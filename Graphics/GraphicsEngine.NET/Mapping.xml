@@ -55,6 +55,7 @@
 	<include file="ShaderBindingTable.h" namespace="Diligent" attach="true"/>
 	<include file="ShaderResourceBinding.h" namespace="Diligent" attach="true"/>
 	<include file="ShaderResourceVariable.h" namespace="Diligent" attach="true"/>
+	<include file="SuperResolution.h" namespace="Diligent" attach="true"/>
 	<include file="SwapChain.h" namespace="Diligent" attach="true"/>
 	<include file="Texture.h" namespace="Diligent" attach="true"/>
 	<include file="TextureView.h" namespace="Diligent" attach="true"/>
@@ -249,6 +250,7 @@
 		<map param="IRenderDevice::CreateBuffer::pBuffData" attribute="optional" default="null"/>
 		<map param="IRenderDevice::CreateTexture::pData" attribute="optional" default="null"/>
 		<map param="IRenderDevice::Create(.+)PipelineState::PSOCreateInfo" name="createInfo"/>
+		<map param="IRenderDevice::GetSuperResolutionSourceSettings::Settings" attribute="out"/>
 
 		<!--Diligent::IDeviceContext-->
 		<map method="IDeviceContext::SetVertexBuffers" visibility="private"/>
@@ -300,6 +302,10 @@
 		<!--Diligent::IQuery-->
 		<map method="IQuery::GetData" visibility="private"/>
 		<map param="IQuery::GetData::pData" type="void" keep-pointers="true"/>
+
+		<!--Diligent::ISuperResolution-->
+		<map param="ISuperResolution::GetOptimalJitterPattern::pJitterX" attribute="out"/>
+		<map param="ISuperResolution::GetOptimalJitterPattern::pJitterY" attribute="out"/>
 	</mapping>
 
 </config>

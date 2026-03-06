@@ -291,6 +291,9 @@ public:
                                                    SHADING_RATE_COMBINER PrimitiveCombiner,
                                                    SHADING_RATE_COMBINER TextureCombiner) override final;
 
+    /// Implementation of IDeviceContext::ExecuteSuperResolution() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE ExecuteSuperResolution(const ExecuteSuperResolutionAttribs& Attribs,
+                                                           ISuperResolution*                    pUpscaler) override final;
     /// Implementation of IDeviceContext::BindSparseResourceMemory() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE BindSparseResourceMemory(const BindSparseResourceMemoryAttribs& Attribs) override final;
 

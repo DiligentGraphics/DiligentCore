@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,43 +39,42 @@ namespace Diligent
 D3D12CreateDeviceProcType           D3D12CreateDevice;
 D3D12GetDebugInterfaceProcType      D3D12GetDebugInterface;
 D3D12SerializeRootSignatureProcType D3D12SerializeRootSignature;
+D3D12GetInterfaceProcType           D3D12GetInterface;
+
+#if PLATFORM_WIN32
+#    define LOAD_D3D12_ENTRY_POINT(hModule, Func) \
+        Func = reinterpret_cast<Func##ProcType>(GetProcAddress(hModule, #Func))
+#elif PLATFORM_UNIVERSAL_WINDOWS
+#    define LOAD_D3D12_ENTRY_POINT(hModule, Func) Func = ::Func
+#else
+#    error Unexpected platform
+#endif
 
 HMODULE LoadD3D12Dll(const char* DLLPath)
 {
 #if PLATFORM_WIN32
     HMODULE hModule = LoadLibraryA(DLLPath);
-
     if (hModule == NULL)
-    {
         return NULL;
-    }
-
-    bool bAllEntriesLoaded = true;
-#    define LOAD_D3D12_ENTRY_POINT(Func)                                                             \
-        do                                                                                           \
-        {                                                                                            \
-            Func = (Func##ProcType)GetProcAddress(hModule, #Func);                                   \
-            if (Func == NULL)                                                                        \
-            {                                                                                        \
-                bAllEntriesLoaded = false;                                                           \
-                LOG_ERROR_MESSAGE("Failed to loader '" #Func "' function from '", DLLPath, "' dll"); \
-            }                                                                                        \
-        } while (false)
-#elif PLATFORM_UNIVERSAL_WINDOWS
-    HMODULE hModule = (HMODULE)-1;
-#    define LOAD_D3D12_ENTRY_POINT(Func) Func = ::Func
 #else
-#    error Unexpected platform
+    HMODULE hModule = (HMODULE)-1;
 #endif
 
-    LOAD_D3D12_ENTRY_POINT(D3D12CreateDevice);
-    LOAD_D3D12_ENTRY_POINT(D3D12GetDebugInterface);
-    LOAD_D3D12_ENTRY_POINT(D3D12SerializeRootSignature);
-#undef LOAD_D3D12_ENTRY_POINT
+    LOAD_D3D12_ENTRY_POINT(hModule, D3D12CreateDevice);
+    LOAD_D3D12_ENTRY_POINT(hModule, D3D12GetDebugInterface);
+    LOAD_D3D12_ENTRY_POINT(hModule, D3D12SerializeRootSignature);
+
+    // D3D12GetInterface is optional (available in newer SDK versions, required for DirectSR).
+    // On Win32 it may be nullptr on older SDKs; on UWP it is not available in d3d12.lib.
+    // All call sites handle nullptr gracefully (DirectSR features are disabled at runtime).
+#if PLATFORM_WIN32
+    LOAD_D3D12_ENTRY_POINT(hModule, D3D12GetInterface);
+#endif
 
 #if PLATFORM_WIN32
-    if (!bAllEntriesLoaded)
+    if (!D3D12CreateDevice || !D3D12GetDebugInterface || !D3D12SerializeRootSignature)
     {
+        LOG_ERROR_MESSAGE("Failed to load one or more entry points from '", DLLPath, "' dll");
         FreeLibrary(hModule);
         return NULL;
     }

@@ -52,6 +52,7 @@
 #include "IndexWrapper.hpp"
 #include "ThreadPool.hpp"
 #include "SpinLock.hpp"
+#include "SuperResolution.h"
 
 namespace Diligent
 {
@@ -119,6 +120,7 @@ public:
     using PipelineResourceSignatureImplType = typename EngineImplTraits::PipelineResourceSignatureImplType;
     using DeviceMemoryImplType              = typename EngineImplTraits::DeviceMemoryImplType;
     using PipelineStateCacheImplType        = typename EngineImplTraits::PipelineStateCacheImplType;
+    using SuperResolutionImplType           = typename EngineImplTraits::SuperResolutionImplType;
 
     /// \param pRefCounters    - Reference counters object that controls the lifetime of this render device
     /// \param RawMemAllocator - Allocator that will be used to allocate memory for all device objects (including render device itself)
@@ -635,6 +637,17 @@ protected:
                            {
                                PipelineStateCacheImplType* pPSOCacheImpl = NEW_RC_OBJ(m_PSOCacheAllocator, "PSOCache instance", PipelineStateCacheImplType)(static_cast<RenderDeviceImplType*>(this), PSOCacheCI);
                                pPSOCacheImpl->QueryInterface(IID_PipelineStateCache, reinterpret_cast<IObject**>(ppCache));
+                           });
+    }
+
+    template <typename... ExtraArgsType>
+    void CreateSuperResolutionImpl(ISuperResolution** ppUpscaler, const SuperResolutionDesc& Desc, const ExtraArgsType&... ExtraArgs)
+    {
+        CreateDeviceObject("Super Resolution Upscaler", Desc, ppUpscaler,
+                           [&]() //
+                           {
+                               SuperResolutionImplType* pUpscalerImpl = NEW_RC_OBJ(GetRawAllocator(), "SuperResolution instance", SuperResolutionImplType)(static_cast<RenderDeviceImplType*>(this), Desc, ExtraArgs...);
+                               pUpscalerImpl->QueryInterface(IID_SuperResolution, reinterpret_cast<IObject**>(ppUpscaler));
                            });
     }
 

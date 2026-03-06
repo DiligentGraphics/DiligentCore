@@ -34,6 +34,7 @@
 #include "WinHPreface.h"
 
 #include <d3d12.h>
+#include <directsr.h>
 #include <atlbase.h>
 
 #if USE_D3D12_LOADER

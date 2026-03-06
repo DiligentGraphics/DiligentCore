@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,6 +39,7 @@ extern "C"
     int TestRenderDeviceCInterface_CreateResourceMapping(void* pRenderDevice);
     int TestRenderDeviceCInterface_CreateFence(void* pRenderDevice);
     int TestRenderDeviceCInterface_CreateQuery(void* pRenderDevice);
+    int TestRenderDeviceCInterface_CreateSuperResolution(void* pRenderDevice);
 }
 
 using namespace Diligent;
@@ -52,7 +53,6 @@ TEST(RenderDevice_CInterface, Misc)
     auto* pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
     EXPECT_EQ(TestRenderDeviceCInterface_Misc(pDevice), 0);
 }
-
 
 TEST(RenderDevice_CInterface, CreateBuffer)
 {
@@ -94,6 +94,12 @@ TEST(RenderDevice_CInterface, CreateQuery)
 {
     auto* pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
     EXPECT_EQ(TestRenderDeviceCInterface_CreateQuery(pDevice), 0);
+}
+
+TEST(RenderDevice_CInterface, CreateSuperResolution)
+{
+    auto* pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
+    EXPECT_EQ(TestRenderDeviceCInterface_CreateSuperResolution(pDevice), 0);
 }
 
 } // namespace

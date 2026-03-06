@@ -2,6 +2,16 @@ cmake_minimum_required (VERSION 3.11)
 
 project(Diligent-GraphicsEngineD3D12 CXX)
 
+include(../../BuildTools/CMake/BuildUtils.cmake)
+
+# Fetch DirectSR headers and Agility SDK DLLs
+FetchContent_DeclareShallowGit(DirectSR-Headers
+    GIT_REPOSITORY https://github.com/MikhailGorobets/DirectSR-Headers.git
+    GIT_TAG        dev
+)
+FetchContent_MakeAvailable(DirectSR-Headers)
+
+
 set(INCLUDE
     include/BottomLevelASD3D12Impl.hpp
     include/BufferD3D12Impl.hpp
@@ -44,6 +54,7 @@ set(INCLUDE
     include/ShaderResourceCacheD3D12.hpp
     include/ShaderResourcesD3D12.hpp
     include/ShaderVariableManagerD3D12.hpp
+    include/SuperResolutionD3D12Impl.hpp
     include/SwapChainD3D12Impl.hpp
     include/TextureD3D12Impl.hpp
     include/TextureViewD3D12Impl.hpp
@@ -108,6 +119,7 @@ set(SRC
     src/ShaderResourceCacheD3D12.cpp
     src/ShaderResourcesD3D12.cpp
     src/ShaderVariableManagerD3D12.cpp
+    src/SuperResolutionD3D12Impl.cpp
     src/SwapChainD3D12Impl.cpp
     src/TextureD3D12Impl.cpp
     src/TextureViewD3D12Impl.cpp
@@ -119,7 +131,7 @@ set(DLL_SRC
     src/GraphicsEngineD3D12.def
 )
 
-if(PLATFORM_WIN32)
+if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
     list(APPEND INCLUDE include/D3D12Loader.hpp)
     list(APPEND SRC src/D3D12Loader.cpp)
     set(USE_D3D12_LOADER 1)
@@ -194,6 +206,7 @@ PRIVATE
     Diligent-GraphicsEngineNextGenBase
     Diligent-TargetPlatform
     Diligent-ShaderTools
+    DirectSR-Headers
     dxgi.lib
     d3dcompiler.lib
 PUBLIC

@@ -58,6 +58,10 @@ class TopLevelASD3D11Impl
 {};
 class ShaderBindingTableD3D11Impl
 {};
+class PipelineStateCacheD3D11Impl
+{};
+class SuperResolutionD3D11Impl
+{};
 
 RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCounters,
                                              IMemoryAllocator&            RawMemAllocator,
@@ -353,6 +357,20 @@ void RenderDeviceD3D11Impl::CreateSBT(const ShaderBindingTableDesc& Desc,
 {
     UNSUPPORTED("CreateSBT is not supported in DirectX 11");
     *ppSBT = nullptr;
+}
+
+void RenderDeviceD3D11Impl::CreateSuperResolution(const SuperResolutionDesc& Desc,
+                                                  ISuperResolution**         ppUpscaler)
+{
+    UNSUPPORTED("CreateSuperResolution is not supported in DirectX 11");
+    *ppUpscaler = nullptr;
+}
+
+void RenderDeviceD3D11Impl::GetSuperResolutionSourceSettings(const SuperResolutionSourceSettingsAttribs& Attribs,
+                                                             SuperResolutionSourceSettings&              Settings) const
+{
+    UNSUPPORTED("GetSuperResolutionSourceSettings is not supported in DirectX 11");
+    Settings = {};
 }
 
 void RenderDeviceD3D11Impl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,

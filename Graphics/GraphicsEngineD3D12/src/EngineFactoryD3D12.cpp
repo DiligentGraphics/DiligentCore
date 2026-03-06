@@ -135,6 +135,14 @@ public:
                                                         IRenderDevice**              ppDevice,
                                                         IDeviceContext**             ppContexts) override final;
 
+    void AttachToD3D12Device(ID3D12Device*                d3d12Device,
+                             Uint32                       CommandQueueCount,
+                             ICommandQueueD3D12**         ppCommandQueues,
+                             const EngineD3D12CreateInfo& EngineCI,
+                             const GraphicsAdapterInfo&   AdapterInfo,
+                             IRenderDevice**              ppDevice,
+                             IDeviceContext**             ppContexts);
+
     virtual void DILIGENT_CALL_TYPE CreateSwapChainD3D12(IRenderDevice*            pDevice,
                                                          IDeviceContext*           pImmediateContext,
                                                          const SwapChainDesc&      SwapChainDesc,
@@ -306,6 +314,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
     std::vector<RefCntAutoPtr<CommandQueueD3D12Impl>> CmdQueueD3D12Refs;
     CComPtr<ID3D12Device>                             d3d12Device;
     std::vector<ICommandQueueD3D12*>                  CmdQueues;
+    GraphicsAdapterInfo                               AdapterInfo;
     try
     {
         ValidateD3D12CreateInfo(EngineCI);
@@ -469,11 +478,9 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
         //d3d12Device->SetStablePowerState(TRUE);
 #endif
 
-        {
-            CComPtr<IDXGIAdapter1>    pDXGIAdapter1 = DXGIAdapterFromD3D12Device(d3d12Device);
-            const GraphicsAdapterInfo AdapterInfo   = GetGraphicsAdapterInfo(d3d12Device, pDXGIAdapter1);
-            VerifyEngineCreateInfo(EngineCI, AdapterInfo);
-        }
+        CComPtr<IDXGIAdapter1> pDXGIAdapter1 = DXGIAdapterFromD3D12Device(d3d12Device);
+        AdapterInfo                          = GetGraphicsAdapterInfo(d3d12Device, pDXGIAdapter1);
+        VerifyEngineCreateInfo(EngineCI, AdapterInfo);
 
         // Describe and create the command queue.
         const auto CreateQueue = [&](const ImmediateContextCreateInfo& ContextCI) //
@@ -515,7 +522,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
         return;
     }
 
-    AttachToD3D12Device(d3d12Device, static_cast<Uint32>(CmdQueues.size()), CmdQueues.data(), EngineCI, ppDevice, ppContexts);
+    AttachToD3D12Device(d3d12Device, static_cast<Uint32>(CmdQueues.size()), CmdQueues.data(), EngineCI, AdapterInfo, ppDevice, ppContexts);
 }
 
 
@@ -567,6 +574,24 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
     if (!pd3d12NativeDevice || !ppCommandQueues || !ppDevice || !ppContexts)
         return;
 
+    ID3D12Device*          d3d12Device   = reinterpret_cast<ID3D12Device*>(pd3d12NativeDevice);
+    CComPtr<IDXGIAdapter1> pDXGIAdapter1 = DXGIAdapterFromD3D12Device(d3d12Device);
+
+    ValidateD3D12CreateInfo(EngineCI);
+
+    const GraphicsAdapterInfo AdapterInfo = GetGraphicsAdapterInfo(pd3d12NativeDevice, pDXGIAdapter1);
+
+    AttachToD3D12Device(d3d12Device, CommandQueueCount, ppCommandQueues, EngineCI, AdapterInfo, ppDevice, ppContexts);
+}
+
+void EngineFactoryD3D12Impl::AttachToD3D12Device(ID3D12Device*                d3d12Device,
+                                                 Uint32                       CommandQueueCount,
+                                                 ICommandQueueD3D12**         ppCommandQueues,
+                                                 const EngineD3D12CreateInfo& EngineCI,
+                                                 const GraphicsAdapterInfo&   AdapterInfo,
+                                                 IRenderDevice**              ppDevice,
+                                                 IDeviceContext**             ppContexts)
+{
     ImmediateContextCreateInfo DefaultImmediateCtxCI;
 
     const Uint32                            NumImmediateContexts  = EngineCI.NumImmediateContexts > 0 ? EngineCI.NumImmediateContexts : 1;
@@ -598,16 +623,11 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
         }
     }
 
+    VerifyEngineCreateInfo(EngineCI, AdapterInfo);
+
     try
     {
-        IMemoryAllocator&      RawMemAllocator = GetRawAllocator();
-        ID3D12Device*          d3d12Device     = reinterpret_cast<ID3D12Device*>(pd3d12NativeDevice);
-        CComPtr<IDXGIAdapter1> pDXGIAdapter1   = DXGIAdapterFromD3D12Device(d3d12Device);
-
-        ValidateD3D12CreateInfo(EngineCI);
-
-        const GraphicsAdapterInfo AdapterInfo = GetGraphicsAdapterInfo(pd3d12NativeDevice, pDXGIAdapter1);
-        VerifyEngineCreateInfo(EngineCI, AdapterInfo);
+        IMemoryAllocator& RawMemAllocator = GetRawAllocator();
 
         RenderDeviceD3D12Impl* pRenderDeviceD3D12{
             NEW_RC_OBJ(RawMemAllocator, "RenderDeviceD3D12Impl instance", RenderDeviceD3D12Impl)(RawMemAllocator, this, EngineCI, AdapterInfo, d3d12Device, CommandQueueCount, ppCommandQueues)};
@@ -1106,7 +1126,51 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
         ASSERT_SIZEOF(DrawCommandProps, 12, "Did you add a new member to DrawCommandProperties? Please initialize it here.");
     }
 
-    ASSERT_SIZEOF(DeviceFeatures, 48, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
+    CComPtr<ID3D12DSRDeviceFactory> pDSRFactory;
+    if (HRESULT hr = D3D12GetInterface(CLSID_D3D12DSRDeviceFactory, IID_PPV_ARGS(&pDSRFactory)); SUCCEEDED(hr))
+    {
+        CComPtr<IDSRDevice> pDSRDevice;
+        if (hr = pDSRFactory->CreateDSRDevice(d3d12Device, 0, IID_PPV_ARGS(&pDSRDevice)); SUCCEEDED(hr))
+        {
+            if (const Uint32 NumVariants = pDSRDevice->GetNumSuperResVariants(); NumVariants > 0)
+            {
+                AdapterInfo.Features.SuperResolution = DEVICE_FEATURE_STATE_ENABLED;
+
+                SuperResolutionProperties& SRProps = AdapterInfo.SuperResolution;
+
+                for (Uint32 Idx = 0; Idx < NumVariants && SRProps.NumUpscalers < DILIGENT_MAX_SUPER_RESOLUTION_UPSCALERS; ++Idx)
+                {
+                    static_assert(sizeof(SuperResolutionInfo::VariantId) == sizeof(DSR_SUPERRES_VARIANT_DESC::VariantId), "GUID/INTERFACE_ID size mismatch");
+
+                    DSR_SUPERRES_VARIANT_DESC VariantDesc = {};
+                    if (hr = pDSRDevice->GetSuperResVariantDesc(Idx, &VariantDesc); FAILED(hr))
+                        continue;
+
+                    SuperResolutionInfo& Info = SRProps.Upscalers[SRProps.NumUpscalers];
+                    Info.Type                 = SUPER_RESOLUTION_UPSCALER_TYPE_TEMPORAL;
+                    if (VariantDesc.Flags & DSR_SUPERRES_VARIANT_FLAG_SUPPORTS_EXPOSURE_SCALE_TEXTURE)
+                        Info.TemporalCapFlags |= SUPER_RESOLUTION_TEMPORAL_CAP_FLAG_EXPOSURE_SCALE_TEXTURE;
+                    if (VariantDesc.Flags & DSR_SUPERRES_VARIANT_FLAG_SUPPORTS_IGNORE_HISTORY_MASK)
+                        Info.TemporalCapFlags |= SUPER_RESOLUTION_TEMPORAL_CAP_FLAG_IGNORE_HISTORY_MASK;
+                    if (VariantDesc.Flags & DSR_SUPERRES_VARIANT_FLAG_SUPPORTS_REACTIVE_MASK)
+                        Info.TemporalCapFlags |= SUPER_RESOLUTION_TEMPORAL_CAP_FLAG_REACTIVE_MASK;
+                    if (VariantDesc.Flags & DSR_SUPERRES_VARIANT_FLAG_SUPPORTS_SHARPNESS)
+                        Info.TemporalCapFlags |= SUPER_RESOLUTION_TEMPORAL_CAP_FLAG_SHARPNESS;
+
+                    strncpy_s(Info.Name, sizeof(Info.Name), VariantDesc.VariantName, _TRUNCATE);
+                    memcpy(&Info.VariantId, &VariantDesc.VariantId, sizeof(Info.VariantId));
+
+                    SRProps.NumUpscalers++;
+                }
+            }
+        }
+    }
+    else
+    {
+        LOG_WARNING_MESSAGE("ID3D12DSRDeviceFactory is not available. Super resolution features will be disabled.");
+    }
+
+    ASSERT_SIZEOF(DeviceFeatures, 49, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
 
     return AdapterInfo;
 }

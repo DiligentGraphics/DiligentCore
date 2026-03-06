@@ -48,6 +48,7 @@
 #include "d3dx12_win.h"
 #include "D3D12DynamicHeap.hpp"
 #include "QueryManagerD3D12.hpp"
+#include "SuperResolutionD3D12Impl.hpp"
 #include "DXGITypeConversions.hpp"
 
 #include "D3D12TileMappingHelper.hpp"
@@ -3346,6 +3347,23 @@ void DeviceContextD3D12Impl::BindSparseResourceMemory(const BindSparseResourceMe
     }
 
     UnlockCommandQueue();
+}
+
+void DeviceContextD3D12Impl::ExecuteSuperResolution(const ExecuteSuperResolutionAttribs& Attribs,
+                                                    ISuperResolution*                    pUpscaler)
+{
+    DEV_CHECK_ERR(pUpscaler != nullptr, "pUpscaler must not be null");
+
+    auto* pUpscalerD3D12 = ClassPtrCast<SuperResolutionD3D12Impl>(pUpscaler);
+
+    // DirectSR submits its own command list(s) to the command queue
+    // We must flush the current command list first so that all rendering work producing the input resources (color, depth, motion vectors) is submitted to the GPU before DirectSR reads them.
+    TransitionOrVerifyTextureState(GetCmdContext(), *ClassPtrCast<TextureD3D12Impl>(Attribs.pOutputTextureView->GetTexture()), RESOURCE_STATE_TRANSITION_MODE_TRANSITION, RESOURCE_STATE_UNORDERED_ACCESS, "OutputTexture before DirectSR");
+
+    Flush();
+    pUpscalerD3D12->Execute(*this, Attribs);
+
+    TransitionOrVerifyTextureState(GetCmdContext(), *ClassPtrCast<TextureD3D12Impl>(Attribs.pOutputTextureView->GetTexture()), RESOURCE_STATE_TRANSITION_MODE_TRANSITION, RESOURCE_STATE_SHADER_RESOURCE, "OutputTexture after DirectSR");
 }
 
 } // namespace Diligent

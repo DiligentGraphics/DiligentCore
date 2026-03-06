@@ -1593,6 +1593,12 @@ void DeviceContextWebGPUImpl::SetShadingRate(SHADING_RATE          BaseRate,
     UNSUPPORTED("SetShadingRate is not supported in WebGPU");
 }
 
+void DeviceContextWebGPUImpl::ExecuteSuperResolution(const ExecuteSuperResolutionAttribs& Attribs,
+                                                     ISuperResolution*                    pUpscaler)
+{
+    UNSUPPORTED("ExecuteSuperResolution is not supported in WebGPU");
+}
+
 void DeviceContextWebGPUImpl::BindSparseResourceMemory(const BindSparseResourceMemoryAttribs& Attribs)
 {
     UNSUPPORTED("BindSparseResourceMemory is not supported in WebGPU");

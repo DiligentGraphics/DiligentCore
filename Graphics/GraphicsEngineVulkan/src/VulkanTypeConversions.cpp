@@ -2062,7 +2062,7 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
 
 #undef INIT_FEATURE
 
-    ASSERT_SIZEOF(DeviceFeatures, 48, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
+    ASSERT_SIZEOF(DeviceFeatures, 49, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
 
     return Features;
 }

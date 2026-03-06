@@ -47,6 +47,8 @@
 #include "DXCompiler.hpp"
 #include "RootSignature.hpp"
 
+#include <directsr.h>
+
 
 // The macros below are only defined in Win SDK 19041+ and are missing in 17763
 #ifndef D3D12_RAYTRACING_MAX_RAY_GENERATION_SHADER_THREADS
@@ -149,6 +151,14 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateSBT(const ShaderBindingTableDesc& Desc,
                                               IShaderBindingTable**         ppSBT) override final;
 
+    /// Implementation of IRenderDevice::CreateSuperResolution() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE CreateSuperResolution(const SuperResolutionDesc& Desc,
+                                                          ISuperResolution**         ppUpscaler) override final;
+
+    /// Implementation of IRenderDevice::GetSuperResolutionSourceSettings() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE GetSuperResolutionSourceSettings(const SuperResolutionSourceSettingsAttribs& Attribs,
+                                                                     SuperResolutionSourceSettings&              Settings) const override final;
+
     /// Implementation of IRenderDevice::CreatePipelineResourceSignature() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
                                                                     IPipelineResourceSignature**         ppSignature) override final;
@@ -214,6 +224,8 @@ public:
     void CreateRootSignature(const RefCntAutoPtr<class PipelineResourceSignatureD3D12Impl>* ppSignatures, Uint32 SignatureCount, size_t Hash, RootSignatureD3D12** ppRootSig);
 
     RootSignatureCacheD3D12& GetRootSignatureCache() { return m_RootSignatureCache; }
+
+    IDSRDevice* GetDSRDevice() const { return m_pDSRDevice; }
 
     DescriptorHeapAllocation AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1);
     DescriptorHeapAllocation AllocateGPUDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1);
@@ -336,6 +348,8 @@ private:
     CComPtr<ID3D12Heap> m_pNVApiHeap;
 
     bool m_IsPSOCacheSupported = false;
+
+    CComPtr<IDSRDevice> m_pDSRDevice;
 
 #ifdef DILIGENT_DEVELOPMENT
     Uint32 m_MaxD3D12DeviceVersion = 0;

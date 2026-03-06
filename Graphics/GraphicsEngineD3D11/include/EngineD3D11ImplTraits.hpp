@@ -71,8 +71,8 @@ class TopLevelASD3D11Impl;
 class ShaderBindingTableD3D11Impl;
 class PipelineResourceSignatureD3D11Impl;
 class DeviceMemoryD3D11Impl;
-class PipelineStateCacheD3D11Impl
-{};
+class PipelineStateCacheD3D11Impl;
+class SuperResolutionD3D11Impl;
 
 class FixedBlockMemoryAllocator;
 
@@ -127,7 +127,7 @@ struct EngineD3D11ImplTraits
     using PipelineResourceSignatureImplType = PipelineResourceSignatureD3D11Impl;
     using DeviceMemoryImplType              = DeviceMemoryD3D11Impl;
     using PipelineStateCacheImplType        = PipelineStateCacheD3D11Impl;
-
+    using SuperResolutionImplType           = SuperResolutionD3D11Impl;
 
     using BuffViewObjAllocatorType = FixedBlockMemoryAllocator;
     using TexViewObjAllocatorType  = FixedBlockMemoryAllocator;
