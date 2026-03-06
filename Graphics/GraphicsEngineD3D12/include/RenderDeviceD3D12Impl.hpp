@@ -47,6 +47,8 @@
 #include "DXCompiler.hpp"
 #include "RootSignature.hpp"
 
+#include <directsr.h>
+
 
 // The macros below are only defined in Win SDK 19041+ and are missing in 17763
 #ifndef D3D12_RAYTRACING_MAX_RAY_GENERATION_SHADER_THREADS
@@ -223,6 +225,8 @@ public:
 
     RootSignatureCacheD3D12& GetRootSignatureCache() { return m_RootSignatureCache; }
 
+    IDSRDevice* GetDSRDevice() const { return m_pDSRDevice; }
+
     DescriptorHeapAllocation AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1);
     DescriptorHeapAllocation AllocateGPUDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1);
 
@@ -344,6 +348,8 @@ private:
     CComPtr<ID3D12Heap> m_pNVApiHeap;
 
     bool m_IsPSOCacheSupported = false;
+
+    CComPtr<IDSRDevice> m_pDSRDevice;
 
 #ifdef DILIGENT_DEVELOPMENT
     Uint32 m_MaxD3D12DeviceVersion = 0;

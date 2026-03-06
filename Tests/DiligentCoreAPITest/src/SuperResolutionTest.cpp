@@ -218,7 +218,7 @@ TEST(SuperResolutionTest, CreateTemporalUpscaler)
     Desc.OutputHeight = 1080;
     Desc.OutputFormat = TEX_FORMAT_RGBA16_FLOAT;
     Desc.ColorFormat  = TEX_FORMAT_RGBA16_FLOAT;
-    Desc.DepthFormat  = TEX_FORMAT_D32_FLOAT;
+    Desc.DepthFormat  = TEX_FORMAT_R32_FLOAT;
     Desc.MotionFormat = TEX_FORMAT_RG16_FLOAT;
     Desc.InputWidth   = SourceSettings.OptimalInputWidth;
     Desc.InputHeight  = SourceSettings.OptimalInputHeight;
@@ -328,7 +328,7 @@ TEST(SuperResolutionTest, ExecuteSpatialUpscaler)
     auto* pContext = pEnv->GetDeviceContext();
 
     ExecuteSuperResolutionAttribs Attribs;
-    Attribs.pColorTextureSRV  = pColorTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
+    Attribs.pColorTextureSRV   = pColorTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
     Attribs.pOutputTextureView = pOutputTex->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET);
 
     pContext->ExecuteSuperResolution(Attribs, pUpscaler);
@@ -377,7 +377,7 @@ TEST(SuperResolutionTest, ExecuteTemporalUpscaler)
     UpscalerDesc.OutputHeight = OutputHeight;
     UpscalerDesc.OutputFormat = TEX_FORMAT_RGBA16_FLOAT;
     UpscalerDesc.ColorFormat  = TEX_FORMAT_RGBA16_FLOAT;
-    UpscalerDesc.DepthFormat  = TEX_FORMAT_D32_FLOAT;
+    UpscalerDesc.DepthFormat  = TEX_FORMAT_R32_FLOAT;
     UpscalerDesc.MotionFormat = TEX_FORMAT_RG16_FLOAT;
     UpscalerDesc.InputWidth   = SourceSettings.OptimalInputWidth;
     UpscalerDesc.InputHeight  = SourceSettings.OptimalInputHeight;
@@ -452,7 +452,7 @@ TEST(SuperResolutionTest, ExecuteTemporalUpscaler)
     Attribs.pColorTextureSRV   = pColorTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
     Attribs.pDepthTextureSRV   = pDepthTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
     Attribs.pMotionVectorsSRV  = pMotionTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
-    Attribs.pOutputTextureView  = pOutputTex->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET);
+    Attribs.pOutputTextureView = pOutputTex->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET);
     Attribs.JitterX            = 0.5f;
     Attribs.JitterY            = -0.5f;
     Attribs.MotionVectorScaleX = 1.0f;

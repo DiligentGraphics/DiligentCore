@@ -114,6 +114,8 @@ D3D12_COMMAND_LIST_TYPE      QueueIdToD3D12CommandListType(HardwareQueueIndex Qu
 COMMAND_QUEUE_TYPE           D3D12CommandListTypeToCmdQueueType(D3D12_COMMAND_LIST_TYPE ListType);
 D3D12_COMMAND_QUEUE_PRIORITY QueuePriorityToD3D12QueuePriority(QUEUE_PRIORITY Priority);
 
+DSR_SUPERRES_CREATE_ENGINE_FLAGS SuperResolutionCreateFlagsToDSRFlags(SUPER_RESOLUTION_CREATE_FLAGS Flags);
+
 static constexpr HardwareQueueIndex D3D12HWQueueIndex_Graphics{Uint8{0}};
 static constexpr HardwareQueueIndex D3D12HWQueueIndex_Compute{Uint8{1}};
 static constexpr HardwareQueueIndex D3D12HWQueueIndex_Copy{Uint8{2}};

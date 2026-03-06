@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,6 +29,7 @@
 
 #include <d3d12.h>
 
+
 namespace Diligent
 {
 
@@ -48,9 +49,15 @@ using D3D12SerializeRootSignatureProcType = HRESULT(WINAPI*)(
     _Out_ ID3DBlob**                                   ppBlob,
     _Always_(_Outptr_opt_result_maybenull_) ID3DBlob** ppErrorBlob);
 
+using D3D12GetInterfaceProcType = HRESULT(WINAPI*)(
+    _In_ REFCLSID           rclsid,
+    _In_ REFIID             riid,
+    _COM_Outptr_opt_ void** ppvDebug);
+
 extern D3D12CreateDeviceProcType           D3D12CreateDevice;
 extern D3D12GetDebugInterfaceProcType      D3D12GetDebugInterface;
 extern D3D12SerializeRootSignatureProcType D3D12SerializeRootSignature;
+extern D3D12GetInterfaceProcType           D3D12GetInterface;
 
 HMODULE LoadD3D12Dll(const char* DLLPath = "d3d12.dll");
 

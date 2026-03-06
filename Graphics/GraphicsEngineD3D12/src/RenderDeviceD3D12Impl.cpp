@@ -57,13 +57,12 @@
 #include "D3D12TypeConversions.hpp"
 #include "DXGITypeConversions.hpp"
 #include "QueryManagerD3D12.hpp"
+#include "D3D12Loader.hpp"
+#include "SuperResolutionD3D12Impl.hpp"
 
 
 namespace Diligent
 {
-
-class SuperResolutionD3D12Impl
-{};
 
 namespace
 {
@@ -122,6 +121,31 @@ CComPtr<ID3D12Heap> CreateDummyNVApiHeap(ID3D12Device* pd3d12Device)
 #endif
 
     return pNVApiHeap;
+}
+
+CComPtr<IDSRDevice> CreateDSRDevice(ID3D12Device* pd3d12Device)
+{
+    if (D3D12GetInterface == nullptr)
+        return nullptr;
+
+    CComPtr<ID3D12DSRDeviceFactory> pDSRFactory;
+
+    if (HRESULT hr = D3D12GetInterface(CLSID_D3D12DSRDeviceFactory, IID_PPV_ARGS(&pDSRFactory)); FAILED(hr))
+    {
+        LOG_WARNING_MESSAGE("Failed to create DirectSR device factory. HRESULT: ", hr);
+        return nullptr;
+    }
+
+    CComPtr<IDSRDevice> pDSRDevice;
+    if (HRESULT hr = pDSRFactory->CreateDSRDevice(pd3d12Device, 0, IID_PPV_ARGS(&pDSRDevice)); FAILED(hr))
+    {
+        LOG_WARNING_MESSAGE("Failed to create DirectSR device. HRESULT: ", hr);
+        return nullptr;
+    }
+
+    LOG_INFO_MESSAGE("DirectSR device initialized successfully. ", pDSRDevice->GetNumSuperResVariants(), " upscaler variant(s) found.");
+
+    return pDSRDevice;
 }
 
 } // namespace
@@ -279,6 +303,8 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
                 m_IsPSOCacheSupported = (ShaderCacheFeature.SupportFlags & D3D12_SHADER_CACHE_SUPPORT_LIBRARY) != 0;
             }
         }
+
+        m_pDSRDevice = CreateDSRDevice(m_pd3d12Device);
 
         InitShaderCompilationThreadPool(EngineCI.pAsyncShaderCompilationThreadPool, EngineCI.NumAsyncShaderCompilationThreads);
     }
@@ -682,15 +708,79 @@ void RenderDeviceD3D12Impl::CreateSBT(const ShaderBindingTableDesc& Desc,
 void RenderDeviceD3D12Impl::CreateSuperResolution(const SuperResolutionDesc& Desc,
                                                   ISuperResolution**         ppUpscaler)
 {
-    UNSUPPORTED("CreateSuperResolution is not supported in DirectX 12");
-    *ppUpscaler = nullptr;
+    if (m_pDSRDevice)
+    {
+        CreateSuperResolutionImpl(ppUpscaler, Desc);
+    }
+    else
+    {
+        LOG_ERROR_MESSAGE("DirectSR device is not initialized. CreateSuperResolution will return nullptr.");
+        *ppUpscaler = nullptr;
+    }
 }
 
 void RenderDeviceD3D12Impl::GetSuperResolutionSourceSettings(const SuperResolutionSourceSettingsAttribs& Attribs,
                                                              SuperResolutionSourceSettings&              Settings) const
 {
-    UNSUPPORTED("GetSuperResolutionSourceSettings is not supported in DirectX 12");
     Settings = {};
+
+    if (!m_pDSRDevice)
+    {
+        LOG_ERROR_MESSAGE("DirectSR device is not initialized");
+        return;
+    }
+
+    DEV_CHECK_ERR(Attribs.OutputWidth > 0 && Attribs.OutputHeight > 0, "Output resolution must be greater than zero");
+    DEV_CHECK_ERR(Attribs.OptimizationType < SUPER_RESOLUTION_OPTIMIZATION_TYPE_COUNT, "Invalid optimization type");
+
+    DSR_OPTIMIZATION_TYPE DSROptType = DSR_OPTIMIZATION_TYPE_BALANCED;
+    switch (Attribs.OptimizationType)
+    {
+        // clang-format off
+        case SUPER_RESOLUTION_OPTIMIZATION_TYPE_MAX_QUALITY:      DSROptType = DSR_OPTIMIZATION_TYPE_MAX_QUALITY;       break;
+        case SUPER_RESOLUTION_OPTIMIZATION_TYPE_HIGH_QUALITY:     DSROptType = DSR_OPTIMIZATION_TYPE_HIGH_QUALITY;      break;
+        case SUPER_RESOLUTION_OPTIMIZATION_TYPE_BALANCED:         DSROptType = DSR_OPTIMIZATION_TYPE_BALANCED;          break;
+        case SUPER_RESOLUTION_OPTIMIZATION_TYPE_HIGH_PERFORMANCE: DSROptType = DSR_OPTIMIZATION_TYPE_HIGH_PERFORMANCE;  break;
+        case SUPER_RESOLUTION_OPTIMIZATION_TYPE_MAX_PERFORMANCE:  DSROptType = DSR_OPTIMIZATION_TYPE_MAX_PERFORMANCE;   break;
+        default: break;
+            // clang-format on
+    }
+
+    const Uint32 NumVariants  = m_pDSRDevice->GetNumSuperResVariants();
+    Uint32       VariantIndex = UINT32_MAX;
+    for (Uint32 Idx = 0; Idx < NumVariants; ++Idx)
+    {
+        DSR_SUPERRES_VARIANT_DESC VariantDesc = {};
+        if (SUCCEEDED(m_pDSRDevice->GetSuperResVariantDesc(Idx, &VariantDesc)))
+        {
+            if (memcmp(&VariantDesc.VariantId, &Attribs.VariantId, sizeof(GUID)) == 0)
+            {
+                VariantIndex = Idx;
+                break;
+            }
+        }
+    }
+
+    if (VariantIndex == UINT32_MAX)
+    {
+        LOG_WARNING_MESSAGE("DirectSR variant not found for the specified VariantId");
+        return;
+    }
+
+    DSR_SIZE                     TargetSize     = {Attribs.OutputWidth, Attribs.OutputHeight};
+    DSR_SUPERRES_SOURCE_SETTINGS SourceSettings = {};
+
+    const DSR_SUPERRES_CREATE_ENGINE_FLAGS DSRCreateFlags = SuperResolutionCreateFlagsToDSRFlags(Attribs.Flags);
+
+    if (HRESULT Result = m_pDSRDevice->QuerySuperResSourceSettings(VariantIndex, TargetSize, TexFormatToDXGI_Format(Attribs.OutputFormat), DSROptType, DSRCreateFlags, &SourceSettings); SUCCEEDED(Result))
+    {
+        Settings.OptimalInputWidth  = SourceSettings.OptimalSize.Width;
+        Settings.OptimalInputHeight = SourceSettings.OptimalSize.Height;
+    }
+    else
+    {
+        LOG_WARNING_MESSAGE("DirectSR QuerySuperResSourceSettings failed. HRESULT: ", Result);
+    }
 }
 
 void RenderDeviceD3D12Impl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
