@@ -60,28 +60,6 @@ DILIGENT_TYPED_ENUM(SUPER_RESOLUTION_FLAGS, Uint32)
 DEFINE_FLAG_ENUM_OPERATORS(SUPER_RESOLUTION_FLAGS)
 
 
-/// Super resolution optimization type.
-/// Defines the quality/performance trade-off for super resolution upscaling.
-DILIGENT_TYPED_ENUM(SUPER_RESOLUTION_OPTIMIZATION_TYPE, Uint8)
-{
-    /// Maximum quality, lowest performance.
-    SUPER_RESOLUTION_OPTIMIZATION_TYPE_MAX_QUALITY = 0u,
-
-    /// Favor quality over performance.
-    SUPER_RESOLUTION_OPTIMIZATION_TYPE_HIGH_QUALITY,
-
-    /// Balanced quality/performance trade-off.
-    SUPER_RESOLUTION_OPTIMIZATION_TYPE_BALANCED,
-
-    /// Favor performance over quality.
-    SUPER_RESOLUTION_OPTIMIZATION_TYPE_HIGH_PERFORMANCE,
-
-    /// Maximum performance, lowest quality.
-    SUPER_RESOLUTION_OPTIMIZATION_TYPE_MAX_PERFORMANCE,
-
-    SUPER_RESOLUTION_OPTIMIZATION_TYPE_COUNT
-};
-
 /// This structure describes the super resolution upscaler object and is part of the creation
 /// parameters given to ISuperResolutionFactory::CreateSuperResolution().
 struct SuperResolutionDesc DILIGENT_DERIVE(DeviceObjectAttribs)
@@ -147,40 +125,6 @@ struct SuperResolutionDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     SUPER_RESOLUTION_FLAGS Flags DEFAULT_INITIALIZER(SUPER_RESOLUTION_FLAG_NONE);
 };
 typedef struct SuperResolutionDesc SuperResolutionDesc;
-
-
-/// Attributes for querying the optimal source (input) settings for super resolution upscaling.
-///
-/// This structure is used by ISuperResolutionFactory::GetSourceSettings().
-struct SuperResolutionSourceSettingsAttribs
-{
-    /// Unique identifier of the super resolution variant to create.
-    ///
-    /// Must match one of the VariantIds reported by ISuperResolutionFactory::EnumerateVariants().
-    INTERFACE_ID VariantId DEFAULT_INITIALIZER({});
-
-    /// Target (output) texture width. Must be greater than zero.
-    Uint32 OutputWidth     DEFAULT_INITIALIZER(0);
-
-    /// Target (output) texture height. Must be greater than zero.
-    Uint32 OutputHeight    DEFAULT_INITIALIZER(0);
-
-    /// Output texture format.
-    ///
-    /// Some backends (e.g. DirectSR) may return different optimal input resolutions
-    /// depending on the output format. When set to TEX_FORMAT_UNKNOWN, the backend will use a reasonable default.
-    TEXTURE_FORMAT OutputFormat DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
-
-    /// Flags controlling the super resolution behavior.
-    ///
-    /// These flags affect the optimal source resolution returned by the backend.
-    /// Must match the flags that will be used when creating the upscaler.
-    SUPER_RESOLUTION_FLAGS Flags DEFAULT_INITIALIZER(SUPER_RESOLUTION_FLAG_NONE);
-
-    /// Optimization type controlling the quality/performance trade-off.
-    SUPER_RESOLUTION_OPTIMIZATION_TYPE OptimizationType DEFAULT_INITIALIZER(SUPER_RESOLUTION_OPTIMIZATION_TYPE_BALANCED);
-};
-typedef struct SuperResolutionSourceSettingsAttribs SuperResolutionSourceSettingsAttribs;
 
 
 /// Super resolution execute attributes
