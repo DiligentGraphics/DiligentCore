@@ -251,7 +251,6 @@ bool GPUUploadManagerImpl::Page::ScheduleBufferUpdate(const ScheduleBufferUpdate
     Op.DstOffset = UpdateInfo.DstOffset;
     Op.NumBytes  = UpdateInfo.NumBytes;
     m_PendingOps.Enqueue(std::move(Op));
-    m_NumPendingOps.fetch_add(1, std::memory_order_acq_rel);
 
     return true;
 }
@@ -288,7 +287,6 @@ void GPUUploadManagerImpl::Page::ExecutePendingOps(IDeviceContext* pContext, Uin
             }
         }
     }
-    m_NumPendingOps.store(0);
     m_FenceValue = FenceValue;
 }
 
@@ -300,7 +298,6 @@ void GPUUploadManagerImpl::Page::Reset(IDeviceContext* pContext)
     m_Offset.store(0);
     // Keep the page sealed until we make it current to prevent any accidental writes.
     m_State.store(SEALED_BIT);
-    m_NumPendingOps.store(0);
     m_Enqueued.store(false);
     m_FenceValue = 0;
 

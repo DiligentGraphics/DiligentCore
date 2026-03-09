@@ -87,6 +87,10 @@ public:
         Node* node = AllocateNode(std::move(value));
         node->pNext.store(nullptr, std::memory_order_relaxed);
 
+        // Increment size before pushing to ensure that the element is not
+        // dequeued before m_Size reflects the new element.
+        m_Size.fetch_add(1, std::memory_order_relaxed);
+
         // Standard Lock-Free Enqueue
         Node* prev = m_Tail.exchange(node, std::memory_order_acq_rel);
         prev->pNext.store(node, std::memory_order_release);
@@ -110,6 +114,8 @@ public:
         m_Head = next;
         result = std::move(next->Value);
 
+        m_Size.fetch_sub(1, std::memory_order_relaxed);
+
         // Current head became the old dummy node, recycle it
         RecycleNode(head);
 
@@ -117,9 +123,28 @@ public:
     }
 
     /// Checks if the queue is empty.
+
+    /// The method is safe to call concurrently with producers, but must only be
+    /// called by the consumer thread.
+    ///
+    /// \note In the presence of concurrent producers, this method may temporarily
+    ///       report the queue as empty while an enqueue is still in progress and
+    ///       the new node has not yet been linked into the queue.
     bool IsEmpty() const
     {
         return m_Head->pNext.load(std::memory_order_acquire) == nullptr;
+    }
+
+    /// Returns the approximate number of items in the queue.
+
+    /// \note This value is not exact in the presence of concurrent producers and
+    ///       consumer. It may temporarily overestimate the number of items due to
+    ///       in-flight enqueue operations, and may disagree with IsEmpty() or a
+    ///       subsequent Dequeue() call. It must not be used to predict whether
+    ///       Dequeue() will succeed.
+    size_t Size() const
+    {
+        return m_Size.load(std::memory_order_relaxed);
     }
 
 private:
@@ -195,6 +220,8 @@ private:
 
     // Consumer Data (Hot)
     alignas(CacheLineSize) Node* m_Head = nullptr;
+
+    std::atomic<size_t> m_Size{0};
 
     // Free List (Shared - Moderate Contention)
     // The lock protects the "Pop" side from other Producers
