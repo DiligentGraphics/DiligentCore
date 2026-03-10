@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,6 +36,7 @@
 #include "GraphicsAccessories.hpp"
 #include "Align.hpp"
 #include "Cast.hpp"
+#include "MPSCQueue.hpp"
 
 namespace Diligent
 {
@@ -156,22 +157,14 @@ private:
 
 struct TextureUploaderGL::InternalData
 {
-    void SwapMapQueues()
-    {
-        std::lock_guard<std::mutex> QueueLock(m_PendingOperationsMtx);
-        m_PendingOperations.swap(m_InWorkOperations);
-    }
-
     void EnqueueCopy(UploadBufferGL* pUploadBuffer, ITexture* pDstTexture, Uint32 dstSlice, Uint32 dstMip, bool AutoRecycle)
     {
-        std::lock_guard<std::mutex> QueueLock(m_PendingOperationsMtx);
-        m_PendingOperations.emplace_back(PendingBufferOperation::Type::Copy, pUploadBuffer, pDstTexture, dstSlice, dstMip, AutoRecycle);
+        m_PendingOperations.Enqueue(PendingBufferOperation{PendingBufferOperation::Type::Copy, pUploadBuffer, pDstTexture, dstSlice, dstMip, AutoRecycle});
     }
 
     void EnqueueMap(UploadBufferGL* pUploadBuffer)
     {
-        std::lock_guard<std::mutex> QueueLock(m_PendingOperationsMtx);
-        m_PendingOperations.emplace_back(PendingBufferOperation::Type::Map, pUploadBuffer);
+        m_PendingOperations.Enqueue(PendingBufferOperation{PendingBufferOperation::Type::Map, pUploadBuffer});
     }
 
     using PendingBufferOperation = TextureUploaderBase::PendingOperation<UploadBufferGL>;
@@ -195,9 +188,7 @@ struct TextureUploaderGL::InternalData
         Deque.emplace_back(pUploadBufferGL);
     }
 
-    std::mutex                          m_PendingOperationsMtx;
-    std::vector<PendingBufferOperation> m_PendingOperations;
-    std::vector<PendingBufferOperation> m_InWorkOperations;
+    MPSCQueue<PendingBufferOperation> m_PendingOperations;
 
     std::mutex                                                                      m_UploadBuffCacheMtx;
     std::unordered_map<UploadBufferDesc, std::deque<RefCntAutoPtr<UploadBufferGL>>> m_UploadBufferCache;
@@ -234,14 +225,10 @@ TextureUploaderGL::~TextureUploaderGL()
 
 void TextureUploaderGL::RenderThreadUpdate(IDeviceContext* pContext)
 {
-    m_pInternalData->SwapMapQueues();
-    if (!m_pInternalData->m_InWorkOperations.empty())
+    InternalData::PendingBufferOperation Operation;
+    while (m_pInternalData->m_PendingOperations.Dequeue(Operation))
     {
-        for (InternalData::PendingBufferOperation& Operation : m_pInternalData->m_InWorkOperations)
-        {
-            m_pInternalData->Execute(m_pDevice, pContext, Operation);
-        }
-        m_pInternalData->m_InWorkOperations.clear();
+        m_pInternalData->Execute(m_pDevice, pContext, Operation);
     }
 }
 
@@ -412,9 +399,8 @@ void TextureUploaderGL::RecycleBuffer(IUploadBuffer* pUploadBuffer)
 
 TextureUploaderStats TextureUploaderGL::GetStats()
 {
-    TextureUploaderStats        Stats;
-    std::lock_guard<std::mutex> QueueLock(m_pInternalData->m_PendingOperationsMtx);
-    Stats.NumPendingOperations = static_cast<Uint32>(m_pInternalData->m_PendingOperations.size());
+    TextureUploaderStats Stats;
+    Stats.NumPendingOperations = static_cast<Uint32>(m_pInternalData->m_PendingOperations.Size());
     return Stats;
 }
 

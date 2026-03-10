@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,6 +42,7 @@
 #include "DXGITypeConversions.hpp"
 #include "ThreadSignal.hpp"
 #include "GraphicsAccessories.hpp"
+#include "MPSCQueue.hpp"
 
 namespace Diligent
 {
@@ -130,6 +131,8 @@ struct TextureUploaderD3D11::InternalData
         Uint32                           DstMipLevels = 0;
         bool                             AutoRecycle  = false;
 
+        PendingBufferOperation() = default;
+
         // clang-format off
         PendingBufferOperation(Type               Op,
                                UploadBufferD3D11* pBuff) :
@@ -167,22 +170,14 @@ struct TextureUploaderD3D11::InternalData
 
     CComPtr<ID3D11Device> m_pd3d11NativeDevice;
 
-    void SwapMapQueues()
-    {
-        std::lock_guard<std::mutex> QueueLock(m_PendingOperationsMtx);
-        m_PendingOperations.swap(m_InWorkOperations);
-    }
-
     void EnqueueCopy(UploadBufferD3D11* pUploadBuffer, ID3D11Resource* pd3d11DstTex, Uint32 Mip, Uint32 Slice, Uint32 MipLevels, bool RecycleBuffer)
     {
-        std::lock_guard<std::mutex> QueueLock(m_PendingOperationsMtx);
-        m_PendingOperations.emplace_back(PendingBufferOperation::Type::Copy, pUploadBuffer, pd3d11DstTex, Mip, Slice, MipLevels, RecycleBuffer);
+        m_PendingOperations.Enqueue(PendingBufferOperation{PendingBufferOperation::Type::Copy, pUploadBuffer, pd3d11DstTex, Mip, Slice, MipLevels, RecycleBuffer});
     }
 
     void EnqueueMap(UploadBufferD3D11* pUploadBuffer, PendingBufferOperation::Type Op)
     {
-        std::lock_guard<std::mutex> QueueLock(m_PendingOperationsMtx);
-        m_PendingOperations.emplace_back(Op, pUploadBuffer);
+        m_PendingOperations.Enqueue(PendingBufferOperation{Op, pUploadBuffer});
     }
 
     void Execute(ID3D11DeviceContext* pd3d11NativeCtx, PendingBufferOperation& Operation, bool ExecuteImmediately);
@@ -217,9 +212,7 @@ struct TextureUploaderD3D11::InternalData
         BuffersByDesc.emplace_back(pUploadBuffer);
     }
 
-    std::mutex                          m_PendingOperationsMtx;
-    std::vector<PendingBufferOperation> m_PendingOperations;
-    std::vector<PendingBufferOperation> m_InWorkOperations;
+    MPSCQueue<PendingBufferOperation> m_PendingOperations;
 
     std::mutex                                                                         m_UploadBuffCacheMtx;
     std::unordered_map<UploadBufferDesc, std::deque<RefCntAutoPtr<UploadBufferD3D11>>> m_UploadBufferCache;
@@ -256,19 +249,22 @@ TextureUploaderD3D11::~TextureUploaderD3D11()
 
 void TextureUploaderD3D11::RenderThreadUpdate(IDeviceContext* pContext)
 {
-    m_pInternalData->SwapMapQueues();
-    if (!m_pInternalData->m_InWorkOperations.empty())
+    if (m_pInternalData->m_PendingOperations.IsEmpty())
+        return;
+
+    RefCntAutoPtr<IDeviceContextD3D11> pContextD3D11{pContext, IID_DeviceContextD3D11};
+    if (!pContextD3D11)
     {
-        RefCntAutoPtr<IDeviceContextD3D11> pContextD3D11(pContext, IID_DeviceContextD3D11);
+        UNEXPECTED("Failed to query IID_DeviceContextD3D11 interface from the device context. "
+                   "Is it really Diligent::IDeviceContextD3D11 interface?");
+        return;
+    }
+    ID3D11DeviceContext* pd3d11NativeCtx = pContextD3D11->GetD3D11DeviceContext();
 
-        ID3D11DeviceContext* pd3d11NativeCtx = pContextD3D11->GetD3D11DeviceContext();
-
-        for (InternalData::PendingBufferOperation& Operation : m_pInternalData->m_InWorkOperations)
-        {
-            m_pInternalData->Execute(pd3d11NativeCtx, Operation, false /*ExecuteImmediately*/);
-        }
-
-        m_pInternalData->m_InWorkOperations.clear();
+    InternalData::PendingBufferOperation Operation;
+    while (m_pInternalData->m_PendingOperations.Dequeue(Operation))
+    {
+        m_pInternalData->Execute(pd3d11NativeCtx, Operation, false /*ExecuteImmediately*/);
     }
 }
 
@@ -516,9 +512,8 @@ void TextureUploaderD3D11::RecycleBuffer(IUploadBuffer* pUploadBuffer)
 
 TextureUploaderStats TextureUploaderD3D11::GetStats()
 {
-    TextureUploaderStats        Stats;
-    std::lock_guard<std::mutex> QueueLock(m_pInternalData->m_PendingOperationsMtx);
-    Stats.NumPendingOperations = static_cast<Uint32>(m_pInternalData->m_PendingOperations.size());
+    TextureUploaderStats Stats;
+    Stats.NumPendingOperations = static_cast<Uint32>(m_pInternalData->m_PendingOperations.Size());
 
     return Stats;
 }
