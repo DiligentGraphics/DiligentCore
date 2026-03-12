@@ -26,9 +26,12 @@
 
 #include "SuperResolutionFactory.h"
 #include "SuperResolutionFactoryLoader.h"
-#include "DummyReferenceCounters.hpp"
+#include "ObjectBase.hpp"
+#include "RefCntAutoPtr.hpp"
 #include "EngineMemory.h"
 #include "PlatformDebug.hpp"
+#include "DebugUtilities.hpp"
+#include "SuperResolutionInternal.hpp"
 
 namespace Diligent
 {
@@ -36,87 +39,134 @@ namespace Diligent
 namespace
 {
 
-class SuperResolutionFactoryImpl final : public ISuperResolutionFactory
+class SuperResolutionFactoryImpl final : public ObjectBase<ISuperResolutionFactory>
 {
 public:
-    static SuperResolutionFactoryImpl* GetInstance()
-    {
-        static SuperResolutionFactoryImpl TheFactory;
-        return &TheFactory;
-    }
+    using TBase = ObjectBase<ISuperResolutionFactory>;
 
-    SuperResolutionFactoryImpl() :
-        m_RefCounters{*this}
-    {}
+    SuperResolutionFactoryImpl(IReferenceCounters* pRefCounters, IRenderDevice* pDevice);
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_SuperResolutionFactory, TBase)
 
-    virtual ReferenceCounterValueType DILIGENT_CALL_TYPE AddRef() override final
-    {
-        return m_RefCounters.AddStrongRef();
-    }
+    virtual void DILIGENT_CALL_TYPE EnumerateVariants(Uint32& NumVariants, SuperResolutionInfo* Variants) override final;
 
-    virtual ReferenceCounterValueType DILIGENT_CALL_TYPE Release() override final
-    {
-        return m_RefCounters.ReleaseStrongRef();
-    }
+    virtual void DILIGENT_CALL_TYPE GetSourceSettings(const SuperResolutionSourceSettingsAttribs& Attribs, SuperResolutionSourceSettings& Settings) const override final;
 
-    virtual IReferenceCounters* DILIGENT_CALL_TYPE GetReferenceCounters() const override final
-    {
-        return const_cast<IReferenceCounters*>(static_cast<const IReferenceCounters*>(&m_RefCounters));
-    }
+    virtual void DILIGENT_CALL_TYPE CreateSuperResolution(const SuperResolutionDesc& Desc, ISuperResolution** ppUpscaler) override final;
 
-    virtual void DILIGENT_CALL_TYPE EnumerateVariants(IRenderDevice* pDevice, Uint32& NumVariants, SuperResolutionInfo* Variants) override final;
-
-    virtual void DILIGENT_CALL_TYPE GetSourceSettings(IRenderDevice*                              pDevice,
-                                                      const SuperResolutionSourceSettingsAttribs& Attribs,
-                                                      SuperResolutionSourceSettings&              Settings) const override final;
-
-    virtual void DILIGENT_CALL_TYPE CreateSuperResolution(IRenderDevice*             pDevice,
-                                                          const SuperResolutionDesc& Desc,
-                                                          ISuperResolution**         ppUpscaler) override final;
-
-    virtual void DILIGENT_CALL_TYPE
-    SetMessageCallback(DebugMessageCallbackType MessageCallback) const override final;
+    virtual void DILIGENT_CALL_TYPE SetMessageCallback(DebugMessageCallbackType MessageCallback) const override final;
 
     virtual void DILIGENT_CALL_TYPE SetBreakOnError(bool BreakOnError) const override final;
 
     virtual void DILIGENT_CALL_TYPE SetMemoryAllocator(IMemoryAllocator* pAllocator) const override final;
 
 private:
-    DummyReferenceCounters<SuperResolutionFactoryImpl> m_RefCounters;
+    void PopulateVariants();
+
+private:
+    SUPER_RESOLUTION_BACKEND FindVariant(const INTERFACE_ID& VariantId) const;
+
+    RefCntAutoPtr<IRenderDevice> m_pDevice;
+    SuperResolutionVariants      m_Variants{};
 };
 
 
-void SuperResolutionFactoryImpl::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)
+SuperResolutionFactoryImpl::SuperResolutionFactoryImpl(IReferenceCounters* pRefCounters, IRenderDevice* pDevice) :
+    TBase{pRefCounters},
+    m_pDevice{pDevice}
 {
-    if (ppInterface == nullptr)
-        return;
+    PopulateVariants();
+}
 
-    *ppInterface = nullptr;
-    if (IID == IID_Unknown || IID == IID_SuperResolutionFactory)
+void SuperResolutionFactoryImpl::PopulateVariants()
+{
+}
+
+SUPER_RESOLUTION_BACKEND SuperResolutionFactoryImpl::FindVariant(const INTERFACE_ID& VariantId) const
+{
+    for (Uint32 BackendIdx = 0; BackendIdx < SUPER_RESOLUTION_BACKEND_COUNT; ++BackendIdx)
     {
-        *ppInterface = this;
-        (*ppInterface)->AddRef();
+        for (const auto& Info : m_Variants[BackendIdx])
+        {
+            if (Info.VariantId == VariantId)
+                return static_cast<SUPER_RESOLUTION_BACKEND>(BackendIdx);
+        }
+    }
+    return SUPER_RESOLUTION_BACKEND_COUNT;
+}
+
+void SuperResolutionFactoryImpl::EnumerateVariants(Uint32& NumVariants, SuperResolutionInfo* Variants)
+{
+    Uint32 Count = 0;
+    for (Uint32 BackendIdx = 0; BackendIdx < SUPER_RESOLUTION_BACKEND_COUNT; ++BackendIdx)
+        Count += static_cast<Uint32>(m_Variants[BackendIdx].size());
+
+    if (Variants == nullptr)
+    {
+        NumVariants = Count;
+        return;
+    }
+
+    const Uint32 MaxVariants = NumVariants;
+    NumVariants              = 0;
+    for (Uint32 BackendIdx = 0; BackendIdx < SUPER_RESOLUTION_BACKEND_COUNT; ++BackendIdx)
+    {
+        for (const auto& Info : m_Variants[BackendIdx])
+        {
+            if (NumVariants >= MaxVariants)
+                break;
+            Variants[NumVariants++] = Info;
+        }
     }
 }
 
-void SuperResolutionFactoryImpl::EnumerateVariants(IRenderDevice* pDevice, Uint32& NumVariants, SuperResolutionInfo* Variants)
-{
-    NumVariants = 0;
-}
-
-void SuperResolutionFactoryImpl::GetSourceSettings(IRenderDevice*                              pDevice,
-                                                   const SuperResolutionSourceSettingsAttribs& Attribs,
-                                                   SuperResolutionSourceSettings&              Settings) const
+void SuperResolutionFactoryImpl::GetSourceSettings(const SuperResolutionSourceSettingsAttribs& Attribs, SuperResolutionSourceSettings& Settings) const
 {
     Settings = {};
+
+    const auto Backend = FindVariant(Attribs.VariantId);
+    if (Backend == SUPER_RESOLUTION_BACKEND_COUNT)
+    {
+        LOG_WARNING_MESSAGE("Super resolution variant not found for the specified VariantId");
+        return;
+    }
+
+    switch (Backend)
+    {
+        default:
+            LOG_WARNING_MESSAGE("Unknown super resolution backend");
+            break;
+    }
 }
 
-void SuperResolutionFactoryImpl::CreateSuperResolution(IRenderDevice*             pDevice,
-                                                       const SuperResolutionDesc& Desc,
-                                                       ISuperResolution**         ppUpscaler)
+void SuperResolutionFactoryImpl::CreateSuperResolution(const SuperResolutionDesc& Desc, ISuperResolution** ppUpscaler)
 {
+    DEV_CHECK_ERR(ppUpscaler != nullptr, "ppUpscaler must not be null");
+    if (ppUpscaler == nullptr)
+        return;
+
+    *ppUpscaler = nullptr;
+
+    const auto Backend = FindVariant(Desc.VariantId);
+    if (Backend == SUPER_RESOLUTION_BACKEND_COUNT)
+    {
+        LOG_ERROR_MESSAGE("Super resolution variant not found for the specified VariantId. Call EnumerateVariants() to get valid variant IDs.");
+        return;
+    }
+
+    try
+    {
+        switch (Backend)
+        {
+            default:
+                LOG_ERROR_MESSAGE("Unknown super resolution backend");
+                break;
+        }
+    }
+    catch (...)
+    {
+        LOG_ERROR("Failed to create super resolution upscaler '", (Desc.Name ? Desc.Name : ""), "'");
+    }
 }
 
 void SuperResolutionFactoryImpl::SetMessageCallback(DebugMessageCallbackType MessageCallback) const
@@ -137,10 +187,23 @@ void SuperResolutionFactoryImpl::SetMemoryAllocator(IMemoryAllocator* pAllocator
 } // namespace
 
 
-API_QUALIFIER
-ISuperResolutionFactory* GetSuperResolutionFactory()
+API_QUALIFIER void CreateSuperResolutionFactory(IRenderDevice* pDevice, ISuperResolutionFactory** ppFactory)
 {
-    return SuperResolutionFactoryImpl::GetInstance();
+    DEV_CHECK_ERR(ppFactory != nullptr, "ppFactory must not be null");
+    if (ppFactory == nullptr)
+        return;
+
+    *ppFactory = nullptr;
+
+    try
+    {
+        auto* pFactory = NEW_RC_OBJ(GetRawAllocator(), "SuperResolutionFactoryImpl instance", SuperResolutionFactoryImpl)(pDevice);
+        pFactory->QueryInterface(IID_SuperResolutionFactory, reinterpret_cast<IObject**>(ppFactory));
+    }
+    catch (...)
+    {
+        LOG_ERROR("Failed to create super resolution factory");
+    }
 }
 
 } // namespace Diligent
@@ -148,8 +211,9 @@ ISuperResolutionFactory* GetSuperResolutionFactory()
 extern "C"
 {
     API_QUALIFIER
-    Diligent::ISuperResolutionFactory* Diligent_GetSuperResolutionFactory()
+    void Diligent_CreateSuperResolutionFactory(Diligent::IRenderDevice*            pDevice,
+                                               Diligent::ISuperResolutionFactory** ppFactory)
     {
-        return Diligent::GetSuperResolutionFactory();
+        Diligent::CreateSuperResolutionFactory(pDevice, ppFactory);
     }
 }
