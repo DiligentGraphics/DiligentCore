@@ -29,7 +29,7 @@
 /// \file
 /// Defines Diligent::ISuperResolution interface and related data structures
 
-#include "../../GraphicsEngine/interface/DeviceObject.h"
+#include "../../../Primitives/interface/Object.h"
 #include "../../GraphicsEngine/interface/GraphicsTypes.h"
 #include "../../GraphicsEngine/interface/TextureView.h"
 #include "../../GraphicsEngine/interface/DeviceContext.h"
@@ -62,7 +62,10 @@ DEFINE_FLAG_ENUM_OPERATORS(SUPER_RESOLUTION_FLAGS)
 
 /// This structure describes the super resolution upscaler object and is part of the creation
 /// parameters given to ISuperResolutionFactory::CreateSuperResolution().
-struct SuperResolutionDesc DILIGENT_DERIVE(DeviceObjectAttribs)
+struct SuperResolutionDesc
+{
+    /// Object name.
+    const Char* Name DEFAULT_INITIALIZER(nullptr);
 
     /// Unique identifier of the super resolution variant to create.
     ///
@@ -106,13 +109,6 @@ struct SuperResolutionDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     ///
     /// Optional. Used for temporal upscaling to guide the denoiser for areas with inaccurate motion information (e.g., alpha-blended objects).
     TEXTURE_FORMAT ReactiveMaskFormat DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
-
-    /// Ignore history mask texture format.
-    ///
-    /// Optional. Used for temporal upscaling to indicate regions where temporal history
-    /// should be completely discarded (binary mask: 0 = use history, 1 = ignore history).
-    /// Unlike the reactive mask which provides proportional control, this is a binary decision.
-    TEXTURE_FORMAT IgnoreHistoryMaskFormat DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
 
     /// Exposure scale texture format.
     ///
@@ -178,7 +174,7 @@ struct ExecuteSuperResolutionAttribs
     /// where temporal history should be completely discarded.
     /// Unlike the reactive mask which provides proportional control,
     /// this is a binary decision (discard or keep).
-    /// Only used when SuperResolutionDesc::IgnoreHistoryMaskFormat != TEX_FORMAT_UNKNOWN.
+    /// Format must be TEX_FORMAT_R8_UINT.
     ITextureView* pIgnoreHistoryMaskTextureSRV DEFAULT_INITIALIZER(nullptr);
 
     /// Jitter offset X applied to the projection matrix (in pixels).
@@ -263,8 +259,8 @@ typedef struct ExecuteSuperResolutionAttribs ExecuteSuperResolutionAttribs;
 #define DILIGENT_INTERFACE_NAME ISuperResolution
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
-#define ISuperResolutionInclusiveMethods    \
-    IDeviceObjectInclusiveMethods;                  \
+#define ISuperResolutionInclusiveMethods   \
+    IObjectInclusiveMethods;               \
     ISuperResolutionMethods SuperResolution
 
 /// Super resolution upscaler interface.
@@ -272,26 +268,24 @@ typedef struct ExecuteSuperResolutionAttribs ExecuteSuperResolutionAttribs;
 /// The super resolution object encapsulates a hardware-accelerated or software-based super resolution
 /// effect (e.g., MetalFX on Metal, DirectSR on D3D12).
 /// It is created via ISuperResolutionFactory::CreateSuperResolution().
-DILIGENT_BEGIN_INTERFACE(ISuperResolution, IDeviceObject)
+DILIGENT_BEGIN_INTERFACE(ISuperResolution, IObject)
 {
-#if DILIGENT_CPP_INTERFACE
     /// Returns the super resolution description used to create the object.
-    virtual const SuperResolutionDesc& METHOD(GetDesc)() const override = 0;
-#endif
+    VIRTUAL const SuperResolutionDesc REF METHOD(GetDesc)(THIS) CONST PURE;
 
     /// Returns the optimal jitter offset for the given frame index.
     
-    /// \param [in]  Index    - Frame index. The sequence wraps automatically.
-    /// \param [out] pJitterX - Jitter offset X in pixel space, typically in [-0.5, 0.5] range.
-    /// \param [out] pJitterY - Jitter offset Y in pixel space, typically in [-0.5, 0.5] range.
+    /// \param [in]  Index   - Frame index. The sequence wraps automatically.
+    /// \param [out] JitterX - Jitter offset X in pixel space, typically in [-0.5, 0.5] range.
+    /// \param [out] JitterY - Jitter offset Y in pixel space, typically in [-0.5, 0.5] range.
     ///
     /// For temporal upscaling, the upscaler provides a recommended jitter pattern
     /// (e.g. Halton sequence) that should be applied to the projection matrix each frame.
     /// For spatial upscaling, both values are set to zero.
     VIRTUAL void METHOD(GetJitterOffset)(THIS_
                                          Uint32 Index,
-                                         float* pJitterX,
-                                         float* pJitterY) CONST PURE;
+                                         float REF JitterX,
+                                         float REF JitterY) CONST PURE;
 
 
     /// Executes the super resolution upscaler.
@@ -315,8 +309,7 @@ DILIGENT_END_INTERFACE
 #if DILIGENT_C_INTERFACE
 
 // clang-format off
-#    define ISuperResolution_GetDesc(This) (const struct SuperResolutionDesc*)IDeviceObject_GetDesc(This)
-
+#    define ISuperResolution_GetDesc(This)              CALL_IFACE_METHOD(SuperResolution, GetDesc, This)
 #    define ISuperResolution_GetJitterOffset(This, ...) CALL_IFACE_METHOD(SuperResolution, GetJitterOffset, This, __VA_ARGS__)
 #    define ISuperResolution_Execute(This, ...)         CALL_IFACE_METHOD(SuperResolution, Execute, This, __VA_ARGS__)
 

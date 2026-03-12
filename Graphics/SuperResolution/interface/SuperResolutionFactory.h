@@ -233,11 +233,14 @@ typedef struct SuperResolutionSourceSettingsAttribs SuperResolutionSourceSetting
 // clang-format off
 
 /// SuperResolution factory interface
+///
+/// The factory is created per render device using CreateSuperResolutionFactory().
+/// It enumerates available super resolution backends, queries optimal settings,
+/// and creates upscaler instances for the device it was created with.
 DILIGENT_BEGIN_INTERFACE(ISuperResolutionFactory, IObject)
 {
-    /// Enumerates the supported super resolution variants for the given render device.
+    /// Enumerates the supported super resolution variants.
 
-    /// \param [in]      pDevice     - Render device to query the supported super resolution variants for.
     /// \param [in, out] NumVariants - Number of super resolution variants. If `Variants` is null, this
     ///                                parameter is used to return the number of supported variants.
     ///                                If `Variants` is not null, this parameter should contain the maximum number
@@ -246,14 +249,12 @@ DILIGENT_BEGIN_INTERFACE(ISuperResolutionFactory, IObject)
     /// \param [out]     Variants    - Array to receive the supported super resolution variants.
     ///                                Each variant is described by SuperResolutionInfo structure.
     VIRTUAL void METHOD(EnumerateVariants)(THIS_
-                                           IRenderDevice*       pDevice,
                                            Uint32 REF           NumVariants,
                                            SuperResolutionInfo* Variants) PURE;
 
 
     /// Returns the optimal source (input) settings for super resolution upscaling.
 
-    /// \param [in]  pDevice  - Render device to query the optimal source settings for.
     /// \param [in]  Attribs  - Attributes, see Diligent::SuperResolutionSourceSettingsAttribs for details.
     /// \param [out] Settings - On success, receives the optimal source settings, 
     ///                         see Diligent::SuperResolutionSourceSettings for details.
@@ -262,14 +263,12 @@ DILIGENT_BEGIN_INTERFACE(ISuperResolutionFactory, IObject)
     ///             Use this method to determine the optimal render resolution before creating
     ///             the upscaler object.
     VIRTUAL void METHOD(GetSourceSettings)(THIS_
-                                           IRenderDevice*                                 pDevice,
                                            const SuperResolutionSourceSettingsAttribs REF Attribs,
                                            SuperResolutionSourceSettings              REF Settings) CONST PURE;
 
 
-     /// Creates a new upscaler object.
+    /// Creates a new upscaler object.
 
-    /// \param [in]  pDevice    - Render device to create the upscaler for.
     /// \param [in]  Desc       - Super resolution upscaler description, see Diligent::SuperResolutionDesc for details.
     /// \param [out] ppUpscaler - Address of the memory location where a pointer to the
     ///                           super resolution upscaler interface will be written.
@@ -279,7 +278,6 @@ DILIGENT_BEGIN_INTERFACE(ISuperResolutionFactory, IObject)
     /// \remarks    On backends that don't support hardware upscaling, the method will
     ///             return nullptr.
     VIRTUAL void METHOD(CreateSuperResolution)(THIS_
-                                               IRenderDevice*                pDevice,
                                                const SuperResolutionDesc REF Desc,
                                                ISuperResolution**            ppUpscaler) PURE;
 
@@ -323,5 +321,13 @@ DILIGENT_END_INTERFACE
 #    define ISuperResolutionFactory_SetMemoryAllocator(This, ...)    CALL_IFACE_METHOD(SuperResolutionFactory, SetMemoryAllocator,    This, __VA_ARGS__)
 
 #endif
+
+/// Creates a super resolution factory for the specified render device.
+
+/// \param [in]  pDevice    - Render device to create the factory for.
+/// \param [out] ppFactory  - Address of the memory location where a pointer to the
+///                           super resolution factory interface will be written.
+void DILIGENT_GLOBAL_FUNCTION(CreateSuperResolutionFactory)(IRenderDevice*            pDevice,
+                                                            ISuperResolutionFactory** ppFactory);
 
 DILIGENT_END_NAMESPACE // namespace Diligent

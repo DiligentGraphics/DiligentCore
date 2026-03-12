@@ -24,12 +24,24 @@
  *  of the possibility of such damages.
  */
 
-#include "DiligentCore/Graphics/SuperResolution/interface/SuperResolutionFactory.h"
+#pragma once
 
-void TestSuperResolutionFactory_CInterface(ISuperResolutionFactory* pSuperResolutionFactory)
+#include "SuperResolutionFactory.h"
+
+#include <array>
+#include <vector>
+
+namespace Diligent
 {
-    ISuperResolutionFactory_EnumerateVariants(pSuperResolutionFactory, (Uint32*)NULL, (SuperResolutionInfo*)NULL);
-    ISuperResolutionFactory_GetSourceSettings(pSuperResolutionFactory, (const SuperResolutionSourceSettingsAttribs*)NULL, (SuperResolutionSourceSettings*)NULL);
-    ISuperResolutionFactory_CreateSuperResolution(pSuperResolutionFactory, (const SuperResolutionDesc*)NULL, (ISuperResolution**)NULL);
-    ISuperResolutionFactory_SetMessageCallback(pSuperResolutionFactory, (DebugMessageCallbackType)NULL);
-}
+
+enum SUPER_RESOLUTION_BACKEND : Uint8
+{
+    SUPER_RESOLUTION_BACKEND_D3D12_DSR,
+    SUPER_RESOLUTION_BACKEND_METAL_FX,
+    SUPER_RESOLUTION_BACKEND_SOFTWARE,
+    SUPER_RESOLUTION_BACKEND_COUNT
+};
+
+using SuperResolutionVariants = std::array<std::vector<SuperResolutionInfo>, SUPER_RESOLUTION_BACKEND_COUNT>;
+
+} // namespace Diligent

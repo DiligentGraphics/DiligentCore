@@ -44,41 +44,45 @@
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-typedef struct ISuperResolutionFactory* (*GetSuperResolutionFactoryType)();
+typedef void (*CreateSuperResolutionFactoryType)(IRenderDevice* pDevice, ISuperResolutionFactory** ppFactory);
 
 #if DILIGENT_SUPER_RESOLUTION_EXPLICIT_LOAD
 
-inline GetSuperResolutionFactoryType DILIGENT_GLOBAL_FUNCTION(LoadSuperResolutionFactory)()
+inline CreateSuperResolutionFactoryType DILIGENT_GLOBAL_FUNCTION(LoadSuperResolutionFactory)()
 {
-    static GetSuperResolutionFactoryType GetFactoryFunc = NULL;
-    if (GetFactoryFunc == NULL)
+    static CreateSuperResolutionFactoryType CreateFactoryFunc = NULL;
+    if (CreateFactoryFunc == NULL)
     {
-        GetFactoryFunc = (GetSuperResolutionFactoryType)LoadEngineDll("SuperResolution", "GetSuperResolutionFactory");
+        CreateFactoryFunc = (CreateSuperResolutionFactoryType)LoadEngineDll("SuperResolution", "CreateSuperResolutionFactory");
     }
-    return GetFactoryFunc;
+    return CreateFactoryFunc;
 }
 
 #else
 
 API_QUALIFIER
-struct ISuperResolutionFactory* DILIGENT_GLOBAL_FUNCTION(GetSuperResolutionFactory)();
+void DILIGENT_GLOBAL_FUNCTION(CreateSuperResolutionFactory)(IRenderDevice*            pDevice,
+                                                            ISuperResolutionFactory** ppFactory);
 
 #endif
 
-/// Loads the SuperResolution implementation DLL if necessary and returns the SuperResolution factory.
-inline struct ISuperResolutionFactory* DILIGENT_GLOBAL_FUNCTION(LoadAndGetSuperResolutionFactory)()
+/// Loads the SuperResolution implementation DLL if necessary and creates a SuperResolution factory
+/// for the specified render device.
+inline void DILIGENT_GLOBAL_FUNCTION(LoadAndCreateSuperResolutionFactory)(IRenderDevice*            pDevice,
+                                                                          ISuperResolutionFactory** ppFactory)
 {
-    GetSuperResolutionFactoryType GetFactoryFunc = NULL;
+    CreateSuperResolutionFactoryType CreateFactoryFunc = NULL;
 #if DILIGENT_SUPER_RESOLUTION_EXPLICIT_LOAD
-    GetFactoryFunc = DILIGENT_GLOBAL_FUNCTION(LoadSuperResolutionFactory)();
-    if (GetFactoryFunc == NULL)
+    CreateFactoryFunc = DILIGENT_GLOBAL_FUNCTION(LoadSuperResolutionFactory)();
+    if (CreateFactoryFunc == NULL)
     {
-        return NULL;
+        *ppFactory = NULL;
+        return;
     }
 #else
-    GetFactoryFunc = DILIGENT_GLOBAL_FUNCTION(GetSuperResolutionFactory);
+    CreateFactoryFunc = DILIGENT_GLOBAL_FUNCTION(CreateSuperResolutionFactory);
 #endif
-    return GetFactoryFunc();
+    CreateFactoryFunc(pDevice, ppFactory);
 }
 
 DILIGENT_END_NAMESPACE // namespace Diligent
