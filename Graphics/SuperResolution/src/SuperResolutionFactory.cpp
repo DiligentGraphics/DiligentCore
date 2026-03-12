@@ -33,6 +33,10 @@
 #include "DebugUtilities.hpp"
 #include "SuperResolutionInternal.hpp"
 
+#if D3D12_SUPPORTED
+#    include "SuperResolution_D3D12.hpp"
+#endif
+
 namespace Diligent
 {
 
@@ -68,6 +72,10 @@ private:
 
     RefCntAutoPtr<IRenderDevice> m_pDevice;
     SuperResolutionVariants      m_Variants{};
+
+#if D3D12_SUPPORTED
+    CComPtr<IDSRDevice> m_pDSRDevice;
+#endif
 };
 
 
@@ -75,11 +83,20 @@ SuperResolutionFactoryImpl::SuperResolutionFactoryImpl(IReferenceCounters* pRefC
     TBase{pRefCounters},
     m_pDevice{pDevice}
 {
+#if D3D12_SUPPORTED
+    if (m_pDevice != nullptr && m_pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D12)
+        m_pDSRDevice = CreateDSRDeviceD3D12(m_pDevice);
+#endif
+
     PopulateVariants();
 }
 
 void SuperResolutionFactoryImpl::PopulateVariants()
 {
+#if D3D12_SUPPORTED
+    if (m_pDSRDevice)
+        EnumerateVariantsD3D12(m_pDSRDevice, m_Variants[SUPER_RESOLUTION_BACKEND_D3D12_DSR]);
+#endif
 }
 
 SUPER_RESOLUTION_BACKEND SuperResolutionFactoryImpl::FindVariant(const INTERFACE_ID& VariantId) const
@@ -133,6 +150,11 @@ void SuperResolutionFactoryImpl::GetSourceSettings(const SuperResolutionSourceSe
 
     switch (Backend)
     {
+#if D3D12_SUPPORTED
+        case SUPER_RESOLUTION_BACKEND_D3D12_DSR:
+            GetSourceSettingsD3D12(m_pDSRDevice, Attribs, Settings);
+            break;
+#endif
         default:
             LOG_WARNING_MESSAGE("Unknown super resolution backend");
             break;
@@ -158,6 +180,11 @@ void SuperResolutionFactoryImpl::CreateSuperResolution(const SuperResolutionDesc
     {
         switch (Backend)
         {
+#if D3D12_SUPPORTED
+            case SUPER_RESOLUTION_BACKEND_D3D12_DSR:
+                CreateSuperResolutionD3D12(m_pDevice, m_pDSRDevice, Desc, ppUpscaler);
+                break;
+#endif
             default:
                 LOG_ERROR_MESSAGE("Unknown super resolution backend");
                 break;

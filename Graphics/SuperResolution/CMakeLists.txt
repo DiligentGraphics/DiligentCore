@@ -4,6 +4,18 @@ include(../../BuildTools/CMake/BuildUtils.cmake)
 
 project(Diligent-SuperResolution CXX)
 
+if(D3D12_SUPPORTED)
+    # Fetch DirectSR headers
+    FetchContent_DeclareShallowGit(DirectSR-Headers
+        GIT_REPOSITORY https://github.com/MikhailGorobets/DirectSR-Headers.git
+        GIT_TAG        dev
+    )
+    FetchContent_MakeAvailable(DirectSR-Headers)
+    if(TARGET DirectSR-AgilitySDK)
+        set_target_properties(DirectSR-AgilitySDK PROPERTIES FOLDER DiligentCore/ThirdParty)
+    endif()
+endif()
+
 set(INCLUDE
     include/SuperResolutionBase.hpp
     include/SuperResolutionInternal.hpp
@@ -20,6 +32,7 @@ set(SOURCE
 )
 
 if(D3D12_SUPPORTED)
+    list(APPEND INCLUDE include/SuperResolution_D3D12.hpp)
     list(APPEND SOURCE src/SuperResolution_D3D12.cpp)
 endif()
 
@@ -66,7 +79,7 @@ PRIVATE
 )
 
 if(D3D12_SUPPORTED)
-    target_link_libraries(Diligent-SuperResolution-static PRIVATE Diligent-GraphicsEngineD3D12-static)
+    target_link_libraries(Diligent-SuperResolution-static PRIVATE Diligent-GraphicsEngineD3D12-static DirectSR-Headers)
     target_include_directories(Diligent-SuperResolution-static PRIVATE ../GraphicsEngineD3D12/include)
 endif()
 
