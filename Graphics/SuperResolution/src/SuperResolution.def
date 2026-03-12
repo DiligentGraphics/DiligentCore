@@ -1,2 +1,2 @@
 EXPORTS
-	 GetSuperResolutionFactory=Diligent_GetSuperResolutionFactory
+    CreateSuperResolutionFactory=Diligent_CreateSuperResolutionFactory

@@ -28,6 +28,7 @@
 
 void TestSuperResolution_CInterface(ISuperResolution* pUpscaler)
 {
+    ISuperResolution_GetDesc(pUpscaler);
     ISuperResolution_GetJitterOffset(pUpscaler, 0, (float*)NULL, (float*)NULL);
     ISuperResolution_Execute(pUpscaler, (const ExecuteSuperResolutionAttribs*)NULL);
 }
