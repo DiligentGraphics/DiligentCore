@@ -56,4 +56,7 @@ if(ARCHIVER_SUPPORTED)
 endif()
 
 add_subdirectory(GraphicsTools)
-add_subdirectory(SuperResolution)
+
+if(SUPER_RESOLUTION_SUPPORTED)
+    add_subdirectory(SuperResolution)
+endif()
