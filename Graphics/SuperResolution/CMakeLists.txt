@@ -83,6 +83,12 @@ if(D3D12_SUPPORTED)
     target_include_directories(Diligent-SuperResolution-static PRIVATE ../GraphicsEngineD3D12/include)
 endif()
 
+if(METAL_SUPPORTED)
+    target_include_directories(Diligent-SuperResolution-static PRIVATE
+        ${CMAKE_SOURCE_DIR}/DiligentCorePro/Graphics/SuperResolution/include
+    )
+endif()
+
 target_link_libraries(Diligent-SuperResolution-shared
 PUBLIC
     Diligent-SuperResolutionInterface

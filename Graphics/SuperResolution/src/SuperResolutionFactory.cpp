@@ -37,6 +37,10 @@
 #    include "SuperResolution_D3D12.hpp"
 #endif
 
+#if METAL_SUPPORTED
+#    include "SuperResolution_Metal.hpp"
+#endif
+
 namespace Diligent
 {
 
@@ -97,6 +101,11 @@ void SuperResolutionFactoryImpl::PopulateVariants()
     if (m_pDSRDevice)
         EnumerateVariantsD3D12(m_pDSRDevice, m_Variants[SUPER_RESOLUTION_BACKEND_D3D12_DSR]);
 #endif
+
+#if METAL_SUPPORTED
+    if (m_pDevice != nullptr && m_pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_METAL)
+        EnumerateVariantsMetal(m_pDevice, m_Variants[SUPER_RESOLUTION_BACKEND_METAL_FX]);
+#endif
 }
 
 SUPER_RESOLUTION_BACKEND SuperResolutionFactoryImpl::FindVariant(const INTERFACE_ID& VariantId) const
@@ -155,6 +164,11 @@ void SuperResolutionFactoryImpl::GetSourceSettings(const SuperResolutionSourceSe
             GetSourceSettingsD3D12(m_pDSRDevice, Attribs, Settings);
             break;
 #endif
+#if METAL_SUPPORTED
+        case SUPER_RESOLUTION_BACKEND_METAL_FX:
+            GetSourceSettingsMetal(Attribs, Settings);
+            break;
+#endif
         default:
             LOG_WARNING_MESSAGE("Unknown super resolution backend");
             break;
@@ -183,6 +197,11 @@ void SuperResolutionFactoryImpl::CreateSuperResolution(const SuperResolutionDesc
 #if D3D12_SUPPORTED
             case SUPER_RESOLUTION_BACKEND_D3D12_DSR:
                 CreateSuperResolutionD3D12(m_pDevice, m_pDSRDevice, Desc, ppUpscaler);
+                break;
+#endif
+#if METAL_SUPPORTED
+            case SUPER_RESOLUTION_BACKEND_METAL_FX:
+                CreateSuperResolutionMetal(m_pDevice, Desc, ppUpscaler);
                 break;
 #endif
             default:
