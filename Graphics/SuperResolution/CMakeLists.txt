@@ -1,10 +1,24 @@
-cmake_minimum_required (VERSION 3.10)
+cmake_minimum_required (VERSION 3.11)
 
 include(../../BuildTools/CMake/BuildUtils.cmake)
 
 project(Diligent-SuperResolution CXX)
 
+if(D3D12_SUPPORTED)
+    # Fetch DirectSR headers
+    FetchContent_DeclareShallowGit(DirectSR-Headers
+        GIT_REPOSITORY https://github.com/MikhailGorobets/DirectSR-Headers.git
+        GIT_TAG        dev
+    )
+    FetchContent_MakeAvailable(DirectSR-Headers)
+    if(TARGET DirectSR-AgilitySDK)
+        set_target_properties(DirectSR-AgilitySDK PROPERTIES FOLDER DiligentCore/ThirdParty)
+    endif()
+endif()
+
 set(INCLUDE
+    include/SuperResolutionBase.hpp
+    include/SuperResolutionInternal.hpp
 )
 
 set(INTERFACE
@@ -18,6 +32,7 @@ set(SOURCE
 )
 
 if(D3D12_SUPPORTED)
+    list(APPEND INCLUDE include/SuperResolution_D3D12.hpp)
     list(APPEND SOURCE src/SuperResolution_D3D12.cpp)
 endif()
 
@@ -29,6 +44,7 @@ set(DLL_SOURCE
 add_library(Diligent-SuperResolutionInterface INTERFACE)
 target_link_libraries     (Diligent-SuperResolutionInterface INTERFACE Diligent-GraphicsEngineInterface)
 target_include_directories(Diligent-SuperResolutionInterface INTERFACE interface)
+target_compile_definitions(Diligent-SuperResolutionInterface INTERFACE SUPER_RESOLUTION_SUPPORTED=1)
 
 add_library(Diligent-SuperResolution-static STATIC
     ${SOURCE} ${INTERFACE} ${INCLUDE}
@@ -45,10 +61,12 @@ endif()
 target_include_directories(Diligent-SuperResolution-static
 PRIVATE
     include
+    ../GraphicsEngine/include
+    ../GraphicsEngineD3DBase/include
+    ../GraphicsEngineNextGenBase/include
 )
 
 target_compile_definitions(Diligent-SuperResolution-shared PUBLIC DILIGENT_SUPER_RESOLUTION_SHARED=1)
-
 
 target_link_libraries(Diligent-SuperResolution-static
 PUBLIC
@@ -56,11 +74,19 @@ PUBLIC
 PRIVATE
     Diligent-BuildSettings
     Diligent-Common
+    Diligent-GraphicsAccessories
+    Diligent-ShaderTools
 )
 
 if(D3D12_SUPPORTED)
-    target_link_libraries(Diligent-SuperResolution-static PRIVATE Diligent-GraphicsEngineD3D12-static)
+    target_link_libraries(Diligent-SuperResolution-static PRIVATE Diligent-GraphicsEngineD3D12-static DirectSR-Headers)
     target_include_directories(Diligent-SuperResolution-static PRIVATE ../GraphicsEngineD3D12/include)
+endif()
+
+if(METAL_SUPPORTED)
+    target_include_directories(Diligent-SuperResolution-static PRIVATE
+        ${CMAKE_SOURCE_DIR}/DiligentCorePro/Graphics/SuperResolution/include
+    )
 endif()
 
 target_link_libraries(Diligent-SuperResolution-shared
@@ -86,7 +112,7 @@ endif()
 if (MINGW_BUILD)
     # Restrict export to GetSuperResolutionFactory
     file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/export.map
-        "{ global: *GetSuperResolutionFactory*; local: *; };"
+        "{ global: *CreateSuperResolutionFactory*; local: *; };"
     )
     target_link_options(Diligent-SuperResolution-shared PRIVATE LINKER:--version-script=export.map)
 endif()

@@ -24,12 +24,28 @@
  *  of the possibility of such damages.
  */
 
-#include "DiligentCore/Graphics/SuperResolution/interface/SuperResolutionFactory.h"
+#pragma once
 
-void TestSuperResolutionFactory_CInterface(ISuperResolutionFactory* pSuperResolutionFactory)
+#include "SuperResolutionInternal.hpp"
+
+#include "../../GraphicsEngineD3D12/include/pch.h"
+#include <directsr.h>
+
+namespace Diligent
 {
-    ISuperResolutionFactory_EnumerateVariants(pSuperResolutionFactory, (Uint32*)NULL, (SuperResolutionInfo*)NULL);
-    ISuperResolutionFactory_GetSourceSettings(pSuperResolutionFactory, (const SuperResolutionSourceSettingsAttribs*)NULL, (SuperResolutionSourceSettings*)NULL);
-    ISuperResolutionFactory_CreateSuperResolution(pSuperResolutionFactory, (const SuperResolutionDesc*)NULL, (ISuperResolution**)NULL);
-    ISuperResolutionFactory_SetMessageCallback(pSuperResolutionFactory, (DebugMessageCallbackType)NULL);
-}
+
+CComPtr<IDSRDevice> CreateDSRDeviceD3D12(IRenderDevice* pDevice);
+
+void EnumerateVariantsD3D12(IDSRDevice*                       pDSRDevice,
+                            std::vector<SuperResolutionInfo>& Variants);
+
+void GetSourceSettingsD3D12(IDSRDevice*                                 pDSRDevice,
+                            const SuperResolutionSourceSettingsAttribs& Attribs,
+                            SuperResolutionSourceSettings&              Settings);
+
+void CreateSuperResolutionD3D12(IRenderDevice*             pDevice,
+                                IDSRDevice*                pDSRDevice,
+                                const SuperResolutionDesc& Desc,
+                                ISuperResolution**         ppUpscaler);
+
+} // namespace Diligent
