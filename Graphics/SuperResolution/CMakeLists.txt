@@ -6,7 +6,7 @@ project(Diligent-SuperResolution CXX)
 
 set(INCLUDE
     include/SuperResolutionBase.hpp
-    include/SuperResolutionInternal.hpp
+    include/SuperResolutionFactoryBase.hpp
 )
 
 set(INTERFACE
@@ -16,11 +16,15 @@ set(INTERFACE
 )
 
 set(SOURCE
-    src/SuperResolutionFactory.cpp
+    src/SuperResolutionFactoryBase.cpp
 )
 
 if(D3D12_SUPPORTED)
-    list(APPEND SOURCE src/SuperResolution_D3D12.cpp)
+    list(APPEND
+    SOURCE
+        src/SuperResolution_D3D12.cpp
+        src/SuperResolutionFactoryD3D12.cpp
+    )
 endif()
 
 set(DLL_SOURCE
