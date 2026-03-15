@@ -27,21 +27,34 @@
 #pragma once
 
 #include "SuperResolutionFactory.h"
+#include "ObjectBase.hpp"
+#include "RefCntAutoPtr.hpp"
 
-#include <array>
 #include <vector>
 
 namespace Diligent
 {
 
-enum SUPER_RESOLUTION_BACKEND : Uint8
+class SuperResolutionFactoryBase : public ObjectBase<ISuperResolutionFactory>
 {
-    SUPER_RESOLUTION_BACKEND_D3D12_DSR,
-    SUPER_RESOLUTION_BACKEND_METAL_FX,
-    SUPER_RESOLUTION_BACKEND_SOFTWARE,
-    SUPER_RESOLUTION_BACKEND_COUNT
-};
+public:
+    using TBase = ObjectBase<ISuperResolutionFactory>;
 
-using SuperResolutionVariants = std::array<std::vector<SuperResolutionInfo>, SUPER_RESOLUTION_BACKEND_COUNT>;
+    SuperResolutionFactoryBase(IReferenceCounters* pRefCounters, IRenderDevice* pDevice);
+
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_SuperResolutionFactory, TBase)
+
+    virtual void DILIGENT_CALL_TYPE EnumerateVariants(Uint32& NumVariants, SuperResolutionInfo* Variants) override final;
+
+    virtual void DILIGENT_CALL_TYPE SetMessageCallback(DebugMessageCallbackType MessageCallback) const override final;
+
+    virtual void DILIGENT_CALL_TYPE SetBreakOnError(bool BreakOnError) const override final;
+
+    virtual void DILIGENT_CALL_TYPE SetMemoryAllocator(IMemoryAllocator* pAllocator) const override final;
+
+private:
+    RefCntAutoPtr<IRenderDevice>     m_pDevice;
+    std::vector<SuperResolutionInfo> m_Variants{};
+};
 
 } // namespace Diligent
