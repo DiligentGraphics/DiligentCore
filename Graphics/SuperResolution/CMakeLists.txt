@@ -22,7 +22,7 @@ set(SOURCE
 if(D3D12_SUPPORTED)
     list(APPEND
     SOURCE
-        src/SuperResolution_D3D12.cpp
+        src/SuperResolutionD3D12.cpp
         src/SuperResolutionFactoryD3D12.cpp
     )
 endif()
