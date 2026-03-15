@@ -38,6 +38,10 @@ namespace Diligent
 void CreateSuperResolutionFactoryD3D12(IRenderDevice* pDevice, ISuperResolutionFactory** ppFactory);
 #endif
 
+#if METAL_SUPPORTED
+void CreateSuperResolutionFactoryMtl(IRenderDevice* pDevice, ISuperResolutionFactory** ppFactory);
+#endif
+
 SuperResolutionFactoryBase::SuperResolutionFactoryBase(IReferenceCounters* pRefCounters, IRenderDevice* pDevice) :
     TBase{pRefCounters},
     m_pDevice{pDevice}
@@ -96,6 +100,12 @@ API_QUALIFIER void CreateSuperResolutionFactory(IRenderDevice* pDevice, ISuperRe
             case RENDER_DEVICE_TYPE_D3D12:
 #if D3D12_SUPPORTED
                 CreateSuperResolutionFactoryD3D12(pDevice, ppFactory);
+#endif
+                break;
+
+            case RENDER_DEVICE_TYPE_METAL:
+#if METAL_SUPPORTED
+                CreateSuperResolutionFactoryMtl(pDevice, ppFactory);
 #endif
                 break;
 
