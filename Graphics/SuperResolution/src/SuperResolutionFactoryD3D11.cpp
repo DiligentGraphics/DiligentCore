@@ -25,27 +25,25 @@
  */
 
 #include "SuperResolutionFactoryBase.hpp"
-#include "DLSSProviderD3D12.hpp"
-#include "DSRProviderD3D12.hpp"
+#include "DLSSProviderD3D11.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent
 {
 
-class SuperResolutionFactoryD3D12 final : public SuperResolutionFactoryBase
+class SuperResolutionFactoryD3D11 final : public SuperResolutionFactoryBase
 {
 public:
-    SuperResolutionFactoryD3D12(IReferenceCounters* pRefCounters, IRenderDevice* pDevice) :
+    SuperResolutionFactoryD3D11(IReferenceCounters* pRefCounters, IRenderDevice* pDevice) :
         SuperResolutionFactoryBase(pRefCounters)
     {
-        AddBackend<DLSSProviderD3D12>(pDevice);
-        AddBackend<DSRProviderD3D12>(pDevice);
+        AddBackend<DLSSProviderD3D11>(pDevice);
     }
 };
 
-void CreateSuperResolutionFactoryD3D12(IRenderDevice* pDevice, ISuperResolutionFactory** ppFactory)
+void CreateSuperResolutionFactoryD3D11(IRenderDevice* pDevice, ISuperResolutionFactory** ppFactory)
 {
-    auto* pFactory = NEW_RC_OBJ(GetRawAllocator(), "SuperResolutionFactoryD3D12 instance", SuperResolutionFactoryD3D12)(pDevice);
+    auto* pFactory = NEW_RC_OBJ(GetRawAllocator(), "SuperResolutionFactoryD3D11 instance", SuperResolutionFactoryD3D11)(pDevice);
     pFactory->QueryInterface(IID_SuperResolutionFactory, reinterpret_cast<IObject**>(ppFactory));
 }
 

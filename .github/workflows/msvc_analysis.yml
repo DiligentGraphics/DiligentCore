@@ -11,7 +11,7 @@ jobs:
             platform:        "Win32"
             toolset:         "x64"
             build_type:      "Debug"
-            cmake_args:      "-DDILIGENT_NO_GLSLANG=ON -DDILIGENT_NO_HLSL=ON"
+            cmake_args:      "-DDILIGENT_NO_GLSLANG=ON -DDILIGENT_NO_HLSL=ON -DDILIGENT_NO_DLSS=ON -DDILIGENT_NO_DSR=ON"
             cmake_generator: "Visual Studio 17 2022"
 
     runs-on: windows-2022

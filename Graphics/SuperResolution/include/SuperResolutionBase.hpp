@@ -26,8 +26,10 @@
 
 #pragma once
 
-#include "SuperResolution.h"
 #include "ObjectBase.hpp"
+#include "SuperResolution.h"
+#include "SuperResolutionFactory.h"
+#include "GraphicsAccessories.hpp"
 
 #include <vector>
 #include <string>
@@ -35,18 +37,55 @@
 namespace Diligent
 {
 
+#define LOG_SUPER_RESOLUTION_ERROR_AND_THROW(Name, ...) LOG_ERROR_AND_THROW("Super resolution upscaler '", ((Name) != nullptr ? (Name) : ""), "': ", ##__VA_ARGS__)
+
+#define VERIFY_SUPER_RESOLUTION(Name, Expr, ...)                     \
+    do                                                               \
+    {                                                                \
+        if (!(Expr))                                                 \
+        {                                                            \
+            LOG_SUPER_RESOLUTION_ERROR_AND_THROW(Name, __VA_ARGS__); \
+        }                                                            \
+    } while (false)
+
+/// Validates super resolution description and throws an exception in case of an error.
+void ValidateSuperResolutionDesc(const SuperResolutionDesc& Desc) noexcept(false);
+
+/// Validates super resolution description for temporal upscaling and throws an exception in case of an error.
+void ValidateTemporalSuperResolutionDesc(const SuperResolutionDesc& Desc) noexcept(false);
+
+/// Validates super resolution source settings attributes and throws an exception in case of an error.
+void ValidateSourceSettingsAttribs(const SuperResolutionSourceSettingsAttribs& Attribs) noexcept(false);
+
+/// Validates execute super resolution attributes and throws an exception in case of an error.
+void ValidateExecuteSuperResolutionAttribs(const SuperResolutionDesc&           Desc,
+                                           const ExecuteSuperResolutionAttribs& Attribs) noexcept(false);
+
+/// Validates execute super resolution attributes for temporal upscaling and throws an exception in case of an error.
+void ValidateTemporalExecuteSuperResolutionAttribs(const SuperResolutionDesc&           Desc,
+                                                   const ExecuteSuperResolutionAttribs& Attribs) noexcept(false);
+
 class SuperResolutionBase : public ObjectBase<ISuperResolution>
 {
 public:
     using TBase = ObjectBase<ISuperResolution>;
 
+    struct JitterOffset
+    {
+        float X = 0.0f;
+        float Y = 0.0f;
+    };
+
     SuperResolutionBase(IReferenceCounters*        pRefCounters,
                         const SuperResolutionDesc& Desc) :
         TBase{pRefCounters},
-        m_Name{Desc.Name != nullptr ? Desc.Name : ""},
         m_Desc{Desc}
     {
-        m_Desc.Name = m_Name.c_str();
+        if (Desc.Name != nullptr)
+        {
+            m_Name      = Desc.Name;
+            m_Desc.Name = m_Name.c_str();
+        }
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_SuperResolution, TBase)
@@ -72,15 +111,12 @@ public:
     }
 
 protected:
-    struct JitterOffset
-    {
-        float X = 0.0f;
-        float Y = 0.0f;
-    };
-
-    const std::string         m_Name;
     SuperResolutionDesc       m_Desc;
+    std::string               m_Name;
     std::vector<JitterOffset> m_JitterPattern;
 };
+
+/// Populates a Halton(2,3) jitter pattern centered at origin.
+void PopulateHaltonJitterPattern(std::vector<SuperResolutionBase::JitterOffset>& JitterPattern, Uint32 PatternSize);
 
 } // namespace Diligent

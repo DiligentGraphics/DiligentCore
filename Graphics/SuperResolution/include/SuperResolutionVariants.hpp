@@ -24,9 +24,26 @@
  *  of the possibility of such damages.
  */
 
-#include "SuperResolution.h"
+#pragma once
+
+/// \file
+/// Super resolution upscaler variant IDs
+
+#include "InterfaceID.h"
 
 namespace Diligent
 {
+
+// {7B3A8D2E-1F4C-4E9A-B5D0-6C8E2F1A3B5D}
+static constexpr INTERFACE_ID VariantId_DLSS =
+    {0x7b3a8d2e, 0x1f4c, 0x4e9a, {0xb5, 0xd0, 0x6c, 0x8e, 0x2f, 0x1a, 0x3b, 0x5d}};
+
+// {C4D70001-A1B2-4C3D-8E9F-0A1B2C3D4E5F}
+static constexpr INTERFACE_ID VariantId_MetalFXSpatial =
+    {0xc4d70001, 0xa1b2, 0x4c3d, {0x8e, 0x9f, 0x0a, 0x1b, 0x2c, 0x3d, 0x4e, 0x5f}};
+
+// {C4D70002-A1B2-4C3D-8E9F-0A1B2C3D4E5F}
+static constexpr INTERFACE_ID VariantId_MetalFXTemporal =
+    {0xc4d70002, 0xa1b2, 0x4c3d, {0x8e, 0x9f, 0x0a, 0x1b, 0x2c, 0x3d, 0x4e, 0x5f}};
 
 } // namespace Diligent
