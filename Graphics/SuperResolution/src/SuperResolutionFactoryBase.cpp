@@ -25,39 +25,93 @@
  */
 
 #include "SuperResolutionFactoryBase.hpp"
-
-#include "SuperResolutionFactoryLoader.h"
-
-#include "PlatformDebug.hpp"
 #include "EngineMemory.h"
+#include "PlatformDebug.hpp"
+#include "DebugUtilities.hpp"
 
 namespace Diligent
 {
 
-#if D3D12_SUPPORTED
-void CreateSuperResolutionFactoryD3D12(IRenderDevice* pDevice, ISuperResolutionFactory** ppFactory);
-#endif
-
-#if METAL_SUPPORTED
-void CreateSuperResolutionFactoryMtl(IRenderDevice* pDevice, ISuperResolutionFactory** ppFactory);
-#endif
-
-SuperResolutionFactoryBase::SuperResolutionFactoryBase(IReferenceCounters* pRefCounters, IRenderDevice* pDevice) :
-    TBase{pRefCounters},
-    m_pDevice{pDevice}
+SuperResolutionFactoryBase::SuperResolutionFactoryBase(IReferenceCounters* pRefCounters) :
+    TBase{pRefCounters}
 {
+}
+
+BackendEntry* SuperResolutionFactoryBase::FindBackend(const INTERFACE_ID& VariantId) const
+{
+    for (const BackendEntry& Entry : m_Backends)
+    {
+        for (const SuperResolutionInfo& Info : Entry.Variants)
+        {
+            if (Info.VariantId == VariantId)
+                return const_cast<BackendEntry*>(&Entry);
+        }
+    }
+    return nullptr;
 }
 
 void SuperResolutionFactoryBase::EnumerateVariants(Uint32& NumVariants, SuperResolutionInfo* Variants)
 {
+    Uint32 Count = 0;
+    for (const BackendEntry& Entry : m_Backends)
+        Count += static_cast<Uint32>(Entry.Variants.size());
+
     if (Variants == nullptr)
     {
-        NumVariants = static_cast<Uint32>(m_Variants.size());
+        NumVariants = Count;
         return;
     }
 
-    NumVariants = std::min(NumVariants, static_cast<Uint32>(m_Variants.size()));
-    memcpy(Variants, m_Variants.data(), NumVariants * sizeof(SuperResolutionInfo));
+    const Uint32 MaxVariants = NumVariants;
+    NumVariants              = 0;
+    for (const BackendEntry& Entry : m_Backends)
+    {
+        for (const SuperResolutionInfo& Info : Entry.Variants)
+        {
+            if (NumVariants >= MaxVariants)
+                return;
+            Variants[NumVariants++] = Info;
+        }
+    }
+}
+
+void SuperResolutionFactoryBase::GetSourceSettings(const SuperResolutionSourceSettingsAttribs& Attribs, SuperResolutionSourceSettings& Settings) const
+{
+    Settings = {};
+
+    BackendEntry* pEntry = FindBackend(Attribs.VariantId);
+    if (pEntry == nullptr)
+    {
+        LOG_WARNING_MESSAGE("Super resolution variant not found for the specified VariantId");
+        return;
+    }
+
+    pEntry->pBackend->GetSourceSettings(Attribs, Settings);
+}
+
+void SuperResolutionFactoryBase::CreateSuperResolution(const SuperResolutionDesc& Desc, ISuperResolution** ppUpscaler)
+{
+    DEV_CHECK_ERR(ppUpscaler != nullptr, "ppUpscaler must not be null");
+    if (ppUpscaler == nullptr)
+        return;
+
+    *ppUpscaler = nullptr;
+
+    BackendEntry* pEntry = FindBackend(Desc.VariantId);
+    if (pEntry == nullptr)
+    {
+        LOG_ERROR_MESSAGE("Super resolution variant not found for the specified VariantId. Call EnumerateVariants() to get valid variant IDs.");
+        return;
+    }
+
+    try
+    {
+        pEntry->pBackend->CreateSuperResolution(Desc, ppUpscaler);
+    }
+    catch (...)
+    {
+        LOG_ERROR("Failed to create super resolution upscaler '", (Desc.Name ? Desc.Name : ""), "'");
+    }
 }
 
 void SuperResolutionFactoryBase::SetMessageCallback(DebugMessageCallbackType MessageCallback) const
@@ -75,58 +129,4 @@ void SuperResolutionFactoryBase::SetMemoryAllocator(IMemoryAllocator* pAllocator
     SetRawAllocator(pAllocator);
 }
 
-
-API_QUALIFIER void CreateSuperResolutionFactory(IRenderDevice* pDevice, ISuperResolutionFactory** ppFactory)
-{
-    if (ppFactory == nullptr)
-    {
-        DEV_ERROR("ppFactory must not be null");
-        return;
-    }
-    DEV_CHECK_ERR(*ppFactory == nullptr, "ppFactory is not null. Overwriting it may cause memory leak");
-
-    *ppFactory = nullptr;
-    if (pDevice == nullptr)
-    {
-        DEV_ERROR("pDevice must not be null");
-        return;
-    }
-
-    RENDER_DEVICE_TYPE DeviceType = pDevice->GetDeviceInfo().Type;
-    try
-    {
-        switch (DeviceType)
-        {
-            case RENDER_DEVICE_TYPE_D3D12:
-#if D3D12_SUPPORTED
-                CreateSuperResolutionFactoryD3D12(pDevice, ppFactory);
-#endif
-                break;
-
-            case RENDER_DEVICE_TYPE_METAL:
-#if METAL_SUPPORTED
-                CreateSuperResolutionFactoryMtl(pDevice, ppFactory);
-#endif
-                break;
-
-            default:
-                LOG_ERROR_MESSAGE("Super resolution is not supported on this device type: ", DeviceType);
-        }
-    }
-    catch (...)
-    {
-        LOG_ERROR("Failed to create super resolution factory");
-    }
-}
-
 } // namespace Diligent
-
-extern "C"
-{
-    API_QUALIFIER
-    void Diligent_CreateSuperResolutionFactory(Diligent::IRenderDevice*            pDevice,
-                                               Diligent::ISuperResolutionFactory** ppFactory)
-    {
-        Diligent::CreateSuperResolutionFactory(pDevice, ppFactory);
-    }
-}

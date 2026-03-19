@@ -24,29 +24,38 @@
  *  of the possibility of such damages.
  */
 
-#include "SuperResolutionFactoryBase.hpp"
-#include "DLSSProviderD3D12.hpp"
-#include "DSRProviderD3D12.hpp"
-#include "EngineMemory.h"
+#pragma once
+
+/// \file
+/// Shared DLSS utilities used by per-API DLSS backend implementations.
+
+#include <vector>
+
+#include <nvsdk_ngx_defs.h>
+
+#include "SuperResolutionFactory.h"
+#include "SuperResolution.h"
+
+struct NVSDK_NGX_Parameter;
 
 namespace Diligent
 {
 
-class SuperResolutionFactoryD3D12 final : public SuperResolutionFactoryBase
-{
-public:
-    SuperResolutionFactoryD3D12(IReferenceCounters* pRefCounters, IRenderDevice* pDevice) :
-        SuperResolutionFactoryBase(pRefCounters)
-    {
-        AddBackend<DLSSProviderD3D12>(pDevice);
-        AddBackend<DSRProviderD3D12>(pDevice);
-    }
-};
+extern const char*    DLSSProjectId;
+extern const wchar_t* DLSSAppDataPath;
 
-void CreateSuperResolutionFactoryD3D12(IRenderDevice* pDevice, ISuperResolutionFactory** ppFactory)
-{
-    auto* pFactory = NEW_RC_OBJ(GetRawAllocator(), "SuperResolutionFactoryD3D12 instance", SuperResolutionFactoryD3D12)(pDevice);
-    pFactory->QueryInterface(IID_SuperResolutionFactory, reinterpret_cast<IObject**>(ppFactory));
-}
+/// Maps Diligent optimization type to NGX performance/quality preset.
+NVSDK_NGX_PerfQuality_Value OptimizationTypeToNGXPerfQuality(SUPER_RESOLUTION_OPTIMIZATION_TYPE Type);
+
+/// Maps Diligent super resolution flags to DLSS feature flags.
+Int32 SuperResolutionFlagsToDLSSFeatureFlags(SUPER_RESOLUTION_FLAGS Flags);
+
+/// Populates DLSS variant info using NGX capability parameters.
+void EnumerateDLSSVariants(NVSDK_NGX_Parameter* pNGXParams, std::vector<SuperResolutionInfo>& Variants);
+
+/// Queries DLSS optimal source settings using NGX capability parameters.
+void GetDLSSSourceSettings(NVSDK_NGX_Parameter*                        pNGXParams,
+                           const SuperResolutionSourceSettingsAttribs& Attribs,
+                           SuperResolutionSourceSettings&              Settings);
 
 } // namespace Diligent

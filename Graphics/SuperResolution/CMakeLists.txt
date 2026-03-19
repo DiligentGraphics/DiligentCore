@@ -4,9 +4,50 @@ include(../../BuildTools/CMake/BuildUtils.cmake)
 
 project(Diligent-SuperResolution CXX)
 
+set(DILIGENT_DLSS_SUPPORTED FALSE CACHE INTERNAL "DLSS is not supported")
+set(DILIGENT_DSR_SUPPORTED  FALSE CACHE INTERNAL "DirectSR is not supported")
+
+if(PLATFORM_WIN32)
+    set(DILIGENT_DLSS_SUPPORTED TRUE CACHE INTERNAL "DLSS is supported on Win32 platform")
+    set(DILIGENT_DSR_SUPPORTED  TRUE CACHE INTERNAL "DirectSR is supported on Win32 platform")
+endif()
+
+if(${DILIGENT_NO_DLSS})
+    set(DILIGENT_DLSS_SUPPORTED FALSE CACHE INTERNAL "DLSS is forcibly disabled")
+endif()
+if(${DILIGENT_NO_DSR})
+    set(DILIGENT_DSR_SUPPORTED FALSE CACHE INTERNAL "DirectSR is forcibly disabled")
+endif()
+
+if(DILIGENT_DSR_SUPPORTED)
+    # Fetch DirectSR headers
+    FetchContent_DeclareShallowGit(DirectSR-Headers
+        GIT_REPOSITORY https://github.com/DiligentGraphics/DirectSR-Headers.git
+        GIT_TAG        master
+    )
+    FetchContent_MakeAvailable(DirectSR-Headers)
+    if(TARGET DirectSR-AgilitySDK)
+        set_target_properties(DirectSR-AgilitySDK PROPERTIES FOLDER DiligentCore/ThirdParty)
+    endif()
+endif()
+
+if(DILIGENT_DLSS_SUPPORTED)
+    # Fetch NVIDIA DLSS SDK headers
+    FetchContent_DeclareShallowGit(DLSS-Headers
+        GIT_REPOSITORY https://github.com/NVIDIA/DLSS.git
+        GIT_TAG        main
+    )
+    FetchContent_MakeAvailable(DLSS-Headers)
+endif()
+
 set(INCLUDE
     include/SuperResolutionBase.hpp
     include/SuperResolutionFactoryBase.hpp
+    include/SuperResolutionVariants.hpp
+    include/DLSSProviderD3D12.hpp
+    include/DLSSProviderD3D11.hpp
+    include/DLSSProviderVk.hpp
+    include/DSRProviderD3D12.hpp
 )
 
 set(INTERFACE
@@ -16,15 +57,22 @@ set(INTERFACE
 )
 
 set(SOURCE
+    src/SuperResolutionBase.cpp
     src/SuperResolutionFactoryBase.cpp
+    src/SuperResolutionFactory.cpp
+    src/SuperResolutionFactoryD3D12.cpp
+    src/SuperResolutionFactoryD3D11.cpp
+    src/SuperResolutionFactoryVk.cpp
+    src/SuperResolutionFactoryMtl.cpp
+    src/DLSSProviderD3D12.cpp
+    src/DLSSProviderD3D11.cpp
+    src/DLSSProviderVk.cpp
+    src/DSRProviderD3D12.cpp
 )
 
-if(D3D12_SUPPORTED)
-    list(APPEND
-    SOURCE
-        src/SuperResolutionD3D12.cpp
-        src/SuperResolutionFactoryD3D12.cpp
-    )
+if(DILIGENT_DLSS_SUPPORTED)
+    list(APPEND INCLUDE include/SuperResolutionDLSS.hpp)
+    list(APPEND SOURCE src/SuperResolutionDLSS.cpp)
 endif()
 
 set(DLL_SOURCE
@@ -57,6 +105,14 @@ PRIVATE
     ../GraphicsEngineNextGenBase/include
 )
 
+if(DILIGENT_DLSS_SUPPORTED)
+    target_compile_definitions(Diligent-SuperResolution-static PRIVATE DILIGENT_DLSS_SUPPORTED=1)
+endif()
+
+if(DILIGENT_DSR_SUPPORTED)
+    target_compile_definitions(Diligent-SuperResolution-static PRIVATE DILIGENT_DSR_SUPPORTED=1)
+endif()
+
 target_compile_definitions(Diligent-SuperResolution-shared PUBLIC DILIGENT_SUPER_RESOLUTION_SHARED=1)
 
 target_link_libraries(Diligent-SuperResolution-static
@@ -69,9 +125,33 @@ PRIVATE
     Diligent-ShaderTools
 )
 
-if(D3D12_SUPPORTED)
-    target_link_libraries(Diligent-SuperResolution-static PRIVATE Diligent-GraphicsEngineD3D12-static)
+if(DILIGENT_DSR_SUPPORTED)
+    target_link_libraries(Diligent-SuperResolution-static PRIVATE Diligent-GraphicsEngineD3D12-static DirectSR-Headers)
     target_include_directories(Diligent-SuperResolution-static PRIVATE ../GraphicsEngineD3D12/include)
+endif()
+
+if(DILIGENT_DLSS_SUPPORTED)
+    set(DLSS_SDK_DIR ${FETCHCONTENT_BASE_DIR}/dlss-headers-src)
+    target_include_directories(Diligent-SuperResolution-static PRIVATE ${DLSS_SDK_DIR}/include)
+
+    # Link NGX static library (dynamic CRT /MD variant)
+    target_link_libraries(Diligent-SuperResolution-static PRIVATE
+        debug     ${DLSS_SDK_DIR}/lib/Windows_x86_64/x64/nvsdk_ngx_d_dbg.lib
+        optimized ${DLSS_SDK_DIR}/lib/Windows_x86_64/x64/nvsdk_ngx_d.lib
+    )
+
+    if(D3D12_SUPPORTED)
+        target_link_libraries(Diligent-SuperResolution-static PRIVATE Diligent-GraphicsEngineD3D12-static)
+        target_include_directories(Diligent-SuperResolution-static PRIVATE ../GraphicsEngineD3D12/include)
+    endif()
+    if(D3D11_SUPPORTED)
+        target_link_libraries(Diligent-SuperResolution-static PRIVATE Diligent-GraphicsEngineD3D11-static)
+        target_include_directories(Diligent-SuperResolution-static PRIVATE ../GraphicsEngineD3D11/include)
+    endif()
+    if(VULKAN_SUPPORTED)
+        target_link_libraries(Diligent-SuperResolution-static PRIVATE Diligent-GraphicsEngineVk-static Vulkan::Headers)
+        target_include_directories(Diligent-SuperResolution-static PRIVATE ../GraphicsEngineVulkan/include)
+    endif()
 endif()
 
 target_link_libraries(Diligent-SuperResolution-shared

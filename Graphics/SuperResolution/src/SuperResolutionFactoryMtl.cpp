@@ -24,29 +24,18 @@
  *  of the possibility of such damages.
  */
 
-#include "SuperResolutionFactoryBase.hpp"
-#include "DLSSProviderD3D12.hpp"
-#include "DSRProviderD3D12.hpp"
-#include "EngineMemory.h"
+#include "SuperResolutionFactory.h"
+
+#if !METAL_SUPPORTED
 
 namespace Diligent
 {
 
-class SuperResolutionFactoryD3D12 final : public SuperResolutionFactoryBase
+void CreateSuperResolutionFactoryMtl(IRenderDevice* /*pDevice*/, ISuperResolutionFactory** ppFactory)
 {
-public:
-    SuperResolutionFactoryD3D12(IReferenceCounters* pRefCounters, IRenderDevice* pDevice) :
-        SuperResolutionFactoryBase(pRefCounters)
-    {
-        AddBackend<DLSSProviderD3D12>(pDevice);
-        AddBackend<DSRProviderD3D12>(pDevice);
-    }
-};
-
-void CreateSuperResolutionFactoryD3D12(IRenderDevice* pDevice, ISuperResolutionFactory** ppFactory)
-{
-    auto* pFactory = NEW_RC_OBJ(GetRawAllocator(), "SuperResolutionFactoryD3D12 instance", SuperResolutionFactoryD3D12)(pDevice);
-    pFactory->QueryInterface(IID_SuperResolutionFactory, reinterpret_cast<IObject**>(ppFactory));
+    *ppFactory = nullptr;
 }
 
 } // namespace Diligent
+
+#endif
