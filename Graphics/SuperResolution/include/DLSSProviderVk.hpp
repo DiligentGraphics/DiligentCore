@@ -24,29 +24,35 @@
  *  of the possibility of such damages.
  */
 
-#include "SuperResolutionFactoryBase.hpp"
-#include "DLSSProviderD3D12.hpp"
-#include "DSRProviderD3D12.hpp"
-#include "EngineMemory.h"
+#pragma once
+
+#include "SuperResolutionFactory.h"
+#include "SuperResolution.h"
+#include "RefCntAutoPtr.hpp"
+
+#include <vector>
+
+struct NVSDK_NGX_Parameter;
 
 namespace Diligent
 {
 
-class SuperResolutionFactoryD3D12 final : public SuperResolutionFactoryBase
+class DLSSProviderVk final
 {
 public:
-    SuperResolutionFactoryD3D12(IReferenceCounters* pRefCounters, IRenderDevice* pDevice) :
-        SuperResolutionFactoryBase(pRefCounters)
-    {
-        AddBackend<DLSSProviderD3D12>(pDevice);
-        AddBackend<DSRProviderD3D12>(pDevice);
-    }
-};
+    DLSSProviderVk(IRenderDevice* pDevice);
 
-void CreateSuperResolutionFactoryD3D12(IRenderDevice* pDevice, ISuperResolutionFactory** ppFactory)
-{
-    auto* pFactory = NEW_RC_OBJ(GetRawAllocator(), "SuperResolutionFactoryD3D12 instance", SuperResolutionFactoryD3D12)(pDevice);
-    pFactory->QueryInterface(IID_SuperResolutionFactory, reinterpret_cast<IObject**>(ppFactory));
-}
+    ~DLSSProviderVk();
+
+    void EnumerateVariants(std::vector<SuperResolutionInfo>& Variants);
+
+    void GetSourceSettings(const SuperResolutionSourceSettingsAttribs& Attribs, SuperResolutionSourceSettings& Settings);
+
+    void CreateSuperResolution(const SuperResolutionDesc& Desc, ISuperResolution** ppUpscaler);
+
+private:
+    RefCntAutoPtr<IRenderDevice> m_pDevice;
+    NVSDK_NGX_Parameter*         m_pNGXParams = nullptr;
+};
 
 } // namespace Diligent

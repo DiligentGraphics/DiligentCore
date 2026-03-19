@@ -121,6 +121,10 @@ PRIVATE
 
 if(SUPER_RESOLUTION_SUPPORTED)
     target_link_libraries(DiligentCoreAPITest PRIVATE Diligent-SuperResolution-static)
+    if(DILIGENT_DSR_SUPPORTED)
+        target_link_libraries(DiligentCoreAPITest PRIVATE DirectSR-AgilitySDK)
+        copy_directsr_dlls(DiligentCoreAPITest)
+    endif()
 endif()
 
 if(TARGET Diligent-HLSL2GLSLConverterLib)
