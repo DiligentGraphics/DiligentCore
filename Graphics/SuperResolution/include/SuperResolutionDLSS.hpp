@@ -47,8 +47,8 @@ extern const wchar_t* DLSSAppDataPath;
 /// Maps Diligent optimization type to NGX performance/quality preset.
 NVSDK_NGX_PerfQuality_Value OptimizationTypeToNGXPerfQuality(SUPER_RESOLUTION_OPTIMIZATION_TYPE Type);
 
-/// Maps Diligent super resolution flags to DLSS feature flags.
-Int32 SuperResolutionFlagsToDLSSFeatureFlags(SUPER_RESOLUTION_FLAGS Flags);
+/// Computes the full set of DLSS feature flags from the description and execution attributes.
+Int32 ComputeDLSSFeatureFlags(SUPER_RESOLUTION_FLAGS Flags, const ExecuteSuperResolutionAttribs& Attribs);
 
 /// Populates DLSS variant info using NGX capability parameters.
 void EnumerateDLSSVariants(NVSDK_NGX_Parameter* pNGXParams, std::vector<SuperResolutionInfo>& Variants);

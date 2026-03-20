@@ -68,8 +68,9 @@ public:
     {
         ValidateTemporalExecuteSuperResolutionAttribs(m_Desc, Attribs);
 
-        if (m_pDLSSFeature == nullptr)
-            CreateFeature(Attribs);
+        NVSDK_NGX_Handle* pDLSSFeature = AcquireFeature(Attribs);
+        if (pDLSSFeature == nullptr)
+            return;
 
         DeviceContextD3D11Impl* pCtxImpl = ClassPtrCast<DeviceContextD3D11Impl>(Attribs.pContext);
 
@@ -100,17 +101,24 @@ public:
         EvalParams.InPreExposure                    = Attribs.PreExposure;
         EvalParams.InExposureScale                  = Attribs.ExposureScale;
 
-        NVSDK_NGX_Result Result = NGX_D3D11_EVALUATE_DLSS_EXT(pd3d11DeviceContext, m_pDLSSFeature, m_pNGXParams, &EvalParams);
+        NVSDK_NGX_Result Result = NGX_D3D11_EVALUATE_DLSS_EXT(pd3d11DeviceContext, pDLSSFeature, m_pNGXParams, &EvalParams);
         if (NVSDK_NGX_FAILED(Result))
             LOG_ERROR_MESSAGE("DLSS D3D11 evaluation failed. NGX Result: ", static_cast<Uint32>(Result));
     }
 
 private:
-    void CreateFeature(const ExecuteSuperResolutionAttribs& Attribs)
+    NVSDK_NGX_Handle* AcquireFeature(const ExecuteSuperResolutionAttribs& Attribs)
     {
-        Int32 DLSSCreateFeatureFlags = SuperResolutionFlagsToDLSSFeatureFlags(m_Desc.Flags);
-        if (Attribs.CameraNear > Attribs.CameraFar)
-            DLSSCreateFeatureFlags |= NVSDK_NGX_DLSS_Feature_Flags_DepthInverted;
+        const Int32 DLSSCreateFeatureFlags = ComputeDLSSFeatureFlags(m_Desc.Flags, Attribs);
+        if (m_pDLSSFeature != nullptr && m_DLSSFeatureFlags == DLSSCreateFeatureFlags)
+            return m_pDLSSFeature;
+
+        if (m_pDLSSFeature != nullptr)
+        {
+            NVSDK_NGX_D3D11_ReleaseFeature(m_pDLSSFeature);
+            m_pDLSSFeature = nullptr;
+        }
+        m_DLSSFeatureFlags = DLSSCreateFeatureFlags;
 
         NVSDK_NGX_DLSS_Create_Params DLSSCreateParams = {};
         DLSSCreateParams.Feature.InWidth              = m_Desc.InputWidth;
@@ -119,16 +127,23 @@ private:
         DLSSCreateParams.Feature.InTargetHeight       = m_Desc.OutputHeight;
         DLSSCreateParams.InFeatureCreateFlags         = DLSSCreateFeatureFlags;
 
+        NVSDK_NGX_Handle*    pFeature  = nullptr;
         ID3D11DeviceContext* pd3d11Ctx = ClassPtrCast<DeviceContextD3D11Impl>(Attribs.pContext)->GetD3D11DeviceContext();
-        NVSDK_NGX_Result     Result    = NGX_D3D11_CREATE_DLSS_EXT(pd3d11Ctx, &m_pDLSSFeature, m_pNGXParams, &DLSSCreateParams);
+        NVSDK_NGX_Result     Result    = NGX_D3D11_CREATE_DLSS_EXT(pd3d11Ctx, &pFeature, m_pNGXParams, &DLSSCreateParams);
 
         if (NVSDK_NGX_FAILED(Result))
-            LOG_ERROR_AND_THROW("Failed to create DLSS D3D11 feature. NGX Result: ", static_cast<Uint32>(Result));
+        {
+            LOG_ERROR_MESSAGE("Failed to create DLSS D3D11 feature. NGX Result: ", static_cast<Uint32>(Result));
+            return nullptr;
+        }
+        m_pDLSSFeature = pFeature;
+        return m_pDLSSFeature;
     }
 
     RefCntAutoPtr<IRenderDevice> m_pDevice;
-    NVSDK_NGX_Handle*            m_pDLSSFeature = nullptr;
-    NVSDK_NGX_Parameter*         m_pNGXParams   = nullptr;
+    NVSDK_NGX_Handle*            m_pDLSSFeature     = nullptr;
+    NVSDK_NGX_Parameter*         m_pNGXParams       = nullptr;
+    Int32                        m_DLSSFeatureFlags = 0;
 };
 
 class DLSSProviderD3D11 final : public SuperResolutionProvider
@@ -140,18 +155,27 @@ public:
         ID3D11Device*    pd3d11Device = ClassPtrCast<RenderDeviceD3D11Impl>(pDevice)->GetD3D11Device();
         NVSDK_NGX_Result Result       = NVSDK_NGX_D3D11_Init_with_ProjectID(DLSSProjectId, NVSDK_NGX_ENGINE_TYPE_CUSTOM, "0", DLSSAppDataPath, pd3d11Device);
         if (NVSDK_NGX_FAILED(Result))
-            LOG_ERROR_AND_THROW("NVIDIA NGX D3D11 initialization failed. Result: ", static_cast<Uint32>(Result));
+        {
+            LOG_WARNING_MESSAGE("NVIDIA NGX D3D11 initialization failed. DLSS will not be available. Result: ", static_cast<Uint32>(Result));
+            return;
+        }
 
         Result = NVSDK_NGX_D3D11_GetCapabilityParameters(&m_pNGXParams);
         if (NVSDK_NGX_FAILED(Result) || m_pNGXParams == nullptr)
-            LOG_ERROR_AND_THROW("Failed to get NGX D3D11 capability parameters. Result: ", static_cast<Uint32>(Result));
+        {
+            LOG_WARNING_MESSAGE("Failed to get NGX D3D11 capability parameters. DLSS will not be available. Result: ", static_cast<Uint32>(Result));
+            m_pNGXParams = nullptr;
+            NVSDK_NGX_D3D11_Shutdown1(pd3d11Device);
+        }
     }
 
     ~DLSSProviderD3D11()
     {
         if (m_pNGXParams != nullptr)
+        {
             NVSDK_NGX_D3D11_DestroyParameters(m_pNGXParams);
-        NVSDK_NGX_D3D11_Shutdown1(ClassPtrCast<RenderDeviceD3D11Impl>(m_pDevice.RawPtr())->GetD3D11Device());
+            NVSDK_NGX_D3D11_Shutdown1(ClassPtrCast<RenderDeviceD3D11Impl>(m_pDevice.RawPtr())->GetD3D11Device());
+        }
     }
 
     virtual void EnumerateVariants(std::vector<SuperResolutionInfo>& Variants) override final

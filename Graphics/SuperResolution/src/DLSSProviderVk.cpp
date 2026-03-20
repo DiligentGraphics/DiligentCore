@@ -69,8 +69,9 @@ public:
     {
         ValidateTemporalExecuteSuperResolutionAttribs(m_Desc, Attribs);
 
-        if (m_pDLSSFeature == nullptr)
-            CreateFeature(Attribs);
+        NVSDK_NGX_Handle* pDLSSFeature = AcquireFeature(Attribs);
+        if (pDLSSFeature == nullptr)
+            return;
 
         DeviceContextVkImpl* pCtxImpl = ClassPtrCast<DeviceContextVkImpl>(Attribs.pContext);
 
@@ -127,17 +128,24 @@ public:
         EvalParams.InPreExposure                    = Attribs.PreExposure;
         EvalParams.InExposureScale                  = Attribs.ExposureScale;
 
-        NVSDK_NGX_Result Result = NGX_VULKAN_EVALUATE_DLSS_EXT(vkCmdBuffer, m_pDLSSFeature, m_pNGXParams, &EvalParams);
+        NVSDK_NGX_Result Result = NGX_VULKAN_EVALUATE_DLSS_EXT(vkCmdBuffer, pDLSSFeature, m_pNGXParams, &EvalParams);
         if (NVSDK_NGX_FAILED(Result))
             LOG_ERROR_MESSAGE("DLSS Vulkan evaluation failed. NGX Result: ", static_cast<Uint32>(Result));
     }
 
 private:
-    void CreateFeature(const ExecuteSuperResolutionAttribs& Attribs)
+    NVSDK_NGX_Handle* AcquireFeature(const ExecuteSuperResolutionAttribs& Attribs)
     {
-        Int32 DLSSCreateFeatureFlags = SuperResolutionFlagsToDLSSFeatureFlags(m_Desc.Flags);
-        if (Attribs.CameraNear > Attribs.CameraFar)
-            DLSSCreateFeatureFlags |= NVSDK_NGX_DLSS_Feature_Flags_DepthInverted;
+        const Int32 DLSSCreateFeatureFlags = ComputeDLSSFeatureFlags(m_Desc.Flags, Attribs);
+        if (m_pDLSSFeature != nullptr && m_DLSSFeatureFlags == DLSSCreateFeatureFlags)
+            return m_pDLSSFeature;
+
+        if (m_pDLSSFeature != nullptr)
+        {
+            NVSDK_NGX_VULKAN_ReleaseFeature(m_pDLSSFeature);
+            m_pDLSSFeature = nullptr;
+        }
+        m_DLSSFeatureFlags = DLSSCreateFeatureFlags;
 
         NVSDK_NGX_DLSS_Create_Params DLSSCreateParams = {};
         DLSSCreateParams.Feature.InWidth              = m_Desc.InputWidth;
@@ -146,16 +154,23 @@ private:
         DLSSCreateParams.Feature.InTargetHeight       = m_Desc.OutputHeight;
         DLSSCreateParams.InFeatureCreateFlags         = DLSSCreateFeatureFlags;
 
-        VkCommandBuffer  vkCmdBuffer = ClassPtrCast<DeviceContextVkImpl>(Attribs.pContext)->GetVkCommandBuffer();
-        NVSDK_NGX_Result Result      = NGX_VULKAN_CREATE_DLSS_EXT(vkCmdBuffer, 1, 1, &m_pDLSSFeature, m_pNGXParams, &DLSSCreateParams);
+        NVSDK_NGX_Handle* pFeature    = nullptr;
+        VkCommandBuffer   vkCmdBuffer = ClassPtrCast<DeviceContextVkImpl>(Attribs.pContext)->GetVkCommandBuffer();
+        NVSDK_NGX_Result  Result      = NGX_VULKAN_CREATE_DLSS_EXT(vkCmdBuffer, 1, 1, &pFeature, m_pNGXParams, &DLSSCreateParams);
 
         if (NVSDK_NGX_FAILED(Result))
-            LOG_ERROR_AND_THROW("Failed to create DLSS Vulkan feature. NGX Result: ", static_cast<Uint32>(Result));
+        {
+            LOG_ERROR_MESSAGE("Failed to create DLSS Vulkan feature. NGX Result: ", static_cast<Uint32>(Result));
+            return nullptr;
+        }
+        m_pDLSSFeature = pFeature;
+        return m_pDLSSFeature;
     }
 
     RefCntAutoPtr<IRenderDevice> m_pDevice;
-    NVSDK_NGX_Handle*            m_pDLSSFeature = nullptr;
-    NVSDK_NGX_Parameter*         m_pNGXParams   = nullptr;
+    NVSDK_NGX_Handle*            m_pDLSSFeature     = nullptr;
+    NVSDK_NGX_Parameter*         m_pNGXParams       = nullptr;
+    Int32                        m_DLSSFeatureFlags = 0;
 };
 
 
@@ -195,18 +210,27 @@ public:
         }
 
         if (NVSDK_NGX_FAILED(Result))
-            LOG_ERROR_AND_THROW("NVIDIA NGX Vulkan initialization failed. Result: ", static_cast<Uint32>(Result));
+        {
+            LOG_WARNING_MESSAGE("NVIDIA NGX Vulkan initialization failed. DLSS will not be available. Result: ", static_cast<Uint32>(Result));
+            return;
+        }
 
         Result = NVSDK_NGX_VULKAN_GetCapabilityParameters(&m_pNGXParams);
         if (NVSDK_NGX_FAILED(Result) || m_pNGXParams == nullptr)
-            LOG_ERROR_AND_THROW("Failed to get NGX Vulkan capability parameters. Result: ", static_cast<Uint32>(Result));
+        {
+            LOG_WARNING_MESSAGE("Failed to get NGX Vulkan capability parameters. DLSS will not be available. Result: ", static_cast<Uint32>(Result));
+            m_pNGXParams = nullptr;
+            NVSDK_NGX_VULKAN_Shutdown1(vkDevice);
+        }
     }
 
     ~DLSSProviderVk()
     {
         if (m_pNGXParams != nullptr)
+        {
             NVSDK_NGX_VULKAN_DestroyParameters(m_pNGXParams);
-        NVSDK_NGX_VULKAN_Shutdown1(ClassPtrCast<RenderDeviceVkImpl>(m_pDevice.RawPtr())->GetVkDevice());
+            NVSDK_NGX_VULKAN_Shutdown1(ClassPtrCast<RenderDeviceVkImpl>(m_pDevice.RawPtr())->GetVkDevice());
+        }
     }
 
     void EnumerateVariants(std::vector<SuperResolutionInfo>& Variants)
