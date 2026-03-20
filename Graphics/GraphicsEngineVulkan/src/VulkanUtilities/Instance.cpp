@@ -714,10 +714,10 @@ VkPhysicalDevice Instance::SelectPhysicalDevice(uint32_t AdapterId) const noexce
         const auto GetDeviceTypePriority = [](VkPhysicalDeviceType Type) -> int {
             switch (Type)
             {
-                case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:   return 3;
+                case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU: return 3;
                 case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU: return 2;
-                case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:    return 1;
-                default:                                     return 0;
+                case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU: return 1;
+                default: return 0;
             }
         };
 
