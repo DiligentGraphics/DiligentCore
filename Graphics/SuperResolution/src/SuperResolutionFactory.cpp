@@ -31,6 +31,8 @@
 #include "EngineMemory.h"
 #include "PlatformDebug.hpp"
 
+#include <memory>
+
 namespace Diligent
 {
 
@@ -103,6 +105,7 @@ public:
 #ifdef DILIGENT_METALFX_SUPPORTED
         AddProvider(pDevice, CreateMetalFXProvider, "MetalFX");
 #endif
+        (void)AddProvider;
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_SuperResolutionFactory, TBase)
