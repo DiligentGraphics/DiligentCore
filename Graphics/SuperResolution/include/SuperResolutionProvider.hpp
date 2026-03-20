@@ -28,33 +28,25 @@
 
 #include "SuperResolutionFactory.h"
 #include "SuperResolution.h"
-#include "RefCntAutoPtr.hpp"
 
 #include <vector>
-
-struct IDSRDevice;
 
 namespace Diligent
 {
 
-class DSRProviderD3D12 final
+class SuperResolutionProvider
 {
 public:
-    DSRProviderD3D12(IRenderDevice* pDevice);
+    virtual ~SuperResolutionProvider()
+    {}
 
-    ~DSRProviderD3D12();
+    virtual void EnumerateVariants(std::vector<SuperResolutionInfo>& Variants) = 0;
 
-    void EnumerateVariants(std::vector<SuperResolutionInfo>& Variants);
+    virtual void GetSourceSettings(const SuperResolutionSourceSettingsAttribs& Attribs,
+                                   SuperResolutionSourceSettings&              Settings) = 0;
 
-    void GetSourceSettings(const SuperResolutionSourceSettingsAttribs& Attribs,
-                           SuperResolutionSourceSettings&              Settings);
-
-    void CreateSuperResolution(const SuperResolutionDesc& Desc,
-                               ISuperResolution**         ppUpscaler);
-
-private:
-    RefCntAutoPtr<IRenderDevice> m_pDevice;
-    IDSRDevice*                  m_pDSRDevice = nullptr;
+    virtual void CreateSuperResolution(const SuperResolutionDesc& Desc,
+                                       ISuperResolution**         ppUpscaler) = 0;
 };
 
 } // namespace Diligent

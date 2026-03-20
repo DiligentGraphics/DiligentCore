@@ -7,9 +7,13 @@ project(Diligent-SuperResolution CXX)
 set(DILIGENT_DLSS_SUPPORTED FALSE CACHE INTERNAL "DLSS is not supported")
 set(DILIGENT_DSR_SUPPORTED  FALSE CACHE INTERNAL "DirectSR is not supported")
 
-if(PLATFORM_WIN32)
-    set(DILIGENT_DLSS_SUPPORTED TRUE CACHE INTERNAL "DLSS is supported on Win32 platform")
-    set(DILIGENT_DSR_SUPPORTED  TRUE CACHE INTERNAL "DirectSR is supported on Win32 platform")
+if(PLATFORM_WIN32 AND NOT MINGW_BUILD)
+    if (D3D11_SUPPORTED OR D3D12_SUPPORTED OR VULKAN_SUPPORTED)
+        set(DILIGENT_DLSS_SUPPORTED TRUE CACHE INTERNAL "DLSS is supported on Win32 platform")
+    endif()
+    if (D3D12_SUPPORTED)
+        set(DILIGENT_DSR_SUPPORTED  TRUE CACHE INTERNAL "DirectSR is supported on Win32 platform")
+    endif()
 endif()
 
 if(${DILIGENT_NO_DLSS})
@@ -42,12 +46,8 @@ endif()
 
 set(INCLUDE
     include/SuperResolutionBase.hpp
-    include/SuperResolutionFactoryBase.hpp
     include/SuperResolutionVariants.hpp
-    include/DLSSProviderD3D12.hpp
-    include/DLSSProviderD3D11.hpp
-    include/DLSSProviderVk.hpp
-    include/DSRProviderD3D12.hpp
+    include/SuperResolutionProvider.hpp
 )
 
 set(INTERFACE
@@ -58,21 +58,27 @@ set(INTERFACE
 
 set(SOURCE
     src/SuperResolutionBase.cpp
-    src/SuperResolutionFactoryBase.cpp
     src/SuperResolutionFactory.cpp
-    src/SuperResolutionFactoryD3D12.cpp
-    src/SuperResolutionFactoryD3D11.cpp
-    src/SuperResolutionFactoryVk.cpp
-    src/SuperResolutionFactoryMtl.cpp
-    src/DLSSProviderD3D12.cpp
-    src/DLSSProviderD3D11.cpp
-    src/DLSSProviderVk.cpp
-    src/DSRProviderD3D12.cpp
 )
 
 if(DILIGENT_DLSS_SUPPORTED)
     list(APPEND INCLUDE include/SuperResolutionDLSS.hpp)
     list(APPEND SOURCE src/SuperResolutionDLSS.cpp)
+    if (D3D11_SUPPORTED)
+        list(APPEND SOURCE src/DLSSProviderD3D11.cpp)
+    endif()
+    if (D3D12_SUPPORTED)
+        list(APPEND SOURCE src/DLSSProviderD3D12.cpp)
+    endif()
+    if (VULKAN_SUPPORTED)
+        list(APPEND SOURCE src/DLSSProviderVk.cpp)
+    endif()
+endif()
+
+if (DILIGENT_DSR_SUPPORTED)
+    if (D3D12_SUPPORTED)
+        list(APPEND SOURCE src/DSRProviderD3D12.cpp)
+    endif()
 endif()
 
 set(DLL_SOURCE
@@ -106,11 +112,21 @@ PRIVATE
 )
 
 if(DILIGENT_DLSS_SUPPORTED)
-    target_compile_definitions(Diligent-SuperResolution-static PRIVATE DILIGENT_DLSS_SUPPORTED=1)
+    if (D3D11_SUPPORTED)
+        target_compile_definitions(Diligent-SuperResolution-static PRIVATE DILIGENT_DLSS_D3D11_SUPPORTED=1)
+    endif()
+    if (D3D12_SUPPORTED)
+        target_compile_definitions(Diligent-SuperResolution-static PRIVATE DILIGENT_DLSS_D3D12_SUPPORTED=1)
+    endif()
+    if (VULKAN_SUPPORTED)
+        target_compile_definitions(Diligent-SuperResolution-static PRIVATE DILIGENT_DLSS_VK_SUPPORTED=1)
+    endif()
 endif()
 
 if(DILIGENT_DSR_SUPPORTED)
-    target_compile_definitions(Diligent-SuperResolution-static PRIVATE DILIGENT_DSR_SUPPORTED=1)
+    if (D3D12_SUPPORTED)
+        target_compile_definitions(Diligent-SuperResolution-static PRIVATE DILIGENT_DSR_D3D12_SUPPORTED=1)
+    endif()
 endif()
 
 target_compile_definitions(Diligent-SuperResolution-shared PUBLIC DILIGENT_SUPER_RESOLUTION_SHARED=1)
