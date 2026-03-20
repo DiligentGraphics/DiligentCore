@@ -24,21 +24,19 @@
  *  of the possibility of such damages.
  */
 
-#include "DLSSProviderVk.hpp"
+#include "SuperResolutionProvider.hpp"
 
-#if VULKAN_SUPPORTED && DILIGENT_DLSS_SUPPORTED
+#include "SuperResolutionDLSS.hpp"
+#include "SuperResolutionBase.hpp"
+#include "SuperResolutionVariants.hpp"
 
-#    include "SuperResolutionDLSS.hpp"
-#    include "SuperResolutionBase.hpp"
-#    include "SuperResolutionVariants.hpp"
-
-#    include "../../GraphicsEngineVulkan/include/pch.h"
-#    include <nvsdk_ngx_helpers_vk.h>
-#    include "RenderDeviceVkImpl.hpp"
-#    include "DeviceContextVkImpl.hpp"
-#    include "TextureVkImpl.hpp"
-#    include "TextureViewVkImpl.hpp"
-#    include "VulkanTypeConversions.hpp"
+#include "../../GraphicsEngineVulkan/include/pch.h"
+#include <nvsdk_ngx_helpers_vk.h>
+#include "RenderDeviceVkImpl.hpp"
+#include "DeviceContextVkImpl.hpp"
+#include "TextureVkImpl.hpp"
+#include "TextureViewVkImpl.hpp"
+#include "VulkanTypeConversions.hpp"
 
 namespace Diligent
 {
@@ -160,27 +158,28 @@ private:
     NVSDK_NGX_Parameter*         m_pNGXParams   = nullptr;
 };
 
-} // anonymous namespace
 
-
-DLSSProviderVk::DLSSProviderVk(IRenderDevice* pDevice) :
-    m_pDevice{pDevice}
+class DLSSProviderVk final : public SuperResolutionProvider
 {
-    RenderDeviceVkImpl* pDeviceVk    = ClassPtrCast<RenderDeviceVkImpl>(pDevice);
-    VkInstance          vkInstance   = pDeviceVk->GetVkInstance();
-    VkPhysicalDevice    vkPhysDevice = pDeviceVk->GetVkPhysicalDevice();
-    VkDevice            vkDevice     = pDeviceVk->GetVkDevice();
-
-    NVSDK_NGX_Result Result = NVSDK_NGX_VULKAN_Init_with_ProjectID(DLSSProjectId, NVSDK_NGX_ENGINE_TYPE_CUSTOM, "0", DLSSAppDataPath, vkInstance, vkPhysDevice, vkDevice);
-
+public:
+    DLSSProviderVk(IRenderDevice* pDevice) :
+        m_pDevice{pDevice}
     {
-        Uint32                         ExtCount    = 0;
-        VkExtensionProperties*         pExtensions = nullptr;
-        NVSDK_NGX_FeatureDiscoveryInfo FeatureInfo = {};
-        NVSDK_NGX_Result               ExtResult   = NVSDK_NGX_VULKAN_GetFeatureDeviceExtensionRequirements(vkInstance, vkPhysDevice, &FeatureInfo, &ExtCount, &pExtensions);
-        if (NVSDK_NGX_SUCCEED(ExtResult) && ExtCount > 0 && pExtensions != nullptr)
+        RenderDeviceVkImpl* pDeviceVk    = ClassPtrCast<RenderDeviceVkImpl>(pDevice);
+        VkInstance          vkInstance   = pDeviceVk->GetVkInstance();
+        VkPhysicalDevice    vkPhysDevice = pDeviceVk->GetVkPhysicalDevice();
+        VkDevice            vkDevice     = pDeviceVk->GetVkDevice();
+
+        NVSDK_NGX_Result Result = NVSDK_NGX_VULKAN_Init_with_ProjectID(DLSSProjectId, NVSDK_NGX_ENGINE_TYPE_CUSTOM, "0", DLSSAppDataPath, vkInstance, vkPhysDevice, vkDevice);
+
         {
-            /* TODO: Need to implement IsExtensionEnabled in VulkanUtilities::LogicalDevice
+            Uint32                         ExtCount    = 0;
+            VkExtensionProperties*         pExtensions = nullptr;
+            NVSDK_NGX_FeatureDiscoveryInfo FeatureInfo = {};
+            NVSDK_NGX_Result               ExtResult   = NVSDK_NGX_VULKAN_GetFeatureDeviceExtensionRequirements(vkInstance, vkPhysDevice, &FeatureInfo, &ExtCount, &pExtensions);
+            if (NVSDK_NGX_SUCCEED(ExtResult) && ExtCount > 0 && pExtensions != nullptr)
+            {
+                /* TODO: Need to implement IsExtensionEnabled in VulkanUtilities::LogicalDevice
             const VulkanUtilities::LogicalDevice& LogicDevice = pDeviceVk->GetLogicalDevice();
             for (Uint32 ExtensionIdx = 0; ExtensionIdx < ExtCount; ++ExtensionIdx)
             {
@@ -192,61 +191,54 @@ DLSSProviderVk::DLSSProviderVk(IRenderDevice* pDevice) :
                 }
             }
             */
+            }
         }
+
+        if (NVSDK_NGX_FAILED(Result))
+            LOG_ERROR_AND_THROW("NVIDIA NGX Vulkan initialization failed. Result: ", static_cast<Uint32>(Result));
+
+        Result = NVSDK_NGX_VULKAN_GetCapabilityParameters(&m_pNGXParams);
+        if (NVSDK_NGX_FAILED(Result) || m_pNGXParams == nullptr)
+            LOG_ERROR_AND_THROW("Failed to get NGX Vulkan capability parameters. Result: ", static_cast<Uint32>(Result));
     }
 
-    if (NVSDK_NGX_FAILED(Result))
-        LOG_ERROR_AND_THROW("NVIDIA NGX Vulkan initialization failed. Result: ", static_cast<Uint32>(Result));
+    ~DLSSProviderVk()
+    {
+        if (m_pNGXParams != nullptr)
+            NVSDK_NGX_VULKAN_DestroyParameters(m_pNGXParams);
+        NVSDK_NGX_VULKAN_Shutdown1(ClassPtrCast<RenderDeviceVkImpl>(m_pDevice.RawPtr())->GetVkDevice());
+    }
 
-    Result = NVSDK_NGX_VULKAN_GetCapabilityParameters(&m_pNGXParams);
-    if (NVSDK_NGX_FAILED(Result) || m_pNGXParams == nullptr)
-        LOG_ERROR_AND_THROW("Failed to get NGX Vulkan capability parameters. Result: ", static_cast<Uint32>(Result));
-}
+    void EnumerateVariants(std::vector<SuperResolutionInfo>& Variants)
+    {
+        EnumerateDLSSVariants(m_pNGXParams, Variants);
+    }
+    void GetSourceSettings(const SuperResolutionSourceSettingsAttribs& Attribs, SuperResolutionSourceSettings& Settings)
+    {
+        GetDLSSSourceSettings(m_pNGXParams, Attribs, Settings);
+    }
 
-DLSSProviderVk::~DLSSProviderVk()
+    void CreateSuperResolution(const SuperResolutionDesc& Desc, ISuperResolution** ppUpscaler)
+    {
+        DEV_CHECK_ERR(m_pDevice != nullptr, "Render device must not be null");
+        DEV_CHECK_ERR(ppUpscaler != nullptr, "ppUpscaler must not be null");
+
+        SuperResolutionVk_DLSS* pUpscaler = NEW_RC_OBJ(GetRawAllocator(), "SuperResolutionVk_DLSS instance", SuperResolutionVk_DLSS)(m_pDevice, Desc, m_pNGXParams);
+        pUpscaler->QueryInterface(IID_SuperResolution, reinterpret_cast<IObject**>(ppUpscaler));
+    }
+
+private:
+    RefCntAutoPtr<IRenderDevice> m_pDevice;
+    NVSDK_NGX_Parameter*         m_pNGXParams = nullptr;
+};
+
+} // anonymous namespace
+
+std::unique_ptr<SuperResolutionProvider> CreateDLSSProviderVk(IRenderDevice* pDevice)
 {
-    if (m_pNGXParams != nullptr)
-        NVSDK_NGX_VULKAN_DestroyParameters(m_pNGXParams);
-    NVSDK_NGX_VULKAN_Shutdown1(ClassPtrCast<RenderDeviceVkImpl>(m_pDevice.RawPtr())->GetVkDevice());
-}
-
-void DLSSProviderVk::EnumerateVariants(std::vector<SuperResolutionInfo>& Variants)
-{
-    EnumerateDLSSVariants(m_pNGXParams, Variants);
-}
-
-void DLSSProviderVk::GetSourceSettings(const SuperResolutionSourceSettingsAttribs& Attribs,
-                                                      SuperResolutionSourceSettings&              Settings)
-{
-    GetDLSSSourceSettings(m_pNGXParams, Attribs, Settings);
-}
-
-void DLSSProviderVk::CreateSuperResolution(const SuperResolutionDesc& Desc,
-                                                          ISuperResolution**         ppUpscaler)
-{
-    DEV_CHECK_ERR(m_pDevice != nullptr, "Render device must not be null");
-    DEV_CHECK_ERR(ppUpscaler != nullptr, "ppUpscaler must not be null");
-
-    SuperResolutionVk_DLSS* pUpscaler = NEW_RC_OBJ(GetRawAllocator(), "SuperResolutionVk_DLSS instance", SuperResolutionVk_DLSS)(m_pDevice, Desc, m_pNGXParams);
-    pUpscaler->QueryInterface(IID_SuperResolution, reinterpret_cast<IObject**>(ppUpscaler));
+    return pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_VULKAN ?
+        std::make_unique<DLSSProviderVk>(pDevice) :
+        nullptr;
 }
 
 } // namespace Diligent
-
-#else
-
-namespace Diligent
-{
-
-DLSSProviderVk::DLSSProviderVk(IRenderDevice*)
-{
-    LOG_INFO_MESSAGE("DLSS is not supported on this platform for Vulkan backend");
-}
-DLSSProviderVk::~DLSSProviderVk() {}
-void DLSSProviderVk::EnumerateVariants(std::vector<SuperResolutionInfo>&) {}
-void DLSSProviderVk::GetSourceSettings(const SuperResolutionSourceSettingsAttribs&, SuperResolutionSourceSettings&) {}
-void DLSSProviderVk::CreateSuperResolution(const SuperResolutionDesc&, ISuperResolution**) {}
-
-} // namespace Diligent
-
-#endif
