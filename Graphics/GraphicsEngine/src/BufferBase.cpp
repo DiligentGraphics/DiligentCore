@@ -209,8 +209,8 @@ void ValidateBufferInitData(const BufferDesc& Desc, const BufferData* pBuffData)
 
     if (HasInitialData)
     {
-        VERIFY_BUFFER(pBuffData->DataSize <= Desc.Size,
-                      "Buffer initial DataSize (", pBuffData->DataSize, ") must be smaller than the buffer size (", Desc.Size, ")");
+        VERIFY_BUFFER(pBuffData->DataSize >= Desc.Size,
+                      "Buffer initial DataSize (", pBuffData->DataSize, ") must be larger than the buffer size (", Desc.Size, ")");
     }
 }
 
