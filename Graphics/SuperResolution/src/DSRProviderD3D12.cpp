@@ -170,10 +170,10 @@ SuperResolutionD3D12_DSR::~SuperResolutionD3D12_DSR() = default;
 void DILIGENT_CALL_TYPE SuperResolutionD3D12_DSR::Execute(const ExecuteSuperResolutionAttribs& Attribs)
 {
     ValidateTemporalExecuteSuperResolutionAttribs(m_Desc, Attribs);
-    VERIFY_SUPER_RESOLUTION(m_Desc.Name, Attribs.CameraNear > 0, "CameraNear must be greater than zero for temporal upscaling");
-    VERIFY_SUPER_RESOLUTION(m_Desc.Name, Attribs.CameraFar > 0, "CameraFar must be greater than zero for temporal upscaling.");
-    VERIFY_SUPER_RESOLUTION(m_Desc.Name, Attribs.CameraFovAngleVert > 0, "CameraFovAngleVert must be greater than zero for temporal upscaling.");
-    VERIFY_SUPER_RESOLUTION(m_Desc.Name, Attribs.TimeDeltaInSeconds >= 0, "TimeDeltaInSeconds must be non-negative.");
+    DEV_CHECK_SUPER_RESOLUTION(m_Desc.Name, Attribs.CameraNear > 0, "CameraNear must be greater than zero for temporal upscaling");
+    DEV_CHECK_SUPER_RESOLUTION(m_Desc.Name, Attribs.CameraFar > 0, "CameraFar must be greater than zero for temporal upscaling.");
+    DEV_CHECK_SUPER_RESOLUTION(m_Desc.Name, Attribs.CameraFovAngleVert > 0, "CameraFovAngleVert must be greater than zero for temporal upscaling.");
+    DEV_CHECK_SUPER_RESOLUTION(m_Desc.Name, Attribs.TimeDeltaInSeconds >= 0, "TimeDeltaInSeconds must be non-negative.");
 
     DeviceContextD3D12Impl* pCtx = ClassPtrCast<DeviceContextD3D12Impl>(Attribs.pContext);
 

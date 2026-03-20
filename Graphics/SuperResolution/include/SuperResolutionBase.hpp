@@ -39,6 +39,8 @@ namespace Diligent
 
 #define LOG_SUPER_RESOLUTION_ERROR_AND_THROW(Name, ...) LOG_ERROR_AND_THROW("Super resolution upscaler '", ((Name) != nullptr ? (Name) : ""), "': ", ##__VA_ARGS__)
 
+#define DEV_CHECK_SUPER_RESOLUTION(Name, Expr, ...) DEV_CHECK_ERR(Expr, "Super resolution upscaler '", ((Name) != nullptr ? (Name) : ""), "': ", ##__VA_ARGS__)
+
 #define VERIFY_SUPER_RESOLUTION(Name, Expr, ...)                     \
     do                                                               \
     {                                                                \
@@ -48,22 +50,24 @@ namespace Diligent
         }                                                            \
     } while (false)
 
+
+
 /// Validates super resolution description and throws an exception in case of an error.
 void ValidateSuperResolutionDesc(const SuperResolutionDesc& Desc) noexcept(false);
 
 /// Validates super resolution description for temporal upscaling and throws an exception in case of an error.
 void ValidateTemporalSuperResolutionDesc(const SuperResolutionDesc& Desc) noexcept(false);
 
-/// Validates super resolution source settings attributes and throws an exception in case of an error.
-void ValidateSourceSettingsAttribs(const SuperResolutionSourceSettingsAttribs& Attribs) noexcept(false);
+/// Validates super resolution source settings attributes using DEV checks.
+void ValidateSourceSettingsAttribs(const SuperResolutionSourceSettingsAttribs& Attribs);
 
-/// Validates execute super resolution attributes and throws an exception in case of an error.
+/// Validates execute super resolution attributes using DEV checks.
 void ValidateExecuteSuperResolutionAttribs(const SuperResolutionDesc&           Desc,
-                                           const ExecuteSuperResolutionAttribs& Attribs) noexcept(false);
+                                           const ExecuteSuperResolutionAttribs& Attribs);
 
-/// Validates execute super resolution attributes for temporal upscaling and throws an exception in case of an error.
+/// Validates execute super resolution attributes for temporal upscaling using DEV checks.
 void ValidateTemporalExecuteSuperResolutionAttribs(const SuperResolutionDesc&           Desc,
-                                                   const ExecuteSuperResolutionAttribs& Attribs) noexcept(false);
+                                                   const ExecuteSuperResolutionAttribs& Attribs);
 
 class SuperResolutionBase : public ObjectBase<ISuperResolution>
 {
