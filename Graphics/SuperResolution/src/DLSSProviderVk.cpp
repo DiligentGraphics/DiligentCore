@@ -50,12 +50,12 @@ public:
     SuperResolutionVk_DLSS(IReferenceCounters*        pRefCounters,
                            IRenderDevice*             pDevice,
                            const SuperResolutionDesc& Desc,
+                           const SuperResolutionInfo& Info,
                            NVSDK_NGX_Parameter*       pNGXParams) :
-        SuperResolutionBase{pRefCounters, Desc},
+        SuperResolutionBase{pRefCounters, Desc, Info},
         m_pDevice{pDevice},
         m_pNGXParams{pNGXParams}
     {
-        ValidateTemporalSuperResolutionDesc(m_Desc);
         PopulateHaltonJitterPattern(m_JitterPattern, 64);
     }
 
@@ -67,7 +67,7 @@ public:
 
     virtual void DILIGENT_CALL_TYPE Execute(const ExecuteSuperResolutionAttribs& Attribs) override final
     {
-        ValidateTemporalExecuteSuperResolutionAttribs(m_Desc, Attribs);
+        ValidateExecuteSuperResolutionAttribs(m_Desc, m_Info, Attribs);
 
         NVSDK_NGX_Handle* pDLSSFeature = AcquireFeature(Attribs);
         if (pDLSSFeature == nullptr)
@@ -242,12 +242,12 @@ public:
         GetDLSSSourceSettings(m_pNGXParams, Attribs, Settings);
     }
 
-    void CreateSuperResolution(const SuperResolutionDesc& Desc, ISuperResolution** ppUpscaler)
+    void CreateSuperResolution(const SuperResolutionDesc& Desc, const SuperResolutionInfo& Info, ISuperResolution** ppUpscaler)
     {
         DEV_CHECK_ERR(m_pDevice != nullptr, "Render device must not be null");
         DEV_CHECK_ERR(ppUpscaler != nullptr, "ppUpscaler must not be null");
 
-        SuperResolutionVk_DLSS* pUpscaler = NEW_RC_OBJ(GetRawAllocator(), "SuperResolutionVk_DLSS instance", SuperResolutionVk_DLSS)(m_pDevice, Desc, m_pNGXParams);
+        SuperResolutionVk_DLSS* pUpscaler = NEW_RC_OBJ(GetRawAllocator(), "SuperResolutionVk_DLSS instance", SuperResolutionVk_DLSS)(m_pDevice, Desc, Info, m_pNGXParams);
         pUpscaler->QueryInterface(IID_SuperResolution, reinterpret_cast<IObject**>(ppUpscaler));
     }
 

@@ -50,24 +50,16 @@ namespace Diligent
         }                                                            \
     } while (false)
 
-
-
-/// Validates super resolution description and throws an exception in case of an error.
-void ValidateSuperResolutionDesc(const SuperResolutionDesc& Desc) noexcept(false);
-
-/// Validates super resolution description for temporal upscaling and throws an exception in case of an error.
-void ValidateTemporalSuperResolutionDesc(const SuperResolutionDesc& Desc) noexcept(false);
-
 /// Validates super resolution source settings attributes using DEV checks.
 void ValidateSourceSettingsAttribs(const SuperResolutionSourceSettingsAttribs& Attribs);
 
+/// Validates super resolution description and throws an exception in case of an error.
+void ValidateSuperResolutionDesc(const SuperResolutionDesc& Desc, const SuperResolutionInfo& Info) noexcept(false);
+
 /// Validates execute super resolution attributes using DEV checks.
 void ValidateExecuteSuperResolutionAttribs(const SuperResolutionDesc&           Desc,
+                                           const SuperResolutionInfo&           Info,
                                            const ExecuteSuperResolutionAttribs& Attribs);
-
-/// Validates execute super resolution attributes for temporal upscaling using DEV checks.
-void ValidateTemporalExecuteSuperResolutionAttribs(const SuperResolutionDesc&           Desc,
-                                                   const ExecuteSuperResolutionAttribs& Attribs);
 
 class SuperResolutionBase : public ObjectBase<ISuperResolution>
 {
@@ -81,15 +73,18 @@ public:
     };
 
     SuperResolutionBase(IReferenceCounters*        pRefCounters,
-                        const SuperResolutionDesc& Desc) :
+                        const SuperResolutionDesc& Desc,
+                        const SuperResolutionInfo& Info) :
         TBase{pRefCounters},
-        m_Desc{Desc}
+        m_Desc{Desc},
+        m_Info{Info}
     {
         if (Desc.Name != nullptr)
         {
             m_Name      = Desc.Name;
             m_Desc.Name = m_Name.c_str();
         }
+        ValidateSuperResolutionDesc(m_Desc, m_Info);
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_SuperResolution, TBase)
@@ -116,6 +111,7 @@ public:
 
 protected:
     SuperResolutionDesc       m_Desc;
+    SuperResolutionInfo       m_Info;
     std::string               m_Name;
     std::vector<JitterOffset> m_JitterPattern;
 };

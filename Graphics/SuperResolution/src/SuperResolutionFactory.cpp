@@ -56,6 +56,10 @@ std::unique_ptr<SuperResolutionProvider> CreateDSRProviderD3D12(IRenderDevice* p
 std::unique_ptr<SuperResolutionProvider> CreateMetalFXProvider(IRenderDevice* pDevice);
 #endif
 
+#if DILIGENT_FSR_SUPPORTED
+std::unique_ptr<SuperResolutionProvider> CreateFSRProvider(IRenderDevice* pDevice);
+#endif
+
 namespace
 {
 
@@ -105,6 +109,9 @@ public:
 #ifdef DILIGENT_METALFX_SUPPORTED
         AddProvider(pDevice, CreateMetalFXProvider, "MetalFX");
 #endif
+#ifdef DILIGENT_FSR_SUPPORTED
+        AddProvider(pDevice, CreateFSRProvider, "FSR Spatial");
+#endif
         (void)AddProvider;
     }
 
@@ -133,8 +140,9 @@ public:
     virtual void DILIGENT_CALL_TYPE GetSourceSettings(const SuperResolutionSourceSettingsAttribs& Attribs,
                                                       SuperResolutionSourceSettings&              Settings) const override final
     {
-        Settings = {};
-        if (const ProviderInfo* pEntry = FindProvider(Attribs.VariantId))
+        Settings                   = {};
+        const auto [pEntry, pInfo] = FindProvider(Attribs.VariantId);
+        if (pEntry != nullptr)
         {
             pEntry->Provider->GetSourceSettings(Attribs, Settings);
         }
@@ -152,7 +160,7 @@ public:
 
         *ppUpscaler = nullptr;
 
-        const ProviderInfo* pEntry = FindProvider(Desc.VariantId);
+        const auto [pEntry, pInfo] = FindProvider(Desc.VariantId);
         if (pEntry == nullptr)
         {
             LOG_ERROR_MESSAGE("Super resolution variant not found for the specified VariantId. Call EnumerateVariants() to get valid variant IDs.");
@@ -161,7 +169,7 @@ public:
 
         try
         {
-            pEntry->Provider->CreateSuperResolution(Desc, ppUpscaler);
+            pEntry->Provider->CreateSuperResolution(Desc, *pInfo, ppUpscaler);
         }
         catch (...)
         {
@@ -191,17 +199,17 @@ private:
         std::vector<SuperResolutionInfo>         Variants;
     };
 
-    const ProviderInfo* FindProvider(const INTERFACE_ID& VariantId) const
+    std::pair<const ProviderInfo*, const SuperResolutionInfo*> FindProvider(const INTERFACE_ID& VariantId) const
     {
         for (const ProviderInfo& ProvInfo : m_Providers)
         {
             for (const SuperResolutionInfo& SRInfo : ProvInfo.Variants)
             {
                 if (SRInfo.VariantId == VariantId)
-                    return &ProvInfo;
+                    return {&ProvInfo, &SRInfo};
             }
         }
-        return nullptr;
+        return {nullptr, nullptr};
     }
 
 private:

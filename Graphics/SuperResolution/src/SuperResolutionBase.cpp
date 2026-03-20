@@ -66,7 +66,7 @@ void ValidateSourceSettingsAttribs(const SuperResolutionSourceSettingsAttribs& A
 #endif
 }
 
-void ValidateSuperResolutionDesc(const SuperResolutionDesc& Desc) noexcept(false)
+void ValidateSuperResolutionDesc(const SuperResolutionDesc& Desc, const SuperResolutionInfo& Info) noexcept(false)
 {
     VERIFY_SUPER_RESOLUTION(Desc.Name, Desc.OutputWidth > 0 && Desc.OutputHeight > 0, "Output resolution must be greater than zero");
     VERIFY_SUPER_RESOLUTION(Desc.Name, Desc.OutputFormat != TEX_FORMAT_UNKNOWN, "OutputFormat must not be TEX_FORMAT_UNKNOWN");
@@ -74,16 +74,48 @@ void ValidateSuperResolutionDesc(const SuperResolutionDesc& Desc) noexcept(false
     VERIFY_SUPER_RESOLUTION(Desc.Name, Desc.InputWidth > 0 && Desc.InputHeight > 0, "InputWidth and InputHeight must be greater than zero");
     VERIFY_SUPER_RESOLUTION(Desc.Name, Desc.InputWidth <= Desc.OutputWidth && Desc.InputHeight <= Desc.OutputHeight,
                             "Input resolution must not exceed output resolution");
-}
 
-void ValidateTemporalSuperResolutionDesc(const SuperResolutionDesc& Desc) noexcept(false)
-{
-    ValidateSuperResolutionDesc(Desc);
-    VERIFY_SUPER_RESOLUTION(Desc.Name, Desc.DepthFormat != TEX_FORMAT_UNKNOWN, "DepthFormat must not be TEX_FORMAT_UNKNOWN for temporal upscaling");
-    VERIFY_SUPER_RESOLUTION(Desc.Name, Desc.MotionFormat != TEX_FORMAT_UNKNOWN, "MotionFormat must not be TEX_FORMAT_UNKNOWN for temporal upscaling");
+    if (Desc.Flags & SUPER_RESOLUTION_FLAG_ENABLE_SHARPENING)
+    {
+        const bool SharpnessSupported = Info.Type == SUPER_RESOLUTION_TYPE_SPATIAL ? (Info.SpatialCapFlags & SUPER_RESOLUTION_SPATIAL_CAP_FLAG_SHARPNESS) != 0 : (Info.TemporalCapFlags & SUPER_RESOLUTION_TEMPORAL_CAP_FLAG_SHARPNESS) != 0;
+
+        VERIFY_SUPER_RESOLUTION(Desc.Name, SharpnessSupported,
+                                "SUPER_RESOLUTION_FLAG_ENABLE_SHARPENING is set, but the '", Info.Name,
+                                "' variant does not support sharpness. Check the variant's capability flags.");
+    }
+
+    if (Desc.Flags & SUPER_RESOLUTION_FLAG_AUTO_EXPOSURE)
+    {
+        VERIFY_SUPER_RESOLUTION(Desc.Name, Info.Type == SUPER_RESOLUTION_TYPE_TEMPORAL,
+                                "SUPER_RESOLUTION_FLAG_AUTO_EXPOSURE is only supported for temporal upscaling.");
+    }
+
+    if (Info.Type == SUPER_RESOLUTION_TYPE_TEMPORAL)
+    {
+        VERIFY_SUPER_RESOLUTION(Desc.Name, Desc.DepthFormat != TEX_FORMAT_UNKNOWN, "DepthFormat must not be TEX_FORMAT_UNKNOWN for temporal upscaling");
+        VERIFY_SUPER_RESOLUTION(Desc.Name, Desc.MotionFormat != TEX_FORMAT_UNKNOWN, "MotionFormat must not be TEX_FORMAT_UNKNOWN for temporal upscaling");
+
+        if (!(Desc.Flags & SUPER_RESOLUTION_FLAG_AUTO_EXPOSURE))
+        {
+            VERIFY_SUPER_RESOLUTION(Desc.Name, Desc.ExposureFormat != TEX_FORMAT_UNKNOWN,
+                                    "ExposureFormat must not be TEX_FORMAT_UNKNOWN when SUPER_RESOLUTION_FLAG_AUTO_EXPOSURE is not set for temporal upscaling");
+        }
+    }
+    else
+    {
+        VERIFY_SUPER_RESOLUTION(Desc.Name, Desc.DepthFormat == TEX_FORMAT_UNKNOWN,
+                                "DepthFormat must be TEX_FORMAT_UNKNOWN for spatial upscaling");
+        VERIFY_SUPER_RESOLUTION(Desc.Name, Desc.MotionFormat == TEX_FORMAT_UNKNOWN,
+                                "MotionFormat must be TEX_FORMAT_UNKNOWN for spatial upscaling");
+        VERIFY_SUPER_RESOLUTION(Desc.Name, Desc.ReactiveMaskFormat == TEX_FORMAT_UNKNOWN,
+                                "ReactiveMaskFormat must be TEX_FORMAT_UNKNOWN for spatial upscaling");
+        VERIFY_SUPER_RESOLUTION(Desc.Name, Desc.ExposureFormat == TEX_FORMAT_UNKNOWN,
+                                "ExposureFormat must be TEX_FORMAT_UNKNOWN for spatial upscaling");
+    }
 }
 
 void ValidateExecuteSuperResolutionAttribs(const SuperResolutionDesc&           Desc,
+                                           const SuperResolutionInfo&           Info,
                                            const ExecuteSuperResolutionAttribs& Attribs)
 {
 #ifdef DILIGENT_DEVELOPMENT
@@ -120,101 +152,96 @@ void ValidateExecuteSuperResolutionAttribs(const SuperResolutionDesc&           
                                    "Output texture view '", TexDesc.Name, "' format (", GetTextureFormatAttribs(ViewDesc.Format).Name,
                                    ") does not match the expected OutputFormat (", GetTextureFormatAttribs(Desc.OutputFormat).Name, ")");
     }
-#endif
-}
 
-void ValidateTemporalExecuteSuperResolutionAttribs(const SuperResolutionDesc&           Desc,
-                                                   const ExecuteSuperResolutionAttribs& Attribs)
-{
-#ifdef DILIGENT_DEVELOPMENT
-    ValidateExecuteSuperResolutionAttribs(Desc, Attribs);
-
-    DEV_CHECK_SUPER_RESOLUTION(Desc.Name, Attribs.pDepthTextureSRV != nullptr, "Depth texture SRV must not be null for temporal upscaling");
-    DEV_CHECK_SUPER_RESOLUTION(Desc.Name, Attribs.pMotionVectorsSRV != nullptr, "Motion vectors SRV must not be null for temporal upscaling");
-    DEV_CHECK_SUPER_RESOLUTION(Desc.Name, (Desc.Flags & SUPER_RESOLUTION_FLAG_AUTO_EXPOSURE) != 0 || Attribs.pExposureTextureSRV != nullptr,
-                               "Exposure texture SRV must not be null when SUPER_RESOLUTION_FLAG_AUTO_EXPOSURE is not set");
-
-    // Validate output texture view type (DirectSR requires UAV)
-    if (Attribs.pOutputTextureView != nullptr)
+    if (Info.Type == SUPER_RESOLUTION_TYPE_TEMPORAL)
     {
-        const TextureDesc&     TexDesc  = Attribs.pOutputTextureView->GetTexture()->GetDesc();
-        const TextureViewDesc& ViewDesc = Attribs.pOutputTextureView->GetDesc();
-        DEV_CHECK_SUPER_RESOLUTION(Desc.Name, ViewDesc.ViewType == TEXTURE_VIEW_UNORDERED_ACCESS,
-                                   "Output texture view '", TexDesc.Name, "' must be TEXTURE_VIEW_UNORDERED_ACCESS");
-    }
+        DEV_CHECK_SUPER_RESOLUTION(Desc.Name, Attribs.pDepthTextureSRV != nullptr, "Depth texture SRV must not be null for temporal upscaling");
+        DEV_CHECK_SUPER_RESOLUTION(Desc.Name, Attribs.pMotionVectorsSRV != nullptr, "Motion vectors SRV must not be null for temporal upscaling");
+        DEV_CHECK_SUPER_RESOLUTION(Desc.Name, (Desc.Flags & SUPER_RESOLUTION_FLAG_AUTO_EXPOSURE) != 0 || Attribs.pExposureTextureSRV != nullptr,
+                                   "Exposure texture SRV must not be null when SUPER_RESOLUTION_FLAG_AUTO_EXPOSURE is not set");
 
-    // Validate depth texture
-    if (Attribs.pDepthTextureSRV != nullptr)
-    {
-        const TextureDesc&     TexDesc  = Attribs.pDepthTextureSRV->GetTexture()->GetDesc();
-        const TextureViewDesc& ViewDesc = Attribs.pDepthTextureSRV->GetDesc();
-        DEV_CHECK_SUPER_RESOLUTION(Desc.Name, ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE,
-                                   "Depth texture view '", TexDesc.Name, "' must be TEXTURE_VIEW_SHADER_RESOURCE");
-        DEV_CHECK_SUPER_RESOLUTION(Desc.Name, TexDesc.Width >= Desc.InputWidth && TexDesc.Height >= Desc.InputHeight,
-                                   "Depth texture '", TexDesc.Name, "' dimensions (", TexDesc.Width, "x", TexDesc.Height,
-                                   ") must be at least the upscaler input resolution (", Desc.InputWidth, "x", Desc.InputHeight, ")");
-        DEV_CHECK_SUPER_RESOLUTION(Desc.Name, ViewDesc.Format == Desc.DepthFormat,
-                                   "Depth texture view '", TexDesc.Name, "' format (", GetTextureFormatAttribs(ViewDesc.Format).Name,
-                                   ") does not match the expected DepthFormat (", GetTextureFormatAttribs(Desc.DepthFormat).Name, ")");
-    }
+        // Validate output texture view type (DirectSR requires UAV)
+        if (Attribs.pOutputTextureView != nullptr)
+        {
+            const TextureDesc&     TexDesc  = Attribs.pOutputTextureView->GetTexture()->GetDesc();
+            const TextureViewDesc& ViewDesc = Attribs.pOutputTextureView->GetDesc();
+            DEV_CHECK_SUPER_RESOLUTION(Desc.Name, ViewDesc.ViewType == TEXTURE_VIEW_UNORDERED_ACCESS,
+                                       "Output texture view '", TexDesc.Name, "' must be TEXTURE_VIEW_UNORDERED_ACCESS");
+        }
 
-    // Validate motion vectors texture
-    if (Attribs.pMotionVectorsSRV != nullptr)
-    {
-        const TextureDesc&     TexDesc  = Attribs.pMotionVectorsSRV->GetTexture()->GetDesc();
-        const TextureViewDesc& ViewDesc = Attribs.pMotionVectorsSRV->GetDesc();
-        DEV_CHECK_SUPER_RESOLUTION(Desc.Name, ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE,
-                                   "Motion vectors view '", TexDesc.Name, "' must be TEXTURE_VIEW_SHADER_RESOURCE");
-        DEV_CHECK_SUPER_RESOLUTION(Desc.Name, TexDesc.Width >= Desc.InputWidth && TexDesc.Height >= Desc.InputHeight,
-                                   "Motion vectors texture '", TexDesc.Name, "' dimensions (", TexDesc.Width, "x", TexDesc.Height,
-                                   ") must be at least the upscaler input resolution (", Desc.InputWidth, "x", Desc.InputHeight, ")");
-        DEV_CHECK_SUPER_RESOLUTION(Desc.Name, ViewDesc.Format == Desc.MotionFormat,
-                                   "Motion vectors view '", TexDesc.Name, "' format (", GetTextureFormatAttribs(ViewDesc.Format).Name,
-                                   ") does not match the expected MotionFormat (", GetTextureFormatAttribs(Desc.MotionFormat).Name, ")");
-    }
+        // Validate depth texture
+        if (Attribs.pDepthTextureSRV != nullptr)
+        {
+            const TextureDesc&     TexDesc  = Attribs.pDepthTextureSRV->GetTexture()->GetDesc();
+            const TextureViewDesc& ViewDesc = Attribs.pDepthTextureSRV->GetDesc();
+            DEV_CHECK_SUPER_RESOLUTION(Desc.Name, ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE,
+                                       "Depth texture view '", TexDesc.Name, "' must be TEXTURE_VIEW_SHADER_RESOURCE");
+            DEV_CHECK_SUPER_RESOLUTION(Desc.Name, TexDesc.Width >= Desc.InputWidth && TexDesc.Height >= Desc.InputHeight,
+                                       "Depth texture '", TexDesc.Name, "' dimensions (", TexDesc.Width, "x", TexDesc.Height,
+                                       ") must be at least the upscaler input resolution (", Desc.InputWidth, "x", Desc.InputHeight, ")");
+            DEV_CHECK_SUPER_RESOLUTION(Desc.Name, ViewDesc.Format == Desc.DepthFormat,
+                                       "Depth texture view '", TexDesc.Name, "' format (", GetTextureFormatAttribs(ViewDesc.Format).Name,
+                                       ") does not match the expected DepthFormat (", GetTextureFormatAttribs(Desc.DepthFormat).Name, ")");
+        }
 
-    // Validate exposure texture
-    if (Attribs.pExposureTextureSRV != nullptr)
-    {
-        const TextureDesc&     TexDesc  = Attribs.pExposureTextureSRV->GetTexture()->GetDesc();
-        const TextureViewDesc& ViewDesc = Attribs.pExposureTextureSRV->GetDesc();
-        DEV_CHECK_SUPER_RESOLUTION(Desc.Name, ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE,
-                                   "Exposure texture view '", TexDesc.Name, "' must be TEXTURE_VIEW_SHADER_RESOURCE");
-        DEV_CHECK_SUPER_RESOLUTION(Desc.Name, TexDesc.Width == 1 && TexDesc.Height == 1,
-                                   "Exposure texture '", TexDesc.Name, "' dimensions (", TexDesc.Width, "x", TexDesc.Height,
-                                   ") must be 1x1");
-        DEV_CHECK_SUPER_RESOLUTION(Desc.Name, ViewDesc.Format == Desc.ExposureFormat,
-                                   "Exposure texture view '", TexDesc.Name, "' format (", GetTextureFormatAttribs(ViewDesc.Format).Name,
-                                   ") does not match the expected ExposureFormat (", GetTextureFormatAttribs(Desc.ExposureFormat).Name, ")");
-    }
+        // Validate motion vectors texture
+        if (Attribs.pMotionVectorsSRV != nullptr)
+        {
+            const TextureDesc&     TexDesc  = Attribs.pMotionVectorsSRV->GetTexture()->GetDesc();
+            const TextureViewDesc& ViewDesc = Attribs.pMotionVectorsSRV->GetDesc();
+            DEV_CHECK_SUPER_RESOLUTION(Desc.Name, ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE,
+                                       "Motion vectors view '", TexDesc.Name, "' must be TEXTURE_VIEW_SHADER_RESOURCE");
+            DEV_CHECK_SUPER_RESOLUTION(Desc.Name, TexDesc.Width >= Desc.InputWidth && TexDesc.Height >= Desc.InputHeight,
+                                       "Motion vectors texture '", TexDesc.Name, "' dimensions (", TexDesc.Width, "x", TexDesc.Height,
+                                       ") must be at least the upscaler input resolution (", Desc.InputWidth, "x", Desc.InputHeight, ")");
+            DEV_CHECK_SUPER_RESOLUTION(Desc.Name, ViewDesc.Format == Desc.MotionFormat,
+                                       "Motion vectors view '", TexDesc.Name, "' format (", GetTextureFormatAttribs(ViewDesc.Format).Name,
+                                       ") does not match the expected MotionFormat (", GetTextureFormatAttribs(Desc.MotionFormat).Name, ")");
+        }
 
-    // Validate reactive mask texture
-    if (Attribs.pReactiveMaskTextureSRV != nullptr)
-    {
-        const TextureDesc&     TexDesc  = Attribs.pReactiveMaskTextureSRV->GetTexture()->GetDesc();
-        const TextureViewDesc& ViewDesc = Attribs.pReactiveMaskTextureSRV->GetDesc();
-        DEV_CHECK_SUPER_RESOLUTION(Desc.Name, ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE,
-                                   "Reactive mask view '", TexDesc.Name, "' must be TEXTURE_VIEW_SHADER_RESOURCE");
-        DEV_CHECK_SUPER_RESOLUTION(Desc.Name, Desc.ReactiveMaskFormat != TEX_FORMAT_UNKNOWN,
-                                   "Reactive mask texture '", TexDesc.Name, "' provided but ReactiveMaskFormat was not set in SuperResolutionDesc");
-        DEV_CHECK_SUPER_RESOLUTION(Desc.Name, TexDesc.Width >= Desc.InputWidth && TexDesc.Height >= Desc.InputHeight,
-                                   "Reactive mask texture '", TexDesc.Name, "' dimensions (", TexDesc.Width, "x", TexDesc.Height,
-                                   ") must be at least the upscaler input resolution (", Desc.InputWidth, "x", Desc.InputHeight, ")");
-        DEV_CHECK_SUPER_RESOLUTION(Desc.Name, ViewDesc.Format == Desc.ReactiveMaskFormat,
-                                   "Reactive mask view '", TexDesc.Name, "' format (", GetTextureFormatAttribs(ViewDesc.Format).Name,
-                                   ") does not match the expected ReactiveMaskFormat (", GetTextureFormatAttribs(Desc.ReactiveMaskFormat).Name, ")");
-    }
+        // Validate exposure texture
+        if (Attribs.pExposureTextureSRV != nullptr)
+        {
+            const TextureDesc&     TexDesc  = Attribs.pExposureTextureSRV->GetTexture()->GetDesc();
+            const TextureViewDesc& ViewDesc = Attribs.pExposureTextureSRV->GetDesc();
+            DEV_CHECK_SUPER_RESOLUTION(Desc.Name, ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE,
+                                       "Exposure texture view '", TexDesc.Name, "' must be TEXTURE_VIEW_SHADER_RESOURCE");
+            DEV_CHECK_SUPER_RESOLUTION(Desc.Name, TexDesc.Width == 1 && TexDesc.Height == 1,
+                                       "Exposure texture '", TexDesc.Name, "' dimensions (", TexDesc.Width, "x", TexDesc.Height,
+                                       ") must be 1x1");
+            DEV_CHECK_SUPER_RESOLUTION(Desc.Name, ViewDesc.Format == Desc.ExposureFormat,
+                                       "Exposure texture view '", TexDesc.Name, "' format (", GetTextureFormatAttribs(ViewDesc.Format).Name,
+                                       ") does not match the expected ExposureFormat (", GetTextureFormatAttribs(Desc.ExposureFormat).Name, ")");
+        }
 
-    // Validate ignore history mask texture
-    if (Attribs.pIgnoreHistoryMaskTextureSRV != nullptr)
-    {
-        const TextureDesc&     TexDesc  = Attribs.pIgnoreHistoryMaskTextureSRV->GetTexture()->GetDesc();
-        const TextureViewDesc& ViewDesc = Attribs.pIgnoreHistoryMaskTextureSRV->GetDesc();
-        DEV_CHECK_SUPER_RESOLUTION(Desc.Name, ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE,
-                                   "Ignore history mask view '", TexDesc.Name, "' must be TEXTURE_VIEW_SHADER_RESOURCE");
-        DEV_CHECK_SUPER_RESOLUTION(Desc.Name, TexDesc.Width >= Desc.InputWidth && TexDesc.Height >= Desc.InputHeight,
-                                   "Ignore history mask texture '", TexDesc.Name, "' dimensions (", TexDesc.Width, "x", TexDesc.Height,
-                                   ") must be at least the upscaler input resolution (", Desc.InputWidth, "x", Desc.InputHeight, ")");
+        // Validate reactive mask texture
+        if (Attribs.pReactiveMaskTextureSRV != nullptr)
+        {
+            const TextureDesc&     TexDesc  = Attribs.pReactiveMaskTextureSRV->GetTexture()->GetDesc();
+            const TextureViewDesc& ViewDesc = Attribs.pReactiveMaskTextureSRV->GetDesc();
+            DEV_CHECK_SUPER_RESOLUTION(Desc.Name, ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE,
+                                       "Reactive mask view '", TexDesc.Name, "' must be TEXTURE_VIEW_SHADER_RESOURCE");
+            DEV_CHECK_SUPER_RESOLUTION(Desc.Name, Desc.ReactiveMaskFormat != TEX_FORMAT_UNKNOWN,
+                                       "Reactive mask texture '", TexDesc.Name, "' provided but ReactiveMaskFormat was not set in SuperResolutionDesc");
+            DEV_CHECK_SUPER_RESOLUTION(Desc.Name, TexDesc.Width >= Desc.InputWidth && TexDesc.Height >= Desc.InputHeight,
+                                       "Reactive mask texture '", TexDesc.Name, "' dimensions (", TexDesc.Width, "x", TexDesc.Height,
+                                       ") must be at least the upscaler input resolution (", Desc.InputWidth, "x", Desc.InputHeight, ")");
+            DEV_CHECK_SUPER_RESOLUTION(Desc.Name, ViewDesc.Format == Desc.ReactiveMaskFormat,
+                                       "Reactive mask view '", TexDesc.Name, "' format (", GetTextureFormatAttribs(ViewDesc.Format).Name,
+                                       ") does not match the expected ReactiveMaskFormat (", GetTextureFormatAttribs(Desc.ReactiveMaskFormat).Name, ")");
+        }
+
+        // Validate ignore history mask texture
+        if (Attribs.pIgnoreHistoryMaskTextureSRV != nullptr)
+        {
+            const TextureDesc&     TexDesc  = Attribs.pIgnoreHistoryMaskTextureSRV->GetTexture()->GetDesc();
+            const TextureViewDesc& ViewDesc = Attribs.pIgnoreHistoryMaskTextureSRV->GetDesc();
+            DEV_CHECK_SUPER_RESOLUTION(Desc.Name, ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE,
+                                       "Ignore history mask view '", TexDesc.Name, "' must be TEXTURE_VIEW_SHADER_RESOURCE");
+            DEV_CHECK_SUPER_RESOLUTION(Desc.Name, TexDesc.Width >= Desc.InputWidth && TexDesc.Height >= Desc.InputHeight,
+                                       "Ignore history mask texture '", TexDesc.Name, "' dimensions (", TexDesc.Width, "x", TexDesc.Height,
+                                       ") must be at least the upscaler input resolution (", Desc.InputWidth, "x", Desc.InputHeight, ")");
+        }
     }
 #endif
 }

@@ -28,7 +28,9 @@
 
 #include "SuperResolutionFactory.h"
 #include "SuperResolution.h"
+#include "SuperResolutionBase.hpp"
 
+#include <algorithm>
 #include <vector>
 
 namespace Diligent
@@ -43,9 +45,31 @@ public:
     virtual void EnumerateVariants(std::vector<SuperResolutionInfo>& Variants) = 0;
 
     virtual void GetSourceSettings(const SuperResolutionSourceSettingsAttribs& Attribs,
-                                   SuperResolutionSourceSettings&              Settings) = 0;
+                                   SuperResolutionSourceSettings&              Settings)
+    {
+        Settings = {};
+
+        ValidateSourceSettingsAttribs(Attribs);
+
+        float ScaleFactor = 1.0f;
+        switch (Attribs.OptimizationType)
+        {
+                // clang-format off
+            case SUPER_RESOLUTION_OPTIMIZATION_TYPE_MAX_QUALITY:      ScaleFactor = 1.0f / 1.3f; break;
+            case SUPER_RESOLUTION_OPTIMIZATION_TYPE_HIGH_QUALITY:     ScaleFactor = 1.0f / 1.5f; break;
+            case SUPER_RESOLUTION_OPTIMIZATION_TYPE_BALANCED:         ScaleFactor = 1.0f / 1.7f; break;
+            case SUPER_RESOLUTION_OPTIMIZATION_TYPE_HIGH_PERFORMANCE: ScaleFactor = 0.5f;        break;
+            case SUPER_RESOLUTION_OPTIMIZATION_TYPE_MAX_PERFORMANCE:  ScaleFactor = 1.0f / 3.0f; break;
+            default:                                                  ScaleFactor = 1.0f / 1.7f; break;
+                // clang-format on
+        }
+
+        Settings.OptimalInputWidth  = std::max(1u, static_cast<Uint32>(Attribs.OutputWidth * ScaleFactor));
+        Settings.OptimalInputHeight = std::max(1u, static_cast<Uint32>(Attribs.OutputHeight * ScaleFactor));
+    }
 
     virtual void CreateSuperResolution(const SuperResolutionDesc& Desc,
+                                       const SuperResolutionInfo& Info,
                                        ISuperResolution**         ppUpscaler) = 0;
 };
 
