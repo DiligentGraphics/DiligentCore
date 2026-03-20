@@ -395,7 +395,8 @@ TEST(SuperResolution_CInterface, SuperResolution)
     QueryAttribs.OutputHeight     = 1080;
     QueryAttribs.OptimizationType = SUPER_RESOLUTION_OPTIMIZATION_TYPE_BALANCED;
     QueryAttribs.OutputFormat     = TEX_FORMAT_RGBA16_FLOAT;
-    QueryAttribs.Flags            = SUPER_RESOLUTION_FLAG_AUTO_EXPOSURE;
+    if (Variants[0].Type == SUPER_RESOLUTION_TYPE_TEMPORAL)
+        QueryAttribs.Flags = SUPER_RESOLUTION_FLAG_AUTO_EXPOSURE;
 
     SuperResolutionSourceSettings SourceSettings;
     pFactory->GetSourceSettings(QueryAttribs, SourceSettings);
@@ -409,9 +410,12 @@ TEST(SuperResolution_CInterface, SuperResolution)
     Desc.InputWidth   = SourceSettings.OptimalInputWidth;
     Desc.InputHeight  = SourceSettings.OptimalInputHeight;
     Desc.ColorFormat  = TEX_FORMAT_RGBA16_FLOAT;
-    Desc.DepthFormat  = TEX_FORMAT_R32_FLOAT;
-    Desc.MotionFormat = TEX_FORMAT_RG16_FLOAT;
-    Desc.Flags        = SUPER_RESOLUTION_FLAG_AUTO_EXPOSURE;
+    if (Variants[0].Type == SUPER_RESOLUTION_TYPE_TEMPORAL)
+    {
+        Desc.DepthFormat  = TEX_FORMAT_R32_FLOAT;
+        Desc.MotionFormat = TEX_FORMAT_RG16_FLOAT;
+        Desc.Flags        = SUPER_RESOLUTION_FLAG_AUTO_EXPOSURE;
+    }
 
     RefCntAutoPtr<ISuperResolution> pUpscaler;
     pFactory->CreateSuperResolution(Desc, &pUpscaler);

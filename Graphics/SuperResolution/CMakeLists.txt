@@ -6,6 +6,7 @@ project(Diligent-SuperResolution CXX)
 
 set(DILIGENT_DLSS_SUPPORTED FALSE CACHE INTERNAL "DLSS is not supported")
 set(DILIGENT_DSR_SUPPORTED  FALSE CACHE INTERNAL "DirectSR is not supported")
+set(DILIGENT_FSR_SUPPORTED  TRUE CACHE INTERNAL "FSR is not supported")
 
 if(PLATFORM_WIN32 AND NOT MINGW_BUILD AND CMAKE_SIZEOF_VOID_P EQUAL 8)
     if (D3D11_SUPPORTED OR D3D12_SUPPORTED OR VULKAN_SUPPORTED)
@@ -21,6 +22,9 @@ if(${DILIGENT_NO_DLSS})
 endif()
 if(${DILIGENT_NO_DSR})
     set(DILIGENT_DSR_SUPPORTED FALSE CACHE INTERNAL "DirectSR is forcibly disabled")
+endif()
+if(${DILIGENT_NO_FSR})
+    set(DILIGENT_FSR_SUPPORTED FALSE CACHE INTERNAL "FSR is forcibly disabled")
 endif()
 
 if(DILIGENT_DSR_SUPPORTED)
@@ -61,6 +65,35 @@ set(SOURCE
     src/SuperResolutionFactory.cpp
 )
 
+if(DILIGENT_FSR_SUPPORTED)
+    set(FSR_SHADERS
+        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/FSR_FullQuad.fx
+        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/FSRStructures.fxh
+        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/FSR_EdgeAdaptiveUpsampling.fx
+        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/FSR_ContrastAdaptiveSharpening.fx
+        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/fsr1/ffx_common_types.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/fsr1/ffx_core.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/fsr1/ffx_core_glsl.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/fsr1/ffx_core_gpu_common.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/fsr1/ffx_core_gpu_common_half.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/fsr1/ffx_core_hlsl.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/fsr1/ffx_core_portability.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/fsr1/ffx_fsr1.h
+    )
+    set_source_files_properties(${FSR_SHADERS} PROPERTIES VS_TOOL_OVERRIDE "None")
+
+    # Convert shaders to headers and generate master header with the list of all files
+    set(FSR_SHADER_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/shaders_inc/FSR)
+    file(MAKE_DIRECTORY ${FSR_SHADER_OUTPUT_DIR})
+    set(FSR_SHADERS_LIST_FILE ${FSR_SHADER_OUTPUT_DIR}/FSRShaderList.h)
+    convert_shaders_to_headers("${FSR_SHADERS}" ${FSR_SHADER_OUTPUT_DIR} ${FSR_SHADERS_LIST_FILE} FSR_SHADERS_INC_LIST)
+
+    list(APPEND SOURCE src/FSRProvider.cpp)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+        set_source_files_properties(src/FSRProvider.cpp PROPERTIES COMPILE_OPTIONS "-Wno-unused-function")
+    endif()
+endif()
+
 if(DILIGENT_DLSS_SUPPORTED)
     list(APPEND INCLUDE include/SuperResolutionDLSS.hpp)
     list(APPEND SOURCE src/SuperResolutionDLSS.cpp)
@@ -92,9 +125,17 @@ target_include_directories(Diligent-SuperResolutionInterface INTERFACE interface
 target_compile_definitions(Diligent-SuperResolutionInterface INTERFACE SUPER_RESOLUTION_SUPPORTED=1)
 
 add_library(Diligent-SuperResolution-static STATIC
-    ${SOURCE} ${INTERFACE} ${INCLUDE}
+    ${SOURCE} 
+    ${INTERFACE} 
+    ${INCLUDE}
+    ${FSR_SHADERS}
+    ${FSR_SHADERS_INC_LIST}
+    ${FSR_SHADERS_LIST_FILE}
     readme.md
 )
+source_group("shaders/FSR" FILES ${FSR_SHADERS})
+source_group("generated/FSR" FILES ${FSR_SHADERS_INC_LIST} ${FSR_SHADERS_LIST_FILE})
+
 add_library(Diligent-SuperResolution-shared SHARED
     readme.md
 )
@@ -129,6 +170,11 @@ if(DILIGENT_DSR_SUPPORTED)
     endif()
 endif()
 
+if(DILIGENT_FSR_SUPPORTED)
+    target_compile_definitions(Diligent-SuperResolution-static PRIVATE DILIGENT_FSR_SUPPORTED=1)
+    target_include_directories(Diligent-SuperResolution-static PRIVATE ${FSR_SHADER_OUTPUT_DIR})
+endif()
+
 target_compile_definitions(Diligent-SuperResolution-shared PUBLIC DILIGENT_SUPER_RESOLUTION_SHARED=1)
 
 target_link_libraries(Diligent-SuperResolution-static
@@ -139,6 +185,7 @@ PRIVATE
     Diligent-Common
     Diligent-GraphicsAccessories
     Diligent-ShaderTools
+    Diligent-GraphicsTools
 )
 
 if(DILIGENT_DSR_SUPPORTED)
