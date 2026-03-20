@@ -54,7 +54,7 @@ NVSDK_NGX_PerfQuality_Value OptimizationTypeToNGXPerfQuality(SUPER_RESOLUTION_OP
     }
 }
 
-Int32 SuperResolutionFlagsToDLSSFeatureFlags(SUPER_RESOLUTION_FLAGS Flags)
+Int32 ComputeDLSSFeatureFlags(SUPER_RESOLUTION_FLAGS Flags, const ExecuteSuperResolutionAttribs& Attribs)
 {
     Int32 DLSSFlags = NVSDK_NGX_DLSS_Feature_Flags_None;
 
@@ -62,6 +62,8 @@ Int32 SuperResolutionFlagsToDLSSFeatureFlags(SUPER_RESOLUTION_FLAGS Flags)
         DLSSFlags |= NVSDK_NGX_DLSS_Feature_Flags_AutoExposure;
     if (Flags & SUPER_RESOLUTION_FLAG_ENABLE_SHARPENING)
         DLSSFlags |= NVSDK_NGX_DLSS_Feature_Flags_DoSharpening;
+    if (Attribs.CameraNear > Attribs.CameraFar)
+        DLSSFlags |= NVSDK_NGX_DLSS_Feature_Flags_DepthInverted;
 
     DLSSFlags |= NVSDK_NGX_DLSS_Feature_Flags_MVLowRes;
     DLSSFlags |= NVSDK_NGX_DLSS_Feature_Flags_IsHDR;
@@ -71,7 +73,8 @@ Int32 SuperResolutionFlagsToDLSSFeatureFlags(SUPER_RESOLUTION_FLAGS Flags)
 
 void EnumerateDLSSVariants(NVSDK_NGX_Parameter* pNGXParams, std::vector<SuperResolutionInfo>& Variants)
 {
-    DEV_CHECK_ERR(pNGXParams != nullptr, "NGX parameters must not be null");
+    if (pNGXParams == nullptr)
+        return;
 
     Int32 NeedsUpdatedDriver = 0;
     NVSDK_NGX_Parameter_GetI(pNGXParams, NVSDK_NGX_Parameter_SuperSampling_NeedsUpdatedDriver, &NeedsUpdatedDriver);
