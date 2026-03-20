@@ -148,7 +148,7 @@ def cmake_build_project(config, settings):
     subprocess.run(f"cmake -S . -B {settings['native-build-folder']} \
             -D CMAKE_BUILD_TYPE={config} \
             -D CMAKE_INSTALL_PREFIX={settings['native-build-folder']}/install -A {settings['cmake-generator-attribute']} \
-            -D DILIGENT_BUILD_CORE_TESTS=ON", check=True)
+            -D DILIGENT_BUILD_CORE_TESTS=ON -D DILIGENT_NO_DLSS=ON -D DILIGENT_NO_DSR=ON", check=True)
     subprocess.run(f"cmake --build {settings['native-build-folder']} --target install --config {config}", check=True)
 
     native_dll_path = f"{project_paths['dotnet-build']}/{project_paths['dotnet-proj']}/native/{settings['nuget-name-folder']}"

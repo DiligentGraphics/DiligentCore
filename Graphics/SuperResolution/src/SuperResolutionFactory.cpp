@@ -25,15 +25,188 @@
  */
 
 #include "SuperResolutionFactoryLoader.h"
+#include "SuperResolutionProvider.hpp"
 #include "DebugUtilities.hpp"
+#include "ObjectBase.hpp"
+#include "EngineMemory.h"
+#include "PlatformDebug.hpp"
 
 namespace Diligent
 {
 
-void CreateSuperResolutionFactoryD3D12(IRenderDevice* pDevice, ISuperResolutionFactory** ppFactory);
-void CreateSuperResolutionFactoryD3D11(IRenderDevice* pDevice, ISuperResolutionFactory** ppFactory);
-void CreateSuperResolutionFactoryVk(IRenderDevice* pDevice, ISuperResolutionFactory** ppFactory);
-void CreateSuperResolutionFactoryMtl(IRenderDevice* pDevice, ISuperResolutionFactory** ppFactory);
+#if DILIGENT_DLSS_D3D11_SUPPORTED
+std::unique_ptr<SuperResolutionProvider> CreateDLSSProviderD3D11(IRenderDevice* pDevice);
+#endif
+
+#if DILIGENT_DLSS_D3D12_SUPPORTED
+std::unique_ptr<SuperResolutionProvider> CreateDLSSProviderD3D12(IRenderDevice* pDevice);
+#endif
+
+#if DILIGENT_DLSS_VK_SUPPORTED
+std::unique_ptr<SuperResolutionProvider> CreateDLSSProviderVk(IRenderDevice* pDevice);
+#endif
+
+#if DILIGENT_DSR_D3D12_SUPPORTED
+std::unique_ptr<SuperResolutionProvider> CreateDSRProviderD3D12(IRenderDevice* pDevice);
+#endif
+
+#if DILIGENT_METALFX_SUPPORTED
+std::unique_ptr<SuperResolutionProvider> CreateMetalFXProvider(IRenderDevice* pDevice);
+#endif
+
+namespace
+{
+
+class SuperResolutionFactory : public ObjectBase<ISuperResolutionFactory>
+{
+public:
+    using TBase = ObjectBase<ISuperResolutionFactory>;
+
+    SuperResolutionFactory(IReferenceCounters* pRefCounters, IRenderDevice* pDevice) :
+        TBase{pRefCounters}
+    {
+        auto AddProvider = [this](IRenderDevice*                           pDevice,
+                                  std::unique_ptr<SuperResolutionProvider> CreateProvider(IRenderDevice*),
+                                  const char*                              ProviderName) {
+            try
+            {
+                ProviderInfo ProvInfo;
+                ProvInfo.Provider = CreateProvider(pDevice);
+                if (ProvInfo.Provider)
+                {
+                    ProvInfo.Provider->EnumerateVariants(ProvInfo.Variants);
+                    if (!ProvInfo.Variants.empty())
+                    {
+                        m_TotalVariants += static_cast<Uint32>(ProvInfo.Variants.size());
+                        m_Providers.push_back(std::move(ProvInfo));
+                    }
+                }
+            }
+            catch (...)
+            {
+                LOG_ERROR_MESSAGE("Failed to create super resolution provider '", ProviderName, "'");
+            }
+        };
+
+#ifdef DILIGENT_DLSS_D3D11_SUPPORTED
+        AddProvider(pDevice, CreateDLSSProviderD3D11, "DLSS D3D11");
+#endif
+#ifdef DILIGENT_DLSS_D3D12_SUPPORTED
+        AddProvider(pDevice, CreateDLSSProviderD3D12, "DLSS D3D12");
+#endif
+#ifdef DILIGENT_DLSS_VK_SUPPORTED
+        AddProvider(pDevice, CreateDLSSProviderVk, "DLSS Vulkan");
+#endif
+#ifdef DILIGENT_DSR_D3D12_SUPPORTED
+        AddProvider(pDevice, CreateDSRProviderD3D12, "DirectSR D3D12");
+#endif
+#ifdef DILIGENT_METALFX_SUPPORTED
+        AddProvider(pDevice, CreateMetalFXProvider, "MetalFX");
+#endif
+    }
+
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_SuperResolutionFactory, TBase)
+
+    virtual void DILIGENT_CALL_TYPE EnumerateVariants(Uint32& NumVariants, SuperResolutionInfo* Variants) override final
+    {
+        if (Variants == nullptr)
+        {
+            NumVariants = m_TotalVariants;
+            return;
+        }
+
+        NumVariants = 0;
+        for (const ProviderInfo& Entry : m_Providers)
+        {
+            for (const SuperResolutionInfo& Info : Entry.Variants)
+            {
+                if (NumVariants >= m_TotalVariants)
+                    return;
+                Variants[NumVariants++] = Info;
+            }
+        }
+    }
+
+    virtual void DILIGENT_CALL_TYPE GetSourceSettings(const SuperResolutionSourceSettingsAttribs& Attribs,
+                                                      SuperResolutionSourceSettings&              Settings) const override final
+    {
+        Settings = {};
+        if (const ProviderInfo* pEntry = FindProvider(Attribs.VariantId))
+        {
+            pEntry->Provider->GetSourceSettings(Attribs, Settings);
+        }
+        else
+        {
+            LOG_WARNING_MESSAGE("Super resolution variant not found for the specified VariantId");
+        }
+    }
+
+    virtual void DILIGENT_CALL_TYPE CreateSuperResolution(const SuperResolutionDesc& Desc, ISuperResolution** ppUpscaler) override final
+    {
+        DEV_CHECK_ERR(ppUpscaler != nullptr, "ppUpscaler must not be null");
+        if (ppUpscaler == nullptr)
+            return;
+
+        *ppUpscaler = nullptr;
+
+        const ProviderInfo* pEntry = FindProvider(Desc.VariantId);
+        if (pEntry == nullptr)
+        {
+            LOG_ERROR_MESSAGE("Super resolution variant not found for the specified VariantId. Call EnumerateVariants() to get valid variant IDs.");
+            return;
+        }
+
+        try
+        {
+            pEntry->Provider->CreateSuperResolution(Desc, ppUpscaler);
+        }
+        catch (...)
+        {
+            LOG_ERROR("Failed to create super resolution upscaler '", (Desc.Name ? Desc.Name : ""), "'");
+        }
+    }
+
+    virtual void DILIGENT_CALL_TYPE SetMessageCallback(DebugMessageCallbackType MessageCallback) const override final
+    {
+        SetDebugMessageCallback(MessageCallback);
+    }
+
+    virtual void DILIGENT_CALL_TYPE SetBreakOnError(bool BreakOnError) const override final
+    {
+        PlatformDebug::SetBreakOnError(BreakOnError);
+    }
+
+    virtual void DILIGENT_CALL_TYPE SetMemoryAllocator(IMemoryAllocator* pAllocator) const override final
+    {
+        SetRawAllocator(pAllocator);
+    }
+
+private:
+    struct ProviderInfo
+    {
+        std::unique_ptr<SuperResolutionProvider> Provider;
+        std::vector<SuperResolutionInfo>         Variants;
+    };
+
+    const ProviderInfo* FindProvider(const INTERFACE_ID& VariantId) const
+    {
+        for (const ProviderInfo& ProvInfo : m_Providers)
+        {
+            for (const SuperResolutionInfo& SRInfo : ProvInfo.Variants)
+            {
+                if (SRInfo.VariantId == VariantId)
+                    return &ProvInfo;
+            }
+        }
+        return nullptr;
+    }
+
+private:
+    std::vector<ProviderInfo> m_Providers;
+    Uint32                    m_TotalVariants = 0;
+};
+
+} // namespace
 
 API_QUALIFIER void CreateSuperResolutionFactory(IRenderDevice* pDevice, ISuperResolutionFactory** ppFactory)
 {
@@ -49,23 +222,8 @@ API_QUALIFIER void CreateSuperResolutionFactory(IRenderDevice* pDevice, ISuperRe
 
     try
     {
-        switch (pDevice->GetDeviceInfo().Type)
-        {
-            case RENDER_DEVICE_TYPE_D3D12:
-                CreateSuperResolutionFactoryD3D12(pDevice, ppFactory);
-                break;
-            case RENDER_DEVICE_TYPE_D3D11:
-                CreateSuperResolutionFactoryD3D11(pDevice, ppFactory);
-                break;
-            case RENDER_DEVICE_TYPE_VULKAN:
-                CreateSuperResolutionFactoryVk(pDevice, ppFactory);
-                break;
-            case RENDER_DEVICE_TYPE_METAL:
-                CreateSuperResolutionFactoryMtl(pDevice, ppFactory);
-                break;
-            default:
-                break;
-        }
+        SuperResolutionFactory* pFactory = NEW_RC_OBJ(GetRawAllocator(), "SuperResolutionFactory instance", SuperResolutionFactory)(pDevice);
+        pFactory->QueryInterface(IID_SuperResolutionFactory, reinterpret_cast<IObject**>(ppFactory));
     }
     catch (...)
     {

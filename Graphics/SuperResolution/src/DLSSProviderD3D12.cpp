@@ -24,20 +24,18 @@
  *  of the possibility of such damages.
  */
 
-#include "DLSSProviderD3D12.hpp"
+#include "SuperResolutionProvider.hpp"
 
-#if D3D12_SUPPORTED && DILIGENT_DLSS_SUPPORTED
+#include "SuperResolutionDLSS.hpp"
+#include "SuperResolutionBase.hpp"
+#include "SuperResolutionVariants.hpp"
 
-#    include "SuperResolutionDLSS.hpp"
-#    include "SuperResolutionBase.hpp"
-#    include "SuperResolutionVariants.hpp"
+#include <nvsdk_ngx_helpers.h>
 
-#    include <nvsdk_ngx_helpers.h>
-
-#    include "../../GraphicsEngineD3D12/include/pch.h"
-#    include "RenderDeviceD3D12Impl.hpp"
-#    include "DeviceContextD3D12Impl.hpp"
-#    include "TextureD3D12Impl.hpp"
+#include "../../GraphicsEngineD3D12/include/pch.h"
+#include "RenderDeviceD3D12Impl.hpp"
+#include "DeviceContextD3D12Impl.hpp"
+#include "TextureD3D12Impl.hpp"
 
 namespace Diligent
 {
@@ -147,66 +145,61 @@ private:
     NVSDK_NGX_Parameter*         m_pNGXParams   = nullptr;
 };
 
+
+class DLSSProviderD3D12 final : public SuperResolutionProvider
+{
+public:
+    DLSSProviderD3D12(IRenderDevice* pDevice) :
+        m_pDevice{pDevice}
+    {
+        ID3D12Device*    pd3d12Device = ClassPtrCast<RenderDeviceD3D12Impl>(pDevice)->GetD3D12Device();
+        NVSDK_NGX_Result Result       = NVSDK_NGX_D3D12_Init_with_ProjectID(DLSSProjectId, NVSDK_NGX_ENGINE_TYPE_CUSTOM, "0", DLSSAppDataPath, pd3d12Device);
+        if (NVSDK_NGX_FAILED(Result))
+            LOG_ERROR_AND_THROW("NVIDIA NGX D3D12 initialization failed. Result: ", static_cast<Uint32>(Result));
+
+        Result = NVSDK_NGX_D3D12_GetCapabilityParameters(&m_pNGXParams);
+        if (NVSDK_NGX_FAILED(Result) || m_pNGXParams == nullptr)
+            LOG_ERROR_AND_THROW("Failed to get NGX D3D12 capability parameters. Result: ", static_cast<Uint32>(Result));
+    }
+
+    ~DLSSProviderD3D12()
+    {
+        if (m_pNGXParams != nullptr)
+            NVSDK_NGX_D3D12_DestroyParameters(m_pNGXParams);
+        NVSDK_NGX_D3D12_Shutdown1(ClassPtrCast<RenderDeviceD3D12Impl>(m_pDevice.RawPtr())->GetD3D12Device());
+    }
+
+    virtual void EnumerateVariants(std::vector<SuperResolutionInfo>& Variants) override final
+    {
+        EnumerateDLSSVariants(m_pNGXParams, Variants);
+    }
+
+    virtual void GetSourceSettings(const SuperResolutionSourceSettingsAttribs& Attribs, SuperResolutionSourceSettings& Settings) override final
+    {
+        GetDLSSSourceSettings(m_pNGXParams, Attribs, Settings);
+    }
+
+    virtual void CreateSuperResolution(const SuperResolutionDesc& Desc, ISuperResolution** ppUpscaler) override final
+    {
+        DEV_CHECK_ERR(m_pDevice != nullptr, "Render device must not be null");
+        DEV_CHECK_ERR(ppUpscaler != nullptr, "ppUpscaler must not be null");
+
+        SuperResolutionD3D12_DLSS* pUpscaler = NEW_RC_OBJ(GetRawAllocator(), "SuperResolutionD3D12_DLSS instance", SuperResolutionD3D12_DLSS)(m_pDevice, Desc, m_pNGXParams);
+        pUpscaler->QueryInterface(IID_SuperResolution, reinterpret_cast<IObject**>(ppUpscaler));
+    }
+
+private:
+    RefCntAutoPtr<IRenderDevice> m_pDevice;
+    NVSDK_NGX_Parameter*         m_pNGXParams = nullptr;
+};
+
 } // anonymous namespace
 
-
-DLSSProviderD3D12::DLSSProviderD3D12(IRenderDevice* pDevice) :
-    m_pDevice{pDevice}
+std::unique_ptr<SuperResolutionProvider> CreateDLSSProviderD3D12(IRenderDevice* pDevice)
 {
-    ID3D12Device*    pd3d12Device = ClassPtrCast<RenderDeviceD3D12Impl>(pDevice)->GetD3D12Device();
-    NVSDK_NGX_Result Result       = NVSDK_NGX_D3D12_Init_with_ProjectID(DLSSProjectId, NVSDK_NGX_ENGINE_TYPE_CUSTOM, "0", DLSSAppDataPath, pd3d12Device);
-    if (NVSDK_NGX_FAILED(Result))
-        LOG_ERROR_AND_THROW("NVIDIA NGX D3D12 initialization failed. Result: ", static_cast<Uint32>(Result));
-
-    Result = NVSDK_NGX_D3D12_GetCapabilityParameters(&m_pNGXParams);
-    if (NVSDK_NGX_FAILED(Result) || m_pNGXParams == nullptr)
-        LOG_ERROR_AND_THROW("Failed to get NGX D3D12 capability parameters. Result: ", static_cast<Uint32>(Result));
-}
-
-DLSSProviderD3D12::~DLSSProviderD3D12()
-{
-    if (m_pNGXParams != nullptr)
-        NVSDK_NGX_D3D12_DestroyParameters(m_pNGXParams);
-    NVSDK_NGX_D3D12_Shutdown1(ClassPtrCast<RenderDeviceD3D12Impl>(m_pDevice.RawPtr())->GetD3D12Device());
-}
-
-void DLSSProviderD3D12::EnumerateVariants(std::vector<SuperResolutionInfo>& Variants)
-{
-    EnumerateDLSSVariants(m_pNGXParams, Variants);
-}
-
-void DLSSProviderD3D12::GetSourceSettings(const SuperResolutionSourceSettingsAttribs& Attribs,
-                                                         SuperResolutionSourceSettings&              Settings)
-{
-    GetDLSSSourceSettings(m_pNGXParams, Attribs, Settings);
-}
-
-void DLSSProviderD3D12::CreateSuperResolution(const SuperResolutionDesc& Desc,
-                                                             ISuperResolution**         ppUpscaler)
-{
-    DEV_CHECK_ERR(m_pDevice != nullptr, "Render device must not be null");
-    DEV_CHECK_ERR(ppUpscaler != nullptr, "ppUpscaler must not be null");
-
-    SuperResolutionD3D12_DLSS* pUpscaler = NEW_RC_OBJ(GetRawAllocator(), "SuperResolutionD3D12_DLSS instance", SuperResolutionD3D12_DLSS)(m_pDevice, Desc, m_pNGXParams);
-    pUpscaler->QueryInterface(IID_SuperResolution, reinterpret_cast<IObject**>(ppUpscaler));
+    return pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D12 ?
+        std::make_unique<DLSSProviderD3D12>(pDevice) :
+        nullptr;
 }
 
 } // namespace Diligent
-
-#else
-
-namespace Diligent
-{
-
-DLSSProviderD3D12::DLSSProviderD3D12(IRenderDevice*)
-{
-    LOG_INFO_MESSAGE("DLSS is not supported on this platform for D3D12 backend");
-}
-DLSSProviderD3D12::~DLSSProviderD3D12() {}
-void DLSSProviderD3D12::EnumerateVariants(std::vector<SuperResolutionInfo>&) {}
-void DLSSProviderD3D12::GetSourceSettings(const SuperResolutionSourceSettingsAttribs&, SuperResolutionSourceSettings&) {}
-void DLSSProviderD3D12::CreateSuperResolution(const SuperResolutionDesc&, ISuperResolution**) {}
-
-} // namespace Diligent
-
-#endif

@@ -24,18 +24,16 @@
  *  of the possibility of such damages.
  */
 
-#include "DSRProviderD3D12.hpp"
+#include "SuperResolutionProvider.hpp"
 
-#if DILIGENT_DSR_SUPPORTED
+#include "SuperResolutionBase.hpp"
+#include "../../GraphicsEngineD3D12/include/pch.h"
 
-#    include "SuperResolutionBase.hpp"
-#    include "../../GraphicsEngineD3D12/include/pch.h"
+#include <directsr.h>
 
-#    include <directsr.h>
-
-#    include "RenderDeviceD3D12Impl.hpp"
-#    include "DeviceContextD3D12Impl.hpp"
-#    include "DXGITypeConversions.hpp"
+#include "RenderDeviceD3D12Impl.hpp"
+#include "DeviceContextD3D12Impl.hpp"
+#include "DXGITypeConversions.hpp"
 
 namespace Diligent
 {
@@ -251,143 +249,140 @@ void DILIGENT_CALL_TYPE SuperResolutionD3D12_DSR::Execute(const ExecuteSuperReso
     pDeviceCtx->TransitionTextureState(Attribs.pOutputTextureView->GetTexture(), D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 }
 
-} // anonymous namespace
-
-DSRProviderD3D12::DSRProviderD3D12(IRenderDevice* pDevice) :
-    m_pDevice{pDevice},
-    m_pDSRDevice{CreateDSRDevice(pDevice).Detach()}
+class DSRProviderD3D12 final : public SuperResolutionProvider
 {
-}
-
-DSRProviderD3D12::~DSRProviderD3D12()
-{
-    if (m_pDSRDevice)
-        m_pDSRDevice->Release();
-}
-
-void DSRProviderD3D12::EnumerateVariants(std::vector<SuperResolutionInfo>& Variants)
-{
-    if (!m_pDSRDevice)
-        return;
-
-    static_assert(sizeof(SuperResolutionInfo::VariantId) == sizeof(DSR_SUPERRES_VARIANT_DESC::VariantId), "GUID/INTERFACE_ID size mismatch");
-
-    const Uint32 DSRNumVariants = m_pDSRDevice->GetNumSuperResVariants();
-    for (Uint32 Idx = 0; Idx < DSRNumVariants; ++Idx)
+public:
+    DSRProviderD3D12(IRenderDevice* pDevice) :
+        m_pDevice{pDevice},
+        m_pDSRDevice{CreateDSRDevice(pDevice).Detach()}
     {
-        DSR_SUPERRES_VARIANT_DESC VariantDesc = {};
-        if (FAILED(m_pDSRDevice->GetSuperResVariantDesc(Idx, &VariantDesc)))
-            continue;
-
-        SuperResolutionInfo Info{};
-        Info.Type = SUPER_RESOLUTION_TYPE_TEMPORAL;
-
-        Info.TemporalCapFlags = SUPER_RESOLUTION_TEMPORAL_CAP_FLAG_NATIVE;
-        if (VariantDesc.Flags & DSR_SUPERRES_VARIANT_FLAG_SUPPORTS_EXPOSURE_SCALE_TEXTURE)
-            Info.TemporalCapFlags |= SUPER_RESOLUTION_TEMPORAL_CAP_FLAG_EXPOSURE_SCALE_TEXTURE;
-        if (VariantDesc.Flags & DSR_SUPERRES_VARIANT_FLAG_SUPPORTS_IGNORE_HISTORY_MASK)
-            Info.TemporalCapFlags |= SUPER_RESOLUTION_TEMPORAL_CAP_FLAG_IGNORE_HISTORY_MASK;
-        if (VariantDesc.Flags & DSR_SUPERRES_VARIANT_FLAG_SUPPORTS_REACTIVE_MASK)
-            Info.TemporalCapFlags |= SUPER_RESOLUTION_TEMPORAL_CAP_FLAG_REACTIVE_MASK;
-        if (VariantDesc.Flags & DSR_SUPERRES_VARIANT_FLAG_SUPPORTS_SHARPNESS)
-            Info.TemporalCapFlags |= SUPER_RESOLUTION_TEMPORAL_CAP_FLAG_SHARPNESS;
-
-        snprintf(Info.Name, sizeof(Info.Name), "DSR: %s", VariantDesc.VariantName);
-        memcpy(&Info.VariantId, &VariantDesc.VariantId, sizeof(Info.VariantId));
-
-        Variants.push_back(Info);
     }
-}
 
-void DSRProviderD3D12::GetSourceSettings(const SuperResolutionSourceSettingsAttribs& Attribs,
-                                                        SuperResolutionSourceSettings&              Settings)
-{
-    Settings = {};
-
-    DEV_CHECK_ERR(m_pDSRDevice != nullptr, "DirectSR device must not be null");
-    ValidateSourceSettingsAttribs(Attribs);
-
-    DSR_OPTIMIZATION_TYPE DSROptType = DSR_OPTIMIZATION_TYPE_BALANCED;
-    switch (Attribs.OptimizationType)
+    ~DSRProviderD3D12()
     {
-        // clang-format off
+        if (m_pDSRDevice)
+            m_pDSRDevice->Release();
+    }
+
+    virtual void EnumerateVariants(std::vector<SuperResolutionInfo>& Variants) override final
+    {
+        if (!m_pDSRDevice)
+            return;
+
+        static_assert(sizeof(SuperResolutionInfo::VariantId) == sizeof(DSR_SUPERRES_VARIANT_DESC::VariantId), "GUID/INTERFACE_ID size mismatch");
+
+        const Uint32 DSRNumVariants = m_pDSRDevice->GetNumSuperResVariants();
+        for (Uint32 Idx = 0; Idx < DSRNumVariants; ++Idx)
+        {
+            DSR_SUPERRES_VARIANT_DESC VariantDesc = {};
+            if (FAILED(m_pDSRDevice->GetSuperResVariantDesc(Idx, &VariantDesc)))
+                continue;
+
+            SuperResolutionInfo Info{};
+            Info.Type = SUPER_RESOLUTION_TYPE_TEMPORAL;
+
+            Info.TemporalCapFlags = SUPER_RESOLUTION_TEMPORAL_CAP_FLAG_NATIVE;
+            if (VariantDesc.Flags & DSR_SUPERRES_VARIANT_FLAG_SUPPORTS_EXPOSURE_SCALE_TEXTURE)
+                Info.TemporalCapFlags |= SUPER_RESOLUTION_TEMPORAL_CAP_FLAG_EXPOSURE_SCALE_TEXTURE;
+            if (VariantDesc.Flags & DSR_SUPERRES_VARIANT_FLAG_SUPPORTS_IGNORE_HISTORY_MASK)
+                Info.TemporalCapFlags |= SUPER_RESOLUTION_TEMPORAL_CAP_FLAG_IGNORE_HISTORY_MASK;
+            if (VariantDesc.Flags & DSR_SUPERRES_VARIANT_FLAG_SUPPORTS_REACTIVE_MASK)
+                Info.TemporalCapFlags |= SUPER_RESOLUTION_TEMPORAL_CAP_FLAG_REACTIVE_MASK;
+            if (VariantDesc.Flags & DSR_SUPERRES_VARIANT_FLAG_SUPPORTS_SHARPNESS)
+                Info.TemporalCapFlags |= SUPER_RESOLUTION_TEMPORAL_CAP_FLAG_SHARPNESS;
+
+            snprintf(Info.Name, sizeof(Info.Name), "DSR: %s", VariantDesc.VariantName);
+            memcpy(&Info.VariantId, &VariantDesc.VariantId, sizeof(Info.VariantId));
+
+            Variants.push_back(Info);
+        }
+    }
+
+    virtual void GetSourceSettings(const SuperResolutionSourceSettingsAttribs& Attribs,
+                                   SuperResolutionSourceSettings&              Settings) override final
+    {
+        Settings = {};
+
+        DEV_CHECK_ERR(m_pDSRDevice != nullptr, "DirectSR device must not be null");
+        ValidateSourceSettingsAttribs(Attribs);
+
+        DSR_OPTIMIZATION_TYPE DSROptType = DSR_OPTIMIZATION_TYPE_BALANCED;
+        switch (Attribs.OptimizationType)
+        {
+                // clang-format off
         case SUPER_RESOLUTION_OPTIMIZATION_TYPE_MAX_QUALITY:      DSROptType = DSR_OPTIMIZATION_TYPE_MAX_QUALITY;       break;
         case SUPER_RESOLUTION_OPTIMIZATION_TYPE_HIGH_QUALITY:     DSROptType = DSR_OPTIMIZATION_TYPE_HIGH_QUALITY;      break;
         case SUPER_RESOLUTION_OPTIMIZATION_TYPE_BALANCED:         DSROptType = DSR_OPTIMIZATION_TYPE_BALANCED;          break;
         case SUPER_RESOLUTION_OPTIMIZATION_TYPE_HIGH_PERFORMANCE: DSROptType = DSR_OPTIMIZATION_TYPE_HIGH_PERFORMANCE;  break;
         case SUPER_RESOLUTION_OPTIMIZATION_TYPE_MAX_PERFORMANCE:  DSROptType = DSR_OPTIMIZATION_TYPE_MAX_PERFORMANCE;   break;
         default: break;
-            // clang-format on
-    }
+                // clang-format on
+        }
 
-    const Uint32 NumVariants  = m_pDSRDevice->GetNumSuperResVariants();
-    Uint32       VariantIndex = UINT32_MAX;
-    for (Uint32 Idx = 0; Idx < NumVariants; ++Idx)
-    {
-        DSR_SUPERRES_VARIANT_DESC VariantDesc = {};
-        if (SUCCEEDED(m_pDSRDevice->GetSuperResVariantDesc(Idx, &VariantDesc)))
+        const Uint32 NumVariants  = m_pDSRDevice->GetNumSuperResVariants();
+        Uint32       VariantIndex = UINT32_MAX;
+        for (Uint32 Idx = 0; Idx < NumVariants; ++Idx)
         {
-            if (memcmp(&VariantDesc.VariantId, &Attribs.VariantId, sizeof(GUID)) == 0)
+            DSR_SUPERRES_VARIANT_DESC VariantDesc = {};
+            if (SUCCEEDED(m_pDSRDevice->GetSuperResVariantDesc(Idx, &VariantDesc)))
             {
-                VariantIndex = Idx;
-                break;
+                if (memcmp(&VariantDesc.VariantId, &Attribs.VariantId, sizeof(GUID)) == 0)
+                {
+                    VariantIndex = Idx;
+                    break;
+                }
             }
+        }
+
+        if (VariantIndex == UINT32_MAX)
+        {
+            LOG_WARNING_MESSAGE("DirectSR variant not found for the specified VariantId");
+            return;
+        }
+
+        DSR_SIZE TargetSize = {Attribs.OutputWidth, Attribs.OutputHeight};
+
+        DSR_SUPERRES_CREATE_ENGINE_FLAGS DSRCreateFlags = DSR_SUPERRES_CREATE_ENGINE_FLAG_NONE;
+        if (Attribs.Flags & SUPER_RESOLUTION_FLAG_AUTO_EXPOSURE)
+            DSRCreateFlags |= DSR_SUPERRES_CREATE_ENGINE_FLAG_AUTO_EXPOSURE;
+        if (Attribs.Flags & SUPER_RESOLUTION_FLAG_ENABLE_SHARPENING)
+            DSRCreateFlags |= DSR_SUPERRES_CREATE_ENGINE_FLAG_ENABLE_SHARPENING;
+
+        DSR_SUPERRES_SOURCE_SETTINGS SourceSettings = {};
+        if (HRESULT hr = m_pDSRDevice->QuerySuperResSourceSettings(VariantIndex, TargetSize, TexFormatToDXGI_Format(Attribs.OutputFormat), DSROptType, DSRCreateFlags, &SourceSettings); SUCCEEDED(hr))
+        {
+            Settings.OptimalInputWidth  = SourceSettings.OptimalSize.Width;
+            Settings.OptimalInputHeight = SourceSettings.OptimalSize.Height;
+        }
+        else
+        {
+            LOG_WARNING_MESSAGE("DirectSR QuerySuperResSourceSettings failed. HRESULT: ", hr);
         }
     }
 
-    if (VariantIndex == UINT32_MAX)
+    virtual void CreateSuperResolution(const SuperResolutionDesc& Desc,
+                                       ISuperResolution**         ppUpscaler) override final
     {
-        LOG_WARNING_MESSAGE("DirectSR variant not found for the specified VariantId");
-        return;
+        DEV_CHECK_ERR(m_pDSRDevice != nullptr, "DirectSR device must not be null");
+        DEV_CHECK_ERR(m_pDevice != nullptr, "Render device must not be null");
+
+        RenderDeviceD3D12Impl*    pDeviceD3D12 = ClassPtrCast<RenderDeviceD3D12Impl>(m_pDevice.RawPtr());
+        SuperResolutionD3D12_DSR* pUpscaler    = NEW_RC_OBJ(GetRawAllocator(), "SuperResolutionD3D12_DSR instance", SuperResolutionD3D12_DSR)(pDeviceD3D12, Desc, m_pDSRDevice);
+        pUpscaler->QueryInterface(IID_SuperResolution, reinterpret_cast<IObject**>(ppUpscaler));
     }
 
-    DSR_SIZE TargetSize = {Attribs.OutputWidth, Attribs.OutputHeight};
+private:
+    RefCntAutoPtr<IRenderDevice> m_pDevice;
+    IDSRDevice*                  m_pDSRDevice = nullptr;
+};
 
-    DSR_SUPERRES_CREATE_ENGINE_FLAGS DSRCreateFlags = DSR_SUPERRES_CREATE_ENGINE_FLAG_NONE;
-    if (Attribs.Flags & SUPER_RESOLUTION_FLAG_AUTO_EXPOSURE)
-        DSRCreateFlags |= DSR_SUPERRES_CREATE_ENGINE_FLAG_AUTO_EXPOSURE;
-    if (Attribs.Flags & SUPER_RESOLUTION_FLAG_ENABLE_SHARPENING)
-        DSRCreateFlags |= DSR_SUPERRES_CREATE_ENGINE_FLAG_ENABLE_SHARPENING;
+} // anonymous namespace
 
-    DSR_SUPERRES_SOURCE_SETTINGS SourceSettings = {};
-    if (HRESULT hr = m_pDSRDevice->QuerySuperResSourceSettings(VariantIndex, TargetSize, TexFormatToDXGI_Format(Attribs.OutputFormat), DSROptType, DSRCreateFlags, &SourceSettings); SUCCEEDED(hr))
-    {
-        Settings.OptimalInputWidth  = SourceSettings.OptimalSize.Width;
-        Settings.OptimalInputHeight = SourceSettings.OptimalSize.Height;
-    }
-    else
-    {
-        LOG_WARNING_MESSAGE("DirectSR QuerySuperResSourceSettings failed. HRESULT: ", hr);
-    }
-}
-
-void DSRProviderD3D12::CreateSuperResolution(const SuperResolutionDesc& Desc,
-                                                            ISuperResolution**         ppUpscaler)
+std::unique_ptr<SuperResolutionProvider> CreateDSRProviderD3D12(IRenderDevice* pDevice)
 {
-    DEV_CHECK_ERR(m_pDSRDevice != nullptr, "DirectSR device must not be null");
-    DEV_CHECK_ERR(m_pDevice != nullptr, "Render device must not be null");
-
-    RenderDeviceD3D12Impl*    pDeviceD3D12 = ClassPtrCast<RenderDeviceD3D12Impl>(m_pDevice.RawPtr());
-    SuperResolutionD3D12_DSR* pUpscaler    = NEW_RC_OBJ(GetRawAllocator(), "SuperResolutionD3D12_DSR instance", SuperResolutionD3D12_DSR)(pDeviceD3D12, Desc, m_pDSRDevice);
-    pUpscaler->QueryInterface(IID_SuperResolution, reinterpret_cast<IObject**>(ppUpscaler));
+    return pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D12 ?
+        std::make_unique<DSRProviderD3D12>(pDevice) :
+        nullptr;
 }
 
 } // namespace Diligent
-
-#else
-
-namespace Diligent
-{
-
-DSRProviderD3D12::DSRProviderD3D12(IRenderDevice*)
-{
-    LOG_INFO_MESSAGE("DirectSR is not supported on this platform");
-}
-DSRProviderD3D12::~DSRProviderD3D12() {}
-void DSRProviderD3D12::EnumerateVariants(std::vector<SuperResolutionInfo>&) {}
-void DSRProviderD3D12::GetSourceSettings(const SuperResolutionSourceSettingsAttribs&, SuperResolutionSourceSettings&) {}
-void DSRProviderD3D12::CreateSuperResolution(const SuperResolutionDesc&, ISuperResolution**) {}
-
-} // namespace Diligent
-
-#endif
