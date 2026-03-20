@@ -38,8 +38,8 @@ endif()
 if(DILIGENT_DLSS_SUPPORTED)
     # Fetch NVIDIA DLSS SDK headers
     FetchContent_DeclareShallowGit(DLSS-Headers
-        GIT_REPOSITORY https://github.com/NVIDIA/DLSS.git
-        GIT_TAG        main
+        GIT_REPOSITORY https://github.com/DiligentGraphics/DLSS-Headers.git
+        GIT_TAG        master
     )
     FetchContent_MakeAvailable(DLSS-Headers)
 endif()
@@ -147,14 +147,7 @@ if(DILIGENT_DSR_SUPPORTED)
 endif()
 
 if(DILIGENT_DLSS_SUPPORTED)
-    set(DLSS_SDK_DIR ${FETCHCONTENT_BASE_DIR}/dlss-headers-src)
-    target_include_directories(Diligent-SuperResolution-static PRIVATE ${DLSS_SDK_DIR}/include)
-
-    # Link NGX static library (dynamic CRT /MD variant)
-    target_link_libraries(Diligent-SuperResolution-static PRIVATE
-        debug     ${DLSS_SDK_DIR}/lib/Windows_x86_64/x64/nvsdk_ngx_d_dbg.lib
-        optimized ${DLSS_SDK_DIR}/lib/Windows_x86_64/x64/nvsdk_ngx_d.lib
-    )
+    target_link_libraries(Diligent-SuperResolution-static PRIVATE DLSS-Headers DLSS-NGX)
 
     if(D3D12_SUPPORTED)
         target_link_libraries(Diligent-SuperResolution-static PRIVATE Diligent-GraphicsEngineD3D12-static)
