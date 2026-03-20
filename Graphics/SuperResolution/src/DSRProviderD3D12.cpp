@@ -96,6 +96,7 @@ public:
     SuperResolutionD3D12_DSR(IReferenceCounters*        pRefCounters,
                              RenderDeviceD3D12Impl*     pDevice,
                              const SuperResolutionDesc& Desc,
+                             const SuperResolutionInfo& Info,
                              IDSRDevice*                pDSRDevice);
 
     ~SuperResolutionD3D12_DSR();
@@ -111,13 +112,13 @@ private:
 SuperResolutionD3D12_DSR::SuperResolutionD3D12_DSR(IReferenceCounters*        pRefCounters,
                                                    RenderDeviceD3D12Impl*     pDevice,
                                                    const SuperResolutionDesc& Desc,
+                                                   const SuperResolutionInfo& Info,
                                                    IDSRDevice*                pDSRDevice) :
-    SuperResolutionBase{pRefCounters, Desc},
+    SuperResolutionBase{pRefCounters, Desc, Info},
     m_pDevice{pDevice},
     m_DSRUpscalers(pDevice->GetCommandQueueCount())
 {
 
-    ValidateTemporalSuperResolutionDesc(m_Desc);
     VERIFY_SUPER_RESOLUTION(m_Desc.Name, Desc.MotionFormat == TEX_FORMAT_RG16_FLOAT, "MotionFormat must be TEX_FORMAT_RG16_FLOAT. Got: ", GetTextureFormatAttribs(Desc.MotionFormat).Name);
     VERIFY_SUPER_RESOLUTION(m_Desc.Name, (Desc.Flags & SUPER_RESOLUTION_FLAG_AUTO_EXPOSURE) != 0 || Desc.ExposureFormat != TEX_FORMAT_UNKNOWN,
                             "ExposureFormat must not be TEX_FORMAT_UNKNOWN when SUPER_RESOLUTION_FLAG_AUTO_EXPOSURE is not set. "
@@ -169,7 +170,7 @@ SuperResolutionD3D12_DSR::~SuperResolutionD3D12_DSR() = default;
 
 void DILIGENT_CALL_TYPE SuperResolutionD3D12_DSR::Execute(const ExecuteSuperResolutionAttribs& Attribs)
 {
-    ValidateTemporalExecuteSuperResolutionAttribs(m_Desc, Attribs);
+    ValidateExecuteSuperResolutionAttribs(m_Desc, m_Info, Attribs);
     DEV_CHECK_SUPER_RESOLUTION(m_Desc.Name, Attribs.CameraNear > 0, "CameraNear must be greater than zero for temporal upscaling");
     DEV_CHECK_SUPER_RESOLUTION(m_Desc.Name, Attribs.CameraFar > 0, "CameraFar must be greater than zero for temporal upscaling.");
     DEV_CHECK_SUPER_RESOLUTION(m_Desc.Name, Attribs.CameraFovAngleVert > 0, "CameraFovAngleVert must be greater than zero for temporal upscaling.");
@@ -361,13 +362,14 @@ public:
     }
 
     virtual void CreateSuperResolution(const SuperResolutionDesc& Desc,
+                                       const SuperResolutionInfo& Info,
                                        ISuperResolution**         ppUpscaler) override final
     {
         DEV_CHECK_ERR(m_pDSRDevice != nullptr, "DirectSR device must not be null");
         DEV_CHECK_ERR(m_pDevice != nullptr, "Render device must not be null");
 
         RenderDeviceD3D12Impl*    pDeviceD3D12 = ClassPtrCast<RenderDeviceD3D12Impl>(m_pDevice.RawPtr());
-        SuperResolutionD3D12_DSR* pUpscaler    = NEW_RC_OBJ(GetRawAllocator(), "SuperResolutionD3D12_DSR instance", SuperResolutionD3D12_DSR)(pDeviceD3D12, Desc, m_pDSRDevice);
+        SuperResolutionD3D12_DSR* pUpscaler    = NEW_RC_OBJ(GetRawAllocator(), "SuperResolutionD3D12_DSR instance", SuperResolutionD3D12_DSR)(pDeviceD3D12, Desc, Info, m_pDSRDevice);
         pUpscaler->QueryInterface(IID_SuperResolution, reinterpret_cast<IObject**>(ppUpscaler));
     }
 
