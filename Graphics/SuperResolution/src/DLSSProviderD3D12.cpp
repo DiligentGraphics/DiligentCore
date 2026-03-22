@@ -73,26 +73,13 @@ public:
         if (pDLSSFeature == nullptr)
             return;
 
-        IDeviceContextD3D12* pCtxImpl = ClassPtrCast<IDeviceContextD3D12>(Attribs.pContext);
+        TransitionResourceStates(Attribs);
 
         auto GetD3D12Resource = [](ITextureView* pView) -> ID3D12Resource* {
             return pView != nullptr ?
                 ClassPtrCast<ITextureD3D12>(pView->GetTexture())->GetD3D12Texture() :
                 nullptr;
         };
-
-        pCtxImpl->TransitionTextureState(Attribs.pColorTextureSRV->GetTexture(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-        pCtxImpl->TransitionTextureState(Attribs.pDepthTextureSRV->GetTexture(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-        pCtxImpl->TransitionTextureState(Attribs.pMotionVectorsSRV->GetTexture(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-        pCtxImpl->TransitionTextureState(Attribs.pOutputTextureView->GetTexture(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-        if (Attribs.pExposureTextureSRV)
-            pCtxImpl->TransitionTextureState(Attribs.pExposureTextureSRV->GetTexture(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-        if (Attribs.pReactiveMaskTextureSRV)
-            pCtxImpl->TransitionTextureState(Attribs.pReactiveMaskTextureSRV->GetTexture(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-        if (Attribs.pIgnoreHistoryMaskTextureSRV)
-            pCtxImpl->TransitionTextureState(Attribs.pIgnoreHistoryMaskTextureSRV->GetTexture(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-
-        ID3D12GraphicsCommandList* pCmdList = pCtxImpl->GetD3D12CommandList();
 
         NVSDK_NGX_D3D12_DLSS_Eval_Params EvalParams{};
         EvalParams.Feature.pInColor                 = GetD3D12Resource(Attribs.pColorTextureSRV);
@@ -113,12 +100,15 @@ public:
         EvalParams.InPreExposure                    = Attribs.PreExposure;
         EvalParams.InExposureScale                  = Attribs.ExposureScale;
 
+        IDeviceContextD3D12*       pCtx     = ClassPtrCast<IDeviceContextD3D12>(Attribs.pContext);
+        ID3D12GraphicsCommandList* pCmdList = pCtx->GetD3D12CommandList();
+
         NVSDK_NGX_Result Result = NGX_D3D12_EVALUATE_DLSS_EXT(pCmdList, pDLSSFeature, m_pNGXParams, &EvalParams);
         if (NVSDK_NGX_FAILED(Result))
             LOG_ERROR_MESSAGE("DLSS D3D12 evaluation failed. NGX Result: ", static_cast<Uint32>(Result));
 
-        pCtxImpl->TransitionTextureState(Attribs.pOutputTextureView->GetTexture(), D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
-        pCtxImpl->Flush();
+        pCtx->TransitionTextureState(Attribs.pOutputTextureView->GetTexture(), D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+        pCtx->Flush();
     }
 };
 

@@ -75,7 +75,7 @@ public:
         if (pDLSSFeature == nullptr)
             return;
 
-        IDeviceContextVk* pCtxImpl = ClassPtrCast<IDeviceContextVk>(Attribs.pContext);
+        TransitionResourceStates(Attribs);
 
         auto CreateNGXResourceVK = [](ITextureView* pView, VkImageAspectFlags AspectMask, bool bReadWrite) -> NVSDK_NGX_Resource_VK {
             ITextureVk*        pTexVk  = ClassPtrCast<ITextureVk>(pView->GetTexture());
@@ -91,8 +91,6 @@ public:
 
             return NVSDK_NGX_Create_ImageView_Resource_VK(pViewVk->GetVulkanImageView(), pTexVk->GetVkImage(), SubresourceRange, TexFormatToVkFormat(TexDesc.Format), TexDesc.Width, TexDesc.Height, bReadWrite);
         };
-
-        VkCommandBuffer vkCmdBuffer = pCtxImpl->GetVkCommandBuffer();
 
         NVSDK_NGX_Resource_VK ColorResource  = CreateNGXResourceVK(Attribs.pColorTextureSRV, VK_IMAGE_ASPECT_COLOR_BIT, false);
         NVSDK_NGX_Resource_VK OutputResource = CreateNGXResourceVK(Attribs.pOutputTextureView, VK_IMAGE_ASPECT_COLOR_BIT, true);
@@ -129,6 +127,9 @@ public:
         EvalParams.InRenderSubrectDimensions.Height = m_Desc.InputHeight;
         EvalParams.InPreExposure                    = Attribs.PreExposure;
         EvalParams.InExposureScale                  = Attribs.ExposureScale;
+
+        IDeviceContextVk* pCtxImpl    = ClassPtrCast<IDeviceContextVk>(Attribs.pContext);
+        VkCommandBuffer   vkCmdBuffer = pCtxImpl->GetVkCommandBuffer();
 
         NVSDK_NGX_Result Result = NGX_VULKAN_EVALUATE_DLSS_EXT(vkCmdBuffer, pDLSSFeature, m_pNGXParams, &EvalParams);
         if (NVSDK_NGX_FAILED(Result))
