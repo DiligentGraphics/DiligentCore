@@ -27,13 +27,20 @@
 #include "SuperResolutionProvider.hpp"
 
 #include "SuperResolutionBase.hpp"
-#include "../../GraphicsEngineD3D12/include/pch.h"
 
+#include <d3d12.h>
+#include <atlbase.h>
 #include <directsr.h>
 
-#include "RenderDeviceD3D12Impl.hpp"
-#include "DeviceContextD3D12Impl.hpp"
+#include <unordered_map>
+
+#include "RenderDeviceD3D12.h"
+#include "DeviceContextD3D12.h"
+#include "TextureD3D12.h"
+#include "CommandQueueD3D12.h"
 #include "DXGITypeConversions.hpp"
+#include "EngineMemory.h"
+#include "D3DErrors.hpp"
 
 namespace Diligent
 {
@@ -61,16 +68,16 @@ CComPtr<IDSRDevice> CreateDSRDevice(IRenderDevice* pDevice)
     CComPtr<ID3D12DSRDeviceFactory> pDSRFactory;
     if (HRESULT hr = pfnD3D12GetInterface(CLSID_D3D12DSRDeviceFactory, IID_PPV_ARGS(&pDSRFactory)); FAILED(hr))
     {
-        LOG_WARNING_MESSAGE("Failed to create DirectSR device factory. HRESULT: ", hr);
+        LOG_D3D_WARNING(hr, "Failed to create DirectSR device factory.");
         return {};
     }
 
-    ID3D12Device* pd3d12Device = ClassPtrCast<RenderDeviceD3D12Impl>(pDevice)->GetD3D12Device();
+    ID3D12Device* pd3d12Device = ClassPtrCast<IRenderDeviceD3D12>(pDevice)->GetD3D12Device();
 
     CComPtr<IDSRDevice> pDSRDevice;
     if (HRESULT hr = pDSRFactory->CreateDSRDevice(pd3d12Device, 0, IID_PPV_ARGS(&pDSRDevice)); FAILED(hr))
     {
-        LOG_WARNING_MESSAGE("Failed to create DirectSR device. HRESULT: ", hr);
+        LOG_D3D_WARNING(hr, "Failed to create DirectSR device.");
         return {};
     }
 
@@ -94,7 +101,6 @@ class SuperResolutionD3D12_DSR final : public SuperResolutionBase
 {
 public:
     SuperResolutionD3D12_DSR(IReferenceCounters*        pRefCounters,
-                             RenderDeviceD3D12Impl*     pDevice,
                              const SuperResolutionDesc& Desc,
                              const SuperResolutionInfo& Info,
                              IDSRDevice*                pDSRDevice);
@@ -104,21 +110,16 @@ public:
     virtual void DILIGENT_CALL_TYPE Execute(const ExecuteSuperResolutionAttribs& Attribs) override final;
 
 private:
-    RefCntAutoPtr<RenderDeviceD3D12Impl>       m_pDevice;
-    CComPtr<IDSRSuperResEngine>                m_pDSREngine;
-    std::vector<CComPtr<IDSRSuperResUpscaler>> m_DSRUpscalers;
+    CComPtr<IDSRSuperResEngine>                                                      m_pDSREngine;
+    std::unordered_map<RefCntWeakPtr<IDeviceContext>, CComPtr<IDSRSuperResUpscaler>> m_DSRUpscalers;
 };
 
 SuperResolutionD3D12_DSR::SuperResolutionD3D12_DSR(IReferenceCounters*        pRefCounters,
-                                                   RenderDeviceD3D12Impl*     pDevice,
                                                    const SuperResolutionDesc& Desc,
                                                    const SuperResolutionInfo& Info,
                                                    IDSRDevice*                pDSRDevice) :
-    SuperResolutionBase{pRefCounters, Desc, Info},
-    m_pDevice{pDevice},
-    m_DSRUpscalers(pDevice->GetCommandQueueCount())
+    SuperResolutionBase{pRefCounters, Desc, Info}
 {
-
     VERIFY_SUPER_RESOLUTION(m_Desc.Name, Desc.MotionFormat == TEX_FORMAT_RG16_FLOAT, "MotionFormat must be TEX_FORMAT_RG16_FLOAT. Got: ", GetTextureFormatAttribs(Desc.MotionFormat).Name);
     VERIFY_SUPER_RESOLUTION(m_Desc.Name, (Desc.Flags & SUPER_RESOLUTION_FLAG_AUTO_EXPOSURE) != 0 || Desc.ExposureFormat != TEX_FORMAT_UNKNOWN,
                             "ExposureFormat must not be TEX_FORMAT_UNKNOWN when SUPER_RESOLUTION_FLAG_AUTO_EXPOSURE is not set. "
@@ -126,15 +127,15 @@ SuperResolutionD3D12_DSR::SuperResolutionD3D12_DSR(IReferenceCounters*        pR
 
     VERIFY_SUPER_RESOLUTION(m_Desc.Name, pDSRDevice != nullptr, "DirectSR device is not available");
 
-    DSR_SUPERRES_CREATE_ENGINE_PARAMETERS CreateInfo = {};
-    CreateInfo.VariantId                             = reinterpret_cast<const GUID&>(Desc.VariantId);
-    CreateInfo.TargetFormat                          = TexFormatToDXGI_Format(Desc.OutputFormat);
-    CreateInfo.SourceColorFormat                     = TexFormatToDXGI_Format(Desc.ColorFormat);
-    CreateInfo.SourceDepthFormat                     = TexFormatToDXGI_Format(Desc.DepthFormat);
-    CreateInfo.ExposureScaleFormat                   = TexFormatToDXGI_Format(Desc.ExposureFormat);
-    CreateInfo.Flags                                 = SuperResolutionFlagsToDSRFlags(Desc.Flags);
-    CreateInfo.MaxSourceSize                         = {Desc.InputWidth, Desc.InputHeight};
-    CreateInfo.TargetSize                            = {Desc.OutputWidth, Desc.OutputHeight};
+    DSR_SUPERRES_CREATE_ENGINE_PARAMETERS CreateInfo{};
+    CreateInfo.VariantId           = reinterpret_cast<const GUID&>(Desc.VariantId);
+    CreateInfo.TargetFormat        = TexFormatToDXGI_Format(Desc.OutputFormat);
+    CreateInfo.SourceColorFormat   = TexFormatToDXGI_Format(Desc.ColorFormat);
+    CreateInfo.SourceDepthFormat   = TexFormatToDXGI_Format(Desc.DepthFormat);
+    CreateInfo.ExposureScaleFormat = TexFormatToDXGI_Format(Desc.ExposureFormat);
+    CreateInfo.Flags               = SuperResolutionFlagsToDSRFlags(Desc.Flags);
+    CreateInfo.MaxSourceSize       = {Desc.InputWidth, Desc.InputHeight};
+    CreateInfo.TargetSize          = {Desc.OutputWidth, Desc.OutputHeight};
 
     if (HRESULT hr = pDSRDevice->CreateSuperResEngine(&CreateInfo, IID_PPV_ARGS(&m_pDSREngine)); FAILED(hr))
         LOG_ERROR_AND_THROW("Failed to create DirectSR super resolution engine. HRESULT: ", hr);
@@ -161,7 +162,7 @@ SuperResolutionD3D12_DSR::SuperResolutionD3D12_DSR(IReferenceCounters*        pR
         else
         {
             PopulateHaltonJitterPattern(m_JitterPattern, 64);
-            LOG_WARNING_MESSAGE("Failed to get optimal jitter pattern from DirectSR engine. HRESULT: ", hr);
+            LOG_D3D_WARNING(hr, "Failed to get optimal jitter pattern from DirectSR engine.");
         }
     }
 }
@@ -176,32 +177,33 @@ void DILIGENT_CALL_TYPE SuperResolutionD3D12_DSR::Execute(const ExecuteSuperReso
     DEV_CHECK_SUPER_RESOLUTION(m_Desc.Name, Attribs.CameraFovAngleVert > 0, "CameraFovAngleVert must be greater than zero for temporal upscaling.");
     DEV_CHECK_SUPER_RESOLUTION(m_Desc.Name, Attribs.TimeDeltaInSeconds >= 0, "TimeDeltaInSeconds must be non-negative.");
 
-    DeviceContextD3D12Impl* pCtx = ClassPtrCast<DeviceContextD3D12Impl>(Attribs.pContext);
-
-    const SoftwareQueueIndex QueueId = pCtx->GetCommandQueueId();
-    VERIFY_EXPR(static_cast<size_t>(QueueId) < m_DSRUpscalers.size());
+    IDeviceContextD3D12*           pDeviceCtx   = ClassPtrCast<IDeviceContextD3D12>(Attribs.pContext);
+    CComPtr<IDSRSuperResUpscaler>& pDSRUpscaler = m_DSRUpscalers[RefCntWeakPtr<IDeviceContext>{pDeviceCtx}];
 
     // Lazily create an upscaler for this queue on first use.
-    CComPtr<IDSRSuperResUpscaler>& pDSRUpscaler = m_DSRUpscalers[static_cast<size_t>(QueueId)];
     if (!pDSRUpscaler)
     {
-        m_pDevice->LockCmdQueueAndRun(QueueId, [&](ICommandQueueD3D12* pCmdQueue) {
-            if (HRESULT hr = m_pDSREngine->CreateUpscaler(pCmdQueue->GetD3D12CommandQueue(), IID_PPV_ARGS(&pDSRUpscaler)); FAILED(hr))
-                LOG_ERROR_AND_THROW("Failed to create DirectSR upscaler for queue ", static_cast<Uint32>(QueueId), ". HRESULT: ", hr);
-        });
+        ICommandQueueD3D12* pCmdQueue = ClassPtrCast<ICommandQueueD3D12>(pDeviceCtx->LockCommandQueue());
+        if (HRESULT hr = m_pDSREngine->CreateUpscaler(pCmdQueue->GetD3D12CommandQueue(), IID_PPV_ARGS(&pDSRUpscaler)); FAILED(hr))
+        {
+            LOG_D3D_ERROR(hr, "Failed to create DirectSR upscaler.");
+        }
+        pDeviceCtx->UnlockCommandQueue();
     }
+
+    if (!pDSRUpscaler)
+        return;
 
     auto GetD3D12Resource = [](ITextureView* pView) -> ID3D12Resource* {
         if (pView != nullptr)
         {
-            TextureD3D12Impl* pTexD3D12 = ClassPtrCast<TextureD3D12Impl>(pView->GetTexture());
-            return pTexD3D12->GetD3D12Resource();
+            ITextureD3D12* pTexD3D12 = ClassPtrCast<ITextureD3D12>(pView->GetTexture());
+            return pTexD3D12->GetD3D12Texture();
         }
         return nullptr;
     };
 
-    DSR_SUPERRES_UPSCALER_EXECUTE_PARAMETERS ExecuteParams = {};
-
+    DSR_SUPERRES_UPSCALER_EXECUTE_PARAMETERS ExecuteParams{};
     ExecuteParams.pTargetTexture            = GetD3D12Resource(Attribs.pOutputTextureView);
     ExecuteParams.TargetRegion              = {0, 0, static_cast<LONG>(m_Desc.OutputWidth), static_cast<LONG>(m_Desc.OutputHeight)};
     ExecuteParams.pSourceColorTexture       = GetD3D12Resource(Attribs.pColorTextureSRV);
@@ -231,7 +233,6 @@ void DILIGENT_CALL_TYPE SuperResolutionD3D12_DSR::Execute(const ExecuteSuperReso
     // Transition all textures to the states expected by DirectSR and flush the context.
     // DirectSR submits its own command list(s) to the command queue, so all rendering work must be submitted before DirectSR reads the inputs.
     // Input textures must be in D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, output must be in D3D12_RESOURCE_STATE_UNORDERED_ACCESS.
-    DeviceContextD3D12Impl* pDeviceCtx = ClassPtrCast<DeviceContextD3D12Impl>(Attribs.pContext);
     pDeviceCtx->TransitionTextureState(Attribs.pColorTextureSRV->GetTexture(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
     pDeviceCtx->TransitionTextureState(Attribs.pDepthTextureSRV->GetTexture(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
     pDeviceCtx->TransitionTextureState(Attribs.pMotionVectorsSRV->GetTexture(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
@@ -245,7 +246,7 @@ void DILIGENT_CALL_TYPE SuperResolutionD3D12_DSR::Execute(const ExecuteSuperReso
     pDeviceCtx->Flush();
 
     if (HRESULT hr = pDSRUpscaler->Execute(&ExecuteParams, Attribs.TimeDeltaInSeconds, Flags); FAILED(hr))
-        LOG_ERROR_MESSAGE("DirectSR Execute failed. HRESULT: ", hr);
+        LOG_D3D_ERROR(hr, "DirectSR Execute failed.");
 
     pDeviceCtx->TransitionTextureState(Attribs.pOutputTextureView->GetTexture(), D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 }
@@ -254,15 +255,12 @@ class DSRProviderD3D12 final : public SuperResolutionProvider
 {
 public:
     DSRProviderD3D12(IRenderDevice* pDevice) :
-        m_pDevice{pDevice},
-        m_pDSRDevice{CreateDSRDevice(pDevice).Detach()}
+        m_pDSRDevice{CreateDSRDevice(pDevice)}
     {
     }
 
     ~DSRProviderD3D12()
     {
-        if (m_pDSRDevice)
-            m_pDSRDevice->Release();
     }
 
     virtual void EnumerateVariants(std::vector<SuperResolutionInfo>& Variants) override final
@@ -357,7 +355,7 @@ public:
         }
         else
         {
-            LOG_WARNING_MESSAGE("DirectSR QuerySuperResSourceSettings failed. HRESULT: ", hr);
+            LOG_D3D_WARNING(hr, "DirectSR QuerySuperResSourceSettings failed.");
         }
     }
 
@@ -366,16 +364,13 @@ public:
                                        ISuperResolution**         ppUpscaler) override final
     {
         DEV_CHECK_ERR(m_pDSRDevice != nullptr, "DirectSR device must not be null");
-        DEV_CHECK_ERR(m_pDevice != nullptr, "Render device must not be null");
 
-        RenderDeviceD3D12Impl*    pDeviceD3D12 = ClassPtrCast<RenderDeviceD3D12Impl>(m_pDevice.RawPtr());
-        SuperResolutionD3D12_DSR* pUpscaler    = NEW_RC_OBJ(GetRawAllocator(), "SuperResolutionD3D12_DSR instance", SuperResolutionD3D12_DSR)(pDeviceD3D12, Desc, Info, m_pDSRDevice);
+        SuperResolutionD3D12_DSR* pUpscaler = NEW_RC_OBJ(GetRawAllocator(), "SuperResolutionD3D12_DSR instance", SuperResolutionD3D12_DSR)(Desc, Info, m_pDSRDevice);
         pUpscaler->QueryInterface(IID_SuperResolution, reinterpret_cast<IObject**>(ppUpscaler));
     }
 
 private:
-    RefCntAutoPtr<IRenderDevice> m_pDevice;
-    IDSRDevice*                  m_pDSRDevice = nullptr;
+    CComPtr<IDSRDevice> m_pDSRDevice;
 };
 
 } // anonymous namespace

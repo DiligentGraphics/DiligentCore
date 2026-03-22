@@ -30,12 +30,14 @@
 #include "SuperResolutionBase.hpp"
 #include "SuperResolutionVariants.hpp"
 
+#include <d3d12.h>
+#include <atlbase.h>
 #include <nvsdk_ngx_helpers.h>
 
-#include "../../GraphicsEngineD3D12/include/pch.h"
-#include "RenderDeviceD3D12Impl.hpp"
-#include "DeviceContextD3D12Impl.hpp"
-#include "TextureD3D12Impl.hpp"
+#include "RenderDeviceD3D12.h"
+#include "DeviceContextD3D12.h"
+#include "TextureD3D12.h"
+#include "EngineMemory.h"
 
 namespace Diligent
 {
@@ -47,12 +49,10 @@ class SuperResolutionD3D12_DLSS final : public SuperResolutionBase
 {
 public:
     SuperResolutionD3D12_DLSS(IReferenceCounters*        pRefCounters,
-                              IRenderDevice*             pDevice,
                               const SuperResolutionDesc& Desc,
                               const SuperResolutionInfo& Info,
                               NVSDK_NGX_Parameter*       pNGXParams) :
         SuperResolutionBase{pRefCounters, Desc, Info},
-        m_pDevice{pDevice},
         m_pNGXParams{pNGXParams}
     {
         PopulateHaltonJitterPattern(m_JitterPattern, 64);
@@ -72,12 +72,12 @@ public:
         if (pDLSSFeature == nullptr)
             return;
 
-        DeviceContextD3D12Impl* pCtxImpl = ClassPtrCast<DeviceContextD3D12Impl>(Attribs.pContext);
+        IDeviceContextD3D12* pCtxImpl = ClassPtrCast<IDeviceContextD3D12>(Attribs.pContext);
 
         auto GetD3D12Resource = [](ITextureView* pView) -> ID3D12Resource* {
-            if (pView != nullptr)
-                return ClassPtrCast<TextureD3D12Impl>(pView->GetTexture())->GetD3D12Resource();
-            return nullptr;
+            return pView != nullptr ?
+                ClassPtrCast<ITextureD3D12>(pView->GetTexture())->GetD3D12Texture() :
+                nullptr;
         };
 
         pCtxImpl->TransitionTextureState(Attribs.pColorTextureSRV->GetTexture(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
@@ -93,7 +93,7 @@ public:
 
         ID3D12GraphicsCommandList* pCmdList = pCtxImpl->GetD3D12CommandList();
 
-        NVSDK_NGX_D3D12_DLSS_Eval_Params EvalParams = {};
+        NVSDK_NGX_D3D12_DLSS_Eval_Params EvalParams{};
         EvalParams.Feature.pInColor                 = GetD3D12Resource(Attribs.pColorTextureSRV);
         EvalParams.Feature.pInOutput                = GetD3D12Resource(Attribs.pOutputTextureView);
         EvalParams.pInDepth                         = GetD3D12Resource(Attribs.pDepthTextureSRV);
@@ -134,15 +134,15 @@ private:
         }
         m_DLSSFeatureFlags = DLSSCreateFeatureFlags;
 
-        NVSDK_NGX_DLSS_Create_Params DLSSCreateParams = {};
-        DLSSCreateParams.Feature.InWidth              = m_Desc.InputWidth;
-        DLSSCreateParams.Feature.InHeight             = m_Desc.InputHeight;
-        DLSSCreateParams.Feature.InTargetWidth        = m_Desc.OutputWidth;
-        DLSSCreateParams.Feature.InTargetHeight       = m_Desc.OutputHeight;
-        DLSSCreateParams.InFeatureCreateFlags         = DLSSCreateFeatureFlags;
+        NVSDK_NGX_DLSS_Create_Params DLSSCreateParams{};
+        DLSSCreateParams.Feature.InWidth        = m_Desc.InputWidth;
+        DLSSCreateParams.Feature.InHeight       = m_Desc.InputHeight;
+        DLSSCreateParams.Feature.InTargetWidth  = m_Desc.OutputWidth;
+        DLSSCreateParams.Feature.InTargetHeight = m_Desc.OutputHeight;
+        DLSSCreateParams.InFeatureCreateFlags   = DLSSCreateFeatureFlags;
 
         NVSDK_NGX_Handle*          pFeature = nullptr;
-        ID3D12GraphicsCommandList* pCmdList = ClassPtrCast<DeviceContextD3D12Impl>(Attribs.pContext)->GetD3D12CommandList();
+        ID3D12GraphicsCommandList* pCmdList = ClassPtrCast<IDeviceContextD3D12>(Attribs.pContext)->GetD3D12CommandList();
         NVSDK_NGX_Result           Result   = NGX_D3D12_CREATE_DLSS_EXT(pCmdList, 1, 1, &pFeature, m_pNGXParams, &DLSSCreateParams);
 
         if (NVSDK_NGX_FAILED(Result))
@@ -154,21 +154,29 @@ private:
         return m_pDLSSFeature;
     }
 
-    RefCntAutoPtr<IRenderDevice> m_pDevice;
-    NVSDK_NGX_Handle*            m_pDLSSFeature     = nullptr;
-    NVSDK_NGX_Parameter*         m_pNGXParams       = nullptr;
-    Int32                        m_DLSSFeatureFlags = 0;
+    NVSDK_NGX_Handle*    m_pDLSSFeature     = nullptr;
+    NVSDK_NGX_Parameter* m_pNGXParams       = nullptr;
+    Int32                m_DLSSFeatureFlags = 0;
 };
 
 
 class DLSSProviderD3D12 final : public SuperResolutionProvider
 {
 public:
-    DLSSProviderD3D12(IRenderDevice* pDevice) :
-        m_pDevice{pDevice}
+    DLSSProviderD3D12(IRenderDevice* pDevice)
     {
-        ID3D12Device*    pd3d12Device = ClassPtrCast<RenderDeviceD3D12Impl>(pDevice)->GetD3D12Device();
-        NVSDK_NGX_Result Result       = NVSDK_NGX_D3D12_Init_with_ProjectID(DLSSProjectId, NVSDK_NGX_ENGINE_TYPE_CUSTOM, "0", DLSSAppDataPath, pd3d12Device);
+        if (pDevice == nullptr)
+            LOG_ERROR_AND_THROW("Device must not be null");
+        if (RefCntAutoPtr<IRenderDeviceD3D12> pDeviceD3D11{pDevice, IID_RenderDeviceD3D12})
+        {
+            m_pd3d12Device = pDeviceD3D11->GetD3D12Device();
+        }
+        else
+        {
+            LOG_ERROR_AND_THROW("Device must be of type RENDER_DEVICE_TYPE_D3D11");
+        }
+
+        NVSDK_NGX_Result Result = NVSDK_NGX_D3D12_Init_with_ProjectID(DLSSProjectId, NVSDK_NGX_ENGINE_TYPE_CUSTOM, "0", DLSSAppDataPath, m_pd3d12Device);
         if (NVSDK_NGX_FAILED(Result))
         {
             LOG_WARNING_MESSAGE("NVIDIA NGX D3D12 initialization failed. DLSS will not be available. Result: ", static_cast<Uint32>(Result));
@@ -180,7 +188,7 @@ public:
         {
             LOG_WARNING_MESSAGE("Failed to get NGX D3D12 capability parameters. DLSS will not be available. Result: ", static_cast<Uint32>(Result));
             m_pNGXParams = nullptr;
-            NVSDK_NGX_D3D12_Shutdown1(pd3d12Device);
+            NVSDK_NGX_D3D12_Shutdown1(m_pd3d12Device);
         }
     }
 
@@ -189,7 +197,7 @@ public:
         if (m_pNGXParams != nullptr)
         {
             NVSDK_NGX_D3D12_DestroyParameters(m_pNGXParams);
-            NVSDK_NGX_D3D12_Shutdown1(ClassPtrCast<RenderDeviceD3D12Impl>(m_pDevice.RawPtr())->GetD3D12Device());
+            NVSDK_NGX_D3D12_Shutdown1(m_pd3d12Device);
         }
     }
 
@@ -205,16 +213,15 @@ public:
 
     virtual void CreateSuperResolution(const SuperResolutionDesc& Desc, const SuperResolutionInfo& Info, ISuperResolution** ppUpscaler) override final
     {
-        DEV_CHECK_ERR(m_pDevice != nullptr, "Render device must not be null");
         DEV_CHECK_ERR(ppUpscaler != nullptr, "ppUpscaler must not be null");
 
-        SuperResolutionD3D12_DLSS* pUpscaler = NEW_RC_OBJ(GetRawAllocator(), "SuperResolutionD3D12_DLSS instance", SuperResolutionD3D12_DLSS)(m_pDevice, Desc, Info, m_pNGXParams);
+        SuperResolutionD3D12_DLSS* pUpscaler = NEW_RC_OBJ(GetRawAllocator(), "SuperResolutionD3D12_DLSS instance", SuperResolutionD3D12_DLSS)(Desc, Info, m_pNGXParams);
         pUpscaler->QueryInterface(IID_SuperResolution, reinterpret_cast<IObject**>(ppUpscaler));
     }
 
 private:
-    RefCntAutoPtr<IRenderDevice> m_pDevice;
-    NVSDK_NGX_Parameter*         m_pNGXParams = nullptr;
+    CComPtr<ID3D12Device> m_pd3d12Device;
+    NVSDK_NGX_Parameter*  m_pNGXParams = nullptr;
 };
 
 } // anonymous namespace

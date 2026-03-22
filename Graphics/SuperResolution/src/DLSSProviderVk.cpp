@@ -30,13 +30,16 @@
 #include "SuperResolutionBase.hpp"
 #include "SuperResolutionVariants.hpp"
 
-#include "../../GraphicsEngineVulkan/include/pch.h"
+#include "../include/VulkanUtilities/VulkanHeaders.h"
+#include "../include/VulkanTypeConversions.hpp"
+
 #include <nvsdk_ngx_helpers_vk.h>
-#include "RenderDeviceVkImpl.hpp"
-#include "DeviceContextVkImpl.hpp"
-#include "TextureVkImpl.hpp"
-#include "TextureViewVkImpl.hpp"
-#include "VulkanTypeConversions.hpp"
+
+#include "RenderDeviceVk.h"
+#include "DeviceContextVk.h"
+#include "TextureVk.h"
+#include "TextureViewVk.h"
+#include "EngineMemory.h"
 
 namespace Diligent
 {
@@ -48,12 +51,10 @@ class SuperResolutionVk_DLSS final : public SuperResolutionBase
 {
 public:
     SuperResolutionVk_DLSS(IReferenceCounters*        pRefCounters,
-                           IRenderDevice*             pDevice,
                            const SuperResolutionDesc& Desc,
                            const SuperResolutionInfo& Info,
                            NVSDK_NGX_Parameter*       pNGXParams) :
         SuperResolutionBase{pRefCounters, Desc, Info},
-        m_pDevice{pDevice},
         m_pNGXParams{pNGXParams}
     {
         PopulateHaltonJitterPattern(m_JitterPattern, 64);
@@ -73,19 +74,19 @@ public:
         if (pDLSSFeature == nullptr)
             return;
 
-        DeviceContextVkImpl* pCtxImpl = ClassPtrCast<DeviceContextVkImpl>(Attribs.pContext);
+        IDeviceContextVk* pCtxImpl = ClassPtrCast<IDeviceContextVk>(Attribs.pContext);
 
         auto CreateNGXResourceVK = [](ITextureView* pView, VkImageAspectFlags AspectMask, bool bReadWrite) -> NVSDK_NGX_Resource_VK {
-            TextureVkImpl*     pTexVk  = ClassPtrCast<TextureVkImpl>(pView->GetTexture());
-            TextureViewVkImpl* pViewVk = ClassPtrCast<TextureViewVkImpl>(pView);
+            ITextureVk*        pTexVk  = ClassPtrCast<ITextureVk>(pView->GetTexture());
+            ITextureViewVk*    pViewVk = ClassPtrCast<ITextureViewVk>(pView);
             const TextureDesc& TexDesc = pTexVk->GetDesc();
 
-            VkImageSubresourceRange SubresourceRange = {};
-            SubresourceRange.aspectMask              = AspectMask;
-            SubresourceRange.baseMipLevel            = 0;
-            SubresourceRange.levelCount              = 1;
-            SubresourceRange.baseArrayLayer          = 0;
-            SubresourceRange.layerCount              = 1;
+            VkImageSubresourceRange SubresourceRange{};
+            SubresourceRange.aspectMask     = AspectMask;
+            SubresourceRange.baseMipLevel   = 0;
+            SubresourceRange.levelCount     = 1;
+            SubresourceRange.baseArrayLayer = 0;
+            SubresourceRange.layerCount     = 1;
 
             return NVSDK_NGX_Create_ImageView_Resource_VK(pViewVk->GetVulkanImageView(), pTexVk->GetVkImage(), SubresourceRange, TexFormatToVkFormat(TexDesc.Format), TexDesc.Width, TexDesc.Height, bReadWrite);
         };
@@ -109,7 +110,7 @@ public:
         if (Attribs.pIgnoreHistoryMaskTextureSRV)
             BiasCurrentColorMaskResource = CreateNGXResourceVK(Attribs.pIgnoreHistoryMaskTextureSRV, VK_IMAGE_ASPECT_COLOR_BIT, false);
 
-        NVSDK_NGX_VK_DLSS_Eval_Params EvalParams    = {};
+        NVSDK_NGX_VK_DLSS_Eval_Params EvalParams{};
         EvalParams.Feature.pInColor                 = &ColorResource;
         EvalParams.Feature.pInOutput                = &OutputResource;
         EvalParams.pInDepth                         = &DepthResource;
@@ -147,15 +148,15 @@ private:
         }
         m_DLSSFeatureFlags = DLSSCreateFeatureFlags;
 
-        NVSDK_NGX_DLSS_Create_Params DLSSCreateParams = {};
-        DLSSCreateParams.Feature.InWidth              = m_Desc.InputWidth;
-        DLSSCreateParams.Feature.InHeight             = m_Desc.InputHeight;
-        DLSSCreateParams.Feature.InTargetWidth        = m_Desc.OutputWidth;
-        DLSSCreateParams.Feature.InTargetHeight       = m_Desc.OutputHeight;
-        DLSSCreateParams.InFeatureCreateFlags         = DLSSCreateFeatureFlags;
+        NVSDK_NGX_DLSS_Create_Params DLSSCreateParams{};
+        DLSSCreateParams.Feature.InWidth        = m_Desc.InputWidth;
+        DLSSCreateParams.Feature.InHeight       = m_Desc.InputHeight;
+        DLSSCreateParams.Feature.InTargetWidth  = m_Desc.OutputWidth;
+        DLSSCreateParams.Feature.InTargetHeight = m_Desc.OutputHeight;
+        DLSSCreateParams.InFeatureCreateFlags   = DLSSCreateFeatureFlags;
 
         NVSDK_NGX_Handle* pFeature    = nullptr;
-        VkCommandBuffer   vkCmdBuffer = ClassPtrCast<DeviceContextVkImpl>(Attribs.pContext)->GetVkCommandBuffer();
+        VkCommandBuffer   vkCmdBuffer = ClassPtrCast<IDeviceContextVk>(Attribs.pContext)->GetVkCommandBuffer();
         NVSDK_NGX_Result  Result      = NGX_VULKAN_CREATE_DLSS_EXT(vkCmdBuffer, 1, 1, &pFeature, m_pNGXParams, &DLSSCreateParams);
 
         if (NVSDK_NGX_FAILED(Result))
@@ -167,10 +168,9 @@ private:
         return m_pDLSSFeature;
     }
 
-    RefCntAutoPtr<IRenderDevice> m_pDevice;
-    NVSDK_NGX_Handle*            m_pDLSSFeature     = nullptr;
-    NVSDK_NGX_Parameter*         m_pNGXParams       = nullptr;
-    Int32                        m_DLSSFeatureFlags = 0;
+    NVSDK_NGX_Handle*    m_pDLSSFeature     = nullptr;
+    NVSDK_NGX_Parameter* m_pNGXParams       = nullptr;
+    Int32                m_DLSSFeatureFlags = 0;
 };
 
 
@@ -178,12 +178,19 @@ class DLSSProviderVk final : public SuperResolutionProvider
 {
 public:
     DLSSProviderVk(IRenderDevice* pDevice) :
-        m_pDevice{pDevice}
+        m_pDevice{pDevice, IID_RenderDeviceVk}
     {
-        RenderDeviceVkImpl* pDeviceVk    = ClassPtrCast<RenderDeviceVkImpl>(pDevice);
-        VkInstance          vkInstance   = pDeviceVk->GetVkInstance();
-        VkPhysicalDevice    vkPhysDevice = pDeviceVk->GetVkPhysicalDevice();
-        VkDevice            vkDevice     = pDeviceVk->GetVkDevice();
+        if (!m_pDevice)
+        {
+            if (pDevice == nullptr)
+                LOG_ERROR_AND_THROW("Device must not be null");
+            else
+                LOG_ERROR_AND_THROW("Device must be of type RENDER_DEVICE_TYPE_VULKAN");
+        }
+
+        VkInstance       vkInstance   = m_pDevice->GetVkInstance();
+        VkPhysicalDevice vkPhysDevice = m_pDevice->GetVkPhysicalDevice();
+        VkDevice         vkDevice     = m_pDevice->GetVkDevice();
 
         NVSDK_NGX_Result Result = NVSDK_NGX_VULKAN_Init_with_ProjectID(DLSSProjectId, NVSDK_NGX_ENGINE_TYPE_CUSTOM, "0", DLSSAppDataPath, vkInstance, vkPhysDevice, vkDevice);
 
@@ -229,7 +236,7 @@ public:
         if (m_pNGXParams != nullptr)
         {
             NVSDK_NGX_VULKAN_DestroyParameters(m_pNGXParams);
-            NVSDK_NGX_VULKAN_Shutdown1(ClassPtrCast<RenderDeviceVkImpl>(m_pDevice.RawPtr())->GetVkDevice());
+            NVSDK_NGX_VULKAN_Shutdown1(m_pDevice->GetVkDevice());
         }
     }
 
@@ -244,16 +251,15 @@ public:
 
     void CreateSuperResolution(const SuperResolutionDesc& Desc, const SuperResolutionInfo& Info, ISuperResolution** ppUpscaler)
     {
-        DEV_CHECK_ERR(m_pDevice != nullptr, "Render device must not be null");
         DEV_CHECK_ERR(ppUpscaler != nullptr, "ppUpscaler must not be null");
 
-        SuperResolutionVk_DLSS* pUpscaler = NEW_RC_OBJ(GetRawAllocator(), "SuperResolutionVk_DLSS instance", SuperResolutionVk_DLSS)(m_pDevice, Desc, Info, m_pNGXParams);
+        SuperResolutionVk_DLSS* pUpscaler = NEW_RC_OBJ(GetRawAllocator(), "SuperResolutionVk_DLSS instance", SuperResolutionVk_DLSS)(Desc, Info, m_pNGXParams);
         pUpscaler->QueryInterface(IID_SuperResolution, reinterpret_cast<IObject**>(ppUpscaler));
     }
 
 private:
-    RefCntAutoPtr<IRenderDevice> m_pDevice;
-    NVSDK_NGX_Parameter*         m_pNGXParams = nullptr;
+    RefCntAutoPtr<IRenderDeviceVk> m_pDevice;
+    NVSDK_NGX_Parameter*           m_pNGXParams = nullptr;
 };
 
 } // anonymous namespace

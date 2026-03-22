@@ -55,12 +55,12 @@ public:
         switch (Attribs.OptimizationType)
         {
                 // clang-format off
-            case SUPER_RESOLUTION_OPTIMIZATION_TYPE_MAX_QUALITY:      ScaleFactor = 1.0f / 1.3f; break;
-            case SUPER_RESOLUTION_OPTIMIZATION_TYPE_HIGH_QUALITY:     ScaleFactor = 1.0f / 1.5f; break;
-            case SUPER_RESOLUTION_OPTIMIZATION_TYPE_BALANCED:         ScaleFactor = 1.0f / 1.7f; break;
-            case SUPER_RESOLUTION_OPTIMIZATION_TYPE_HIGH_PERFORMANCE: ScaleFactor = 0.5f;        break;
-            case SUPER_RESOLUTION_OPTIMIZATION_TYPE_MAX_PERFORMANCE:  ScaleFactor = 1.0f / 3.0f; break;
-            default:                                                  ScaleFactor = 1.0f / 1.7f; break;
+            case SUPER_RESOLUTION_OPTIMIZATION_TYPE_MAX_QUALITY:      ScaleFactor = 12.f / 16.f; break;
+            case SUPER_RESOLUTION_OPTIMIZATION_TYPE_HIGH_QUALITY:     ScaleFactor = 11.f / 16.f; break;
+            case SUPER_RESOLUTION_OPTIMIZATION_TYPE_BALANCED:         ScaleFactor = 9.f / 16.f; break;
+            case SUPER_RESOLUTION_OPTIMIZATION_TYPE_HIGH_PERFORMANCE: ScaleFactor = 8.f / 16.f; break;
+            case SUPER_RESOLUTION_OPTIMIZATION_TYPE_MAX_PERFORMANCE:  ScaleFactor = 5.f / 16.f; break;
+            default:                                                  ScaleFactor = 9.f / 16.f; break;
                 // clang-format on
         }
 

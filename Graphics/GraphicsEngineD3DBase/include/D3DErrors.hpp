@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -123,4 +123,15 @@ private:
             ComErrorDesc ErrDesc(_hr_);                                    \
             LOG_ERROR_MESSAGE(Message, "\nHRESULT Desc: ", ErrDesc.Get()); \
         }                                                                  \
+    } while (false)
+
+#define LOG_D3D_WARNING(Expr, Message)                                       \
+    do                                                                       \
+    {                                                                        \
+        HRESULT _hr_ = Expr;                                                 \
+        if (FAILED(_hr_))                                                    \
+        {                                                                    \
+            ComErrorDesc ErrDesc(_hr_);                                      \
+            LOG_WARNING_MESSAGE(Message, "\nHRESULT Desc: ", ErrDesc.Get()); \
+        }                                                                    \
     } while (false)
