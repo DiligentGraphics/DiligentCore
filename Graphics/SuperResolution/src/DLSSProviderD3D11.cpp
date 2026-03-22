@@ -73,13 +73,13 @@ public:
         if (pDLSSFeature == nullptr)
             return;
 
+        TransitionResourceStates(Attribs);
+
         auto GetD3D11Resource = [](ITextureView* pView) -> ID3D11Resource* {
             return pView != nullptr ?
                 ClassPtrCast<ITextureD3D11>(pView->GetTexture())->GetD3D11Texture() :
                 nullptr;
         };
-
-        ID3D11DeviceContext* pd3d11Ctx = ClassPtrCast<IDeviceContextD3D11>(Attribs.pContext)->GetD3D11DeviceContext();
 
         NVSDK_NGX_D3D11_DLSS_Eval_Params EvalParams{};
         EvalParams.Feature.pInColor                 = GetD3D11Resource(Attribs.pColorTextureSRV);
@@ -99,6 +99,8 @@ public:
         EvalParams.InRenderSubrectDimensions.Height = m_Desc.InputHeight;
         EvalParams.InPreExposure                    = Attribs.PreExposure;
         EvalParams.InExposureScale                  = Attribs.ExposureScale;
+
+        ID3D11DeviceContext* pd3d11Ctx = ClassPtrCast<IDeviceContextD3D11>(Attribs.pContext)->GetD3D11DeviceContext();
 
         NVSDK_NGX_Result Result = NGX_D3D11_EVALUATE_DLSS_EXT(pd3d11Ctx, pDLSSFeature, m_pNGXParams, &EvalParams);
         if (NVSDK_NGX_FAILED(Result))
