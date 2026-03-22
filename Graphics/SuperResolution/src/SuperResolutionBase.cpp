@@ -77,7 +77,9 @@ void ValidateSuperResolutionDesc(const SuperResolutionDesc& Desc, const SuperRes
 
     if (Desc.Flags & SUPER_RESOLUTION_FLAG_ENABLE_SHARPENING)
     {
-        const bool SharpnessSupported = Info.Type == SUPER_RESOLUTION_TYPE_SPATIAL ? (Info.SpatialCapFlags & SUPER_RESOLUTION_SPATIAL_CAP_FLAG_SHARPNESS) != 0 : (Info.TemporalCapFlags & SUPER_RESOLUTION_TEMPORAL_CAP_FLAG_SHARPNESS) != 0;
+        const bool SharpnessSupported = Info.Type == SUPER_RESOLUTION_TYPE_SPATIAL ?
+            (Info.SpatialCapFlags & SUPER_RESOLUTION_SPATIAL_CAP_FLAG_SHARPNESS) != 0 :
+            (Info.TemporalCapFlags & SUPER_RESOLUTION_TEMPORAL_CAP_FLAG_SHARPNESS) != 0;
 
         VERIFY_SUPER_RESOLUTION(Desc.Name, SharpnessSupported,
                                 "SUPER_RESOLUTION_FLAG_ENABLE_SHARPENING is set, but the '", Info.Name,

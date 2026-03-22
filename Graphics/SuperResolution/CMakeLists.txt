@@ -143,23 +143,19 @@ PRIVATE
 
 if(DILIGENT_DSR_SUPPORTED)
     target_link_libraries(Diligent-SuperResolution-static PRIVATE Diligent-GraphicsEngineD3D12-static DirectSR-Headers)
-    target_include_directories(Diligent-SuperResolution-static PRIVATE ../GraphicsEngineD3D12/include)
 endif()
 
 if(DILIGENT_DLSS_SUPPORTED)
     target_link_libraries(Diligent-SuperResolution-static PRIVATE DLSS-Headers DLSS-NGX)
 
     if(D3D12_SUPPORTED)
-        target_link_libraries(Diligent-SuperResolution-static PRIVATE Diligent-GraphicsEngineD3D12-static)
-        target_include_directories(Diligent-SuperResolution-static PRIVATE ../GraphicsEngineD3D12/include)
+        target_link_libraries(Diligent-SuperResolution-static PRIVATE Diligent-GraphicsEngineD3D12Interface)
     endif()
     if(D3D11_SUPPORTED)
-        target_link_libraries(Diligent-SuperResolution-static PRIVATE Diligent-GraphicsEngineD3D11-static)
-        target_include_directories(Diligent-SuperResolution-static PRIVATE ../GraphicsEngineD3D11/include)
+        target_link_libraries(Diligent-SuperResolution-static PRIVATE Diligent-GraphicsEngineD3D11Interface)
     endif()
     if(VULKAN_SUPPORTED)
         target_link_libraries(Diligent-SuperResolution-static PRIVATE Diligent-GraphicsEngineVk-static Vulkan::Headers)
-        target_include_directories(Diligent-SuperResolution-static PRIVATE ../GraphicsEngineVulkan/include)
     endif()
 endif()
 
