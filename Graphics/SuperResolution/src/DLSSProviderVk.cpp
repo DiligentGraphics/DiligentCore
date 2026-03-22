@@ -47,23 +47,24 @@ namespace Diligent
 namespace
 {
 
-class SuperResolutionVk_DLSS final : public SuperResolutionBase
+NVSDK_NGX_Result CreateDLSSFeatureVk(IDeviceContext*               pContext,
+                                     NVSDK_NGX_Parameter*          pNGXParams,
+                                     NVSDK_NGX_DLSS_Create_Params& DLSSCreateParams,
+                                     NVSDK_NGX_Handle**            ppFeature)
+{
+    VkCommandBuffer vkCmdBuffer = ClassPtrCast<IDeviceContextVk>(pContext)->GetVkCommandBuffer();
+    return NGX_VULKAN_CREATE_DLSS_EXT(vkCmdBuffer, 1, 1, ppFeature, pNGXParams, &DLSSCreateParams);
+}
+
+class SuperResolutionVk_DLSS final : public SuperResolutionDLSS<CreateDLSSFeatureVk, NVSDK_NGX_VULKAN_ReleaseFeature>
 {
 public:
     SuperResolutionVk_DLSS(IReferenceCounters*        pRefCounters,
                            const SuperResolutionDesc& Desc,
                            const SuperResolutionInfo& Info,
                            NVSDK_NGX_Parameter*       pNGXParams) :
-        SuperResolutionBase{pRefCounters, Desc, Info},
-        m_pNGXParams{pNGXParams}
+        SuperResolutionDLSS{pRefCounters, Desc, Info, pNGXParams}
     {
-        PopulateHaltonJitterPattern(m_JitterPattern, 64);
-    }
-
-    ~SuperResolutionVk_DLSS()
-    {
-        if (m_pDLSSFeature != nullptr)
-            NVSDK_NGX_VULKAN_ReleaseFeature(m_pDLSSFeature);
     }
 
     virtual void DILIGENT_CALL_TYPE Execute(const ExecuteSuperResolutionAttribs& Attribs) override final
@@ -133,48 +134,10 @@ public:
         if (NVSDK_NGX_FAILED(Result))
             LOG_ERROR_MESSAGE("DLSS Vulkan evaluation failed. NGX Result: ", static_cast<Uint32>(Result));
     }
-
-private:
-    NVSDK_NGX_Handle* AcquireFeature(const ExecuteSuperResolutionAttribs& Attribs)
-    {
-        const Int32 DLSSCreateFeatureFlags = ComputeDLSSFeatureFlags(m_Desc.Flags, Attribs);
-        if (m_pDLSSFeature != nullptr && m_DLSSFeatureFlags == DLSSCreateFeatureFlags)
-            return m_pDLSSFeature;
-
-        if (m_pDLSSFeature != nullptr)
-        {
-            NVSDK_NGX_VULKAN_ReleaseFeature(m_pDLSSFeature);
-            m_pDLSSFeature = nullptr;
-        }
-        m_DLSSFeatureFlags = DLSSCreateFeatureFlags;
-
-        NVSDK_NGX_DLSS_Create_Params DLSSCreateParams{};
-        DLSSCreateParams.Feature.InWidth        = m_Desc.InputWidth;
-        DLSSCreateParams.Feature.InHeight       = m_Desc.InputHeight;
-        DLSSCreateParams.Feature.InTargetWidth  = m_Desc.OutputWidth;
-        DLSSCreateParams.Feature.InTargetHeight = m_Desc.OutputHeight;
-        DLSSCreateParams.InFeatureCreateFlags   = DLSSCreateFeatureFlags;
-
-        NVSDK_NGX_Handle* pFeature    = nullptr;
-        VkCommandBuffer   vkCmdBuffer = ClassPtrCast<IDeviceContextVk>(Attribs.pContext)->GetVkCommandBuffer();
-        NVSDK_NGX_Result  Result      = NGX_VULKAN_CREATE_DLSS_EXT(vkCmdBuffer, 1, 1, &pFeature, m_pNGXParams, &DLSSCreateParams);
-
-        if (NVSDK_NGX_FAILED(Result))
-        {
-            LOG_ERROR_MESSAGE("Failed to create DLSS Vulkan feature. NGX Result: ", static_cast<Uint32>(Result));
-            return nullptr;
-        }
-        m_pDLSSFeature = pFeature;
-        return m_pDLSSFeature;
-    }
-
-    NVSDK_NGX_Handle*    m_pDLSSFeature     = nullptr;
-    NVSDK_NGX_Parameter* m_pNGXParams       = nullptr;
-    Int32                m_DLSSFeatureFlags = 0;
 };
 
 
-class DLSSProviderVk final : public SuperResolutionProvider
+class DLSSProviderVk final : public DLSSProviderBase
 {
 public:
     DLSSProviderVk(IRenderDevice* pDevice) :
@@ -240,15 +203,6 @@ public:
         }
     }
 
-    void EnumerateVariants(std::vector<SuperResolutionInfo>& Variants)
-    {
-        EnumerateDLSSVariants(m_pNGXParams, Variants);
-    }
-    void GetSourceSettings(const SuperResolutionSourceSettingsAttribs& Attribs, SuperResolutionSourceSettings& Settings)
-    {
-        GetDLSSSourceSettings(m_pNGXParams, Attribs, Settings);
-    }
-
     void CreateSuperResolution(const SuperResolutionDesc& Desc, const SuperResolutionInfo& Info, ISuperResolution** ppUpscaler)
     {
         DEV_CHECK_ERR(ppUpscaler != nullptr, "ppUpscaler must not be null");
@@ -259,7 +213,6 @@ public:
 
 private:
     RefCntAutoPtr<IRenderDeviceVk> m_pDevice;
-    NVSDK_NGX_Parameter*           m_pNGXParams = nullptr;
 };
 
 } // anonymous namespace
