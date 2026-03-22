@@ -32,9 +32,11 @@
 #include <vector>
 
 #include <nvsdk_ngx_defs.h>
+#include <nvsdk_ngx_params.h>
 
 #include "SuperResolutionFactory.h"
-#include "SuperResolution.h"
+#include "SuperResolutionProvider.hpp"
+#include "SuperResolutionBase.hpp"
 
 struct NVSDK_NGX_Parameter;
 
@@ -50,12 +52,77 @@ NVSDK_NGX_PerfQuality_Value OptimizationTypeToNGXPerfQuality(SUPER_RESOLUTION_OP
 /// Computes the full set of DLSS feature flags from the description and execution attributes.
 Int32 ComputeDLSSFeatureFlags(SUPER_RESOLUTION_FLAGS Flags, const ExecuteSuperResolutionAttribs& Attribs);
 
-/// Populates DLSS variant info using NGX capability parameters.
-void EnumerateDLSSVariants(NVSDK_NGX_Parameter* pNGXParams, std::vector<SuperResolutionInfo>& Variants);
+class DLSSProviderBase : public SuperResolutionProvider
+{
+public:
+    /// Populates DLSS variant info using NGX capability parameters.
+    virtual void EnumerateVariants(std::vector<SuperResolutionInfo>& Variants) override final;
 
-/// Queries DLSS optimal source settings using NGX capability parameters.
-void GetDLSSSourceSettings(NVSDK_NGX_Parameter*                        pNGXParams,
-                           const SuperResolutionSourceSettingsAttribs& Attribs,
-                           SuperResolutionSourceSettings&              Settings);
+    /// Queries DLSS optimal source settings using NGX capability parameters.
+    virtual void GetSourceSettings(const SuperResolutionSourceSettingsAttribs& Attribs, SuperResolutionSourceSettings& Settings) override final;
+
+protected:
+    NVSDK_NGX_Parameter* m_pNGXParams = nullptr;
+};
+
+template <auto CreateFeature, auto ReleaseFeature>
+class SuperResolutionDLSS : public SuperResolutionBase
+{
+public:
+    SuperResolutionDLSS(IReferenceCounters*        pRefCounters,
+                        const SuperResolutionDesc& Desc,
+                        const SuperResolutionInfo& Info,
+                        NVSDK_NGX_Parameter*       pNGXParams) :
+        SuperResolutionBase{pRefCounters, Desc, Info},
+        m_pNGXParams{pNGXParams}
+    {
+        PopulateHaltonJitterPattern(m_JitterPattern, 64);
+    }
+
+    ~SuperResolutionDLSS()
+    {
+        if (m_pDLSSFeature != nullptr)
+            ReleaseFeature(m_pDLSSFeature);
+    }
+
+protected:
+    NVSDK_NGX_Handle* AcquireFeature(const ExecuteSuperResolutionAttribs& Attribs)
+    {
+        const Int32 DLSSCreateFeatureFlags = ComputeDLSSFeatureFlags(m_Desc.Flags, Attribs);
+        if (m_pDLSSFeature != nullptr && m_DLSSFeatureFlags == DLSSCreateFeatureFlags)
+            return m_pDLSSFeature;
+
+        if (m_pDLSSFeature != nullptr)
+        {
+            ReleaseFeature(m_pDLSSFeature);
+            m_pDLSSFeature = nullptr;
+        }
+        m_DLSSFeatureFlags = DLSSCreateFeatureFlags;
+
+        NVSDK_NGX_DLSS_Create_Params DLSSCreateParams{};
+        DLSSCreateParams.Feature.InWidth        = m_Desc.InputWidth;
+        DLSSCreateParams.Feature.InHeight       = m_Desc.InputHeight;
+        DLSSCreateParams.Feature.InTargetWidth  = m_Desc.OutputWidth;
+        DLSSCreateParams.Feature.InTargetHeight = m_Desc.OutputHeight;
+        DLSSCreateParams.InFeatureCreateFlags   = DLSSCreateFeatureFlags;
+
+        NVSDK_NGX_Handle* pFeature = nullptr;
+        NVSDK_NGX_Result  Result   = CreateFeature(Attribs.pContext, m_pNGXParams, DLSSCreateParams, &pFeature);
+        if (NVSDK_NGX_FAILED(Result))
+        {
+            LOG_ERROR_MESSAGE("Failed to create DLSS feature. NGX Result: ", static_cast<Uint32>(Result));
+            return nullptr;
+        }
+        m_pDLSSFeature = pFeature;
+        return m_pDLSSFeature;
+    }
+
+protected:
+    NVSDK_NGX_Parameter* const m_pNGXParams;
+
+private:
+    NVSDK_NGX_Handle* m_pDLSSFeature     = nullptr;
+    Int32             m_DLSSFeatureFlags = 0;
+};
 
 } // namespace Diligent

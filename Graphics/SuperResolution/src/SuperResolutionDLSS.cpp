@@ -71,18 +71,18 @@ Int32 ComputeDLSSFeatureFlags(SUPER_RESOLUTION_FLAGS Flags, const ExecuteSuperRe
     return DLSSFlags;
 }
 
-void EnumerateDLSSVariants(NVSDK_NGX_Parameter* pNGXParams, std::vector<SuperResolutionInfo>& Variants)
+void DLSSProviderBase::EnumerateVariants(std::vector<SuperResolutionInfo>& Variants)
 {
-    if (pNGXParams == nullptr)
+    if (m_pNGXParams == nullptr)
         return;
 
     Int32 NeedsUpdatedDriver = 0;
-    NVSDK_NGX_Parameter_GetI(pNGXParams, NVSDK_NGX_Parameter_SuperSampling_NeedsUpdatedDriver, &NeedsUpdatedDriver);
+    NVSDK_NGX_Parameter_GetI(m_pNGXParams, NVSDK_NGX_Parameter_SuperSampling_NeedsUpdatedDriver, &NeedsUpdatedDriver);
     if (NeedsUpdatedDriver)
         LOG_WARNING_MESSAGE("NVIDIA DLSS requires an updated driver.");
 
     Int32            DLSSAvailable = 0;
-    NVSDK_NGX_Result Result        = NVSDK_NGX_Parameter_GetI(pNGXParams, NVSDK_NGX_Parameter_SuperSampling_Available, &DLSSAvailable);
+    NVSDK_NGX_Result Result        = NVSDK_NGX_Parameter_GetI(m_pNGXParams, NVSDK_NGX_Parameter_SuperSampling_Available, &DLSSAvailable);
     if (NVSDK_NGX_FAILED(Result))
     {
         LOG_WARNING_MESSAGE("Failed to query DLSS availability. Result: ", static_cast<Uint32>(Result));
@@ -111,9 +111,8 @@ void EnumerateDLSSVariants(NVSDK_NGX_Parameter* pNGXParams, std::vector<SuperRes
     }
 }
 
-void GetDLSSSourceSettings(NVSDK_NGX_Parameter*                        pNGXParams,
-                           const SuperResolutionSourceSettingsAttribs& Attribs,
-                           SuperResolutionSourceSettings&              Settings)
+void DLSSProviderBase::GetSourceSettings(const SuperResolutionSourceSettingsAttribs& Attribs,
+                                         SuperResolutionSourceSettings&              Settings)
 {
     Settings = {};
 
@@ -130,7 +129,7 @@ void GetDLSSSourceSettings(NVSDK_NGX_Parameter*                        pNGXParam
     float  Sharpness     = 0.0f;
 
     NVSDK_NGX_Result Result = NGX_DLSS_GET_OPTIMAL_SETTINGS(
-        pNGXParams,
+        m_pNGXParams,
         Attribs.OutputWidth, Attribs.OutputHeight,
         PerfQuality,
         &OptimalWidth, &OptimalHeight,

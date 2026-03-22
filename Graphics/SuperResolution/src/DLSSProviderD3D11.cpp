@@ -45,23 +45,24 @@ namespace Diligent
 namespace
 {
 
-class SuperResolutionD3D11_DLSS final : public SuperResolutionBase
+NVSDK_NGX_Result CreateDLSSFeatureD3D11(IDeviceContext*               pContext,
+                                        NVSDK_NGX_Parameter*          pNGXParams,
+                                        NVSDK_NGX_DLSS_Create_Params& DLSSCreateParams,
+                                        NVSDK_NGX_Handle**            ppFeature)
+{
+    ID3D11DeviceContext* pd3d11Ctx = ClassPtrCast<IDeviceContextD3D11>(pContext)->GetD3D11DeviceContext();
+    return NGX_D3D11_CREATE_DLSS_EXT(pd3d11Ctx, ppFeature, pNGXParams, &DLSSCreateParams);
+}
+
+class SuperResolutionD3D11_DLSS final : public SuperResolutionDLSS<CreateDLSSFeatureD3D11, NVSDK_NGX_D3D11_ReleaseFeature>
 {
 public:
     SuperResolutionD3D11_DLSS(IReferenceCounters*        pRefCounters,
                               const SuperResolutionDesc& Desc,
                               const SuperResolutionInfo& Info,
                               NVSDK_NGX_Parameter*       pNGXParams) :
-        SuperResolutionBase{pRefCounters, Desc, Info},
-        m_pNGXParams{pNGXParams}
+        SuperResolutionDLSS{pRefCounters, Desc, Info, pNGXParams}
     {
-        PopulateHaltonJitterPattern(m_JitterPattern, 64);
-    }
-
-    ~SuperResolutionD3D11_DLSS()
-    {
-        if (m_pDLSSFeature != nullptr)
-            NVSDK_NGX_D3D11_ReleaseFeature(m_pDLSSFeature);
     }
 
     virtual void DILIGENT_CALL_TYPE Execute(const ExecuteSuperResolutionAttribs& Attribs) override final
@@ -103,47 +104,9 @@ public:
         if (NVSDK_NGX_FAILED(Result))
             LOG_ERROR_MESSAGE("DLSS D3D11 evaluation failed. NGX Result: ", static_cast<Uint32>(Result));
     }
-
-private:
-    NVSDK_NGX_Handle* AcquireFeature(const ExecuteSuperResolutionAttribs& Attribs)
-    {
-        const Int32 DLSSCreateFeatureFlags = ComputeDLSSFeatureFlags(m_Desc.Flags, Attribs);
-        if (m_pDLSSFeature != nullptr && m_DLSSFeatureFlags == DLSSCreateFeatureFlags)
-            return m_pDLSSFeature;
-
-        if (m_pDLSSFeature != nullptr)
-        {
-            NVSDK_NGX_D3D11_ReleaseFeature(m_pDLSSFeature);
-            m_pDLSSFeature = nullptr;
-        }
-        m_DLSSFeatureFlags = DLSSCreateFeatureFlags;
-
-        NVSDK_NGX_DLSS_Create_Params DLSSCreateParams{};
-        DLSSCreateParams.Feature.InWidth        = m_Desc.InputWidth;
-        DLSSCreateParams.Feature.InHeight       = m_Desc.InputHeight;
-        DLSSCreateParams.Feature.InTargetWidth  = m_Desc.OutputWidth;
-        DLSSCreateParams.Feature.InTargetHeight = m_Desc.OutputHeight;
-        DLSSCreateParams.InFeatureCreateFlags   = DLSSCreateFeatureFlags;
-
-        NVSDK_NGX_Handle*    pFeature  = nullptr;
-        ID3D11DeviceContext* pd3d11Ctx = ClassPtrCast<IDeviceContextD3D11>(Attribs.pContext)->GetD3D11DeviceContext();
-        NVSDK_NGX_Result     Result    = NGX_D3D11_CREATE_DLSS_EXT(pd3d11Ctx, &pFeature, m_pNGXParams, &DLSSCreateParams);
-
-        if (NVSDK_NGX_FAILED(Result))
-        {
-            LOG_ERROR_MESSAGE("Failed to create DLSS D3D11 feature. NGX Result: ", static_cast<Uint32>(Result));
-            return nullptr;
-        }
-        m_pDLSSFeature = pFeature;
-        return m_pDLSSFeature;
-    }
-
-    NVSDK_NGX_Handle*    m_pDLSSFeature     = nullptr;
-    NVSDK_NGX_Parameter* m_pNGXParams       = nullptr;
-    Int32                m_DLSSFeatureFlags = 0;
 };
 
-class DLSSProviderD3D11 final : public SuperResolutionProvider
+class DLSSProviderD3D11 final : public DLSSProviderBase
 {
 public:
     DLSSProviderD3D11(IRenderDevice* pDevice)
@@ -184,16 +147,6 @@ public:
         }
     }
 
-    virtual void EnumerateVariants(std::vector<SuperResolutionInfo>& Variants) override final
-    {
-        EnumerateDLSSVariants(m_pNGXParams, Variants);
-    }
-
-    virtual void GetSourceSettings(const SuperResolutionSourceSettingsAttribs& Attribs, SuperResolutionSourceSettings& Settings) override final
-    {
-        GetDLSSSourceSettings(m_pNGXParams, Attribs, Settings);
-    }
-
     virtual void CreateSuperResolution(const SuperResolutionDesc& Desc, const SuperResolutionInfo& Info, ISuperResolution** ppUpscaler) override final
     {
         DEV_CHECK_ERR(ppUpscaler != nullptr, "ppUpscaler must not be null");
@@ -204,7 +157,6 @@ public:
 
 private:
     CComPtr<ID3D11Device> m_pd3d11Device;
-    NVSDK_NGX_Parameter*  m_pNGXParams = nullptr;
 };
 
 } // anonymous namespace
