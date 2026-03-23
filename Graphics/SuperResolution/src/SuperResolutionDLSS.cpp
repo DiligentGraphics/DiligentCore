@@ -39,6 +39,24 @@ namespace Diligent
 const char*    DLSSProjectId   = "750fed3a-efba-42ba-801b-22d4cbad9148";
 const wchar_t* DLSSAppDataPath = L".";
 
+static const Char* GetOptimizationTypeName(SUPER_RESOLUTION_OPTIMIZATION_TYPE Type)
+{
+    static_assert(SUPER_RESOLUTION_OPTIMIZATION_TYPE_COUNT == 5, "Please update the switch below to handle the new optimization type");
+    switch (Type)
+    {
+        // clang-format off
+        case SUPER_RESOLUTION_OPTIMIZATION_TYPE_MAX_QUALITY:      return "Max Quality";
+        case SUPER_RESOLUTION_OPTIMIZATION_TYPE_HIGH_QUALITY:     return "High Quality";
+        case SUPER_RESOLUTION_OPTIMIZATION_TYPE_BALANCED:         return "Balanced";
+        case SUPER_RESOLUTION_OPTIMIZATION_TYPE_HIGH_PERFORMANCE: return "High Performance";
+        case SUPER_RESOLUTION_OPTIMIZATION_TYPE_MAX_PERFORMANCE:  return "Max Performance";
+            // clang-format on
+        default:
+            UNEXPECTED("Unexpected optimization type");
+            return "Unknown";
+    }
+}
+
 NVSDK_NGX_PerfQuality_Value OptimizationTypeToNGXPerfQuality(SUPER_RESOLUTION_OPTIMIZATION_TYPE Type)
 {
     switch (Type)
@@ -118,34 +136,42 @@ void DLSSProviderBase::GetSourceSettings(const SuperResolutionSourceSettingsAttr
 
     ValidateSourceSettingsAttribs(Attribs);
 
-    NVSDK_NGX_PerfQuality_Value PerfQuality = OptimizationTypeToNGXPerfQuality(Attribs.OptimizationType);
-
-    Uint32 OptimalWidth  = 0;
-    Uint32 OptimalHeight = 0;
-    Uint32 MaxWidth      = 0;
-    Uint32 MaxHeight     = 0;
-    Uint32 MinWidth      = 0;
-    Uint32 MinHeight     = 0;
-    float  Sharpness     = 0.0f;
-
-    NVSDK_NGX_Result Result = NGX_DLSS_GET_OPTIMAL_SETTINGS(
-        m_pNGXParams,
-        Attribs.OutputWidth, Attribs.OutputHeight,
-        PerfQuality,
-        &OptimalWidth, &OptimalHeight,
-        &MaxWidth, &MaxHeight,
-        &MinWidth, &MinHeight,
-        &Sharpness);
-
-    if (NVSDK_NGX_SUCCEED(Result) && OptimalWidth > 0 && OptimalHeight > 0)
+    for (SUPER_RESOLUTION_OPTIMIZATION_TYPE OptType = Attribs.OptimizationType; OptType < SUPER_RESOLUTION_OPTIMIZATION_TYPE_COUNT; OptType = static_cast<SUPER_RESOLUTION_OPTIMIZATION_TYPE>(OptType + 1))
     {
-        Settings.OptimalInputWidth  = OptimalWidth;
-        Settings.OptimalInputHeight = OptimalHeight;
+        NVSDK_NGX_PerfQuality_Value PerfQuality = OptimizationTypeToNGXPerfQuality(OptType);
+
+        Uint32 OptimalWidth  = 0;
+        Uint32 OptimalHeight = 0;
+        Uint32 MaxWidth      = 0;
+        Uint32 MaxHeight     = 0;
+        Uint32 MinWidth      = 0;
+        Uint32 MinHeight     = 0;
+        float  Sharpness     = 0.0f;
+
+        NVSDK_NGX_Result Result = NGX_DLSS_GET_OPTIMAL_SETTINGS(
+            m_pNGXParams,
+            Attribs.OutputWidth, Attribs.OutputHeight,
+            PerfQuality,
+            &OptimalWidth, &OptimalHeight,
+            &MaxWidth, &MaxHeight,
+            &MinWidth, &MinHeight,
+            &Sharpness);
+
+        if (NVSDK_NGX_SUCCEED(Result) && OptimalWidth > 0 && OptimalHeight > 0)
+        {
+            if (OptType != Attribs.OptimizationType)
+            {
+                LOG_WARNING_MESSAGE("DLSS quality mode '", GetOptimizationTypeName(Attribs.OptimizationType),
+                                    "' is not available. Falling back to '", GetOptimizationTypeName(OptType), "'.");
+            }
+            Settings.OptimalInputWidth  = OptimalWidth;
+            Settings.OptimalInputHeight = OptimalHeight;
+            return;
+        }
     }
-    else
-    {
-        LOG_WARNING_MESSAGE("Failed to get DLSS optimal settings. Result: ", static_cast<Uint32>(Result));
-    }
+
+    LOG_WARNING_MESSAGE("Failed to get DLSS optimal settings: no quality mode is available for ",
+                        Attribs.OutputWidth, "x", Attribs.OutputHeight, " output resolution.");
 }
 
 } // namespace Diligent
