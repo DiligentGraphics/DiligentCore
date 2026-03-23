@@ -199,6 +199,7 @@ public:
     {
         if (m_pNGXParams != nullptr)
         {
+            m_pDevice->IdleGPU();
             NVSDK_NGX_VULKAN_DestroyParameters(m_pNGXParams);
             NVSDK_NGX_VULKAN_Shutdown1(m_pDevice->GetVkDevice());
         }
