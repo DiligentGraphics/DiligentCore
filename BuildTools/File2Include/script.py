@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright 2019-2022 Diligent Graphics LLC
+# Copyright 2019-2026 Diligent Graphics LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,20 +25,157 @@
 # ----------------------------------------------------------------------------
 
 import sys
+import io
+import argparse
+
+def strip_c_comments(text):
+    result = []
+    current_line = []
+
+    in_line_comment = False
+    in_block_comment = False
+    in_string = False
+    in_char = False
+    escape = False
+
+    line_has_comment = False
+    line_has_noncomment_code = False
+
+    def append_char(c):
+        nonlocal line_has_noncomment_code
+        current_line.append(c)
+        if not c.isspace():
+            line_has_noncomment_code = True
+
+    def flush_line(add_newline):
+        nonlocal current_line, line_has_comment, line_has_noncomment_code
+
+        # Remove lines that contain only a comment (possibly with whitespace around it)
+        if not (line_has_comment and not line_has_noncomment_code and "".join(current_line).strip() == ""):
+            result.extend(current_line)
+            if add_newline:
+                result.append("\n")
+
+        current_line = []
+        line_has_noncomment_code = False
+
+        # If we are still inside a block comment, the next physical line is also comment-only so far
+        line_has_comment = in_block_comment
+
+    i = 0
+    n = len(text)
+
+    while i < n:
+        c = text[i]
+        nxt = text[i + 1] if i + 1 < n else ""
+
+        if in_line_comment:
+            if c == "\n":
+                in_line_comment = False
+                flush_line(True)
+            i += 1
+            continue
+
+        if in_block_comment:
+            if c == "*" and nxt == "/":
+                in_block_comment = False
+                i += 2
+                continue
+
+            if c == "\n":
+                flush_line(True)
+            i += 1
+            continue
+
+        if in_string:
+            append_char(c)
+            if escape:
+                escape = False
+            elif c == "\\":
+                escape = True
+            elif c == '"':
+                in_string = False
+            i += 1
+            continue
+
+        if in_char:
+            append_char(c)
+            if escape:
+                escape = False
+            elif c == "\\":
+                escape = True
+            elif c == "'":
+                in_char = False
+            i += 1
+            continue
+
+        if c == "/" and nxt == "/":
+            line_has_comment = True
+            in_line_comment = True
+            i += 2
+            continue
+
+        if c == "/" and nxt == "*":
+            line_has_comment = True
+            in_block_comment = True
+            i += 2
+            continue
+
+        if c == '"':
+            append_char(c)
+            in_string = True
+            i += 1
+            continue
+
+        if c == "'":
+            append_char(c)
+            in_char = True
+            i += 1
+            continue
+
+        if c == "\n":
+            flush_line(True)
+            i += 1
+            continue
+
+        append_char(c)
+        i += 1
+
+    if current_line:
+        if not (line_has_comment and not line_has_noncomment_code and "".join(current_line).strip() == ""):
+            result.extend(current_line)
+
+    return "".join(result)
 
 
 def main():
-    try:
-        if len(sys.argv) < 3:
-            raise ValueError("Incorrect number of command line arguments. Expected arguments: src file, dst file")
+    parser = argparse.ArgumentParser(
+        description="Convert a file into quoted string lines."
+    )
+    parser.add_argument("src", help="source file")
+    parser.add_argument("dst", help="destination file")
+    parser.add_argument(
+        "--strip-comments",
+        action="store_true",
+        help="strip // and /* */ comments before converting",
+    )
 
-        if sys.argv[1] == sys.argv[2]:
+    args = parser.parse_args()
+
+    try:
+        if args.src == args.dst:
             raise ValueError("Source and destination files must be different")
 
-        with open(sys.argv[1], "r") as src_file, open(sys.argv[2], "w") as dst_file:
+        with open(args.src, "r") as src_file, open(args.dst, "w") as dst_file:
             special_chars = "\'\"\\"
 
-            for line in src_file:
+            if args.strip_comments:
+                content = strip_c_comments(src_file.read())
+                src_iter = io.StringIO(content)
+            else:
+                src_iter = src_file
+
+            for line in src_iter:
                 dst_file.write('\"')
 
                 for i, c in enumerate(line.rstrip()):
@@ -48,7 +185,8 @@ def main():
 
                 dst_file.write('\\n\"\n')
 
-        print("File2String: successfully converted {} to {}".format(sys.argv[1], sys.argv[2]))
+        print("File2String: successfully converted {} to {}".format(args.src, args.dst))
+
     except (ValueError, IOError) as error:
         print(error)
         sys.exit(1)

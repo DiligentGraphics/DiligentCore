@@ -232,7 +232,7 @@ target_sources(Diligent-ShaderTools PRIVATE
 
 find_package(Python3 REQUIRED)
 add_custom_command(OUTPUT ${HLSL_DEFINITIONS_INC} # We must use full path here!
-                   COMMAND ${Python3_EXECUTABLE} ${FILE2STRING_PATH} ${HLSL_DEFINITIONS} ${HLSL_DEFINITIONS_INC}
+                   COMMAND ${Python3_EXECUTABLE} ${FILE2STRING_PATH} ${HLSL_DEFINITIONS} ${HLSL_DEFINITIONS_INC} --strip-comments
                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
                    MAIN_DEPENDENCY ${HLSL_DEFINITIONS}
                    COMMENT "Processing HLSLDefinitions.fxh"
