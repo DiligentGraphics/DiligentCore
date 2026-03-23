@@ -51,18 +51,18 @@ public:
 
         ValidateSourceSettingsAttribs(Attribs);
 
-        float ScaleFactor = 1.0f;
-        switch (Attribs.OptimizationType)
-        {
-                // clang-format off
-            case SUPER_RESOLUTION_OPTIMIZATION_TYPE_MAX_QUALITY:      ScaleFactor = 12.f / 16.f; break;
-            case SUPER_RESOLUTION_OPTIMIZATION_TYPE_HIGH_QUALITY:     ScaleFactor = 11.f / 16.f; break;
-            case SUPER_RESOLUTION_OPTIMIZATION_TYPE_BALANCED:         ScaleFactor = 9.f / 16.f; break;
-            case SUPER_RESOLUTION_OPTIMIZATION_TYPE_HIGH_PERFORMANCE: ScaleFactor = 8.f / 16.f; break;
-            case SUPER_RESOLUTION_OPTIMIZATION_TYPE_MAX_PERFORMANCE:  ScaleFactor = 5.f / 16.f; break;
-            default:                                                  ScaleFactor = 9.f / 16.f; break;
-                // clang-format on
-        }
+        static constexpr float ScaleFactors[] = {
+            24.f / 32.f, // MAX_QUALITY      (75%)
+            22.f / 32.f, // HIGH_QUALITY     (69%)
+            18.f / 32.f, // BALANCED         (56%)
+            16.f / 32.f, // HIGH_PERFORMANCE (50%)
+            11.f / 32.f, // MAX_PERFORMANCE  (34%)
+        };
+
+        static_assert(_countof(ScaleFactors) == SUPER_RESOLUTION_OPTIMIZATION_TYPE_COUNT,
+                      "Scale factor table must match SUPER_RESOLUTION_OPTIMIZATION_TYPE_COUNT");
+
+        const float ScaleFactor = Attribs.OptimizationType < SUPER_RESOLUTION_OPTIMIZATION_TYPE_COUNT ? ScaleFactors[Attribs.OptimizationType] : ScaleFactors[SUPER_RESOLUTION_OPTIMIZATION_TYPE_BALANCED];
 
         Settings.OptimalInputWidth  = std::max(1u, static_cast<Uint32>(Attribs.OutputWidth * ScaleFactor));
         Settings.OptimalInputHeight = std::max(1u, static_cast<Uint32>(Attribs.OutputHeight * ScaleFactor));
