@@ -706,20 +706,35 @@ VkPhysicalDevice Instance::SelectPhysicalDevice(uint32_t AdapterId) const noexce
         SelectedPhysicalDevice = m_PhysicalDevices[AdapterId];
     }
 
-    // Select a device that exposes a queue family that supports both compute and graphics operations.
-    // Prefer discrete GPU.
+    // Select a device that exposes a queue family that supports both compute and graphics operations
+    // DISCRETE > INTEGRATED > everything else.
     if (SelectedPhysicalDevice == VK_NULL_HANDLE)
     {
+        // Returns a priority value for the device type (higher is better).
+        const auto GetDeviceTypePriority = [](VkPhysicalDeviceType Type) -> int {
+            switch (Type)
+            {
+                case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU: return 3;
+                case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU: return 2;
+                case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU: return 1;
+                default: return 0;
+            }
+        };
+
+        int BestPriority = -1;
         for (VkPhysicalDevice Device : m_PhysicalDevices)
         {
+            if (!IsGraphicsAndComputeQueueSupported(Device))
+                continue;
+
             VkPhysicalDeviceProperties DeviceProps;
             vkGetPhysicalDeviceProperties(Device, &DeviceProps);
 
-            if (IsGraphicsAndComputeQueueSupported(Device))
+            const int Priority = GetDeviceTypePriority(DeviceProps.deviceType);
+            if (Priority > BestPriority)
             {
                 SelectedPhysicalDevice = Device;
-                if (DeviceProps.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
-                    break;
+                BestPriority           = Priority;
             }
         }
     }
