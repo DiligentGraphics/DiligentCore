@@ -41,16 +41,30 @@ def strip_c_comments(text):
     line_has_comment = False
     line_has_noncomment_code = False
 
+    block_comment_buf = []
+    line_comment_buf = []
+
     def append_char(c):
         nonlocal line_has_noncomment_code
         current_line.append(c)
         if not c.isspace():
             line_has_noncomment_code = True
 
+    def append_text(s):
+        for ch in s:
+            append_char(ch)
+
+    def should_preserve_block_comment(comment_text):
+        inner = comment_text[2:-2].strip()
+        return inner.startswith("format")
+
+    def should_preserve_line_comment(comment_text):
+        inner = comment_text[2:].strip()
+        return inner.startswith("format")
+
     def flush_line(add_newline):
         nonlocal current_line, line_has_comment, line_has_noncomment_code
 
-        # Remove lines that contain only a comment (possibly with whitespace around it)
         if not (line_has_comment and not line_has_noncomment_code and "".join(current_line).strip() == ""):
             result.extend(current_line)
             if add_newline:
@@ -58,8 +72,6 @@ def strip_c_comments(text):
 
         current_line = []
         line_has_noncomment_code = False
-
-        # If we are still inside a block comment, the next physical line is also comment-only so far
         line_has_comment = in_block_comment
 
     i = 0
@@ -71,14 +83,33 @@ def strip_c_comments(text):
 
         if in_line_comment:
             if c == "\n":
+                comment_text = "".join(line_comment_buf)
+                if should_preserve_line_comment(comment_text):
+                    append_text(comment_text)
+
+                line_comment_buf = []
                 in_line_comment = False
                 flush_line(True)
+                i += 1
+                continue
+
+            line_comment_buf.append(c)
             i += 1
             continue
 
         if in_block_comment:
+            block_comment_buf.append(c)
+
             if c == "*" and nxt == "/":
+                block_comment_buf.append("/")
+                comment_text = "".join(block_comment_buf)
+
                 in_block_comment = False
+                block_comment_buf = []
+
+                if should_preserve_block_comment(comment_text):
+                    append_text(comment_text)
+
                 i += 2
                 continue
 
@@ -112,12 +143,14 @@ def strip_c_comments(text):
         if c == "/" and nxt == "/":
             line_has_comment = True
             in_line_comment = True
+            line_comment_buf = ["//"]
             i += 2
             continue
 
         if c == "/" and nxt == "*":
             line_has_comment = True
             in_block_comment = True
+            block_comment_buf = ["/*"]
             i += 2
             continue
 
@@ -140,6 +173,11 @@ def strip_c_comments(text):
 
         append_char(c)
         i += 1
+
+    if in_line_comment:
+        comment_text = "".join(line_comment_buf)
+        if should_preserve_line_comment(comment_text):
+            append_text(comment_text)
 
     if current_line:
         if not (line_has_comment and not line_has_noncomment_code and "".join(current_line).strip() == ""):
