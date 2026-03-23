@@ -733,13 +733,6 @@ VkPhysicalDevice Instance::SelectPhysicalDevice(uint32_t AdapterId) const noexce
             const int Priority = GetDeviceTypePriority(DeviceProps.deviceType);
             if (Priority > BestPriority)
             {
-                // Don't replace a hardware device with a software renderer (e.g. llvmpipe).
-                // On systems without a discrete GPU the loop would otherwise overwrite an
-                // integrated GPU with the last CPU-type device in the list.
-                if (SelectedPhysicalDevice != VK_NULL_HANDLE &&
-                    DeviceProps.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU)
-                    continue;
-
                 SelectedPhysicalDevice = Device;
                 BestPriority           = Priority;
             }
