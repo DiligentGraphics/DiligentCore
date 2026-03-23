@@ -248,13 +248,14 @@ FSRProvider::FSRProvider(IRenderDevice* pDevice) :
 
     auto CreateShader = [&](SHADER_TYPE Type, const char* Name, const char* EntryPoint, const char* FilePath, const ShaderMacroArray& ShaderMacros = {}) {
         ShaderCreateInfo ShaderCI;
-        ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
-        ShaderCI.Desc.ShaderType            = Type;
-        ShaderCI.Desc.Name                  = Name;
-        ShaderCI.EntryPoint                 = EntryPoint;
-        ShaderCI.FilePath                   = FilePath;
-        ShaderCI.Macros                     = ShaderMacros;
-        ShaderCI.pShaderSourceStreamFactory = m_pShaderSourceFactory;
+        ShaderCI.SourceLanguage                  = SHADER_SOURCE_LANGUAGE_HLSL;
+        ShaderCI.Desc.ShaderType                 = Type;
+        ShaderCI.Desc.Name                       = Name;
+        ShaderCI.Desc.UseCombinedTextureSamplers = true;
+        ShaderCI.EntryPoint                      = EntryPoint;
+        ShaderCI.FilePath                        = FilePath;
+        ShaderCI.Macros                          = ShaderMacros;
+        ShaderCI.pShaderSourceStreamFactory      = m_pShaderSourceFactory;
         RefCntAutoPtr<IShader> pShader;
         pDevice->CreateShader(ShaderCI, &pShader);
         return pShader;
@@ -278,7 +279,7 @@ FSRProvider::PipelineData& FSRProvider::GetOrCreatePipelines(TEXTURE_FORMAT Outp
         ResourceLayout
             .SetDefaultVariableType(SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
             .AddVariable(SHADER_TYPE_PIXEL, "cbFSRAttribs", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
-            .AddImmutableSampler(SHADER_TYPE_PIXEL, "g_TextureSource_sampler", Sam_PointClamp);
+            .AddImmutableSampler(SHADER_TYPE_PIXEL, "g_TextureSource", Sam_PointClamp);
 
         GraphicsPipelineStateCreateInfoX PSOCreateInfo{"FSR::EASU PSO"};
         PSOCreateInfo
