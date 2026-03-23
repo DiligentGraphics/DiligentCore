@@ -113,8 +113,6 @@ def strip_c_comments(text):
                 i += 2
                 continue
 
-            if c == "\n":
-                flush_line(True)
             i += 1
             continue
 
@@ -186,6 +184,30 @@ def strip_c_comments(text):
     return "".join(result)
 
 
+def prepare_content(text, strip_comments=False):
+    if strip_comments:
+        return strip_c_comments(text)
+    return text
+
+
+def convert_to_string_lines(text):
+    special_chars = "'\"\\"
+    output = []
+
+    for line in text.splitlines():
+        quoted = ['"']
+
+        for c in line.rstrip():
+            if c in special_chars:
+                quoted.append("\\")
+            quoted.append(c)
+
+        quoted.append('\\n"\n')
+        output.append("".join(quoted))
+
+    return "".join(output)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Convert a file into quoted string lines."
@@ -205,23 +227,9 @@ def main():
             raise ValueError("Source and destination files must be different")
 
         with open(args.src, "r") as src_file, open(args.dst, "w") as dst_file:
-            special_chars = "\'\"\\"
-
-            if args.strip_comments:
-                content = strip_c_comments(src_file.read())
-                src_iter = io.StringIO(content)
-            else:
-                src_iter = src_file
-
-            for line in src_iter:
-                dst_file.write('\"')
-
-                for i, c in enumerate(line.rstrip()):
-                    if special_chars.find(c) != -1:
-                        dst_file.write('\\')
-                    dst_file.write(c)
-
-                dst_file.write('\\n\"\n')
+            content = src_file.read()
+            content = prepare_content(content, args.strip_comments)
+            dst_file.write(convert_to_string_lines(content))
 
         print("File2String: successfully converted {} to {}".format(args.src, args.dst))
 
