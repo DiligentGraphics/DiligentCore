@@ -26,7 +26,7 @@ struct FSRAttribs
 };
 
 #ifdef CHECK_STRUCT_ALIGNMENT
-CHECK_STRUCT_ALIGNMENT(FSRAttribs);
+CHECK_STRUCT_ALIGNMENT(FSRAttribs)
 #endif
 
 

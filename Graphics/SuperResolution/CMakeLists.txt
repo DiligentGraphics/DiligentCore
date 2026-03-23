@@ -73,6 +73,7 @@ if(DILIGENT_FSR_SUPPORTED)
         ${CMAKE_CURRENT_SOURCE_DIR}/shaders/FSR_ContrastAdaptiveSharpening.fx
         ${CMAKE_CURRENT_SOURCE_DIR}/shaders/fsr1/ffx_common_types.h
         ${CMAKE_CURRENT_SOURCE_DIR}/shaders/fsr1/ffx_core.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/fsr1/ffx_core_cpu.h
         ${CMAKE_CURRENT_SOURCE_DIR}/shaders/fsr1/ffx_core_glsl.h
         ${CMAKE_CURRENT_SOURCE_DIR}/shaders/fsr1/ffx_core_gpu_common.h
         ${CMAKE_CURRENT_SOURCE_DIR}/shaders/fsr1/ffx_core_gpu_common_half.h
