@@ -41,16 +41,30 @@ def strip_c_comments(text):
     line_has_comment = False
     line_has_noncomment_code = False
 
+    block_comment_buf = []
+    line_comment_buf = []
+
     def append_char(c):
         nonlocal line_has_noncomment_code
         current_line.append(c)
         if not c.isspace():
             line_has_noncomment_code = True
 
+    def append_text(s):
+        for ch in s:
+            append_char(ch)
+
+    def should_preserve_block_comment(comment_text):
+        inner = comment_text[2:-2].strip()
+        return inner.startswith("format")
+
+    def should_preserve_line_comment(comment_text):
+        inner = comment_text[2:].strip()
+        return inner.startswith("format")
+
     def flush_line(add_newline):
         nonlocal current_line, line_has_comment, line_has_noncomment_code
 
-        # Remove lines that contain only a comment (possibly with whitespace around it)
         if not (line_has_comment and not line_has_noncomment_code and "".join(current_line).strip() == ""):
             result.extend(current_line)
             if add_newline:
@@ -58,8 +72,6 @@ def strip_c_comments(text):
 
         current_line = []
         line_has_noncomment_code = False
-
-        # If we are still inside a block comment, the next physical line is also comment-only so far
         line_has_comment = in_block_comment
 
     i = 0
@@ -71,19 +83,36 @@ def strip_c_comments(text):
 
         if in_line_comment:
             if c == "\n":
+                comment_text = "".join(line_comment_buf)
+                if should_preserve_line_comment(comment_text):
+                    append_text(comment_text)
+
+                line_comment_buf = []
                 in_line_comment = False
                 flush_line(True)
+                i += 1
+                continue
+
+            line_comment_buf.append(c)
             i += 1
             continue
 
         if in_block_comment:
+            block_comment_buf.append(c)
+
             if c == "*" and nxt == "/":
+                block_comment_buf.append("/")
+                comment_text = "".join(block_comment_buf)
+
                 in_block_comment = False
+                block_comment_buf = []
+
+                if should_preserve_block_comment(comment_text):
+                    append_text(comment_text)
+
                 i += 2
                 continue
 
-            if c == "\n":
-                flush_line(True)
             i += 1
             continue
 
@@ -112,12 +141,14 @@ def strip_c_comments(text):
         if c == "/" and nxt == "/":
             line_has_comment = True
             in_line_comment = True
+            line_comment_buf = ["//"]
             i += 2
             continue
 
         if c == "/" and nxt == "*":
             line_has_comment = True
             in_block_comment = True
+            block_comment_buf = ["/*"]
             i += 2
             continue
 
@@ -141,11 +172,40 @@ def strip_c_comments(text):
         append_char(c)
         i += 1
 
+    if in_line_comment:
+        comment_text = "".join(line_comment_buf)
+        if should_preserve_line_comment(comment_text):
+            append_text(comment_text)
+
     if current_line:
         if not (line_has_comment and not line_has_noncomment_code and "".join(current_line).strip() == ""):
             result.extend(current_line)
 
     return "".join(result)
+
+
+def prepare_content(text, strip_comments=False):
+    if strip_comments:
+        return strip_c_comments(text)
+    return text
+
+
+def convert_to_string_lines(text):
+    special_chars = "'\"\\"
+    output = []
+
+    for line in text.splitlines():
+        quoted = ['"']
+
+        for c in line.rstrip():
+            if c in special_chars:
+                quoted.append("\\")
+            quoted.append(c)
+
+        quoted.append('\\n"\n')
+        output.append("".join(quoted))
+
+    return "".join(output)
 
 
 def main():
@@ -167,23 +227,9 @@ def main():
             raise ValueError("Source and destination files must be different")
 
         with open(args.src, "r") as src_file, open(args.dst, "w") as dst_file:
-            special_chars = "\'\"\\"
-
-            if args.strip_comments:
-                content = strip_c_comments(src_file.read())
-                src_iter = io.StringIO(content)
-            else:
-                src_iter = src_file
-
-            for line in src_iter:
-                dst_file.write('\"')
-
-                for i, c in enumerate(line.rstrip()):
-                    if special_chars.find(c) != -1:
-                        dst_file.write('\\')
-                    dst_file.write(c)
-
-                dst_file.write('\\n\"\n')
+            content = src_file.read()
+            content = prepare_content(content, args.strip_comments)
+            dst_file.write(convert_to_string_lines(content))
 
         print("File2String: successfully converted {} to {}".format(args.src, args.dst))
 
