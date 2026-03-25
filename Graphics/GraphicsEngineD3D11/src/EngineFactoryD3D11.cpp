@@ -526,7 +526,10 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
         // i.e. 256 bytes.
         BufferProps.ConstantBufferOffsetAlignment   = 256;
         BufferProps.StructuredBufferOffsetAlignment = D3D11_RAW_UAV_SRV_BYTE_ALIGNMENT;
-        ASSERT_SIZEOF(BufferProps, 8, "Did you add a new member to BufferProperites? Please initialize it here.");
+        // Buffer to texture copies are not supported in D3D11
+        BufferProps.TextureUpdateOffsetAlignment = 0;
+        BufferProps.TextureUpdateStrideAlignment = 0;
+        ASSERT_SIZEOF(BufferProps, 16, "Did you add a new member to BufferProperites? Please initialize it here.");
     }
 
     // Compute shader properties

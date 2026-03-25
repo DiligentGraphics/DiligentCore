@@ -1038,7 +1038,9 @@ void RenderDeviceGLImpl::InitAdapterInfo()
             BufferProperties& BufferProps{m_AdapterInfo.Buffer};
             BufferProps.ConstantBufferOffsetAlignment   = 256;
             BufferProps.StructuredBufferOffsetAlignment = 16;
-            ASSERT_SIZEOF(BufferProps, 8, "Did you add a new member to BufferProperites? Please initialize it here.");
+            BufferProps.TextureUpdateOffsetAlignment    = 4;
+            BufferProps.TextureUpdateStrideAlignment    = 4;
+            ASSERT_SIZEOF(BufferProps, 16, "Did you add a new member to BufferProperites? Please initialize it here.");
         }
 #undef ENABLE_FEATURE
     }

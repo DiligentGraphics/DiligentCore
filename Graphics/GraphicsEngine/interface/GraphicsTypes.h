@@ -2228,19 +2228,34 @@ typedef struct WaveOpProperties WaveOpProperties;
 /// Buffer properties
 struct BufferProperties
 {
-    /// The minimum required alignment, in bytes, for the constant buffer offsets.
-
-    /// The Offset parameter passed to IShaderResourceVariable::SetBufferRange() or to
-    /// IShaderResourceVariable::SetBufferOffset() method used to set the offset of a
-    /// constant buffer, must be an integer multiple of this limit.
+    /// Minimum required alignment, in bytes, for constant buffer offsets.
+    ///
+    /// The `Offset` parameter passed to `IShaderResourceVariable::SetBufferRange()`
+    /// or `IShaderResourceVariable::SetBufferOffset()` for a constant buffer must be
+    /// a multiple of this value.
     Uint32 ConstantBufferOffsetAlignment DEFAULT_INITIALIZER(0);
 
-    /// The minimum required alignment, in bytes, for the structured buffer offsets.
-
-    /// The ByteOffset member of the BufferViewDesc used to create a structured buffer view or
-    /// the Offset parameter passed to IShaderResourceVariable::SetBufferOffset() method used to
-    /// set the offset of a structured buffer, must be an integer multiple of this limit.
+    /// Minimum required alignment, in bytes, for structured buffer offsets.
+    ///
+    /// The `ByteOffset` member of `BufferViewDesc` used to create a structured buffer
+    /// view, or the `Offset` parameter passed to
+    /// `IShaderResourceVariable::SetBufferOffset()` for a structured buffer, must be
+    /// a multiple of this value.
     Uint32 StructuredBufferOffsetAlignment DEFAULT_INITIALIZER(0);
+
+    /// Minimum required alignment, in bytes, for source buffer offsets used by
+    /// `IDeviceContext::UpdateTexture()`.
+    ///
+    /// When `TextureSubResData::pSrcBuffer` is not null, the
+    /// `TextureSubResData::SrcOffset` member must be a multiple of this value.
+    Uint32 TextureUpdateOffsetAlignment DEFAULT_INITIALIZER(0);
+
+    /// Minimum required alignment, in bytes, for source buffer row strides used by
+    /// `IDeviceContext::UpdateTexture()`.
+    ///
+    /// When `TextureSubResData::pSrcBuffer` is not null, the
+    /// `TextureSubResData::Stride` member must be a multiple of this value.
+    Uint32 TextureUpdateStrideAlignment DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
     /// Comparison operator tests if two structures are equivalent
@@ -2252,10 +2267,11 @@ struct BufferProperties
     constexpr bool operator==(const BufferProperties& RHS) const
     {
         return ConstantBufferOffsetAlignment   == RHS.ConstantBufferOffsetAlignment &&
-               StructuredBufferOffsetAlignment == RHS.StructuredBufferOffsetAlignment;
+               StructuredBufferOffsetAlignment == RHS.StructuredBufferOffsetAlignment &&
+               TextureUpdateOffsetAlignment == RHS.TextureUpdateOffsetAlignment &&
+               TextureUpdateStrideAlignment == RHS.TextureUpdateStrideAlignment;
     }
 #endif
-
 };
 typedef struct BufferProperties BufferProperties;
 

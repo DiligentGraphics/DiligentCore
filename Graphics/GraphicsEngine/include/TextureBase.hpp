@@ -53,7 +53,12 @@ void ValidateTextureDesc(const TextureDesc& TexDesc, const IRenderDevice* pDevic
 void ValidatedAndCorrectTextureViewDesc(const TextureDesc& TexDesc, TextureViewDesc& ViewDesc) noexcept(false);
 
 /// Validates update texture command parameters.
-void ValidateUpdateTextureParams(const TextureDesc& TexDesc, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData);
+void ValidateUpdateTextureParams(const TextureDesc&       TexDesc,
+                                 Uint32                   MipLevel,
+                                 Uint32                   Slice,
+                                 const Box&               DstBox,
+                                 const TextureSubResData& SubresData,
+                                 const BufferProperties&  BufferProps);
 
 /// Validates copy texture command parameters.
 void ValidateCopyTextureParams(const CopyTextureAttribs& CopyAttribs);

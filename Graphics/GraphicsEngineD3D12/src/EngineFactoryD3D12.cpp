@@ -1046,7 +1046,9 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
             BufferProperties& BufferProps{AdapterInfo.Buffer};
             BufferProps.ConstantBufferOffsetAlignment   = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
             BufferProps.StructuredBufferOffsetAlignment = D3D12_RAW_UAV_SRV_BYTE_ALIGNMENT;
-            ASSERT_SIZEOF(BufferProps, 8, "Did you add a new member to BufferProperites? Please initialize it here.");
+            BufferProps.TextureUpdateOffsetAlignment    = D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT;
+            BufferProps.TextureUpdateStrideAlignment    = D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
+            ASSERT_SIZEOF(BufferProps, 16, "Did you add a new member to BufferProperites? Please initialize it here.");
         }
     }
 

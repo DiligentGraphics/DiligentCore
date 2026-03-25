@@ -2,6 +2,7 @@
 
 ## Current progress
 
+* Added `TextureUpdateOffsetAlignment` and `TextureUpdateStrideAlignment` members to `BufferProperties` struct (API256015)
 * Added pipeline specialization constants (API256014)
   * Added `SpecializationConstants` device feature
   * Added `SpecializationConstant` struct

@@ -184,7 +184,9 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
         BufferProperties& BufferProps{AdapterInfo.Buffer};
         BufferProps.ConstantBufferOffsetAlignment   = static_cast<Uint32>(vkDeviceLimits.minUniformBufferOffsetAlignment);
         BufferProps.StructuredBufferOffsetAlignment = static_cast<Uint32>(vkDeviceLimits.minStorageBufferOffsetAlignment);
-        ASSERT_SIZEOF(BufferProps, 8, "Did you add a new member to BufferProperites? Please initialize it here.");
+        BufferProps.TextureUpdateOffsetAlignment    = static_cast<Uint32>(vkDeviceLimits.optimalBufferCopyOffsetAlignment);
+        BufferProps.TextureUpdateStrideAlignment    = static_cast<Uint32>(vkDeviceLimits.optimalBufferCopyRowPitchAlignment);
+        ASSERT_SIZEOF(BufferProps, 16, "Did you add a new member to BufferProperites? Please initialize it here.");
     }
 
     // Texture properties

@@ -527,6 +527,9 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter, WGPUDevice w
         BufferProperties& BufferInfo{AdapterInfo.Buffer};
         BufferInfo.ConstantBufferOffsetAlignment   = wgpuSupportedLimits.limits.minUniformBufferOffsetAlignment;
         BufferInfo.StructuredBufferOffsetAlignment = wgpuSupportedLimits.limits.minStorageBufferOffsetAlignment;
+        BufferInfo.TextureUpdateOffsetAlignment    = 256; // Where is this specified?
+        BufferInfo.TextureUpdateStrideAlignment    = 256; // From spec
+        ASSERT_SIZEOF(BufferInfo, 16, "Did you add a new member to BufferProperties? Please initialize it here.");
     }
 
     // Set sampler info

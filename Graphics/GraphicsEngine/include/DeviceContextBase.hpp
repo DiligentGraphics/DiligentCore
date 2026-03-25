@@ -1884,7 +1884,7 @@ inline void DeviceContextBase<ImplementationTraits>::UpdateTexture(
     DEV_CHECK_ERR(pTexture != nullptr, "pTexture must not be null");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "UpdateTexture command must be used outside of render pass.");
 
-    ValidateUpdateTextureParams(pTexture->GetDesc(), MipLevel, Slice, DstBox, SubresData);
+    ValidateUpdateTextureParams(pTexture->GetDesc(), MipLevel, Slice, DstBox, SubresData, m_pDevice->GetAdapterInfo().Buffer);
     ++m_Stats.CommandCounters.UpdateTexture;
 }
 
