@@ -59,11 +59,6 @@ struct AxisSplit
     Uint32 Size   = 0;
 };
 
-Uint32 GetMipDimension(Uint32 BaseDim, Uint32 Mip)
-{
-    return std::max(BaseDim >> Mip, 1u);
-}
-
 AxisSplit GetAxisSplit(Uint32 Dim, Uint32 Split)
 {
     if (Dim <= 1)
@@ -77,6 +72,7 @@ AxisSplit GetAxisSplit(Uint32 Dim, Uint32 Split)
 
 TextureDesc CreateTestTextureDesc(const char*        Name,
                                   RESOURCE_DIMENSION Type,
+                                  TEXTURE_FORMAT     Format,
                                   Uint32             Width,
                                   Uint32             Height,
                                   Uint32             ArraySizeOrDepth,
@@ -85,7 +81,7 @@ TextureDesc CreateTestTextureDesc(const char*        Name,
     TextureDesc TexDesc;
     TexDesc.Name      = Name;
     TexDesc.Type      = Type;
-    TexDesc.Format    = TEX_FORMAT_RGBA8_UNORM;
+    TexDesc.Format    = Format;
     TexDesc.BindFlags = BIND_SHADER_RESOURCE;
     TexDesc.Width     = Width;
     TexDesc.Height    = Height;
@@ -107,12 +103,9 @@ void ForEachSubresource(const TextureDesc& TexDesc, Fn&& Callback)
 
     for (Uint32 mip = 0; mip < TexDesc.MipLevels; ++mip)
     {
-        const Uint32 MipWidth  = GetMipDimension(TexDesc.Width, mip);
-        const Uint32 MipHeight = GetMipDimension(TexDesc.Height, mip);
-        const Uint32 MipDepth  = TexDesc.Is3D() ? GetMipDimension(TexDesc.Depth, mip) : 1u;
-
+        MipLevelProperties Mip = GetMipLevelProperties(TexDesc, mip);
         for (Uint32 slice = 0; slice < NumSlices; ++slice)
-            Callback(mip, slice, MipWidth, MipHeight, MipDepth);
+            Callback(mip, slice, Mip);
     }
 }
 
@@ -130,7 +123,7 @@ void RunCopyBufferToTextureTest(const TextureDesc& BaseTexDesc)
 
     const Uint32 TextureUpdateOffsetAlignment = pDevice->GetAdapterInfo().Buffer.TextureUpdateOffsetAlignment;
     const Uint32 TextureUpdateStrideAlignment = pDevice->GetAdapterInfo().Buffer.TextureUpdateStrideAlignment;
-    const Uint32 NumSlices                    = BaseTexDesc.IsArray() ? BaseTexDesc.ArraySize : 1u;
+    const Uint32 NumSlices                    = BaseTexDesc.GetArraySize();
 
     for (USAGE BufferUsage : {USAGE_DEFAULT, USAGE_STAGING})
     {
@@ -148,22 +141,34 @@ void RunCopyBufferToTextureTest(const TextureDesc& BaseTexDesc)
         pDevice->CreateTexture(StagingTexDesc, nullptr, &pStagingTexture);
         ASSERT_NE(pStagingTexture, nullptr);
 
-        std::vector<std::vector<Uint32>> RefSubresources(BaseTexDesc.MipLevels * NumSlices);
-        std::vector<Uint8>               UploadData;
-        std::vector<UploadRegion>        UploadRegions;
+        std::vector<std::vector<Uint8>> RefSubresources(BaseTexDesc.MipLevels * NumSlices);
+        std::vector<Uint8>              UploadData;
+        std::vector<UploadRegion>       UploadRegions;
 
         auto GetSubresourceIndex = [NumSlices](Uint32 Mip, Uint32 Slice) {
             return Mip * NumSlices + Slice;
         };
 
-        FastRandInt rnd{0, 0, 32766};
+        FastRandInt rnd{0, 0, 255};
 
-        ForEachSubresource(BaseTexDesc, [&](Uint32 mip, Uint32 slice, Uint32 MipWidth, Uint32 MipHeight, Uint32 MipDepth) {
+        const TextureFormatAttribs& FmtAttribs = pDevice->GetTextureFormatInfo(BaseTexDesc.Format);
+
+        const Uint32 ElementSize = FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED ?
+            FmtAttribs.ComponentSize :
+            FmtAttribs.ComponentSize * FmtAttribs.NumComponents;
+
+        ForEachSubresource(BaseTexDesc, [&](Uint32 mip, Uint32 slice, const MipLevelProperties& Mip) {
             auto& Subres = RefSubresources[GetSubresourceIndex(mip, slice)];
-            Subres.resize(static_cast<size_t>(MipWidth) * MipHeight * MipDepth);
+            Subres.resize(static_cast<size_t>(Mip.MipSize));
 
-            for (Uint32& pixel : Subres)
-                pixel = rnd() | (rnd() << 16);
+            const Uint32 MipWidth  = Mip.LogicalWidth;
+            const Uint32 MipHeight = Mip.LogicalHeight;
+            const Uint32 MipDepth  = Mip.Depth;
+            VERIFY((MipWidth % FmtAttribs.BlockWidth) == 0, "Logical mip width (", MipWidth, ") is expected to be a multiple of block width (", FmtAttribs.BlockWidth, ")");
+            VERIFY((MipHeight % FmtAttribs.BlockHeight) == 0, "Logical mip height (", MipHeight, ") is expected to be a multiple of block height (", FmtAttribs.BlockHeight, ")");
+
+            for (Uint8& pixel : Subres)
+                pixel = static_cast<Uint8>(rnd());
 
             const Uint32 NumXSplits = MipWidth > 1 ? 2u : 1u;
             const Uint32 NumYSplits = MipHeight > 1 ? 2u : 1u;
@@ -185,8 +190,8 @@ void RunCopyBufferToTextureTest(const TextureDesc& BaseTexDesc)
                                                              static_cast<Uint64>(TextureUpdateOffsetAlignment));
                         UploadData.resize(static_cast<size_t>(AlignedOffset));
 
-                        const Uint32 Stride      = AlignUp(MipWidth * Uint32{sizeof(Uint32)}, TextureUpdateStrideAlignment);
-                        const Uint32 DepthStride = Y.Size * Stride;
+                        const Uint32 Stride      = AlignUp(X.Size / FmtAttribs.BlockWidth * ElementSize, TextureUpdateStrideAlignment);
+                        const Uint32 DepthStride = Y.Size / FmtAttribs.BlockHeight * Stride;
                         const Uint64 SrcOffset   = static_cast<Uint64>(UploadData.size());
                         const Uint64 RegionSize  = static_cast<Uint64>(Z.Size) * DepthStride;
 
@@ -194,10 +199,13 @@ void RunCopyBufferToTextureTest(const TextureDesc& BaseTexDesc)
 
                         for (Uint32 z = 0; z < Z.Size; ++z)
                         {
-                            for (Uint32 row = 0; row < Y.Size; ++row)
+                            for (Uint32 row = 0; row < Y.Size / FmtAttribs.BlockHeight; ++row)
                             {
-                                const Uint32* pSrcRow =
-                                    &Subres[((Z.Offset + z) * MipHeight + (Y.Offset + row)) * MipWidth + X.Offset];
+                                const Uint8* pSrcRow =
+                                    &Subres[static_cast<size_t>(
+                                        (Z.Offset + z) * Mip.DepthSliceSize +
+                                        (Y.Offset / FmtAttribs.BlockHeight + row) * Mip.RowSize +
+                                        X.Offset / FmtAttribs.BlockWidth * ElementSize)];
 
                                 Uint8* pDstRow =
                                     UploadData.data() +
@@ -205,7 +213,7 @@ void RunCopyBufferToTextureTest(const TextureDesc& BaseTexDesc)
                                     static_cast<size_t>(z) * DepthStride +
                                     static_cast<size_t>(row) * Stride;
 
-                                memcpy(pDstRow, pSrcRow, X.Size * sizeof(Uint32));
+                                memcpy(pDstRow, pSrcRow, X.Size / FmtAttribs.BlockWidth * ElementSize);
                             }
                         }
 
@@ -272,9 +280,15 @@ void RunCopyBufferToTextureTest(const TextureDesc& BaseTexDesc)
                                     RESOURCE_STATE_TRANSITION_MODE_VERIFY);
         }
 
+        if (pDevice->GetDeviceInfo().IsGLDevice() && FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+        {
+            // Readback of compressed textures is not supported in OpenGL backend, so we cannot verify texture data on CPU.
+            continue;
+        }
+
         pContext->TransitionResourceState({pTexture, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE});
         pContext->TransitionResourceState({pStagingTexture, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_DEST, STATE_TRANSITION_FLAG_UPDATE_STATE});
-        ForEachSubresource(BaseTexDesc, [&](Uint32 mip, Uint32 slice, Uint32, Uint32, Uint32) {
+        ForEachSubresource(BaseTexDesc, [&](Uint32 mip, Uint32 slice, const MipLevelProperties&) {
             CopyTextureAttribs CopyAttribs;
             CopyAttribs.pSrcTexture              = pTexture;
             CopyAttribs.SrcTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_VERIFY;
@@ -289,23 +303,23 @@ void RunCopyBufferToTextureTest(const TextureDesc& BaseTexDesc)
 
         pContext->WaitForIdle();
 
-        ForEachSubresource(BaseTexDesc, [&](Uint32 mip, Uint32 slice, Uint32 MipWidth, Uint32 MipHeight, Uint32 MipDepth) {
+        ForEachSubresource(BaseTexDesc, [&](Uint32 mip, Uint32 slice, const MipLevelProperties& Mip) {
             const auto& Subres = RefSubresources[GetSubresourceIndex(mip, slice)];
 
             MappedTextureSubresource MappedData;
             pContext->MapTextureSubresource(pStagingTexture, mip, slice, MAP_READ, MAP_FLAG_DO_NOT_WAIT, nullptr, MappedData);
 
-            for (Uint32 z = 0; z < MipDepth; ++z)
+            for (Uint32 z = 0; z < Mip.Depth; ++z)
             {
-                for (Uint32 row = 0; row < MipHeight; ++row)
+                for (Uint32 row = 0; row < Mip.LogicalHeight / FmtAttribs.BlockHeight; ++row)
                 {
-                    const void* pRefRow = &Subres[(z * MipHeight + row) * MipWidth];
+                    const void* pRefRow = &Subres[static_cast<size_t>(z * Mip.DepthSliceSize + row * Mip.RowSize)];
                     const void* pTexRow =
                         reinterpret_cast<const Uint8*>(MappedData.pData) +
                         static_cast<size_t>(z) * static_cast<size_t>(MappedData.DepthStride) +
                         static_cast<size_t>(row) * static_cast<size_t>(MappedData.Stride);
 
-                    EXPECT_EQ(memcmp(pRefRow, pTexRow, MipWidth * sizeof(Uint32)), 0)
+                    EXPECT_EQ(memcmp(pRefRow, pTexRow, static_cast<size_t>(Mip.RowSize)), 0)
                         << "Mip level: " << mip
                         << ", slice: " << slice
                         << ", z: " << z
@@ -318,33 +332,62 @@ void RunCopyBufferToTextureTest(const TextureDesc& BaseTexDesc)
     }
 }
 
-TEST(UpdateTextureFromBuffer, Texture2D)
+TEST(UpdateTextureFromBuffer, Texture2D_RGBA8)
 {
     RunCopyBufferToTextureTest(
         CreateTestTextureDesc("UpdateTextureFromBuffer.Texture2D",
                               RESOURCE_DIM_TEX_2D,
+                              TEX_FORMAT_RGBA8_UNORM,
                               128,
                               128,
                               1,
                               4));
 }
 
-TEST(UpdateTextureFromBuffer, Texture2DArray)
+
+TEST(UpdateTextureFromBuffer, Texture2D_BC1)
+{
+    RunCopyBufferToTextureTest(
+        CreateTestTextureDesc("UpdateTextureFromBuffer.Texture2D",
+                              RESOURCE_DIM_TEX_2D,
+                              TEX_FORMAT_BC1_UNORM,
+                              512,
+                              512,
+                              1,
+                              4));
+}
+
+TEST(UpdateTextureFromBuffer, Texture2DArray_RGBA8)
 {
     RunCopyBufferToTextureTest(
         CreateTestTextureDesc("UpdateTextureFromBuffer.Texture2DArray",
                               RESOURCE_DIM_TEX_2D_ARRAY,
+                              TEX_FORMAT_RGBA8_UNORM,
                               128,
                               128,
                               4,
                               4));
 }
 
-TEST(UpdateTextureFromBuffer, Texture3D)
+
+TEST(UpdateTextureFromBuffer, Texture2DArray_BC1)
+{
+    RunCopyBufferToTextureTest(
+        CreateTestTextureDesc("UpdateTextureFromBuffer.Texture2DArray",
+                              RESOURCE_DIM_TEX_2D_ARRAY,
+                              TEX_FORMAT_BC1_UNORM,
+                              512,
+                              512,
+                              4,
+                              4));
+}
+
+TEST(UpdateTextureFromBuffer, Texture3D_RGBA8)
 {
     RunCopyBufferToTextureTest(
         CreateTestTextureDesc("UpdateTextureFromBuffer.Texture3D",
                               RESOURCE_DIM_TEX_3D,
+                              TEX_FORMAT_RGBA8_UNORM,
                               128,
                               128,
                               8,
