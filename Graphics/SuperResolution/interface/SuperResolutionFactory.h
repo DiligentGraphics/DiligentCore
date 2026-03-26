@@ -55,12 +55,13 @@ DILIGENT_TYPED_ENUM(SUPER_RESOLUTION_TYPE, Uint8)
     SUPER_RESOLUTION_TYPE_TEMPORAL
 };
 
-// Capability flags for spatial super resolution upscaling.
+/// Capability flags for spatial super resolution upscaling.
 DILIGENT_TYPED_ENUM(SUPER_RESOLUTION_SPATIAL_CAP_FLAGS, Uint32)
 {
+    /// No special capabilities.
     SUPER_RESOLUTION_SPATIAL_CAP_FLAG_NONE = 0u,
 
-    /// The upscaler is a native hardware-accelerated implementation (e.g. MetalFX, DirectSR)
+    /// The upscaler is a native hardware-accelerated implementation (e.g. DLSS, DirectSR, MetalFX)
     /// as opposed to a custom software fallback.
     SUPER_RESOLUTION_SPATIAL_CAP_FLAG_NATIVE = 1u << 0,
 
@@ -76,6 +77,7 @@ DEFINE_FLAG_ENUM_OPERATORS(SUPER_RESOLUTION_SPATIAL_CAP_FLAGS)
 /// Capability flags for temporal super resolution upscaling.
 DILIGENT_TYPED_ENUM(SUPER_RESOLUTION_TEMPORAL_CAP_FLAGS, Uint32)
 {
+    /// No special capabilities.
     SUPER_RESOLUTION_TEMPORAL_CAP_FLAG_NONE = 0u,
 
     /// The upscaler is a native hardware-accelerated implementation (e.g. MetalFX, DirectSR)

@@ -30,7 +30,6 @@
 /// Shared DLSS utilities used by per-API DLSS backend implementations.
 
 #include <vector>
-#include <array>
 
 #include <nvsdk_ngx_defs.h>
 #include <nvsdk_ngx_params.h>
@@ -116,29 +115,6 @@ protected:
         }
         m_pDLSSFeature = pFeature;
         return m_pDLSSFeature;
-    }
-
-    void TransitionResourceStates(const ExecuteSuperResolutionAttribs& Attribs)
-    {
-        std::array<StateTransitionDesc, 7> Barriers;
-        Uint32                             BarrierCount = 0;
-
-        auto AddBarrier = [&](ITextureView* pView, RESOURCE_STATE NewState) {
-            if (pView == nullptr)
-                return;
-            VERIFY_EXPR(BarrierCount < Barriers.size());
-            Barriers[BarrierCount++] = StateTransitionDesc{pView->GetTexture(), RESOURCE_STATE_UNKNOWN, NewState, STATE_TRANSITION_FLAG_UPDATE_STATE};
-        };
-
-        AddBarrier(Attribs.pColorTextureSRV, RESOURCE_STATE_SHADER_RESOURCE);
-        AddBarrier(Attribs.pDepthTextureSRV, RESOURCE_STATE_SHADER_RESOURCE);
-        AddBarrier(Attribs.pMotionVectorsSRV, RESOURCE_STATE_SHADER_RESOURCE);
-        AddBarrier(Attribs.pOutputTextureView, RESOURCE_STATE_UNORDERED_ACCESS);
-        AddBarrier(Attribs.pExposureTextureSRV, RESOURCE_STATE_SHADER_RESOURCE);
-        AddBarrier(Attribs.pReactiveMaskTextureSRV, RESOURCE_STATE_SHADER_RESOURCE);
-        AddBarrier(Attribs.pIgnoreHistoryMaskTextureSRV, RESOURCE_STATE_SHADER_RESOURCE);
-
-        Attribs.pContext->TransitionResourceStates(BarrierCount, Barriers.data());
     }
 
 protected:

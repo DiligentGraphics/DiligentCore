@@ -188,7 +188,7 @@ void SuperResolutionFSR::Execute(const ExecuteSuperResolutionAttribs& Attribs)
         ITextureView* pRTVs[] = {Attribs.pOutputTextureView};
         pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
         pContext->SetPipelineState(m_pRCAS_PSO);
-        pContext->CommitShaderResources(m_pRCAS_SRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pContext->CommitShaderResources(m_pRCAS_SRB, Attribs.StateTransitionMode);
         pContext->Draw({3, DRAW_FLAG_VERIFY_ALL});
     }
 

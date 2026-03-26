@@ -33,6 +33,7 @@
 
 #include <vector>
 #include <string>
+#include <array>
 
 namespace Diligent
 {
@@ -107,6 +108,33 @@ public:
             JitterX = 0.0f;
             JitterY = 0.0f;
         }
+    }
+
+protected:
+    void TransitionResourceStates(const ExecuteSuperResolutionAttribs& Attribs, RESOURCE_STATE OutputTextureState = RESOURCE_STATE_UNORDERED_ACCESS)
+    {
+        if (Attribs.StateTransitionMode != RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
+            return;
+
+        std::array<StateTransitionDesc, 7> Barriers;
+        Uint32                             BarrierCount = 0;
+
+        auto AddBarrier = [&](ITextureView* pView, RESOURCE_STATE NewState) {
+            if (pView == nullptr)
+                return;
+            VERIFY_EXPR(BarrierCount < Barriers.size());
+            Barriers[BarrierCount++] = StateTransitionDesc{pView->GetTexture(), RESOURCE_STATE_UNKNOWN, NewState, STATE_TRANSITION_FLAG_UPDATE_STATE};
+        };
+
+        AddBarrier(Attribs.pColorTextureSRV, RESOURCE_STATE_SHADER_RESOURCE);
+        AddBarrier(Attribs.pDepthTextureSRV, RESOURCE_STATE_SHADER_RESOURCE);
+        AddBarrier(Attribs.pMotionVectorsSRV, RESOURCE_STATE_SHADER_RESOURCE);
+        AddBarrier(Attribs.pOutputTextureView, OutputTextureState);
+        AddBarrier(Attribs.pExposureTextureSRV, RESOURCE_STATE_SHADER_RESOURCE);
+        AddBarrier(Attribs.pReactiveMaskTextureSRV, RESOURCE_STATE_SHADER_RESOURCE);
+        AddBarrier(Attribs.pIgnoreHistoryMaskTextureSRV, RESOURCE_STATE_SHADER_RESOURCE);
+
+        Attribs.pContext->TransitionResourceStates(BarrierCount, Barriers.data());
     }
 
 protected:
