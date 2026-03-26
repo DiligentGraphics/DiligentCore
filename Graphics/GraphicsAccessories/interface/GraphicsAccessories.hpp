@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -494,6 +494,8 @@ String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFul
 const char* GetShaderCodeVariableClassString(SHADER_CODE_VARIABLE_CLASS Class);
 
 const char* GetShaderCodeBasicTypeString(SHADER_CODE_BASIC_TYPE Type);
+
+Uint32 GetShaderCodeBasicTypeBitSize(SHADER_CODE_BASIC_TYPE Type);
 
 /// Returns the string containing the shader buffer description.
 String GetShaderCodeBufferDescString(const ShaderCodeBufferDesc& Desc, size_t GlobalIdent = 0, size_t MemberIdent = 2);

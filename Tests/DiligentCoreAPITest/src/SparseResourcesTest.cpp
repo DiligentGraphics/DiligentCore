@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -91,7 +91,7 @@ protected:
             Barrier.NewState  = RESOURCE_STATE_CONSTANT_BUFFER;
             Barrier.Flags     = STATE_TRANSITION_FLAG_UPDATE_STATE;
 
-            pContext->TransitionResourceStates(1, &Barrier);
+            pContext->TransitionResourceState(Barrier);
 
             ShaderCreateInfo ShaderCI;
             ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
@@ -925,7 +925,7 @@ TEST_F(SparseResourceTest, SparseBuffer)
             Barrier.NewState  = RESOURCE_STATE_UNORDERED_ACCESS;
             Barrier.Flags     = STATE_TRANSITION_FLAG_UPDATE_STATE;
 
-            pContext->TransitionResourceStates(1, &Barrier);
+            pContext->TransitionResourceState(Barrier);
         }
         RestartColorRandomizer();
         FillBuffer(pContext, pBuffer, BlockSize * 0, BlockSize, RandomColorU());
@@ -948,7 +948,7 @@ TEST_F(SparseResourceTest, SparseBuffer)
 
         // Transition to CopySrc state to use in TakeSnapshot()
         StateTransitionDesc Barrier{pRT, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
-        pContext->TransitionResourceStates(1, &Barrier);
+        pContext->TransitionResourceState(Barrier);
 
         pContext->Flush();
         pContext->InvalidateState(); // because TakeSnapshot() will clear state in D3D11
@@ -1045,7 +1045,7 @@ TEST_F(SparseResourceTest, SparseResidentBuffer)
             Barrier.NewState  = RESOURCE_STATE_UNORDERED_ACCESS;
             Barrier.Flags     = STATE_TRANSITION_FLAG_UPDATE_STATE;
 
-            pContext->TransitionResourceStates(1, &Barrier);
+            pContext->TransitionResourceState(Barrier);
         }
         RestartColorRandomizer();
         FillBuffer(pContext, pBuffer, BlockSize * 0, BlockSize, RandomColorU());
@@ -1076,7 +1076,7 @@ TEST_F(SparseResourceTest, SparseResidentBuffer)
 
         // Transition to CopySrc state to use in TakeSnapshot()
         StateTransitionDesc Barrier{pRT, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
-        pContext->TransitionResourceStates(1, &Barrier);
+        pContext->TransitionResourceState(Barrier);
 
         pContext->Flush();
         pContext->InvalidateState(); // because TakeSnapshot() will clear state in D3D11
@@ -1179,7 +1179,7 @@ TEST_F(SparseResourceTest, SparseResidentAliasedBuffer)
             Barrier.NewState  = RESOURCE_STATE_UNORDERED_ACCESS;
             Barrier.Flags     = STATE_TRANSITION_FLAG_UPDATE_STATE;
 
-            pContext->TransitionResourceStates(1, &Barrier);
+            pContext->TransitionResourceState(Barrier);
         }
         RestartColorRandomizer();
         const auto Col0 = RandomColorU();
@@ -1201,7 +1201,7 @@ TEST_F(SparseResourceTest, SparseResidentAliasedBuffer)
         {
             // aliased buffer ranges
             StateTransitionDesc Barrier{pBuffer, pBuffer};
-            pContext->TransitionResourceStates(1, &Barrier);
+            pContext->TransitionResourceState(Barrier);
 
             FillBuffer(pContext, pBuffer, BlockSize * 0, BlockSize, Col1); // aliased
         }
@@ -1221,7 +1221,7 @@ TEST_F(SparseResourceTest, SparseResidentAliasedBuffer)
 
         // Transition to CopySrc state to use in TakeSnapshot()
         StateTransitionDesc Barrier{pRT, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
-        pContext->TransitionResourceStates(1, &Barrier);
+        pContext->TransitionResourceState(Barrier);
 
         pContext->Flush();
         pContext->InvalidateState(); // because TakeSnapshot() will clear state in D3D11
@@ -1347,7 +1347,7 @@ TEST_P(SparseResourceTest, SparseTexture)
 
         // Transition to CopySrc state to use in TakeSnapshot()
         StateTransitionDesc Barrier{pRT, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
-        pContext->TransitionResourceStates(1, &Barrier);
+        pContext->TransitionResourceState(Barrier);
 
         pContext->Flush();
         pContext->InvalidateState(); // because TakeSnapshot() will clear state in D3D11
@@ -1540,7 +1540,7 @@ TEST_P(SparseResourceTest, SparseResidencyTexture)
 
         // Transition to CopySrc state to use in TakeSnapshot()
         StateTransitionDesc Barrier{pRT, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
-        pContext->TransitionResourceStates(1, &Barrier);
+        pContext->TransitionResourceState(Barrier);
 
         pContext->Flush();
         pContext->InvalidateState(); // because TakeSnapshot() will clear state in D3D11
@@ -1725,7 +1725,7 @@ TEST_P(SparseResourceTest, SparseResidencyAliasedTexture)
             else
             {
                 StateTransitionDesc Barrier{pTexture, pTexture};
-                pContext->TransitionResourceStates(1, &Barrier);
+                pContext->TransitionResourceState(Barrier);
 
                 // clang-format off
                 FillTexture(pContext, pTexture, Rect{  0, 0,       128, 128}, 0, Slice, Col0);
@@ -1752,7 +1752,7 @@ TEST_P(SparseResourceTest, SparseResidencyAliasedTexture)
 
         // Transition to CopySrc state to use in TakeSnapshot()
         StateTransitionDesc Barrier{pRT, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
-        pContext->TransitionResourceStates(1, &Barrier);
+        pContext->TransitionResourceState(Barrier);
 
         pContext->Flush();
         pContext->InvalidateState(); // because TakeSnapshot() will clear state in D3D11
@@ -1890,7 +1890,13 @@ TEST_F(SparseResourceTest, SparseTexture3D)
     {
         GTEST_SKIP() << "Sparse texture 3D is not supported by this device";
     }
-    if ((pDevice->GetSparseTextureFormatInfo(TEX_FORMAT_RGBA8_UNORM, RESOURCE_DIM_TEX_3D, 1).BindFlags & BIND_UNORDERED_ACCESS) == 0)
+
+    SparseTextureFormatInfo SparseInfo;
+    if (!pDevice->GetSparseTextureFormatInfo(TEX_FORMAT_RGBA8_UNORM, RESOURCE_DIM_TEX_3D, 1, SparseInfo))
+    {
+        GTEST_SKIP() << "Sparse texture format is not supported by this device";
+    }
+    if ((SparseInfo.BindFlags & BIND_UNORDERED_ACCESS) == 0)
     {
         GTEST_SKIP() << "Sparse texture UAV is not supported by this device";
     }
@@ -1934,7 +1940,7 @@ TEST_F(SparseResourceTest, SparseTexture3D)
 
         // Transition to CopySrc state to use in TakeSnapshot()
         StateTransitionDesc Barrier{pRT, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
-        pContext->TransitionResourceStates(1, &Barrier);
+        pContext->TransitionResourceState(Barrier);
 
         pContext->Flush();
         pContext->InvalidateState(); // because TakeSnapshot() will clear state in D3D11
@@ -2198,7 +2204,9 @@ TEST_F(SparseResourceTest, GetSparseTextureFormatInfo)
 
     const auto CheckInfo = [&](TEXTURE_FORMAT TexFormat, RESOURCE_DIMENSION Dimension, Uint32 SampleCount, const char* FmtName, BIND_FLAGS PossibleBindFlags) //
     {
-        SparseTextureFormatInfo Info = pDevice->GetSparseTextureFormatInfo(TexFormat, Dimension, SampleCount);
+        SparseTextureFormatInfo Info;
+        if (!pDevice->GetSparseTextureFormatInfo(TexFormat, Dimension, SampleCount, Info))
+            return;
 
         if (Info.BindFlags == BIND_NONE)
             return; // not supported

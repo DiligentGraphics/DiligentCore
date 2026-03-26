@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -60,6 +60,13 @@ public:
 };
 ASSERT_SIZEOF(ImmutableSamplerAttribsD3D11, 12, "The struct is used in serialization and must be tightly packed");
 
+struct InlineConstantBufferAttribsD3D11
+{
+    D3D11ResourceBindPoints        BindPoints;
+    Uint32                         NumConstants = 0;
+    RefCntAutoPtr<BufferD3D11Impl> pBuffer;
+};
+
 
 struct PipelineResourceSignatureInternalDataD3D11 : PipelineResourceSignatureInternalData<PipelineResourceAttribsD3D11, ImmutableSamplerAttribsD3D11>
 {
@@ -105,6 +112,8 @@ public:
     void CopyStaticResources(ShaderResourceCacheD3D11& ResourceCache) const;
     // Make the base class method visible
     using TPipelineResourceSignatureBase::CopyStaticResources;
+
+    void UpdateInlineConstantBuffers(const ShaderResourceCacheD3D11& ResourceCache, ID3D11DeviceContext* pd3d11Ctx) const;
 
 #ifdef DILIGENT_DEVELOPMENT
     /// Verifies committed resource using the D3D resource attributes from the PSO.

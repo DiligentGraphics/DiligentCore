@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@
 #include <limits>
 #include <vector>
 #include <algorithm>
+#include <optional>
 
 #include "../../Primitives/interface/BasicTypes.h"
 #include "../../Primitives/interface/FlagEnum.h"
@@ -1348,6 +1349,241 @@ inline void StripPreprocessorDirectives(std::string& Source, const std::vector<s
 
         Pos = SkipLine(Pos, Source.end(), /* GoToNextLine = */ true);
     }
+}
+
+
+/// Describes a type parsed from the source code
+template <typename TokenIterType>
+struct TypeDesc
+{
+    /// Type name.
+    std::optional<TokenIterType> Name = {};
+
+    /// Members of the type.
+    struct Member
+    {
+        /// Member type start.
+        TokenIterType TypeStart = {};
+
+        /// Member type end.
+        TokenIterType TypeEnd = {};
+
+        /// Member name.
+        TokenIterType Name = {};
+
+        /// Semantics (e.g. `float4 position : POSITION;`), if any.
+        std::optional<TokenIterType> Semantics = {};
+
+        /// Array dimensions (if the member is an array).
+        std::vector<TokenIterType> ArrayDimensions = {};
+
+        /// Returns the full type string (e.g. "unsigned long int").
+        std::string GetFullTypeString() const
+        {
+            std::string TypeStr;
+            for (auto it = TypeStart; it != TypeEnd; ++it)
+            {
+                if (!TypeStr.empty())
+                    TypeStr.push_back(' ');
+                const auto LiteralRange = it->GetLiteral();
+                TypeStr.append(LiteralRange.first, LiteralRange.second);
+            }
+            return TypeStr;
+        }
+    };
+    /// Members of the type.
+    std::vector<Member> Members = {};
+
+    operator bool() const
+    {
+        return Name.has_value();
+    }
+};
+
+template <typename TokenClass, typename TokenIterType>
+TypeDesc<TokenIterType> ParseType(const TokenIterType& Start, const TokenIterType& End, const TokenIterType& NameToken)
+{
+    TokenIterType Token = NameToken;
+
+    TypeDesc<TokenIterType> Type;
+    Type.Name = Token;
+
+    using TokenType = typename TokenClass::TokenType;
+
+    // struct TestStruct
+    //        ^
+    ++Token;
+    if (Token == End || Token->GetType() != TokenType::OpenBrace)
+        return {};
+
+    // struct TestStruct
+    // {
+    // ^
+
+    TokenIterType ClosingBrace = FindMatchingBracket(Start, End, Token);
+    if (ClosingBrace == End)
+        return {};
+
+    ++Token;
+    // struct TestStruct
+    // {
+    //    int i;
+    //    ^
+    while (Token != ClosingBrace)
+    {
+        const TokenIterType MemberTypeStartToken = Token;
+
+        while (Token != ClosingBrace &&
+               Token->GetType() != TokenType::Colon &&
+               Token->GetType() != TokenType::Semicolon &&
+               Token->GetType() != TokenType::Comma &&
+               Token->GetType() != TokenType::OpenSquareBracket)
+
+        {
+            // unsigned long int i;
+            ++Token;
+
+            if (Token->CompareLiteral("<"))
+            {
+                // texture2D<float, access::read>
+                // 			^
+                int NumOpenAngleBrackets = 1;
+                ++Token;
+                for (; Token != ClosingBrace && NumOpenAngleBrackets > 0; ++Token)
+                {
+                    if (Token->CompareLiteral("<"))
+                    {
+                        ++NumOpenAngleBrackets;
+                    }
+                    else if (Token->CompareLiteral(">"))
+                    {
+                        --NumOpenAngleBrackets;
+                    }
+                }
+                if (Token == ClosingBrace)
+                {
+                    //      texture2D<float
+                    // }
+                    return {};
+                }
+            }
+        }
+        if (Token == ClosingBrace)
+        {
+            //     int i
+            // }
+            // ^
+            return {};
+        }
+
+        // unsigned long int i;
+        //                    ^
+        --Token;
+        // unsigned long int i;
+        //                   ^
+        const TokenIterType MemberTypeEndToken = Token;
+        if (MemberTypeEndToken == MemberTypeStartToken)
+        {
+            // int ;
+            //   ^
+            return {};
+        }
+
+        while (Token != ClosingBrace)
+        {
+            //    int i;
+            //        ^
+            const TokenIterType MemberNameToken = Token;
+            Type.Members.push_back({MemberTypeStartToken, MemberTypeEndToken, MemberNameToken});
+            ++Token;
+
+            if (Token == ClosingBrace)
+            {
+                //     int i, j
+                // }
+                // ^
+                return {};
+            }
+
+            while (Token->GetType() == TokenType::OpenSquareBracket)
+            {
+                //    int i[10];
+                //         ^
+                TokenIterType ClosingSquareBracket = FindMatchingBracket(Start, ClosingBrace, Token);
+                if (ClosingSquareBracket == ClosingBrace)
+                {
+                    // int i[10
+                    //      ^
+                    return {};
+                }
+                ++Token;
+
+                if (Token == ClosingSquareBracket)
+                {
+                    // int i[]
+                    //       ^
+                    return {};
+                }
+
+                if (Token->GetType() == TokenType::OpenSquareBracket)
+                {
+                    // float4 position [[position]];
+                    //                  ^
+                }
+                else
+                {
+                    //    int i[10];
+                    //          ^
+                    Type.Members.back().ArrayDimensions.push_back(Token);
+                }
+                Token = ClosingSquareBracket;
+                //    int i[10];
+                //            ^
+
+                ++Token;
+                //    int i[10];
+                //             ^
+            }
+
+            if (Token->GetType() == TokenType::Colon)
+            {
+                // float4 position : POSITION;
+                //                 ^
+                ++Token;
+                if (Token == ClosingBrace)
+                {
+                    //      float4 position :
+                    //  }
+                    return {};
+                }
+                Type.Members.back().Semantics = Token;
+                ++Token;
+            }
+
+            if (Token->GetType() == TokenType::Comma)
+            {
+                //    int i, j;
+                //         ^
+                ++Token;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        if (Token == ClosingBrace || Token->GetType() != TokenType::Semicolon)
+        {
+            //     int i
+            // }
+            // ^
+            return {};
+        }
+
+        ++Token;
+    }
+
+    return Type;
 }
 
 } // namespace Parsing

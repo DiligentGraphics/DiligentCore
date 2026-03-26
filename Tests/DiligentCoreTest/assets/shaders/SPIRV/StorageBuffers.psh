@@ -1,0 +1,43 @@
+// Test for storage buffers (structured buffers and byte address buffers)
+struct BufferData0
+{
+    float4 data0;
+    float4 data1;
+};
+
+struct BufferData1
+{
+    float4 data0;
+    float4 data1;
+    float4 data2;
+    float4 data3;
+};
+
+// Read-only structured buffer
+StructuredBuffer<BufferData0> g_ROBuffer : register(t0);
+
+// Read-write structured buffer
+RWStructuredBuffer<BufferData1> g_RWBuffer : register(u0);
+
+// Atomic counter buffers
+ByteAddressBuffer g_ROAtomicBuffer : register(t1);
+RWByteAddressBuffer g_RWAtomicBuffer : register(u1);
+
+float4 main() : SV_Target
+{
+    float4 result = float4(0.0, 0.0, 0.0, 0.0);
+
+    // Read from RO buffer
+    result += g_ROBuffer[0].data0;
+    result += g_ROBuffer[1].data1;
+
+    // Write to RW buffer
+    g_RWBuffer[0].data0 = result;
+    g_RWBuffer[1].data1 = result * 2.0;
+
+    // Atomic operations
+    uint atomicValue = g_ROAtomicBuffer.Load(0);
+    g_RWAtomicBuffer.Store(0, atomicValue + 1);
+
+    return result;
+}

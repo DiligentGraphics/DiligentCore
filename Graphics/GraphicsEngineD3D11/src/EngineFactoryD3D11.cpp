@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -490,7 +490,7 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
         Features.ShaderFloat16 = ShaderFloat16Supported ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
     }
 
-    ASSERT_SIZEOF(Features, 47, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
+    ASSERT_SIZEOF(Features, 48, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
 
     // Texture properties
     {
@@ -526,7 +526,10 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
         // i.e. 256 bytes.
         BufferProps.ConstantBufferOffsetAlignment   = 256;
         BufferProps.StructuredBufferOffsetAlignment = D3D11_RAW_UAV_SRV_BYTE_ALIGNMENT;
-        ASSERT_SIZEOF(BufferProps, 8, "Did you add a new member to BufferProperites? Please initialize it here.");
+        // Buffer to texture copies are not supported in D3D11
+        BufferProps.TextureUpdateOffsetAlignment = 0;
+        BufferProps.TextureUpdateStrideAlignment = 0;
+        ASSERT_SIZEOF(BufferProps, 16, "Did you add a new member to BufferProperites? Please initialize it here.");
     }
 
     // Compute shader properties

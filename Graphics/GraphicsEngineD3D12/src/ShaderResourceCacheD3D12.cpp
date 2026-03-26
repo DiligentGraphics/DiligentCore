@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,10 +41,30 @@
 namespace Diligent
 {
 
+static size_t GetRequiredMemorySize(Uint32 NumTables,
+                                    Uint32 TotalResources,
+                                    Uint32 NumDescriptorAllocations,
+                                    Uint32 TotalInlineConstantValues)
+{
+    size_t MemorySize = NumTables * sizeof(ShaderResourceCacheD3D12::RootTable);
+
+    MemorySize = AlignUp(MemorySize, alignof(ShaderResourceCacheD3D12::Resource));
+    MemorySize += TotalResources * sizeof(ShaderResourceCacheD3D12::Resource);
+
+    MemorySize = AlignUp(MemorySize, alignof(DescriptorHeapAllocation));
+    MemorySize += NumDescriptorAllocations * sizeof(DescriptorHeapAllocation);
+
+    MemorySize = AlignUp(MemorySize, alignof(Uint32));
+    MemorySize += TotalInlineConstantValues * sizeof(Uint32);
+
+    return MemorySize;
+}
+
 ShaderResourceCacheD3D12::MemoryRequirements ShaderResourceCacheD3D12::GetMemoryRequirements(const RootParamsManager& RootParams)
 {
     const Uint32 NumRootTables = RootParams.GetNumRootTables();
     const Uint32 NumRootViews  = RootParams.GetNumRootViews();
+    const Uint32 NumRootConsts = RootParams.GetNumRootConstants();
 
     MemoryRequirements MemReqs;
 
@@ -61,17 +81,23 @@ ShaderResourceCacheD3D12::MemoryRequirements ShaderResourceCacheD3D12::GetMemory
             }
         }
     }
-    // Root views' resources are stored in one-descriptor tables
+    // Root views and root constants resources are stored in one-descriptor tables
     MemReqs.TotalResources += NumRootViews;
+    MemReqs.TotalResources += NumRootConsts;
 
-    static_assert(sizeof(RootTable) % sizeof(void*) == 0, "sizeof(RootTable) is not aligned by the sizeof(void*)");
-    static_assert(sizeof(Resource) % sizeof(void*) == 0, "sizeof(Resource) is not aligned by the sizeof(void*)");
+    MemReqs.NumTables = NumRootTables + NumRootViews + NumRootConsts;
 
-    MemReqs.NumTables = NumRootTables + NumRootViews;
+    MemReqs.TotalInlineConstantValues = 0;
+    for (Uint32 i = 0; i < NumRootConsts; ++i)
+    {
+        const RootParameter& RootConsts = RootParams.GetRootConstants(i);
+        MemReqs.TotalInlineConstantValues += RootConsts.d3d12RootParam.Constants.Num32BitValues;
+    }
 
-    MemReqs.TotalSize = (MemReqs.NumTables * sizeof(RootTable) +
-                         MemReqs.TotalResources * sizeof(Resource) +
-                         MemReqs.NumDescriptorAllocations * sizeof(DescriptorHeapAllocation));
+    MemReqs.TotalSize = GetRequiredMemorySize(MemReqs.NumTables,
+                                              MemReqs.TotalResources,
+                                              MemReqs.NumDescriptorAllocations,
+                                              MemReqs.TotalInlineConstantValues);
 
     return MemReqs;
 }
@@ -82,21 +108,22 @@ ShaderResourceCacheD3D12::MemoryRequirements ShaderResourceCacheD3D12::GetMemory
 //  m_pMemory                             |             m_pResources, m_NumResources                 |
 //  |                                     |                                                          |
 //  V                                     |                                                          V
-//  |  RootTable[0]  |   ....    |  RootTable[Nrt-1]  |  Res[0]  |  ... |  Res[n-1]  |    ....     | Res[0]  |  ... |  Res[m-1]  |  DescriptorHeapAllocation[0]  |  ...
+//  |  RootTable[0]  |   ....    |  RootTable[Nrt-1]  |  Res[0]  |  ... |  Res[n-1]  |    ....     | Res[0]  |  ... |  Res[m-1]  |  Descriptor Heap Allocations  | Inline cnstant values |
 //       |                                                A
 //       |                                                |
 //       |________________________________________________|
 //                    m_pResources, m_NumResources
 //
 
-size_t ShaderResourceCacheD3D12::AllocateMemory(IMemoryAllocator& MemAllocator)
+size_t ShaderResourceCacheD3D12::AllocateMemory(IMemoryAllocator& MemAllocator,
+                                                Uint32            TotalInlineConstantValues)
 {
     VERIFY(!m_pMemory, "Memory has already been allocated");
 
-    const size_t MemorySize =
-        (m_NumTables * sizeof(RootTable) +
-         m_TotalResourceCount * sizeof(Resource) +
-         m_NumDescriptorAllocations * sizeof(DescriptorHeapAllocation));
+    const size_t MemorySize = GetRequiredMemorySize(m_NumTables,
+                                                    m_TotalResourceCount,
+                                                    m_NumDescriptorAllocations,
+                                                    TotalInlineConstantValues);
 
     if (MemorySize > 0)
     {
@@ -104,24 +131,36 @@ size_t ShaderResourceCacheD3D12::AllocateMemory(IMemoryAllocator& MemAllocator)
             ALLOCATE_RAW(MemAllocator, "Memory for shader resource cache data", MemorySize),
             STDDeleter<void, IMemoryAllocator>(MemAllocator) //
         };
+        VERIFY((reinterpret_cast<size_t>(m_pMemory.get()) % std::max(alignof(RootTable), std::max(alignof(Resource), alignof(DescriptorHeapAllocation)))) == 0,
+               "Resource cache buffer is not properly aligned");
 
-        RootTable* const pTables    = reinterpret_cast<RootTable*>(m_pMemory.get());
-        Resource* const  pResources = reinterpret_cast<Resource*>(pTables + m_NumTables);
-        m_DescriptorAllocations     = m_NumDescriptorAllocations > 0 ? reinterpret_cast<DescriptorHeapAllocation*>(pResources + m_TotalResourceCount) : nullptr;
+#ifdef DILIGENT_DEBUG
+        m_DbgMemoryEnd = static_cast<Uint8*>(m_pMemory.get()) + MemorySize;
+#endif
+
+        Resource* const pResources = GetResourceStorage();
+        m_DescriptorAllocations    = m_NumDescriptorAllocations > 0 ? GetDescriptorAllocationStorage() : nullptr;
 
         for (Uint32 res = 0; res < m_TotalResourceCount; ++res)
+        {
             new (pResources + res) Resource{};
+        }
 
         for (Uint32 i = 0; i < m_NumDescriptorAllocations; ++i)
             new (m_DescriptorAllocations + i) DescriptorHeapAllocation{};
     }
 
+#ifdef DILIGENT_DEBUG
+    m_DbgTotalInlineConstants = TotalInlineConstantValues;
+#endif
+
     return MemorySize;
 }
 
-void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator& MemAllocator,
-                                          Uint32            NumTables,
-                                          const Uint32      TableSizes[])
+void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator&                   MemAllocator,
+                                          Uint32                              NumTables,
+                                          const Uint32                        TableSizes[],
+                                          const InlineConstantInfoVectorType& InlineConstants)
 {
     VERIFY(GetContentType() == ResourceCacheContentType::Signature,
            "This method should be called to initialize the cache to store resources of a pipeline resource signature");
@@ -137,7 +176,13 @@ void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator& MemAllocator,
 
     m_DescriptorAllocations = 0;
 
-    AllocateMemory(MemAllocator);
+    Uint32 TotalInlineConstantValues = 0;
+    for (const InlineConstantParamInfo& InlineConstInfo : InlineConstants)
+    {
+        TotalInlineConstantValues += InlineConstInfo.NumValues;
+    }
+
+    AllocateMemory(MemAllocator, TotalInlineConstantValues);
 
     Uint32 ResIdx = 0;
     for (Uint32 t = 0; t < m_NumTables; ++t)
@@ -146,6 +191,22 @@ void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator& MemAllocator,
         ResIdx += TableSizes[t];
     }
     VERIFY_EXPR(ResIdx == m_TotalResourceCount);
+
+    Uint32* pCurrInlineConstValueStorage = GetInlineConstantStorage();
+    for (const InlineConstantParamInfo& InlineConstInfo : InlineConstants)
+    {
+        Resource& Res               = GetRootTable(InlineConstInfo.RootIndex).GetResource(InlineConstInfo.OffsetFromTableStart);
+        Res.CPUDescriptorHandle.ptr = reinterpret_cast<SIZE_T>(pCurrInlineConstValueStorage);
+        // Note that normally resource type is set when a resource is bound to the cache.
+        // For inline constants, we set it here during tinitialization.
+        Res.Type = SHADER_RESOURCE_TYPE_CONSTANT_BUFFER;
+        // Set the buffer range size to match the number of constant values
+        Res.BufferRangeSize = InlineConstInfo.NumValues * sizeof(Uint32);
+        pCurrInlineConstValueStorage += InlineConstInfo.NumValues;
+
+        m_RootConstantsMask |= (Uint64{1} << Uint64{InlineConstInfo.RootIndex});
+    }
+    VERIFY_EXPR(pCurrInlineConstValueStorage == GetInlineConstantStorage() + TotalInlineConstantValues);
 }
 
 
@@ -168,7 +229,7 @@ void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator&        MemAllocator,
     m_NumDescriptorAllocations = static_cast<decltype(m_NumDescriptorAllocations)>(MemReq.NumDescriptorAllocations);
     VERIFY_EXPR(m_NumDescriptorAllocations == MemReq.NumDescriptorAllocations);
 
-    const size_t MemSize = AllocateMemory(MemAllocator);
+    const size_t MemSize = AllocateMemory(MemAllocator, MemReq.TotalInlineConstantValues);
     VERIFY_EXPR(MemSize == MemReq.TotalSize);
 
 #ifdef DILIGENT_DEBUG
@@ -177,7 +238,7 @@ void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator&        MemAllocator,
 
     Uint32 ResIdx = 0;
 
-    // Initialize root tables
+    // Initialize root tables.
     for (Uint32 i = 0; i < RootParams.GetNumRootTables(); ++i)
     {
         const RootParameter& RootTbl = RootParams.GetRootTable(i);
@@ -220,6 +281,46 @@ void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator&        MemAllocator,
         RootTableInitFlags[RootView.RootIndex] = true;
 #endif
     }
+
+    if (Uint32 NumRootConstants = RootParams.GetNumRootConstants())
+    {
+        Uint32* pCurrInlineConstValueStorage = GetInlineConstantStorage();
+
+        // Initialize one-descriptor tables for root constants
+        for (Uint32 i = 0; i < NumRootConstants; ++i)
+        {
+            const RootParameter& RootConsts = RootParams.GetRootConstants(i);
+            VERIFY(!RootTableInitFlags[RootConsts.RootIndex], "Root table at index ", RootConsts.RootIndex, " has already been initialized.");
+            VERIFY_EXPR(RootConsts.TableOffsetInGroupAllocation == RootParameter::InvalidTableOffsetInGroupAllocation);
+            VERIFY_EXPR(RootConsts.d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS);
+
+            Resource& Res               = GetResource(ResIdx);
+            Res.CPUDescriptorHandle.ptr = reinterpret_cast<SIZE_T>(pCurrInlineConstValueStorage);
+            // Note that normally resource type is set when a resource is bound to the cache.
+            // For inline constants, we set it here during tinitialization.
+            Res.Type = SHADER_RESOURCE_TYPE_CONSTANT_BUFFER;
+            // Set the buffer range size to match the number of constant values
+            Res.BufferRangeSize = RootConsts.d3d12RootParam.Constants.Num32BitValues * sizeof(Uint32);
+
+            pCurrInlineConstValueStorage += RootConsts.d3d12RootParam.Constants.Num32BitValues;
+
+            new (&GetRootTable(RootConsts.RootIndex)) RootTable{
+                1,
+                &Res,
+                false //IsRootView
+            };
+            ++ResIdx;
+
+            m_RootConstantsMask |= (Uint64{1} << Uint64{RootConsts.RootIndex});
+
+#ifdef DILIGENT_DEBUG
+            RootTableInitFlags[RootConsts.RootIndex] = true;
+#endif
+        }
+
+        VERIFY_EXPR(pCurrInlineConstValueStorage == GetInlineConstantStorage() + MemReq.TotalInlineConstantValues);
+    }
+
     VERIFY_EXPR(ResIdx == m_TotalResourceCount);
 
 #ifdef DILIGENT_DEBUG
@@ -386,6 +487,23 @@ void ShaderResourceCacheD3D12::SetBufferDynamicOffset(Uint32 RootIndex,
     Res.BufferDynamicOffset = BufferDynamicOffset;
 }
 
+void ShaderResourceCacheD3D12::SetInlineConstants(Uint32      RootIndex,
+                                                  Uint32      OffsetFromTableStart,
+                                                  const void* pConstants,
+                                                  Uint32      FirstConstant,
+                                                  Uint32      NumConstants)
+{
+    RootTable& Tbl = GetRootTable(RootIndex);
+    Resource&  Res = Tbl.GetResource(OffsetFromTableStart);
+    VERIFY_EXPR(Res.Type == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
+    VERIFY(Res.IsNull(), "There should be no resource bound for root constants as they contain raw data.");
+    VERIFY(Res.CPUDescriptorHandle.ptr != 0, "Resources used to store root constants must have valid pointer to the data.");
+    VERIFY(FirstConstant + NumConstants <= Res.BufferRangeSize / sizeof(Uint32),
+           "Too many constants (", FirstConstant + NumConstants, ") for the allocated space (", Res.BufferRangeSize / sizeof(Uint32), ")");
+    Uint32* pDstConstants = reinterpret_cast<Uint32*>(Res.CPUDescriptorHandle.ptr);
+    memcpy(pDstConstants + FirstConstant, pConstants, NumConstants * sizeof(Uint32));
+}
+
 const ShaderResourceCacheD3D12::Resource& ShaderResourceCacheD3D12::CopyResource(ID3D12Device*   pd3d12Device,
                                                                                  Uint32          RootIndex,
                                                                                  Uint32          OffsetFromTableStart,
@@ -485,6 +603,9 @@ void ShaderResourceCacheD3D12::DbgValidateDynamicBuffersMask() const
 
 void ShaderResourceCacheD3D12::Resource::TransitionResource(CommandContext& Ctx)
 {
+    if (IsNull())
+        return;
+
     static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update this function to handle the new resource type");
     switch (Type)
     {
@@ -569,6 +690,9 @@ void ShaderResourceCacheD3D12::Resource::TransitionResource(CommandContext& Ctx)
 #ifdef DILIGENT_DEVELOPMENT
 void ShaderResourceCacheD3D12::Resource::DvpVerifyResourceState()
 {
+    if (IsNull())
+        return;
+
     static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update this function to handle the new resource type");
     switch (Type)
     {

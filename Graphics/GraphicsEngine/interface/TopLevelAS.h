@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -165,14 +165,17 @@ DILIGENT_BEGIN_INTERFACE(ITopLevelAS, IDeviceObject)
 
     /// Returns instance description that can be used in shader binding table.
 
-    /// \param [in] Name - Instance name that is specified in TLASBuildInstanceData::InstanceName.
-    /// \return TLASInstanceDesc object, see Diligent::TLASInstanceDesc.
-    ///         If instance does not exist then TLASInstanceDesc::ContributionToHitGroupIndex
-    ///         and TLASInstanceDesc::InstanceIndex are set to INVALID_INDEX.
+    /// \param [in]  Name - Instance name that is specified in TLASBuildInstanceData::InstanceName.
+    /// \param [out] Desc - Instance description that will be filled with the information about the
+    ///                     instance, see Diligent::TLASInstanceDesc.
+    ///                     If instance does not exist, then TLASInstanceDesc::ContributionToHitGroupIndex
+    ///                     and TLASInstanceDesc::InstanceIndex are set to INVALID_INDEX.
+    /// \return  True if instance with the specified name was found and Desc is successfully filled, false otherwise.
     ///
     /// \note Access to the TLAS must be externally synchronized.
-    VIRTUAL TLASInstanceDesc METHOD(GetInstanceDesc)(THIS_
-                                                     const Char* Name) CONST PURE;
+    VIRTUAL Bool METHOD(GetInstanceDesc)(THIS_
+                                         const Char*          Name,
+                                         TLASInstanceDesc REF Desc) CONST PURE;
 
 
     /// Returns TLAS state after the last build or update operation.
@@ -180,13 +183,13 @@ DILIGENT_BEGIN_INTERFACE(ITopLevelAS, IDeviceObject)
     /// \return TLASBuildInfo object, see Diligent::TLASBuildInfo.
     ///
     /// \note Access to the TLAS must be externally synchronized.
-    VIRTUAL TLASBuildInfo METHOD(GetBuildInfo)(THIS) CONST PURE;
+    VIRTUAL const TLASBuildInfo REF METHOD(GetBuildInfo)(THIS) CONST PURE;
 
 
     /// Returns scratch buffer info for the current acceleration structure.
 
     /// \return ScratchBufferSizes object, see Diligent::ScratchBufferSizes.
-    VIRTUAL ScratchBufferSizes METHOD(GetScratchBufferSizes)(THIS) CONST PURE;
+    VIRTUAL const ScratchBufferSizes REF METHOD(GetScratchBufferSizes)(THIS) CONST PURE;
 
 
     /// Returns native acceleration structure handle specific to the underlying graphics API

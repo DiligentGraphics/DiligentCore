@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -189,9 +189,10 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateDeferredContext(IDeviceContext** ppContext) override final;
 
     /// Implementation of IRenderDevice::GetSparseTextureFormatInfo() in OpenGL backend.
-    virtual SparseTextureFormatInfo DILIGENT_CALL_TYPE GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,
-                                                                                  RESOURCE_DIMENSION Dimension,
-                                                                                  Uint32             SampleCount) const override final;
+    virtual Bool DILIGENT_CALL_TYPE GetSparseTextureFormatInfo(TEXTURE_FORMAT           TexFormat,
+                                                               RESOURCE_DIMENSION       Dimension,
+                                                               Uint32                   SampleCount,
+                                                               SparseTextureFormatInfo& FormatInfo) const override final;
 
 #if PLATFORM_WIN32 || PLATFORM_ANDROID
     virtual NativeGLContextAttribs DILIGENT_CALL_TYPE GetNativeGLContextAttribs() const override final;

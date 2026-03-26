@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -443,6 +443,9 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
     }
 
     VERIFY_EXPR(IsInKnownState());
+
+    if (m_Desc.Usage == USAGE_SPARSE)
+        InitSparseProperties();
 }
 
 
@@ -462,6 +465,9 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
     m_VulkanBuffer{vkBuffer}
 {
     SetState(InitialState);
+
+    if (m_Desc.Usage == USAGE_SPARSE)
+        InitSparseProperties();
 }
 
 BufferVkImpl::~BufferVkImpl()
@@ -609,17 +615,13 @@ void BufferVkImpl::InvalidateMappedRange(Uint64 StartOffset, Uint64 Size)
     LogicalDevice.InvalidateMappedMemoryRanges(1, &MappedRange);
 }
 
-SparseBufferProperties BufferVkImpl::GetSparseProperties() const
+void BufferVkImpl::InitSparseProperties()
 {
-    DEV_CHECK_ERR(m_Desc.Usage == USAGE_SPARSE,
-                  "IBuffer::GetSparseProperties() must be used for sparse buffer");
-
+    VERIFY_EXPR(m_Desc.Usage == USAGE_SPARSE);
     VkMemoryRequirements MemReq = m_pDevice->GetLogicalDevice().GetBufferMemoryRequirements(GetVkBuffer());
 
-    SparseBufferProperties Props{};
-    Props.AddressSpaceSize = MemReq.size;
-    Props.BlockSize        = StaticCast<Uint32>(MemReq.alignment);
-    return Props;
+    m_SparseProps.AddressSpaceSize = MemReq.size;
+    m_SparseProps.BlockSize        = StaticCast<Uint32>(MemReq.alignment);
 }
 
 } // namespace Diligent

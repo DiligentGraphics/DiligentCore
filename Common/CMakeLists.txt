@@ -12,6 +12,7 @@ set(INTERFACE
     interface/Array2DTools.hpp
     interface/AsyncInitializer.hpp
     interface/BasicMath.hpp
+    interface/Float16.hpp
     interface/BasicFileStream.hpp
     interface/DataBlobImpl.hpp
     interface/DefaultRawMemoryAllocator.hpp
@@ -24,6 +25,7 @@ set(INTERFACE
     interface/HashUtils.hpp
     interface/ImageTools.h
     interface/LRUCache.hpp
+    interface/MPSCQueue.hpp
     interface/FixedLinearAllocator.hpp
     interface/DynamicLinearAllocator.hpp
     interface/EngineMemory.h
@@ -89,7 +91,6 @@ if(PLATFORM_LINUX)
     target_link_libraries(Diligent-Common PRIVATE pthread)
 endif()
 
-# c++ 17 is needed for aligned_alloc
 set_common_target_properties(Diligent-Common)
 
 source_group("src" FILES ${SOURCE})

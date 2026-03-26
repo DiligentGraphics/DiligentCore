@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,6 +35,7 @@
 #include "MapHelper.hpp"
 #include "FastRand.hpp"
 #include "ThreadSignal.hpp"
+#include "GraphicsTypesX.hpp"
 
 #include "gtest/gtest.h"
 
@@ -226,6 +227,40 @@ void main(in  uint    VertId : SV_VertexID,
 }
 )"
 };
+
+const std::string DrawTest_DynamicBuffers2{
+R"(
+
+cbuffer DynamicCB0
+{
+    float4 Positions[6];
+}
+
+cbuffer DynamicCB1
+{
+    float4 Colors[6];
+}
+
+cbuffer DynamicCB2
+{
+    float4 ColorFactors[6];
+}
+
+struct PSInput
+{
+    float4 Pos   : SV_POSITION;
+    float3 Color : COLOR;
+};
+
+void main(in  uint    VertId : SV_VertexID,
+          out PSInput PSIn)
+{
+    PSIn.Pos   = Positions[VertId];
+    PSIn.Color = Colors[VertId].rgb * ColorFactors[VertId].rgb;
+}
+)"
+};
+
 
 const std::string DrawTest_VSStructuredBuffers{
 R"(
@@ -824,6 +859,18 @@ protected:
                                          SHADER_RESOURCE_VARIABLE_TYPE DynamicCB0Type,
                                          SHADER_RESOURCE_VARIABLE_TYPE DynamicCB1Type,
                                          SHADER_RESOURCE_VARIABLE_TYPE ImmutableCBType);
+
+    struct TestDynamicBufferUpdatesWithSignaturesAttribs
+    {
+        IShader* const          pVS;
+        IShader* const          pPS;
+        IBuffer* const          pIndexBuffer;
+        std::array<IBuffer*, 3> pDynamicCBs{};
+    };
+    static void TestDynamicBufferUpdatesWithSignatures(
+        const TestDynamicBufferUpdatesWithSignaturesAttribs& Attribs,
+        std::array<Uint32, 3>                                SignatureIndices,
+        std::function<void()>                                DrawFunc);
 
     static void DrawWithStructuredOrFormattedBuffers(bool                          UseArray,
                                                      IShader*                      pVS,
@@ -2769,6 +2816,314 @@ TEST_F(DrawCommandTest, DynamicUniformBufferUpdates)
         }
     }
 }
+
+
+void DrawCommandTest::TestDynamicBufferUpdatesWithSignatures(
+    const TestDynamicBufferUpdatesWithSignaturesAttribs& Attribs,
+    std::array<Uint32, 3>                                SignatureIndices,
+    std::function<void()>                                DrawFunc)
+{
+    GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice    = pEnv->GetDevice();
+    IDeviceContext*        pContext   = pEnv->GetDeviceContext();
+    ISwapChain*            pSwapChain = pEnv->GetSwapChain();
+
+    std::array<PipelineResourceSignatureDescX, 3> SignDesc;
+
+    const char* UBNames[] = {"DynamicCB0", "DynamicCB1", "DynamicCB2"};
+    for (Uint32 i = 0; i < 3; ++i)
+    {
+        Uint32 SignIndex = SignatureIndices[i];
+        SignDesc[SignIndex].AddResource(SHADER_TYPE_VERTEX, UBNames[i], 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
+    }
+
+    GraphicsPipelineStateCreateInfoX PSOCreateInfo{"Draw command test - dynamic buffer update with signatures"};
+    PSOCreateInfo
+        .AddRenderTarget(pSwapChain->GetDesc().ColorBufferFormat)
+        .SetPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+        .AddShader(Attribs.pVS)
+        .AddShader(Attribs.pPS);
+
+    GraphicsPipelineDesc& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+
+    GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+    GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+    std::array<RefCntAutoPtr<IShaderResourceBinding>, 3> pSRBs;
+    for (Uint32 i = 0; i < 3; ++i)
+    {
+        PipelineResourceSignatureDescX& SD = SignDesc[i];
+        if (SD.NumResources > 0)
+        {
+            SD.SetName(std::string{"Dynamic buffer update with signatures"} + std::to_string(i));
+            SD.SetBindingIndex(static_cast<Uint8>(i));
+            RefCntAutoPtr<IPipelineResourceSignature> pPRS;
+            pDevice->CreatePipelineResourceSignature(SD, &pPRS);
+            ASSERT_NE(pPRS, nullptr);
+            PSOCreateInfo.AddSignature(pPRS);
+
+            pPRS->CreateShaderResourceBinding(&pSRBs[i], true);
+            ASSERT_NE(pSRBs[i], nullptr);
+        }
+    }
+
+    for (Uint32 i = 0; i < 3; ++i)
+    {
+        ShaderResourceVariableX{pSRBs[SignatureIndices[i]], SHADER_TYPE_VERTEX, UBNames[i]}.Set(Attribs.pDynamicCBs[i]);
+    }
+
+    RefCntAutoPtr<IPipelineState> pPSO;
+    pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
+    ASSERT_TRUE(pPSO != nullptr);
+
+    SetRenderTargets(pPSO);
+
+    pContext->SetIndexBuffer(Attribs.pIndexBuffer, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    for (Uint32 i = 0; i < 3; ++i)
+    {
+        if (pSRBs[i])
+            pContext->CommitShaderResources(pSRBs[i], RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    }
+
+    DrawFunc();
+
+    Present();
+}
+
+// Test dynamic buffer update between two draw calls without committing and SRB
+TEST_F(DrawCommandTest, DynamicUniformBufferUpdatesWithSignatures)
+{
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+
+    RefCntAutoPtr<IShader> pVS;
+    {
+        ShaderCI.Desc       = {"Draw command test dynamic buffer updates - VS", SHADER_TYPE_VERTEX, true};
+        ShaderCI.EntryPoint = "main";
+        ShaderCI.Source     = HLSL::DrawTest_DynamicBuffers2.c_str();
+        pDevice->CreateShader(ShaderCI, &pVS);
+        ASSERT_NE(pVS, nullptr);
+    }
+
+    RefCntAutoPtr<IShader> pPS;
+    {
+        ShaderCI.Desc       = {"Draw command test dynamic buffer updates - PS", SHADER_TYPE_PIXEL, true};
+        ShaderCI.EntryPoint = "main";
+        ShaderCI.Source     = HLSL::DrawTest_PS.c_str();
+        pDevice->CreateShader(ShaderCI, &pPS);
+        ASSERT_NE(pPS, nullptr);
+    }
+
+    RefCntAutoPtr<IBuffer> pDynamicCB0;
+    RefCntAutoPtr<IBuffer> pDynamicCB1;
+    RefCntAutoPtr<IBuffer> pDynamicCB2;
+    {
+        BufferDesc BuffDesc;
+        BuffDesc.Name           = "Dynamic buffer update test - dynamic CB0";
+        BuffDesc.BindFlags      = BIND_UNIFORM_BUFFER;
+        BuffDesc.Usage          = USAGE_DYNAMIC;
+        BuffDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
+        BuffDesc.Size           = sizeof(float4) * 6;
+
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pDynamicCB0);
+        ASSERT_NE(pDynamicCB0, nullptr);
+
+        BuffDesc.Name = "Dynamic buffer update test - dynamic CB1";
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pDynamicCB1);
+        ASSERT_NE(pDynamicCB1, nullptr);
+
+        BuffDesc.Name = "Dynamic buffer update test - dynamic CB1";
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pDynamicCB2);
+        ASSERT_NE(pDynamicCB2, nullptr);
+    }
+
+    const Uint32           Indices[]    = {0, 1, 2, 3, 4, 5};
+    RefCntAutoPtr<IBuffer> pIndexBuffer = CreateIndexBuffer(Indices, sizeof(Indices));
+
+    TestDynamicBufferUpdatesWithSignaturesAttribs Attribs{
+        pVS,
+        pPS,
+        pIndexBuffer,
+        {pDynamicCB0, pDynamicCB1, pDynamicCB2},
+    };
+
+    static constexpr float4 Colors[6] =
+        {
+            float4{1.0f, 0.0f, 0.0f, 1.0f},
+            float4{0.0f, 1.0f, 0.0f, 1.0f},
+            float4{0.0f, 0.0f, 1.0f, 1.0f},
+
+            float4{1.0f, 0.0f, 0.0f, 1.0f},
+            float4{0.0f, 1.0f, 0.0f, 1.0f},
+            float4{0.0f, 0.0f, 1.0f, 1.0f},
+        };
+    static constexpr float4 ColorFactors[6] =
+        {
+            float4{1},
+            float4{1},
+            float4{1},
+            float4{1},
+            float4{1},
+            float4{1},
+        };
+
+    using SignIndexArray = std::array<Uint32, 3>;
+    for (const SignIndexArray& SignIndices : {
+             SignIndexArray{0, 0, 0},
+             SignIndexArray{0, 0, 1},
+             SignIndexArray{0, 1, 0},
+             SignIndexArray{1, 0, 0},
+             SignIndexArray{0, 1, 1},
+             SignIndexArray{1, 0, 1},
+             SignIndexArray{1, 1, 0},
+             SignIndexArray{0, 1, 2},
+         })
+    {
+        TestDynamicBufferUpdatesWithSignatures(
+            Attribs, {0, 0, 0},
+            [&]() {
+                {
+                    MapHelper<float4> PosData{pContext, pDynamicCB0, MAP_WRITE, MAP_FLAG_DISCARD};
+                    memcpy(PosData, Pos, sizeof(float4) * 6);
+                }
+
+                {
+                    MapHelper<float4> ColorData{pContext, pDynamicCB1, MAP_WRITE, MAP_FLAG_DISCARD};
+                    memcpy(ColorData, Colors, sizeof(Colors));
+                }
+
+                {
+                    MapHelper<float4> ColorFactorData{pContext, pDynamicCB2, MAP_WRITE, MAP_FLAG_DISCARD};
+                    memcpy(ColorFactorData, ColorFactors, sizeof(ColorFactors));
+                }
+
+                DrawIndexedAttribs DrawAttrs{3, VT_UINT32, DRAW_FLAG_VERIFY_ALL};
+                pContext->DrawIndexed(DrawAttrs);
+
+                DrawAttrs.FirstIndexLocation = 3;
+                pContext->DrawIndexed(DrawAttrs);
+            });
+        std::cout << TestingEnvironment::GetCurrentTestStatusString()
+                  << "{" << SignIndices[0] << ", " << SignIndices[1] << ", " << SignIndices[2] << "} - Draw - Draw" << std::endl;
+
+
+        TestDynamicBufferUpdatesWithSignatures(
+            Attribs, {0, 0, 0},
+            [&]() {
+                {
+                    MapHelper<float4> ColorData{pContext, pDynamicCB1, MAP_WRITE, MAP_FLAG_DISCARD};
+                    memcpy(ColorData, Colors, sizeof(Colors));
+                }
+
+                {
+                    MapHelper<float4> ColorFactorData{pContext, pDynamicCB2, MAP_WRITE, MAP_FLAG_DISCARD};
+                    memcpy(ColorFactorData, ColorFactors, sizeof(ColorFactors));
+                }
+
+                {
+                    MapHelper<float4> PosData{pContext, pDynamicCB0, MAP_WRITE, MAP_FLAG_DISCARD};
+                    PosData[0] = Pos[0];
+                    PosData[1] = Pos[1];
+                    PosData[2] = Pos[2];
+                }
+
+                DrawIndexedAttribs DrawAttrs{3, VT_UINT32, DRAW_FLAG_VERIFY_ALL};
+                pContext->DrawIndexed(DrawAttrs);
+
+                {
+                    MapHelper<float4> PosData{pContext, pDynamicCB0, MAP_WRITE, MAP_FLAG_DISCARD};
+                    PosData[3] = Pos[3];
+                    PosData[4] = Pos[4];
+                    PosData[5] = Pos[5];
+                }
+
+                DrawAttrs.FirstIndexLocation = 3;
+                pContext->DrawIndexed(DrawAttrs);
+            });
+        std::cout << TestingEnvironment::GetCurrentTestStatusString()
+                  << "{" << SignIndices[0] << ", " << SignIndices[1] << ", " << SignIndices[2] << "} - Draw - update pos - Draw" << std::endl;
+
+
+        TestDynamicBufferUpdatesWithSignatures(
+            Attribs, {0, 0, 0},
+            [&]() {
+                {
+                    MapHelper<float4> PosData{pContext, pDynamicCB0, MAP_WRITE, MAP_FLAG_DISCARD};
+                    memcpy(PosData, Pos, sizeof(float4) * 6);
+                }
+
+                {
+                    MapHelper<float4> ColorFactorData{pContext, pDynamicCB2, MAP_WRITE, MAP_FLAG_DISCARD};
+                    memcpy(ColorFactorData, ColorFactors, sizeof(ColorFactors));
+                }
+
+                {
+                    MapHelper<float4> ColorData{pContext, pDynamicCB1, MAP_WRITE, MAP_FLAG_DISCARD};
+                    ColorData[0] = Colors[0];
+                    ColorData[1] = Colors[1];
+                    ColorData[2] = Colors[2];
+                }
+
+                DrawIndexedAttribs DrawAttrs{3, VT_UINT32, DRAW_FLAG_VERIFY_ALL};
+                pContext->DrawIndexed(DrawAttrs);
+
+                {
+                    MapHelper<float4> ColorData{pContext, pDynamicCB1, MAP_WRITE, MAP_FLAG_DISCARD};
+                    ColorData[3] = Colors[3];
+                    ColorData[4] = Colors[4];
+                    ColorData[5] = Colors[5];
+                }
+
+                DrawAttrs.FirstIndexLocation = 3;
+                pContext->DrawIndexed(DrawAttrs);
+            });
+        std::cout << TestingEnvironment::GetCurrentTestStatusString()
+                  << "{" << SignIndices[0] << ", " << SignIndices[1] << ", " << SignIndices[2] << "} - Draw - update color - Draw" << std::endl;
+
+
+        TestDynamicBufferUpdatesWithSignatures(
+            Attribs, {0, 0, 0},
+            [&]() {
+                {
+                    MapHelper<float4> PosData{pContext, pDynamicCB0, MAP_WRITE, MAP_FLAG_DISCARD};
+                    memcpy(PosData, Pos, sizeof(float4) * 6);
+                }
+
+                {
+                    MapHelper<float4> ColorData{pContext, pDynamicCB1, MAP_WRITE, MAP_FLAG_DISCARD};
+                    memcpy(ColorData, Colors, sizeof(Colors));
+                }
+
+                {
+                    MapHelper<float4> ColorFactorData{pContext, pDynamicCB2, MAP_WRITE, MAP_FLAG_DISCARD};
+                    ColorFactorData[0] = ColorFactors[0];
+                    ColorFactorData[1] = ColorFactors[1];
+                    ColorFactorData[2] = ColorFactors[2];
+                }
+
+                DrawIndexedAttribs DrawAttrs{3, VT_UINT32, DRAW_FLAG_VERIFY_ALL};
+                pContext->DrawIndexed(DrawAttrs);
+
+                {
+                    MapHelper<float4> ColorFactorData{pContext, pDynamicCB2, MAP_WRITE, MAP_FLAG_DISCARD};
+                    ColorFactorData[3] = ColorFactors[3];
+                    ColorFactorData[4] = ColorFactors[4];
+                    ColorFactorData[5] = ColorFactors[5];
+                }
+
+                DrawAttrs.FirstIndexLocation = 3;
+                pContext->DrawIndexed(DrawAttrs);
+            });
+        std::cout << TestingEnvironment::GetCurrentTestStatusString()
+                  << "{" << SignIndices[0] << ", " << SignIndices[1] << ", " << SignIndices[2] << "} - Draw - update factors - Draw" << std::endl;
+    }
+}
+
 
 TEST_F(DrawCommandTest, DynamicVertexBufferUpdate)
 {

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2025 Diligent Graphics LLC
+ *  Copyright 2023-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -69,9 +69,6 @@ public:
 
     /// Implementation of IBuffer::GetNativeHandle().
     Uint64 DILIGENT_CALL_TYPE GetNativeHandle() override final;
-
-    /// Implementation of IBuffer::GetSparseProperties().
-    SparseBufferProperties DILIGENT_CALL_TYPE GetSparseProperties() const override final;
 
     /// Implementation of IBufferWebGPU::GetWebGPUBuffer().
     WGPUBuffer DILIGENT_CALL_TYPE GetWebGPUBuffer() const override final;

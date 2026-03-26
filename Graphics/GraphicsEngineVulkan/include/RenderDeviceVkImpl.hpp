@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -221,9 +221,10 @@ public:
     virtual void DILIGENT_CALL_TYPE ReleaseStaleResources(bool ForceRelease = false) override final;
 
     /// Implementation of IRenderDevice::GetSparseTextureFormatInfo() in Vulkan backend.
-    virtual SparseTextureFormatInfo DILIGENT_CALL_TYPE GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,
-                                                                                  RESOURCE_DIMENSION Dimension,
-                                                                                  Uint32             SampleCount) const override final;
+    virtual Bool DILIGENT_CALL_TYPE GetSparseTextureFormatInfo(TEXTURE_FORMAT           TexFormat,
+                                                               RESOURCE_DIMENSION       Dimension,
+                                                               Uint32                   SampleCount,
+                                                               SparseTextureFormatInfo& FormatInfo) const override final;
 
     /// Implementation of IRenderDeviceVk::GetDeviceFeaturesVk().
     virtual void DILIGENT_CALL_TYPE GetDeviceFeaturesVk(DeviceFeaturesVk& FeaturesVk) const override final;

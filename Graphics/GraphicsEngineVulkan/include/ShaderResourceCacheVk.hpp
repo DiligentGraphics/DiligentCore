@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,7 +37,7 @@
 //  m_pMemory                                |   |              m_pResources, m_NumResources == m            |
 //  |               m_DescriptorSetAllocation|   |                                                           |
 //  V                                        |   |                                                           V
-//  |  DescriptorSet[0]  |   ....    |  DescriptorSet[Ns-1]  |  Res[0]  |  ... |  Res[n-1]  |    ....     | Res[0]  |  ... |  Res[m-1]  |
+//  |  DescriptorSet[0]  |   ....    |  DescriptorSet[Ns-1]  |  Res[0]  |  ... |  Res[n-1]  |    ....     | Res[0]  |  ... |  Res[m-1]  | Inline constant values |
 //         |    |                                                A \
 //         |    |                                                |  \
 //         |    |________________________________________________|   \RefCntAutoPtr
@@ -74,7 +74,8 @@ class ShaderResourceCacheVk : public ShaderResourceCacheBase
 public:
     explicit ShaderResourceCacheVk(ResourceCacheContentType ContentType) noexcept :
         m_TotalResources{0},
-        m_ContentType{static_cast<Uint32>(ContentType)}
+        m_ContentType{static_cast<Uint32>(ContentType)},
+        m_HasInlineConstants{0}
     {
         VERIFY_EXPR(GetContentType() == ContentType);
     }
@@ -88,12 +89,33 @@ public:
 
     ~ShaderResourceCacheVk();
 
-    static size_t GetRequiredMemorySize(Uint32 NumSets, const Uint32* SetSizes);
+    static size_t GetRequiredMemorySize(Uint32        NumSets,
+                                        const Uint32* SetSizes,
+                                        Uint32        TotalInlineConstants);
 
-    void InitializeSets(IMemoryAllocator& MemAllocator, Uint32 NumSets, const Uint32* SetSizes);
-    void InitializeResources(Uint32 Set, Uint32 Offset, Uint32 ArraySize, DescriptorType Type, bool HasImmutableSampler);
+    // Allocates memory for descriptor sets and resources, including space for inline constants.
+    // IMPORTANT: This function only allocates memory. After calling InitializeSets(), you must
+    //            call InitializeResources/InitializeInlineConstantBuffer to construct Resource objects.
+    void InitializeSets(IMemoryAllocator& MemAllocator,
+                        Uint32            NumSets,
+                        const Uint32*     SetSizes,
+                        Uint32            TotalInlineConstants = 0);
 
-    // sizeof(Resource) == 32 (x64, msvc, Release)
+    void InitializeResources(Uint32         Set,
+                             Uint32         Offset,
+                             Uint32         ArraySize,
+                             DescriptorType Type,
+                             bool           HasImmutableSampler);
+
+    void InitializeInlineConstantBuffer(Uint32                                Set,
+                                        Uint32                                Offset,
+                                        Uint32                                InlineConstantOffset,
+                                        Uint32                                NumInlineConstants,
+                                        const VulkanUtilities::LogicalDevice* pLogicalDevice = nullptr,
+                                        Uint32                                BindingIndex   = 0,
+                                        RefCntAutoPtr<IDeviceObject>          pBuffer        = {});
+
+    // sizeof(Resource) == 40 (x64, msvc, Release)
     struct Resource
     {
         explicit Resource(DescriptorType _Type, bool _HasImmutableSampler) noexcept :
@@ -102,6 +124,15 @@ public:
         {
             VERIFY(Type == DescriptorType::CombinedImageSampler || Type == DescriptorType::Sampler || !HasImmutableSampler,
                    "Immutable sampler can only be assigned to a combined image sampler or a separate sampler");
+        }
+
+        explicit Resource(DescriptorType _Type, void* _pInlineConstantData) noexcept :
+            Type{_Type},
+            HasImmutableSampler{false},
+            pInlineConstantData{_pInlineConstantData}
+        {
+            VERIFY(Type == DescriptorType::UniformBufferDynamic, "Inline constant buffer must be of type UniformBufferDynamic");
+            VERIFY(pInlineConstantData != nullptr, "Inline constant data pointer must not be null");
         }
 
         // clang-format off
@@ -119,6 +150,10 @@ public:
         // For uniform and storage buffers only
 /*16 */ Uint64                       BufferBaseOffset = 0;
 /*24 */ Uint64                       BufferRangeSize  = 0;
+
+        // For inline constants only - pointer to the CPU-side staging buffer
+/*32 */ void* const                  pInlineConstantData = nullptr;
+/*40 */ // End of structure
 
         VkDescriptorBufferInfo GetUniformBufferDescriptorWriteInfo()                     const;
         VkDescriptorBufferInfo GetStorageBufferDescriptorWriteInfo()                     const;
@@ -189,7 +224,7 @@ public:
     const DescriptorSet& GetDescriptorSet(Uint32 Index) const
     {
         VERIFY_EXPR(Index < m_NumSets);
-        return reinterpret_cast<const DescriptorSet*>(m_pMemory.get())[Index];
+        return static_cast<const DescriptorSet*>(m_pMemory.get())[Index];
     }
 
     void AssignDescriptorSetAllocation(Uint32 SetIndex, DescriptorSetAllocation&& Allocation)
@@ -245,9 +280,30 @@ public:
                                 Uint32 CacheOffset,
                                 Uint32 DynamicBufferOffset);
 
+    // Gets the inline constant data pointer from the resource cache
+    const void* GetInlineConstantData(Uint32 DescrSetIndex, Uint32 CacheOffset) const
+    {
+        const DescriptorSet& DescrSet = GetDescriptorSet(DescrSetIndex);
+        VERIFY(CacheOffset < DescrSet.GetSize(), "CacheOffset is out of bounds");
+
+        const Resource& Res = DescrSet.GetResource(CacheOffset);
+        return Res.pInlineConstantData;
+    }
+
+    // Sets inline constant data in the resource cache
+    void SetInlineConstants(Uint32      DescrSetIndex,
+                            Uint32      CacheOffset,
+                            const void* pConstants,
+                            Uint32      FirstConstant,
+                            Uint32      NumConstants);
 
     Uint32 GetNumDescriptorSets() const { return m_NumSets; }
     bool   HasDynamicResources() const { return m_NumDynamicBuffers > 0; }
+
+    bool HasInlineConstants() const
+    {
+        return m_HasInlineConstants;
+    }
 
     ResourceCacheContentType GetContentType() const { return static_cast<ResourceCacheContentType>(m_ContentType); }
 
@@ -260,41 +316,65 @@ public:
     template <bool VerifyOnly>
     void TransitionResources(DeviceContextVkImpl* pCtxVkImpl);
 
-    Uint32 GetDynamicBufferOffsets(DeviceContextVkImpl*   pCtx,
-                                   std::vector<uint32_t>& Offsets,
-                                   Uint32                 StartInd) const;
+    struct WriteDynamicBufferOffsetsResult
+    {
+        Uint32 NumOffsetsWritten = 0;
+        Uint32 NumOffsetsChanged = 0;
+    };
+    WriteDynamicBufferOffsetsResult WriteDynamicBufferOffsets(
+        DeviceContextVkImpl*   pCtx,
+        std::vector<uint32_t>& Offsets,
+        Uint32                 StartInd) const;
 
 private:
     Resource* GetFirstResourcePtr()
     {
-        return reinterpret_cast<Resource*>(reinterpret_cast<DescriptorSet*>(m_pMemory.get()) + m_NumSets);
+        static_assert((sizeof(DescriptorSet) % alignof(Resource)) == 0,
+                      "DescriptorSet size is not a multiple of Resource alignment. "
+                      "This may lead to misaligned Resource pointers.");
+        return reinterpret_cast<Resource*>(static_cast<DescriptorSet*>(m_pMemory.get()) + m_NumSets);
     }
     const Resource* GetFirstResourcePtr() const
     {
-        return reinterpret_cast<const Resource*>(reinterpret_cast<const DescriptorSet*>(m_pMemory.get()) + m_NumSets);
+        static_assert((sizeof(DescriptorSet) % alignof(Resource)) == 0,
+                      "DescriptorSet size is not a multiple of Resource alignment. "
+                      "This may lead to misaligned Resource pointers.");
+        return reinterpret_cast<const Resource*>(static_cast<const DescriptorSet*>(m_pMemory.get()) + m_NumSets);
     }
 
     DescriptorSet& GetDescriptorSet(Uint32 Index)
     {
         VERIFY_EXPR(Index < m_NumSets);
-        return reinterpret_cast<DescriptorSet*>(m_pMemory.get())[Index];
+        return static_cast<DescriptorSet*>(m_pMemory.get())[Index];
     }
 
+    // Returns pointer to inline constant storage at the given offset
+    void* GetInlineConstantStorage(Uint32 FirstConstant = 0)
+    {
+        return reinterpret_cast<Uint8*>(GetFirstResourcePtr() + m_TotalResources) + FirstConstant * sizeof(Uint32);
+    }
+
+private:
     std::unique_ptr<void, STDDeleter<void, IMemoryAllocator>> m_pMemory;
 
     Uint16 m_NumSets = 0;
 
     // Total actual number of dynamic buffers (that were created with USAGE_DYNAMIC) bound in the resource cache
-    // regardless of the variable type. Note this variable is not equal to dynamic offsets count, which is constant.
+    // regardless of the variable type (including inline constant buffers).
+    // Note this variable is not equal to dynamic offsets count, which is constant.
     Uint16 m_NumDynamicBuffers = 0;
-    Uint32 m_TotalResources : 31;
+    Uint32 m_TotalResources : 30;
 
     // Indicates what types of resources are stored in the cache
     const Uint32 m_ContentType : 1;
 
+    // Indicates whether the cache contains inline constants
+    Uint32 m_HasInlineConstants : 1;
+
 #ifdef DILIGENT_DEBUG
     // Debug array that stores flags indicating if resources in the cache have been initialized
     std::vector<std::vector<bool>> m_DbgInitializedResources;
+    std::vector<bool>              m_DbgAssignedInlineConstants;
 #endif
 };
 

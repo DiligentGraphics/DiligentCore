@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -103,22 +103,32 @@ DILIGENT_TYPED_ENUM(SHADER_VARIABLE_FLAGS, Uint8)
     ///             flag in the internal pipeline resource signature.
     SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS = 1u << 0,
 
+    /// Indicates that the resource consists of inline constants
+    /// (also known as push constants in Vulkan or root constants in Direct3D12).
+    /// Applies to Diligent::SHADER_RESOURCE_TYPE_CONSTANT_BUFFER only.
+    /// 
+    /// \remarks    This flag directly translates to the Diligent::PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS
+    ///             flag in the internal pipeline resource signature.
+    /// 
+    /// See Diligent::PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS for more details.
+    SHADER_VARIABLE_FLAG_INLINE_CONSTANTS = 1u << 1,
+
     /// Indicates that the resource is an input attachment in general layout, which allows simultaneously
     /// reading from the resource through the input attachment and writing to it via color or depth-stencil
     /// attachment.
     ///
     /// \note This flag is only valid in Vulkan.
-    SHADER_VARIABLE_FLAG_GENERAL_INPUT_ATTACHMENT_VK = 1u << 1,
+    SHADER_VARIABLE_FLAG_GENERAL_INPUT_ATTACHMENT_VK = 1u << 2,
 
     /// Indicates that the resource is an unfilterable-float texture.
     ///
     /// \note This flag is only valid in WebGPU and ignored in other backends.
-    SHADER_VARIABLE_FLAG_UNFILTERABLE_FLOAT_TEXTURE_WEBGPU = 1u << 2,
+    SHADER_VARIABLE_FLAG_UNFILTERABLE_FLOAT_TEXTURE_WEBGPU = 1u << 3,
 
     /// Indicates that the resource is a non-filtering sampler.
     ///
     /// \note This flag is only valid in WebGPU and ignored in other backends.
-    SHADER_VARIABLE_FLAG_NON_FILTERING_SAMPLER_WEBGPU = 1u << 3,
+    SHADER_VARIABLE_FLAG_NON_FILTERING_SAMPLER_WEBGPU = 1u << 4,
 
     /// Special value that indicates the last flag in the enumeration.
     SHADER_VARIABLE_FLAG_LAST = SHADER_VARIABLE_FLAG_NON_FILTERING_SAMPLER_WEBGPU
@@ -695,6 +705,89 @@ DILIGENT_TYPED_ENUM(PSO_CREATE_FLAGS, Uint32)
 DEFINE_FLAG_ENUM_OPERATORS(PSO_CREATE_FLAGS);
 
 
+/// Pipeline state specialization constant.
+///
+/// Specialization constants are shader constants whose values are provided
+/// when the pipeline state is created. Their values are patched into the
+/// shader bytecode at specialization time, allowing applications to create
+/// pipeline variations without recompiling shaders and enabling the driver
+/// to optimize the resulting shader code.
+///
+/// \remarks    Specialization constants are supported in Vulkan (via VkSpecializationInfo)
+///             and WebGPU (via pipeline-overridable constants). Other backends
+///             will reject non-empty specialization constants.
+struct SpecializationConstant
+{
+    /// Specialization constant name as defined in the shader source.
+
+    /// In GLSL/SPIR-V, this corresponds to the name decorated with the
+    /// `constant_id` layout qualifier.
+    /// In WGSL, this corresponds to the name of an `override` declaration.
+    ///
+    /// Must not be null.
+    const Char* Name         DEFAULT_INITIALIZER(nullptr);
+
+    /// Shader stages this specialization constant applies to.
+
+    /// Specifies which shader stages use this constant.
+    /// The value must be a valid combination of SHADER_TYPE flags.
+    SHADER_TYPE ShaderStages DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
+
+    /// Size of the specialization constant data, in bytes.
+
+    /// Must match the size of the constant's type as declared in the shader.
+    Uint32      Size         DEFAULT_INITIALIZER(0);
+
+    /// Pointer to the specialization constant data.
+
+    /// The data is interpreted as raw bytes and must be at least
+    /// `Size` bytes long. Must not be null when Size > 0.
+    const void* pData        DEFAULT_INITIALIZER(nullptr);
+
+#if DILIGENT_CPP_INTERFACE
+    constexpr SpecializationConstant() noexcept {}
+
+    constexpr SpecializationConstant(const Char* _Name,
+                                     SHADER_TYPE _ShaderStages,
+                                     Uint32      _Size,
+                                     const void* _pData) noexcept :
+        Name        {_Name        },
+        ShaderStages{_ShaderStages},
+        Size        {_Size        },
+        pData       {_pData       }
+    {}
+
+    bool operator==(const SpecializationConstant& RHS) const noexcept
+    {
+        if (ShaderStages != RHS.ShaderStages ||
+            Size         != RHS.Size         ||
+            !SafeStrEqual(Name, RHS.Name))
+            return false;
+
+        if (pData != RHS.pData)
+        {
+            if (Size == 0)
+                return true;
+
+            if ((pData == nullptr) != (RHS.pData == nullptr))
+                return false;
+
+            if (pData != nullptr && memcmp(pData, RHS.pData, Size) != 0)
+                return false;
+        }
+
+        return true;
+    }
+
+    bool operator!=(const SpecializationConstant& RHS) const noexcept
+    {
+        return !(*this == RHS);
+    }
+#endif
+};
+typedef struct SpecializationConstant SpecializationConstant;
+
+
 /// Pipeline state creation attributes
 struct PipelineStateCreateInfo
 {
@@ -719,6 +812,22 @@ struct PipelineStateCreateInfo
     /// should be in it default state.
     IPipelineResourceSignature** ppResourceSignatures DEFAULT_INITIALIZER(nullptr);
 
+    /// The number of specialization constants.
+    Uint32 NumSpecializationConstants DEFAULT_INITIALIZER(0);
+
+    /// Pointer to an array of NumSpecializationConstants SpecializationConstant
+    /// elements that define the values of specialization constants for the pipeline.
+
+    /// Specialization constants allow applications to set constant values at pipeline
+    /// creation time, enabling the driver to optimize the compiled shader code.
+    ///
+    /// This feature requires DeviceFeatures.SpecializationConstants to be enabled.
+    /// If the device does not support specialization constants, non-empty arrays
+    /// will be rejected during pipeline creation.
+    ///
+    /// \sa SpecializationConstant
+    const SpecializationConstant* pSpecializationConstants DEFAULT_INITIALIZER(nullptr);
+
     /// Optional pipeline state cache that is used to accelerate
     /// PSO creation. If `PSODesc.Name` is found in the cache, the cache
     /// data is used to create the PSO. Otherwise, the PSO
@@ -741,9 +850,10 @@ struct PipelineStateCreateInfo
 
     bool operator==(const PipelineStateCreateInfo& RHS) const noexcept
     {
-        if (PSODesc                 != RHS.PSODesc ||
-            Flags                   != RHS.Flags   ||
-            ResourceSignaturesCount != RHS.ResourceSignaturesCount)
+        if (PSODesc                      != RHS.PSODesc                      ||
+            Flags                        != RHS.Flags                        ||
+            ResourceSignaturesCount      != RHS.ResourceSignaturesCount      ||
+            NumSpecializationConstants   != RHS.NumSpecializationConstants)
             return false;
 
         if (ppResourceSignatures != RHS.ppResourceSignatures)
@@ -762,6 +872,18 @@ struct PipelineStateCreateInfo
                     return false;
 
                 if (!pSign0->IsCompatibleWith(pSign1))
+                    return false;
+            }
+        }
+
+        if (pSpecializationConstants != RHS.pSpecializationConstants)
+        {
+            if ((pSpecializationConstants == nullptr) != (RHS.pSpecializationConstants == nullptr))
+                return false;
+
+            for (Uint32 i = 0; i < NumSpecializationConstants; ++i)
+            {
+                if (pSpecializationConstants[i] != RHS.pSpecializationConstants[i])
                     return false;
             }
         }

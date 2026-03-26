@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,9 +32,11 @@
 
 #include <stdlib.h>
 #include <atomic>
+#include <new>
 
 #include "../../Primitives/interface/Object.h"
 #include "../../Primitives/interface/MemoryAllocator.h"
+#include "../../Primitives/interface/AlignedMalloc.h"
 #include "../../Platforms/Basic/interface/DebugUtilities.hpp"
 #include "SpinLock.hpp"
 #include "Cast.hpp"
@@ -244,7 +246,14 @@ private:
             if (m_pAllocator)
             {
                 m_pObject->~ObjectType();
-                m_pAllocator->Free(m_pObject);
+                if constexpr (alignof(ObjectType) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+                {
+                    m_pAllocator->FreeAligned(m_pObject);
+                }
+                else
+                {
+                    m_pAllocator->Free(m_pObject);
+                }
             }
             else
             {
@@ -577,15 +586,26 @@ protected:
     // or from RefCountersImpl when object is destroyed
     // It needs to be protected (not private!) to allow generation of destructors in derived classes
 
-    void operator delete(void* ptr)
+    void operator delete(void* ptr) noexcept
     {
         free(ptr);
     }
 
+    void operator delete(void* ptr, std::align_val_t Alignment) noexcept
+    {
+        DILIGENT_ALIGNED_FREE(ptr);
+    }
+
     template <typename ObjectAllocatorType>
-    void operator delete(void* ptr, ObjectAllocatorType& Allocator, const Char* dbgDescription, const char* dbgFileName, const Int32 dbgLineNumber)
+    void operator delete(void* ptr, ObjectAllocatorType& Allocator, const Char* dbgDescription, const char* dbgFileName, Int32 dbgLineNumber) noexcept
     {
         return Allocator.Free(ptr);
+    }
+
+    template <typename ObjectAllocatorType>
+    void operator delete(void* ptr, std::align_val_t Alignment, ObjectAllocatorType& Allocator, const Char* dbgDescription, const char* dbgFileName, Int32 dbgLineNumber) noexcept
+    {
+        return Allocator.FreeAligned(ptr);
     }
 
 private:
@@ -596,12 +616,22 @@ private:
         return malloc(Size);
     }
 
+    void* operator new(size_t Size, std::align_val_t Alignment)
+    {
+        return DILIGENT_ALIGNED_MALLOC(Size, static_cast<size_t>(Alignment), __FILE__, __LINE__);
+    }
+
     template <typename ObjectAllocatorType>
-    void* operator new(size_t Size, ObjectAllocatorType& Allocator, const Char* dbgDescription, const char* dbgFileName, const Int32 dbgLineNumber)
+    void* operator new(size_t Size, ObjectAllocatorType& Allocator, const Char* dbgDescription, const char* dbgFileName, Int32 dbgLineNumber)
     {
         return Allocator.Allocate(Size, dbgDescription, dbgFileName, dbgLineNumber);
     }
 
+    template <typename ObjectAllocatorType>
+    void* operator new(size_t Size, std::align_val_t Alignment, ObjectAllocatorType& Allocator, const Char* dbgDescription, const char* dbgFileName, Int32 dbgLineNumber)
+    {
+        return Allocator.AllocateAligned(Size, static_cast<size_t>(Alignment), dbgDescription, dbgFileName, dbgLineNumber);
+    }
 
     // Note that the type of the reference counters is RefCountersImpl,
     // not IReferenceCounters. This avoids virtual calls from
@@ -671,9 +701,20 @@ public:
             // Operators new and delete of RefCountedObject are private and only accessible
             // by methods of MakeNewRCObj
             if (m_pAllocator)
-                pObj = new (*m_pAllocator, m_dvpDescription, m_dvpFileName, m_dvpLineNumber) ObjectType{pRefCounters, std::forward<CtorArgTypes>(CtorArgs)...};
+            {
+                if constexpr (alignof(ObjectType) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+                {
+                    pObj = new (std::align_val_t{alignof(ObjectType)}, *m_pAllocator, m_dvpDescription, m_dvpFileName, m_dvpLineNumber) ObjectType{pRefCounters, std::forward<CtorArgTypes>(CtorArgs)...};
+                }
+                else
+                {
+                    pObj = new (*m_pAllocator, m_dvpDescription, m_dvpFileName, m_dvpLineNumber) ObjectType{pRefCounters, std::forward<CtorArgTypes>(CtorArgs)...};
+                }
+            }
             else
+            {
                 pObj = new ObjectType{pRefCounters, std::forward<CtorArgTypes>(CtorArgs)...};
+            }
             if (pNewRefCounters != nullptr)
                 pNewRefCounters->Attach<ObjectType, AllocatorType>(pObj, m_pAllocator);
         }

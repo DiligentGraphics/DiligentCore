@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -738,9 +738,10 @@ void RenderDeviceD3D12Impl::CreateDeferredContext(IDeviceContext** ppDeferredCon
     CreateDeferredContextImpl(ppDeferredContext);
 }
 
-SparseTextureFormatInfo RenderDeviceD3D12Impl::GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,
-                                                                          RESOURCE_DIMENSION Dimension,
-                                                                          Uint32             SampleCount) const
+Bool RenderDeviceD3D12Impl::GetSparseTextureFormatInfo(TEXTURE_FORMAT           TexFormat,
+                                                       RESOURCE_DIMENSION       Dimension,
+                                                       Uint32                   SampleCount,
+                                                       SparseTextureFormatInfo& FormatInfo) const
 {
     D3D12_FEATURE_DATA_FORMAT_SUPPORT FormatSupport{
         TexFormatToDXGI_Format(TexFormat), // .Format
@@ -749,10 +750,11 @@ SparseTextureFormatInfo RenderDeviceD3D12Impl::GetSparseTextureFormatInfo(TEXTUR
     if (FAILED(m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &FormatSupport, sizeof(FormatSupport))) ||
         (FormatSupport.Support2 & D3D12_FORMAT_SUPPORT2_TILED) != D3D12_FORMAT_SUPPORT2_TILED)
     {
-        return {};
+        FormatInfo = {};
+        return false;
     }
 
-    return TRenderDeviceBase::GetSparseTextureFormatInfo(TexFormat, Dimension, SampleCount);
+    return TRenderDeviceBase::GetSparseTextureFormatInfo(TexFormat, Dimension, SampleCount, FormatInfo);
 }
 
 } // namespace Diligent

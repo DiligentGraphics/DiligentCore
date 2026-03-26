@@ -57,7 +57,7 @@ PUBLIC
 
 find_package(Python3 REQUIRED)
 add_custom_command(OUTPUT ${GLSL_DEFINITIONS_INC} # We must use full path here!
-                   COMMAND ${Python3_EXECUTABLE} ${FILE2STRING_PATH} ${GLSL_DEFINITIONS} ${GLSL_DEFINITIONS_INC}
+                   COMMAND ${Python3_EXECUTABLE} ${FILE2STRING_PATH} ${GLSL_DEFINITIONS} ${GLSL_DEFINITIONS_INC} --strip-comments
                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
                    MAIN_DEPENDENCY ${GLSL_DEFINITIONS}
                    COMMENT "Processing GLSLDefinitions.h"

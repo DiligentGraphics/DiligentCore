@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -43,6 +43,22 @@ Uint64 WindowsMisc::SetCurrentThreadAffinity(Uint64 Mask)
     return SetThreadAffinityMask(hCurrThread, static_cast<DWORD_PTR>(Mask));
 }
 
+Bool WindowsMisc::SetProcessAffinity(Uint64 Mask)
+{
+    const HANDLE hCurrProcess = GetCurrentProcess();
+    return SetProcessAffinityMask(hCurrProcess, static_cast<DWORD_PTR>(Mask)) != 0;
+}
+
+Uint64 WindowsMisc::GetProcessAffinity()
+{
+    DWORD_PTR    ProcessAffinityMask = 0;
+    DWORD_PTR    SystemAffinityMask  = 0;
+    const HANDLE hCurrProcess        = GetCurrentProcess();
+    if (GetProcessAffinityMask(hCurrProcess, &ProcessAffinityMask, &SystemAffinityMask))
+        return static_cast<Uint64>(ProcessAffinityMask);
+    else
+        return 0;
+}
 
 static ThreadPriority WndPriorityToThreadPiority(int priority)
 {

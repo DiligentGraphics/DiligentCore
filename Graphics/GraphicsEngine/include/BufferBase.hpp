@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -228,6 +228,12 @@ public:
         DvpVerifyInvalidateMappedRangeArguments(StartOffset, Size);
     }
 
+    virtual const SparseBufferProperties& DILIGENT_CALL_TYPE GetSparseProperties() const override final
+    {
+        DEV_CHECK_ERR(this->m_Desc.Usage == USAGE_SPARSE,
+                      "IBuffer::GetSparseProperties() must be used for sparse buffers only");
+        return m_SparseProps;
+    }
 
     bool IsInKnownState() const
     {
@@ -281,6 +287,8 @@ protected:
 
     // Dynamic buffer Id is used by device contexts to index dynamic allocations
     Uint32 m_DynamicBufferId = ~0u;
+
+    SparseBufferProperties m_SparseProps;
 
     /// Default UAV addressing the entire buffer
     std::unique_ptr<BufferViewImplType, STDDeleter<BufferViewImplType, TBuffViewObjAllocator>> m_pDefaultUAV;

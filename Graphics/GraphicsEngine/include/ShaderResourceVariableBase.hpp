@@ -231,6 +231,20 @@ bool VerifyConstantBufferBinding(const PipelineResourceDesc& ResDesc,
                                  Uint64                      CachedRangeSize,
                                  const char*                 SignatureName)
 {
+    if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0)
+    {
+        std::stringstream ss;
+        ss << "Error binding buffer to variable '" << GetShaderResourcePrintName(ResDesc, BindInfo.ArrayIndex) << '\'';
+        if (SignatureName != nullptr)
+        {
+            ss << " defined by signature '" << SignatureName << '\'';
+        }
+        ss << ". The variable is marked as inline constants and cannot be bound to a buffer. "
+              "Use IShaderResourceVariable::SetInlineConstants() method to set the inline constant values.";
+        RESOURCE_VALIDATION_FAILURE(ss.str());
+        return false;
+    }
+
     bool BindingOK = VerifyResourceBinding("buffer", ResDesc, BindInfo, pBufferImpl, pCachedBuffer, SignatureName);
 
     if (pBufferImpl != nullptr)
@@ -540,6 +554,12 @@ bool VerifyDynamicBufferOffset(const PipelineResourceDesc& ResDesc,
 {
     bool BindingOK = true;
 
+    if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0)
+    {
+        RESOURCE_VALIDATION_FAILURE("Error setting dynamic buffer offset for variable '", ResDesc.Name, "': inline constants do not support dynamic offsets.");
+        BindingOK = false;
+    }
+
     if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) != 0)
     {
         RESOURCE_VALIDATION_FAILURE("Error setting dynamic buffer offset for variable '", ResDesc.Name, "': the variable was created with PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS flag.");
@@ -601,6 +621,34 @@ bool VerifyDynamicBufferOffset(const PipelineResourceDesc& ResDesc,
     return BindingOK;
 }
 
+
+inline bool VerifyInlineConstants(const PipelineResourceDesc& ResDesc,
+                                  const void*                 pConstants,
+                                  Uint32                      FirstConstant,
+                                  Uint32                      NumConstants)
+{
+    bool ParamsOK = true;
+    if (ResDesc.ResourceType != SHADER_RESOURCE_TYPE_CONSTANT_BUFFER)
+    {
+        RESOURCE_VALIDATION_FAILURE("SetInlineConstants() is only allowed for constant buffer resources.");
+        ParamsOK = false;
+    }
+
+    if (pConstants == nullptr)
+    {
+        RESOURCE_VALIDATION_FAILURE("Pointer to inline constants is null.");
+        ParamsOK = false;
+    }
+
+    if (FirstConstant + NumConstants > ResDesc.ArraySize)
+    {
+        RESOURCE_VALIDATION_FAILURE("Inline constant range (", FirstConstant, " .. ", FirstConstant + NumConstants - 1,
+                                    ") is out of bounds for variable '", ResDesc.Name, "' of size ", ResDesc.ArraySize, " constants.");
+        ParamsOK = false;
+    }
+
+    return ParamsOK;
+}
 
 #undef RESOURCE_VALIDATION_FAILURE
 
@@ -712,6 +760,27 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
         static_cast<ThisImplType*>(this)->SetDynamicOffset(ArrayIndex, Offset);
     }
 
+
+    virtual void DILIGENT_CALL_TYPE SetInlineConstants(const void* pConstants,
+                                                       Uint32      FirstConstant,
+                                                       Uint32      NumConstants) override final
+    {
+#ifdef DILIGENT_DEVELOPMENT
+        {
+            const PipelineResourceDesc& Desc = GetDesc();
+            DEV_CHECK_ERR(Desc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,
+                          "SetInlineConstants() is only allowed for constant buffer resources.");
+            DEV_CHECK_ERR(Desc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS,
+                          "SetInlineConstants() is only allowed for inline constant buffers.");
+            DEV_CHECK_ERR(pConstants != nullptr, "Pointer to inline constants is null.");
+            DEV_CHECK_ERR(FirstConstant + NumConstants <= Desc.ArraySize,
+                          "Inline constant range (", FirstConstant, " .. ", FirstConstant + NumConstants - 1,
+                          ") is out of bounds for variable '", Desc.Name, "' of size ", Desc.ArraySize, " constants.");
+        }
+#endif
+
+        static_cast<ThisImplType*>(this)->SetConstants(pConstants, FirstConstant, NumConstants);
+    }
 
     virtual SHADER_RESOURCE_VARIABLE_TYPE DILIGENT_CALL_TYPE GetType() const override final
     {

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,6 +35,14 @@
 namespace Diligent
 {
 
+namespace
+{
+
+using TestPipelineResourceSignatureInternalData = PipelineResourceSignatureInternalData<Uint32, Uint32>;
+ASSERT_SIZEOF64(TestPipelineResourceSignatureInternalData, 32, "Did you add new members to PipelineResourceSignatureInternalData? You need to implement serialization for them in PRSSerializer.");
+
+} // namespace
+
 #define LOG_PRS_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of a pipeline resource signature '", (Desc.Name ? Desc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
 
 void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& Desc,
@@ -63,6 +71,7 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
         LOG_PRS_ERROR_AND_THROW("Desc.UseCombinedTextureSamplers is true, but Desc.CombinedSamplerSuffix is null or empty");
 
 
+    Uint32 TotalInlineConstantValues = 0;
     // Hash map of all resources by name
     std::unordered_multimap<HashMapStringKey, const PipelineResourceDesc&> Resources;
     for (Uint32 i = 0; i < Desc.NumResources; ++i)
@@ -109,6 +118,28 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
             LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags (", GetPipelineResourceFlagsString(Res.Flags),
                                     "). Only the following flags are valid for a ", GetShaderResourceTypeLiteralName(Res.ResourceType),
                                     ": ", GetPipelineResourceFlagsString(AllowedResourceFlags, false, ", "), ".");
+        }
+
+        if ((Res.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0)
+        {
+            if (Res.Flags != PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
+            {
+                LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags (", GetPipelineResourceFlagsString(Res.Flags),
+                                        "). INLINE_CONSTANTS flag cannot be combined with other flags.");
+            }
+
+            if (Res.ArraySize > MAX_INLINE_CONSTANTS)
+            {
+                LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].ArraySize (", Res.ArraySize,
+                                        ") exceeds the maximum allowed value (", MAX_INLINE_CONSTANTS, ") for inline constants.");
+            }
+
+            TotalInlineConstantValues += Res.ArraySize;
+            if (TotalInlineConstantValues > MAX_INLINE_CONSTANTS)
+            {
+                LOG_PRS_ERROR_AND_THROW("Total number of inline constant values in the resource signature (", TotalInlineConstantValues,
+                                        ") exceeds the maximum allowed value (", MAX_INLINE_CONSTANTS, ").");
+            }
         }
 
         if ((Res.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0 && Features.FormattedBuffers == DEVICE_FEATURE_STATE_DISABLED)

@@ -49,6 +49,7 @@
 #include "ShaderToolsCommon.hpp"
 #ifdef USE_SPIRV_TOOLS
 #    include "SPIRVTools.hpp"
+#    include "spirv-tools/libspirv.h"
 #endif
 
 // clang-format off

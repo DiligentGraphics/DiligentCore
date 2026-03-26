@@ -669,6 +669,26 @@ void ShaderVariableManagerD3D12::SetBufferDynamicOffset(Uint32 ResIndex,
     m_ResourceCache.SetBufferDynamicOffset(RootIndex, OffsetFromTableStart, BufferDynamicOffset);
 }
 
+void ShaderVariableManagerD3D12::SetInlineConstants(Uint32      ResIndex,
+                                                    const void* pConstants,
+                                                    Uint32      FirstConstant,
+                                                    Uint32      NumConstants)
+{
+    const ResourceAttribs&         Attribs              = m_pSignature->GetResourceAttribs(ResIndex);
+    const ResourceCacheContentType CacheType            = m_ResourceCache.GetContentType();
+    const Uint32                   RootIndex            = Attribs.RootIndex(CacheType);
+    const Uint32                   OffsetFromTableStart = Attribs.OffsetFromTableStart(CacheType);
+
+#ifdef DILIGENT_DEVELOPMENT
+    {
+        const PipelineResourceDesc& ResDesc = m_pSignature->GetResourceDesc(ResIndex);
+        VerifyInlineConstants(ResDesc, pConstants, FirstConstant, NumConstants);
+    }
+#endif
+
+    m_ResourceCache.SetInlineConstants(RootIndex, OffsetFromTableStart, pConstants, FirstConstant, NumConstants);
+}
+
 IDeviceObject* ShaderVariableManagerD3D12::Get(Uint32 ArrayIndex,
                                                Uint32 ResIndex) const
 {

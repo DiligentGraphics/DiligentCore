@@ -78,8 +78,11 @@ set_target_properties(Diligent-ApplePlatform PROPERTIES
 if(DILIGENT_INSTALL_CORE)
     install_core_lib(Diligent-ApplePlatform)
 
-    get_target_relative_dir(Diligent-ApplePlatform RELATIVE_PATH)
-    install(DIRECTORY    ../Linux/interface
-            DESTINATION  "${CMAKE_INSTALL_INCLUDEDIR}/${RELATIVE_PATH}/../Linux"
+    get_target_relative_dir(Diligent-ApplePlatform APPLE_PLATFORM_DIR)  # DiligentCore/Platforms/Apple
+    cmake_path(GET APPLE_PLATFORM_DIR PARENT_PATH PLATFORMS_DIR)        # DiligentCore/Platforms
+
+    install(
+        DIRECTORY   "../Linux/interface"
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${PLATFORMS_DIR}/Linux"
     )
 endif()

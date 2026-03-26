@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,6 +43,6 @@ void TestBuffer_CInterface(IBuffer* pBuffer)
     (void)MemProps;
     IBuffer_FlushMappedRange(pBuffer, (Uint64)0, (Uint64)128);
     IBuffer_InvalidateMappedRange(pBuffer, (Uint64)0, (Uint64)128);
-    SparseBufferProperties SparseProps = IBuffer_GetSparseProperties(pBuffer);
+    const SparseBufferProperties* SparseProps = IBuffer_GetSparseProperties(pBuffer);
     (void)SparseProps;
 }

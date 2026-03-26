@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -132,6 +132,7 @@ private:
 };
 
 using TestPRSInternalData = PipelineResourceSignatureInternalData<TestResourceAttribs, TestImmutableSamplerAttribs>;
+ASSERT_SIZEOF64(TestPRSInternalData, 32, "Did you add new members to PipelineResourceSignatureInternalData? You need to implement serialization for them in PRSSerializer.");
 
 TEST(PSOSerializerTest, SerializePRSDesc)
 {
@@ -214,12 +215,7 @@ TEST(PSOSerializerTest, SerializePRSDesc)
         SrcInternalData.NumImmutableSamplers = _countof(ImmSamAttribs);
         SrcInternalData.pImmutableSamplers   = ImmSamAttribs;
 
-        SrcInternalData.ShaderStages          = Val(SHADER_TYPE_GEOMETRY, (SHADER_TYPE_LAST << 1) - 1);
-        SrcInternalData.StaticResShaderStages = Val(SHADER_TYPE_HULL, (SHADER_TYPE_LAST << 1) - 1);
-        SrcInternalData.PipelineType          = Val(PIPELINE_TYPE_GRAPHICS, PIPELINE_TYPE_LAST);
-
-        for (size_t i = 0; i < SrcInternalData.StaticResStageIndex.size(); ++i)
-            SrcInternalData.StaticResStageIndex[i] = Val(static_cast<Int8>(i), Int8{127});
+        SrcInternalData.ShaderStages = Val(SHADER_TYPE_GEOMETRY, (SHADER_TYPE_LAST << 1) - 1);
 
         DynamicLinearAllocator Allocator{GetRawAllocator()};
         SerializedData         Data;
@@ -275,6 +271,21 @@ static void TestSerializePSOCreateInfo(HelperType&& Helper)
         for (Uint32 i = 0; i < SrcPSO.ResourceSignaturesCount; ++i)
             SrcPRSNames[i] = PRSNames[i].c_str();
 
+        const Uint32 SpecConstData0 = 0x12345678u;
+        const float  SpecConstData1 = 3.14f;
+        const Uint32 SpecConstData2 = 42u;
+
+        SpecializationConstant SpecConsts[] =
+            {
+                {"ConstA", SHADER_TYPE_VERTEX, sizeof(SpecConstData0), &SpecConstData0},
+                {"ConstB", SHADER_TYPE_PIXEL, sizeof(SpecConstData1), &SpecConstData1},
+                {"ConstC", SHADER_TYPE_GEOMETRY, sizeof(SpecConstData2), &SpecConstData2} //
+            };
+
+        SrcPSO.NumSpecializationConstants = Val(0u, _countof(SpecConsts));
+        if (SrcPSO.NumSpecializationConstants > 0)
+            SrcPSO.pSpecializationConstants = SpecConsts;
+
         Helper.Init(SrcPSO, Val);
 
         Serializer<SerializerMode::Measure> MSer;
@@ -295,6 +306,15 @@ static void TestSerializePSOCreateInfo(HelperType&& Helper)
 
         EXPECT_TRUE(RSer.IsEnded());
         EXPECT_EQ(SrcPSO, DstPSO);
+        if (SrcPSO.NumSpecializationConstants > 0)
+        {
+            ASSERT_NE(DstPSO.pSpecializationConstants, nullptr);
+            for (Uint32 i = 0; i < SrcPSO.NumSpecializationConstants; ++i)
+            {
+                EXPECT_STREQ(SrcPSO.pSpecializationConstants[i].Name, DstPSO.pSpecializationConstants[i].Name);
+                EXPECT_NE(SrcPSO.pSpecializationConstants[i].pData, DstPSO.pSpecializationConstants[i].pData);
+            }
+        }
 
         for (size_t i = 0; i < DstPRSNames.size(); ++i)
         {
@@ -433,7 +453,7 @@ TEST(PSOSerializerTest, SerializeGraphicsPSOCreateInfo)
             GraphicsPipeline.SmplDesc.Count   = Val(Uint8{0}, Uint8{64});
             GraphicsPipeline.SmplDesc.Quality = Val(Uint8{0}, Uint8{8});
 
-            ASSERT_SIZEOF64(GraphicsPipelineStateCreateInfo, 344, "Did you add a new member to GraphicsPipelineStateCreateInfo? Please add serialization test here.");
+            ASSERT_SIZEOF64(GraphicsPipelineStateCreateInfo, 360, "Did you add a new member to GraphicsPipelineStateCreateInfo? Please add serialization test here.");
         }
 
         void Measure(Serializer<SerializerMode::Measure>& Ser, const GraphicsPipelineStateCreateInfo& CI, const TPRSNames& PRSNames)

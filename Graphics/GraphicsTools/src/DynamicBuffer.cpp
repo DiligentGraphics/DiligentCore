@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -161,7 +161,7 @@ void DynamicBuffer::InitBuffer(IRenderDevice* pDevice)
     }
 
     // NB: m_Desc.Usage may be changed by CreateSparseBuffer()
-    if (m_Desc.Usage == USAGE_DEFAULT && m_PendingSize > 0)
+    if (m_Desc.Usage != USAGE_SPARSE && m_PendingSize > 0)
     {
         BufferDesc Desc = m_Desc;
         Desc.Size       = m_PendingSize;

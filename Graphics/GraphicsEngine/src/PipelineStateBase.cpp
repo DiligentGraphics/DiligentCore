@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -478,6 +478,9 @@ void ValidatePipelineResourceLayoutDesc(const PipelineStateDesc& PSODesc, const 
             if (Var.ShaderStages == SHADER_TYPE_UNKNOWN)
                 LOG_PSO_ERROR_AND_THROW("ResourceLayout.Variables[", i, "].ShaderStages must not be SHADER_TYPE_UNKNOWN.");
 
+            if ((Var.Flags & SHADER_VARIABLE_FLAG_INLINE_CONSTANTS) != 0 && (Var.Flags != SHADER_VARIABLE_FLAG_INLINE_CONSTANTS))
+                LOG_PSO_ERROR_AND_THROW("ResourceLayout.Variables[", i, "].Flags: INLINE_CONSTANTS flag cannot be combined with other flags.");
+
             auto range = UniqueVariables.equal_range(Var.Name);
             for (auto it = range.first; it != range.second; ++it)
             {
@@ -548,6 +551,64 @@ void ValidatePipelineResourceLayoutDesc(const PipelineStateDesc& PSODesc, const 
         LOG_ERROR_AND_THROW(GetShaderTypeLiteralName(Shader->GetDesc().ShaderType), " is not a valid type for ", ShaderName, " shader"); \
     }
 
+
+void ValidateSpecializationConstants(const PipelineStateDesc&      PSODesc,
+                                     const DeviceFeatures&         Features,
+                                     Uint32                        NumSpecializationConstants,
+                                     const SpecializationConstant* pSpecializationConstants) noexcept(false)
+{
+    if (NumSpecializationConstants != 0 && pSpecializationConstants == nullptr)
+        LOG_PSO_ERROR_AND_THROW("NumSpecializationConstants (", NumSpecializationConstants, ") is not zero, but pSpecializationConstants is null.");
+
+    if (NumSpecializationConstants == 0)
+        return;
+
+    if (Features.SpecializationConstants == DEVICE_FEATURE_STATE_DISABLED)
+        LOG_PSO_ERROR_AND_THROW("NumSpecializationConstants (", NumSpecializationConstants, ") is not zero, but SpecializationConstants device feature is not enabled.");
+
+    for (Uint32 i = 0; i < NumSpecializationConstants; ++i)
+    {
+        const SpecializationConstant& SpecConst = pSpecializationConstants[i];
+
+        if (SpecConst.Name == nullptr)
+            LOG_PSO_ERROR_AND_THROW("pSpecializationConstants[", i, "].Name must not be null.");
+
+        if (SpecConst.Name[0] == '\0')
+            LOG_PSO_ERROR_AND_THROW("pSpecializationConstants[", i, "].Name must not be empty.");
+
+        if (SpecConst.ShaderStages == SHADER_TYPE_UNKNOWN)
+            LOG_PSO_ERROR_AND_THROW("pSpecializationConstants[", i, "].ShaderStages must not be SHADER_TYPE_UNKNOWN.");
+
+        if (SpecConst.Size == 0)
+            LOG_PSO_ERROR_AND_THROW("pSpecializationConstants[", i, "].Size must not be zero.");
+
+        if (SpecConst.pData == nullptr)
+            LOG_PSO_ERROR_AND_THROW("pSpecializationConstants[", i, "].pData must not be null.");
+    }
+
+    {
+        std::unordered_multimap<HashMapStringKey, SHADER_TYPE> UniqueConstants;
+        for (Uint32 i = 0; i < NumSpecializationConstants; ++i)
+        {
+            const SpecializationConstant& SpecConst = pSpecializationConstants[i];
+
+            auto range = UniqueConstants.equal_range(SpecConst.Name);
+            for (auto it = range.first; it != range.second; ++it)
+            {
+                if ((it->second & SpecConst.ShaderStages) != 0)
+                {
+                    LOG_PSO_ERROR_AND_THROW("Specialization constant '", SpecConst.Name,
+                                            "' is defined in overlapping shader stages (", GetShaderStagesString(SpecConst.ShaderStages),
+                                            " and ", GetShaderStagesString(it->second),
+                                            "). Multiple specialization constants with the same name are allowed, "
+                                            "but shader stages they use must not overlap.");
+                }
+            }
+            UniqueConstants.emplace(SpecConst.Name, SpecConst.ShaderStages);
+        }
+    }
+}
+
 void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& CreateInfo,
                                         const IRenderDevice*                   pDevice) noexcept(false)
 {
@@ -568,6 +629,7 @@ void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& C
     ValidateDepthStencilDesc(PSODesc, GraphicsPipeline);
     ValidateGraphicsPipelineDesc(PSODesc, GraphicsPipeline, AdapterInfo.ShadingRate);
     ValidatePipelineResourceLayoutDesc(PSODesc, Features);
+    ValidateSpecializationConstants(PSODesc, Features, CreateInfo.NumSpecializationConstants, CreateInfo.pSpecializationConstants);
 
 
     if (PSODesc.PipelineType == PIPELINE_TYPE_GRAPHICS)
@@ -683,6 +745,7 @@ void ValidateComputePipelineCreateInfo(const ComputePipelineStateCreateInfo& Cre
 
     ValidatePipelineResourceSignatures(CreateInfo, pDevice);
     ValidatePipelineResourceLayoutDesc(PSODesc, Features);
+    ValidateSpecializationConstants(PSODesc, Features, CreateInfo.NumSpecializationConstants, CreateInfo.pSpecializationConstants);
 
     if (CreateInfo.pCS == nullptr)
         LOG_PSO_ERROR_AND_THROW("Compute shader must not be null.");
@@ -704,6 +767,7 @@ void ValidateRayTracingPipelineCreateInfo(const IRenderDevice*                  
 
     ValidatePipelineResourceSignatures(CreateInfo, pDevice);
     ValidatePipelineResourceLayoutDesc(PSODesc, DeviceInfo.Features);
+    ValidateSpecializationConstants(PSODesc, DeviceInfo.Features, CreateInfo.NumSpecializationConstants, CreateInfo.pSpecializationConstants);
 
     if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D12)
     {
@@ -792,6 +856,7 @@ void ValidateTilePipelineCreateInfo(const TilePipelineStateCreateInfo& CreateInf
 
     ValidatePipelineResourceSignatures(CreateInfo, pDevice);
     ValidatePipelineResourceLayoutDesc(PSODesc, Features);
+    ValidateSpecializationConstants(PSODesc, Features, CreateInfo.NumSpecializationConstants, CreateInfo.pSpecializationConstants);
 
     if (CreateInfo.pTS == nullptr)
         LOG_PSO_ERROR_AND_THROW("Tile shader must not be null.");
@@ -865,32 +930,65 @@ void ValidatePipelineResourceCompatibility(const PipelineResourceDesc& ResDesc,
 
     VERIFY(ResDesc.ArraySize > 0, "ResDesc.ArraySize can't be zero. This error should've be caught by ValidatePipelineResourceSignatureDesc().");
 
-    if (ArraySize == 0)
+    if ((ResourceFlags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0)
     {
-        // ArraySize == 0 means that the resource is a runtime-sized array and ResDesc.ArraySize from the
-        // resource signature may have any non-zero value.
-        if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) == 0)
+        if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) == 0)
         {
             LOG_ERROR_AND_THROW("Shader '", ShaderName, "' contains resource '", ResDesc.Name,
-                                "' that is a runtime-sized array, but in the resource signature '", SignatureName,
-                                "' the resource is defined without the PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY flag.");
+                                "' that is defined as inline constants, but in the pipeline resource signature '", SignatureName,
+                                "' the resource is not labeled as inline constants.");
+        }
+
+        if (ArraySize != 1)
+        {
+            LOG_ERROR_AND_THROW("Shader '", ShaderName, "' contains resource '", ResDesc.Name,
+                                "' that is defined as inline constants, but has array size ", ArraySize,
+                                " in the pipeline resource signature '", SignatureName,
+                                "'. Inline constant resources must have array size of 1.");
+        }
+    }
+    else if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0)
+    {
+        // In most APIs, inline constants are just regular constant buffers and don't have
+        // the special status. Only in Vulkan push constants are treated specially, but
+        // emulated inline constants are still just regular constant buffers.
+        if (ArraySize != 1)
+        {
+            LOG_ERROR_AND_THROW("Shader '", ShaderName, "' contains resource '", ResDesc.Name,
+                                "' that is defined in the pipeline resource signature '", SignatureName,
+                                "' as inline constants, but has array size ", ArraySize,
+                                ". Inline constant resources must have array size of 1.");
         }
     }
     else
     {
-        if (ResDesc.ArraySize < ArraySize)
+        if (ArraySize == 0)
         {
-            LOG_ERROR_AND_THROW("Shader '", ShaderName, "' contains resource '", ResDesc.Name,
-                                "' whose array size (", ArraySize, ") is greater than the array size (",
-                                ResDesc.ArraySize, ") specified by the pipeline resource signature '", SignatureName, "'.");
+            // ArraySize == 0 means that the resource is a runtime-sized array and ResDesc.ArraySize from the
+            // resource signature may have any non-zero value.
+            if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) == 0)
+            {
+                LOG_ERROR_AND_THROW("Shader '", ShaderName, "' contains resource '", ResDesc.Name,
+                                    "' that is a runtime-sized array, but in the resource signature '", SignatureName,
+                                    "' the resource is defined without the PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY flag.");
+            }
         }
+        else
+        {
+            if (ResDesc.ArraySize < ArraySize)
+            {
+                LOG_ERROR_AND_THROW("Shader '", ShaderName, "' contains resource '", ResDesc.Name,
+                                    "' whose array size (", ArraySize, ") is greater than the array size (",
+                                    ResDesc.ArraySize, ") specified by the pipeline resource signature '", SignatureName, "'.");
+            }
 
-        //if (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY)
-        //{
-        //    LOG_WARNING_MESSAGE("Shader '", ShaderName, "' contains resource with name '", ResDesc.Name,
-        //                        "' that is defined in resource signature '", SignatureName,
-        //                        "' with flag PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY, but the resource is not a runtime-sized array.");
-        //}
+            //if (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY)
+            //{
+            //    LOG_WARNING_MESSAGE("Shader '", ShaderName, "' contains resource with name '", ResDesc.Name,
+            //                        "' that is defined in resource signature '", SignatureName,
+            //                        "' with flag PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY, but the resource is not a runtime-sized array.");
+            //}
+        }
     }
 }
 

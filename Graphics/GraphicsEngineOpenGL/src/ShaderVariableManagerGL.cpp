@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -223,6 +223,18 @@ void ShaderVariableManagerGL::UniformBuffBindInfo::SetDynamicOffset(Uint32 Array
     m_ParentManager.m_ResourceCache.SetDynamicUBOffset(Attr.CacheOffset + ArrayIndex, Offset);
 }
 
+void ShaderVariableManagerGL::UniformBuffBindInfo::SetConstants(const void* pConstants, Uint32 FirstConstant, Uint32 NumConstants)
+{
+    const ResourceAttribs&      Attr = GetAttribs();
+    const PipelineResourceDesc& Desc = GetDesc();
+    VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
+#ifdef DILIGENT_DEVELOPMENT
+    {
+        VerifyInlineConstants(Desc, pConstants, FirstConstant, NumConstants);
+    }
+#endif
+    m_ParentManager.m_ResourceCache.SetInlineConstants(Attr.CacheOffset, pConstants, FirstConstant, NumConstants);
+}
 
 void ShaderVariableManagerGL::TextureBindInfo::BindResource(const BindResourceInfo& BindInfo)
 {

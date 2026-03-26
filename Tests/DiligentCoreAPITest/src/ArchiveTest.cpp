@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -633,8 +633,7 @@ RefCntAutoPtr<IBuffer> CreateTestVertexBuffer(IRenderDevice* pDevice, IDeviceCon
     if (!pVB)
         return pVB;
 
-    StateTransitionDesc Barrier{pVB, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_VERTEX_BUFFER, STATE_TRANSITION_FLAG_UPDATE_STATE};
-    pContext->TransitionResourceStates(1, &Barrier);
+    pContext->TransitionResourceState({pVB, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_VERTEX_BUFFER, STATE_TRANSITION_FLAG_UPDATE_STATE});
 
     return pVB;
 }
@@ -656,8 +655,7 @@ std::array<RefCntAutoPtr<ITexture>, 3> CreateTestGBuffer(GPUTestingEnvironment* 
         {
             GBuffer[i] = pEnv->CreateTexture("", TEX_FORMAT_RGBA8_UNORM, BIND_SHADER_RESOURCE, Width, Height, InitData);
 
-            StateTransitionDesc Barrier{GBuffer[i], RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_SHADER_RESOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
-            pContext->TransitionResourceStates(1, &Barrier);
+            pContext->TransitionResourceState({GBuffer[i], RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_SHADER_RESOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE});
         }
     }
 
@@ -1139,8 +1137,7 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = fa
         pDevice->CreateBuffer(BuffDesc, &InitialData, &pConstants);
         ASSERT_NE(pConstants, nullptr);
 
-        StateTransitionDesc Barrier{pConstants, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_CONSTANT_BUFFER, STATE_TRANSITION_FLAG_UPDATE_STATE};
-        pContext->TransitionResourceStates(1, &Barrier);
+        pContext->TransitionResourceState({pConstants, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_CONSTANT_BUFFER, STATE_TRANSITION_FLAG_UPDATE_STATE});
     }
 
     RefCntAutoPtr<IShaderResourceBinding> pSRB;
@@ -1173,9 +1170,8 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = fa
         RenderGraphicsPSOTestImage(pContext, pRefPSOWithSign, pRenderPass, pSRB, pFramebuffer, pVB);
 
         // Transition to CopySrc state to use in TakeSnapshot()
-        ITexture*           pRT = pSwapChain->GetCurrentBackBufferRTV()->GetTexture();
-        StateTransitionDesc Barrier{pRT, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
-        pContext->TransitionResourceStates(1, &Barrier);
+        ITexture* pRT = pSwapChain->GetCurrentBackBufferRTV()->GetTexture();
+        pContext->TransitionResourceState({pRT, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE});
 
         pContext->Flush();
         pContext->InvalidateState(); // because TakeSnapshot() will clear state in D3D11
@@ -1515,9 +1511,8 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = fal
     // Dispatch reference
     Dispatch(pRefPSO, pTestingSwapChain->GetCurrentBackBufferUAV());
 
-    ITexture*           pTexUAV = pTestingSwapChain->GetCurrentBackBufferUAV()->GetTexture();
-    StateTransitionDesc Barrier{pTexUAV, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
-    pContext->TransitionResourceStates(1, &Barrier);
+    ITexture* pTexUAV = pTestingSwapChain->GetCurrentBackBufferUAV()->GetTexture();
+    pContext->TransitionResourceState({pTexUAV, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE});
 
     pContext->Flush();
     pContext->InvalidateState(); // because TakeSnapshot() will clear state in D3D11
@@ -1895,9 +1890,8 @@ void TestRayTracingPipeline(bool CompileAsync = false)
     // Reference
     TraceRays(pRefPSO, pTestingSwapChain->GetCurrentBackBufferUAV(), pRefPSO_SBT);
 
-    ITexture*           pTexUAV = pTestingSwapChain->GetCurrentBackBufferUAV()->GetTexture();
-    StateTransitionDesc Barrier{pTexUAV, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
-    pContext->TransitionResourceStates(1, &Barrier);
+    ITexture* pTexUAV = pTestingSwapChain->GetCurrentBackBufferUAV()->GetTexture();
+    pContext->TransitionResourceState({pTexUAV, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE});
 
     pContext->Flush();
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -1637,11 +1637,15 @@ String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFul
 
         PIPELINE_RESOURCE_FLAGS Flag = ExtractLSB(Flags);
 
-        static_assert(PIPELINE_RESOURCE_FLAG_LAST == (1u << 4), "Please update the switch below to handle the new pipeline resource flag.");
+        static_assert(PIPELINE_RESOURCE_FLAG_LAST == (1u << 5), "Please update the switch below to handle the new pipeline resource flag.");
         switch (Flag)
         {
             case PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS:
                 Str.append(GetFullName ? "PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS" : "NO_DYNAMIC_BUFFERS");
+                break;
+
+            case PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS:
+                Str.append(GetFullName ? "PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS" : "INLINE_CONSTANTS");
                 break;
 
             case PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER:
@@ -1713,6 +1717,40 @@ const char* GetShaderCodeBasicTypeString(SHADER_CODE_BASIC_TYPE Type)
         case SHADER_CODE_BASIC_TYPE_STRING:     return "string";
         // clang-format on
         default: UNEXPECTED("Unknown/unsupported variable class"); return "UNKNOWN";
+    }
+}
+
+Uint32 GetShaderCodeBasicTypeBitSize(SHADER_CODE_BASIC_TYPE Type)
+{
+    static_assert(SHADER_CODE_BASIC_TYPE_COUNT == 21, "Did you add a new type? Please update the switch below.");
+    switch (Type)
+    {
+        // clang-format off
+        case SHADER_CODE_BASIC_TYPE_UNKNOWN:    return 0;
+        case SHADER_CODE_BASIC_TYPE_VOID:       return 0;
+        case SHADER_CODE_BASIC_TYPE_BOOL:       return 8;
+        case SHADER_CODE_BASIC_TYPE_INT:        return 32;
+        case SHADER_CODE_BASIC_TYPE_INT8:       return 8;
+        case SHADER_CODE_BASIC_TYPE_INT16:      return 16;
+        case SHADER_CODE_BASIC_TYPE_INT64:      return 64;
+        case SHADER_CODE_BASIC_TYPE_UINT:       return 32;
+        case SHADER_CODE_BASIC_TYPE_UINT8:      return 8;
+        case SHADER_CODE_BASIC_TYPE_UINT16:     return 16;
+        case SHADER_CODE_BASIC_TYPE_UINT64:     return 64;
+        case SHADER_CODE_BASIC_TYPE_FLOAT:      return 32;
+        case SHADER_CODE_BASIC_TYPE_FLOAT16:    return 16;
+        case SHADER_CODE_BASIC_TYPE_DOUBLE:     return 64;
+        case SHADER_CODE_BASIC_TYPE_MIN8FLOAT:  return 8;
+        case SHADER_CODE_BASIC_TYPE_MIN10FLOAT: return 10;
+        case SHADER_CODE_BASIC_TYPE_MIN16FLOAT: return 16;
+        case SHADER_CODE_BASIC_TYPE_MIN12INT:   return 12;
+        case SHADER_CODE_BASIC_TYPE_MIN16INT:   return 16;
+        case SHADER_CODE_BASIC_TYPE_MIN16UINT:  return 16;
+        case SHADER_CODE_BASIC_TYPE_STRING:     return 0;
+        // clang-format on
+        default:
+            UNEXPECTED("Unknown/unsupported variable class");
+            return 0;
     }
 }
 
@@ -1808,7 +1846,7 @@ PIPELINE_RESOURCE_FLAGS GetValidPipelineResourceFlags(SHADER_RESOURCE_TYPE Resou
     switch (ResourceType)
     {
         case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
-            return PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY;
+            return PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY | PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS;
 
         case SHADER_RESOURCE_TYPE_TEXTURE_SRV:
             return PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER | PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY;
@@ -1839,7 +1877,7 @@ PIPELINE_RESOURCE_FLAGS GetValidPipelineResourceFlags(SHADER_RESOURCE_TYPE Resou
 
 PIPELINE_RESOURCE_FLAGS ShaderVariableFlagsToPipelineResourceFlags(SHADER_VARIABLE_FLAGS Flags)
 {
-    static_assert(SHADER_VARIABLE_FLAG_LAST == (1 << 3), "Please update the switch below to handle the new shader variable flags");
+    static_assert(SHADER_VARIABLE_FLAG_LAST == (1 << 4), "Please update the switch below to handle the new shader variable flags");
     switch (Flags)
     {
         case SHADER_VARIABLE_FLAG_NONE:
@@ -1847,6 +1885,9 @@ PIPELINE_RESOURCE_FLAGS ShaderVariableFlagsToPipelineResourceFlags(SHADER_VARIAB
 
         case SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS:
             return PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS;
+
+        case SHADER_VARIABLE_FLAG_INLINE_CONSTANTS:
+            return PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS;
 
         case SHADER_VARIABLE_FLAG_GENERAL_INPUT_ATTACHMENT_VK:
             return PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT;

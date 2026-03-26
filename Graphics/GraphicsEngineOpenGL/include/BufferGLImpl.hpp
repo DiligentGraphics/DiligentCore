@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -81,9 +81,6 @@ public:
 
     /// Implementation of IBuffer::GetNativeHandle() in OpenGL backend.
     virtual Uint64 DILIGENT_CALL_TYPE GetNativeHandle() override final { return BitCast<Uint64>(GetGLBufferHandle()); }
-
-    /// Implementation of IBuffer::GetSparseProperties().
-    virtual SparseBufferProperties DILIGENT_CALL_TYPE GetSparseProperties() const override final;
 
 private:
     virtual void CreateViewInternal(const struct BufferViewDesc& ViewDesc, IBufferView** ppView, bool bIsDefaultView) override;

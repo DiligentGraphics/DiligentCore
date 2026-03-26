@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -424,12 +424,6 @@ void BufferGLImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBuffe
         const char* ViewTypeName = GetBufferViewTypeLiteralName(OrigViewDesc.ViewType);
         LOG_ERROR("Failed to create view '", (OrigViewDesc.Name ? OrigViewDesc.Name : ""), "' (", ViewTypeName, ") for buffer '", (m_Desc.Name ? m_Desc.Name : ""), "'");
     }
-}
-
-SparseBufferProperties BufferGLImpl::GetSparseProperties() const
-{
-    DEV_ERROR("IBuffer::GetSparseProperties() is not supported in OpenGL");
-    return {};
 }
 
 } // namespace Diligent

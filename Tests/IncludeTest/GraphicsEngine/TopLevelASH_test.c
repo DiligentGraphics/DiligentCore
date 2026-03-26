@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,13 +32,14 @@ void TestTopLevelAS_CInterface(ITopLevelAS* pTLAS)
     const TopLevelASDesc* pDesc = ITopLevelAS_GetDesc(pTLAS);
     (void)pDesc;
 
-    TLASInstanceDesc InstDesc = ITopLevelAS_GetInstanceDesc(pTLAS, "Name");
+    TLASInstanceDesc InstDesc;
+    ITopLevelAS_GetInstanceDesc(pTLAS, "Name", &InstDesc);
     (void)InstDesc;
 
-    TLASBuildInfo BuildInfo = ITopLevelAS_GetBuildInfo(pTLAS);
+    const TLASBuildInfo* BuildInfo = ITopLevelAS_GetBuildInfo(pTLAS);
     (void)BuildInfo;
 
-    ScratchBufferSizes ScratchSizes = ITopLevelAS_GetScratchBufferSizes(pTLAS);
+    const ScratchBufferSizes* ScratchSizes = ITopLevelAS_GetScratchBufferSizes(pTLAS);
     (void)ScratchSizes;
 
     Uint64 Handle = ITopLevelAS_GetNativeHandle(pTLAS);

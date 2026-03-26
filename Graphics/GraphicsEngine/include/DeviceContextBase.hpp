@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -381,6 +381,9 @@ protected:
         // buffers with dynamic offsets in all backends).
         SRBMaskType DynamicSRBMask = 0;
 
+        // Indicates which SRBs contain inline constants
+        SRBMaskType InlineConstantsSRBMask = 0;
+
         void Set(Uint32 Index, ShaderResourceBindingImplType* pSRB)
         {
             VERIFY_EXPR(Index < MAX_RESOURCE_SIGNATURES);
@@ -398,6 +401,11 @@ protected:
             else
                 DynamicSRBMask &= ~SRBBit;
 
+            if (pResourceCache != nullptr && pResourceCache->HasInlineConstants())
+                InlineConstantsSRBMask |= SRBBit;
+            else
+                InlineConstantsSRBMask &= ~SRBBit;
+
 #ifdef DILIGENT_DEVELOPMENT
             SRBs[Index] = pSRB;
             if (pSRB != nullptr)
@@ -412,7 +420,8 @@ protected:
         }
 
         // Returns the mask of SRBs whose resources need to be committed
-        SRBMaskType GetCommitMask(bool DynamicResourcesIntact = false) const
+        SRBMaskType GetCommitMask(bool DynamicResourcesIntact = false,
+                                  bool InlineConstantsIntact  = false) const
         {
 #ifdef DILIGENT_DEVELOPMENT
             DvpVerifyCacheRevisions();
@@ -420,13 +429,31 @@ protected:
 
             // Stale SRBs always have to be committed
             SRBMaskType CommitMask = StaleSRBMask;
+
             // If dynamic resources are not intact, SRBs with dynamic resources
             // have to be handled
             if (!DynamicResourcesIntact)
                 CommitMask |= DynamicSRBMask;
+
+            // If inline constants are not intact, SRBs with inline constants
+            // have to be handled
+            if (!InlineConstantsIntact)
+                CommitMask |= InlineConstantsSRBMask;
+
             // Only process SRBs that are used by current PSO
             CommitMask &= ActiveSRBMask;
             return CommitMask;
+        }
+
+        SRBMaskType GetInlineConstantSRBCommitMask(bool InlineConstantsIntact = false) const
+        {
+            // Stale SRBs always have to be committed
+            SRBMaskType CommitMask = StaleSRBMask & InlineConstantsSRBMask;
+
+            if (!InlineConstantsIntact)
+                CommitMask |= InlineConstantsSRBMask;
+
+            return CommitMask & ActiveSRBMask;
         }
 
 #ifdef DILIGENT_DEVELOPMENT
@@ -689,6 +716,9 @@ protected:
     struct DbgMappedBufferInfo
     {
         MAP_TYPE MapType;
+        USAGE    Usage;
+
+        RefCntWeakPtr<IBuffer> pBuffer;
     };
     std::unordered_map<IBuffer*, DbgMappedBufferInfo> m_DbgMappedBuffers;
 #endif
@@ -1772,7 +1802,7 @@ inline void DeviceContextBase<ImplementationTraits>::MapBuffer(
 #ifdef DILIGENT_DEBUG
     {
         VERIFY(m_DbgMappedBuffers.find(pBuffer) == m_DbgMappedBuffers.end(), "Buffer '", BuffDesc.Name, "' has already been mapped");
-        m_DbgMappedBuffers[pBuffer] = DbgMappedBufferInfo{MapType};
+        m_DbgMappedBuffers[pBuffer] = DbgMappedBufferInfo{MapType, BuffDesc.Usage, RefCntWeakPtr<IBuffer>{pBuffer}};
     }
 #endif
 
@@ -1825,9 +1855,16 @@ inline void DeviceContextBase<ImplementationTraits>::UnmapBuffer(IBuffer* pBuffe
 #ifdef DILIGENT_DEBUG
     {
         auto MappedBufferIt = m_DbgMappedBuffers.find(pBuffer);
-        VERIFY(MappedBufferIt != m_DbgMappedBuffers.end(), "Buffer '", pBuffer->GetDesc().Name, "' has not been mapped.");
-        VERIFY(MappedBufferIt->second.MapType == MapType, "MapType (", MapType, ") does not match the map type that was used to map the buffer ", MappedBufferIt->second.MapType);
-        m_DbgMappedBuffers.erase(MappedBufferIt);
+        if (MappedBufferIt != m_DbgMappedBuffers.end())
+        {
+            VERIFY(MappedBufferIt->second.MapType == MapType, "MapType (", MapType,
+                   ") does not match the map type that was used to map the buffer ", MappedBufferIt->second.MapType);
+            m_DbgMappedBuffers.erase(MappedBufferIt);
+        }
+        else
+        {
+            UNEXPECTED("Buffer '", pBuffer->GetDesc().Name, "' has not been mapped.");
+        }
     }
 #endif
 }
@@ -1847,7 +1884,7 @@ inline void DeviceContextBase<ImplementationTraits>::UpdateTexture(
     DEV_CHECK_ERR(pTexture != nullptr, "pTexture must not be null");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "UpdateTexture command must be used outside of render pass.");
 
-    ValidateUpdateTextureParams(pTexture->GetDesc(), MipLevel, Slice, DstBox, SubresData);
+    ValidateUpdateTextureParams(pTexture->GetDesc(), MipLevel, Slice, DstBox, SubresData, m_pDevice->GetAdapterInfo().Buffer);
     ++m_Stats.CommandCounters.UpdateTexture;
 }
 

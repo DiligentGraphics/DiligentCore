@@ -1,0 +1,30 @@
+// Test for textures and samplers
+Texture2D<float4> g_SampledImage : register(t0);      // 2D texture (sampled image)
+Texture2DMS<float4> g_SampledImageMS : register(t1);  // 2D multisample texture
+Texture3D<float4> g_SampledImage3D : register(t2);    // 3D texture
+TextureCube<float4> g_SampledImageCube : register(t3); // Cubemap texture
+
+SamplerState g_Sampler : register(s0);                 // Separate sampler
+Texture2D<float4> g_SeparateImage : register(t4);      // Separate image (used with separate sampler)
+
+// Combined sampler test - when texture and sampler follow the naming convention,
+// they should be recognized as SampledImage instead of SeparateImage
+Texture2D<float4> g_Texture : register(t5);
+SamplerState g_Texture_sampler : register(s1);
+
+float4 main() : SV_Target
+{
+    // Sample textures
+    float4 color1 = g_SampledImage.Sample(g_Sampler, float2(0.5, 0.5));
+    float4 color2 = g_SampledImageMS.Load(int2(0, 0), 0); // Texture2DMS uses Load instead of Sample
+    float4 color3 = g_SampledImage3D.Sample(g_Sampler, float3(0.5, 0.5, 0.5));
+    float4 color4 = g_SampledImageCube.Sample(g_Sampler, float3(0.0, 1.0, 0.0));
+
+    // Sample separate image with separate sampler
+    float4 color5 = g_SeparateImage.Sample(g_Sampler, float2(0.25, 0.25));
+
+    // Sample combined sampler texture
+    float4 color6 = g_Texture.Sample(g_Texture_sampler, float2(0.5, 0.5));
+
+    return color1 + color2 + color3 + color4 + color5 + color6;
+}

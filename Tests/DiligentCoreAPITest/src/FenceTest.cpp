@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -167,7 +167,7 @@ TEST_F(FenceTest, GPUWaitForCPU)
 
         // Transition to CopySrc state to use in TakeSnapshot()
         StateTransitionDesc Barrier{pBackBufferUAV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
-        pContext->TransitionResourceStates(1, &Barrier);
+        pContext->TransitionResourceState(Barrier);
         pContext->WaitForIdle();
 
         pTestingSwapChain->TakeSnapshot(pBackBufferUAV->GetTexture());
@@ -283,7 +283,7 @@ TEST_F(FenceTest, ContextWaitForAnotherContext)
 
         // Transition to CopySrc state to use in TakeSnapshot()
         StateTransitionDesc Barrier{pBackBufferUAV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
-        pGraphicsCtx->TransitionResourceStates(1, &Barrier);
+        pGraphicsCtx->TransitionResourceState(Barrier);
         pGraphicsCtx->WaitForIdle();
 
         pTestingSwapChain->TakeSnapshot(pBackBufferUAV->GetTexture());

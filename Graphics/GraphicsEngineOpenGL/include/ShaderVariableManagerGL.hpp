@@ -114,6 +114,11 @@ public:
         {
             UNSUPPORTED("Dynamic offset may only be set for uniform and storage buffers");
         }
+
+        void SetConstants(const void* pConstants, Uint32 FirstConstant, Uint32 NumConstants)
+        {
+            UNSUPPORTED("Inline constants may only be set for uniform buffers");
+        }
     };
 
 
@@ -133,6 +138,8 @@ public:
         }
 
         void SetDynamicOffset(Uint32 ArrayIndex, Uint32 Offset);
+
+        void SetConstants(const void* pConstants, Uint32 FirstConstant, Uint32 NumConstants);
     };
 
 

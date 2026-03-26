@@ -1,0 +1,20 @@
+// Test for storage images (read-write textures)
+// Note: HLSL does not support RWTextureCube, so we only test 2D, 2DArray, and 3D storage images
+RWTexture2D<float4> g_RWImage2D : register(u0);
+RWTexture2DArray<float4> g_RWImage2DArray : register(u1);
+RWTexture3D<float4> g_RWImage3D : register(u2);
+
+float4 main() : SV_Target
+{
+    // Write to storage images
+    g_RWImage2D[uint2(0, 0)] = float4(1.0, 0.0, 0.0, 1.0);
+    g_RWImage2DArray[uint3(0, 0, 0)] = float4(0.0, 1.0, 0.0, 1.0);
+    g_RWImage3D[uint3(0, 0, 0)] = float4(0.0, 0.0, 1.0, 1.0);
+
+    // Read back and combine
+    float4 color = g_RWImage2D[uint2(0, 0)];
+    color += g_RWImage2DArray[uint3(0, 0, 0)];
+    color += g_RWImage3D[uint3(0, 0, 0)];
+
+    return color;
+}

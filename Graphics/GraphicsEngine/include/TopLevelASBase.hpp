@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -241,32 +241,36 @@ public:
     }
 
     /// Implementation of ITopLevelAS::GetInstanceDesc().
-    virtual TLASInstanceDesc DILIGENT_CALL_TYPE GetInstanceDesc(const char* Name) const override final
+    virtual Bool DILIGENT_CALL_TYPE GetInstanceDesc(const char* Name, TLASInstanceDesc& Desc) const override final
     {
-        VERIFY_EXPR(Name != nullptr && Name[0] != '\0');
+        Desc = {};
 
-        TLASInstanceDesc Result = {};
+        if (Name == nullptr || Name[0] == '\0')
+        {
+            DEV_ERROR("Instance name must not be null or empty");
+            return false;
+        }
 
         auto Iter = this->m_Instances.find(Name);
         if (Iter != this->m_Instances.end())
         {
-            const InstanceDesc& Inst           = Iter->second;
-            Result.ContributionToHitGroupIndex = Inst.ContributionToHitGroupIndex;
-            Result.InstanceIndex               = Inst.InstanceIndex;
-            Result.pBLAS                       = Inst.pBLAS;
+            const InstanceDesc& Inst         = Iter->second;
+            Desc.ContributionToHitGroupIndex = Inst.ContributionToHitGroupIndex;
+            Desc.InstanceIndex               = Inst.InstanceIndex;
+            Desc.pBLAS                       = Inst.pBLAS;
+            return true;
         }
         else
         {
-            Result.ContributionToHitGroupIndex = INVALID_INDEX;
-            Result.InstanceIndex               = INVALID_INDEX;
+            Desc.ContributionToHitGroupIndex = INVALID_INDEX;
+            Desc.InstanceIndex               = INVALID_INDEX;
             LOG_ERROR_MESSAGE("Can't find instance with the specified name ('", Name, "')");
+            return false;
         }
-
-        return Result;
     }
 
     /// Implementation of ITopLevelAS::GetBuildInfo().
-    virtual TLASBuildInfo DILIGENT_CALL_TYPE GetBuildInfo() const override final
+    virtual const TLASBuildInfo& DILIGENT_CALL_TYPE GetBuildInfo() const override final
     {
         return m_BuildInfo;
     }
@@ -286,7 +290,7 @@ public:
     }
 
     /// Implementation of ITopLevelAS::GetScratchBufferSizes().
-    virtual ScratchBufferSizes DILIGENT_CALL_TYPE GetScratchBufferSizes() const override final
+    virtual const ScratchBufferSizes& DILIGENT_CALL_TYPE GetScratchBufferSizes() const override final
     {
         return this->m_ScratchSize;
     }

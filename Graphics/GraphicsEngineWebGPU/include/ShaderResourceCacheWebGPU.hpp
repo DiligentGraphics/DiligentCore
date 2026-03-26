@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2025 Diligent Graphics LLC
+ *  Copyright 2023-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -58,10 +58,19 @@ public:
 
     ~ShaderResourceCacheWebGPU();
 
-    static size_t GetRequiredMemorySize(Uint32 NumGroups, const Uint32* GroupSizes);
+    static size_t GetRequiredMemorySize(Uint32 NumGroups, const Uint32* GroupSizes, Uint32 TotalInlineConstants = 0);
 
-    void InitializeGroups(IMemoryAllocator& MemAllocator, Uint32 NumGroups, const Uint32* GroupSizes);
-    void InitializeResources(Uint32 GroupIdx, Uint32 Offset, Uint32 ArraySize, BindGroupEntryType Type, bool HasImmutableSampler);
+    void InitializeGroups(IMemoryAllocator& MemAllocator, Uint32 NumGroups, const Uint32* GroupSizes, Uint32 TotalInlineConstants = 0);
+    void InitializeResources(Uint32             GroupIdx,
+                             Uint32             Offset,
+                             Uint32             ArraySize,
+                             BindGroupEntryType Type,
+                             bool               HasImmutableSampler);
+    void InitializeInlineConstantBuffer(Uint32                       GroupIdx,
+                                        Uint32                       Offset,
+                                        Uint32                       InlineConstantOffset,
+                                        Uint32                       NumInlineConstants,
+                                        RefCntAutoPtr<IDeviceObject> pObject = {});
 
     struct Resource
     {
@@ -71,6 +80,14 @@ public:
         {
             VERIFY(Type == BindGroupEntryType::Texture || Type == BindGroupEntryType::Sampler || !HasImmutableSampler,
                    "Immutable sampler can only be assigned to a textre or a sampler");
+        }
+
+        explicit Resource(BindGroupEntryType _Type, void* _pInlineConstantData = nullptr) noexcept :
+            Type{_Type},
+            HasImmutableSampler{false},
+            pInlineConstantData{_pInlineConstantData}
+        {
+            VERIFY(Type == BindGroupEntryType::UniformBufferDynamic, "Inline constant buffer must be of type UniformBufferDynamic");
         }
 
         // clang-format off
@@ -88,10 +105,23 @@ public:
         // For uniform and storage buffers only
 /*16 */ Uint64                       BufferBaseOffset = 0;
 /*24 */ Uint64                       BufferRangeSize  = 0;
+        // For inline constant buffers only - pointer to the staging data
+/*32 */ void* const                  pInlineConstantData = nullptr;
         // clang-format on
 
         void SetUniformBuffer(RefCntAutoPtr<IDeviceObject>&& _pBuffer, Uint64 _RangeOffset, Uint64 _RangeSize);
         void SetStorageBuffer(RefCntAutoPtr<IDeviceObject>&& _pBufferView);
+
+        // Writes inline constant data to the staging buffer.
+        // IMPORTANT: Does NOT call UpdateRevision() - inline constants can change after SRB commit.
+        void SetInlineConstants(const void* pData, Uint32 FirstConstant, Uint32 NumConstants)
+        {
+            VERIFY(pInlineConstantData != nullptr, "Inline constant data pointer is not initialized");
+            VERIFY(pData != nullptr, "Source data is null");
+            VERIFY(FirstConstant + NumConstants <= BufferRangeSize / sizeof(Uint32),
+                   "Too many constants (", FirstConstant + NumConstants, ") for the allocated space (", BufferRangeSize / sizeof(Uint32), ")");
+            memcpy(static_cast<Uint32*>(pInlineConstantData) + FirstConstant, pData, NumConstants * sizeof(Uint32));
+        }
 
         template <typename ResType>
         Uint32 GetDynamicBufferOffset(const DeviceContextWebGPUImpl* pCtx) const;
@@ -176,6 +206,11 @@ public:
     Uint32 GetNumBindGroups() const { return m_NumBindGroups; }
     bool   HasDynamicResources() const { return m_NumDynamicBuffers > 0; }
 
+    bool HasInlineConstants() const
+    {
+        return m_HasInlineConstants != 0;
+    }
+
     ResourceCacheContentType GetContentType() const { return static_cast<ResourceCacheContentType>(m_ContentType); }
 
     WGPUBindGroup UpdateBindGroup(WGPUDevice wgpuDevice, Uint32 GroupIndex, WGPUBindGroupLayout wgpuGroupLayout);
@@ -184,6 +219,27 @@ public:
     bool GetDynamicBufferOffsets(const DeviceContextWebGPUImpl* pCtx,
                                  std::vector<uint32_t>&         Offsets,
                                  Uint32                         GroupIdx) const;
+
+    // Writes inline constant data to the staging buffer
+    void SetInlineConstants(Uint32      BindGroupIdx,
+                            Uint32      CacheOffset,
+                            const void* pConstants,
+                            Uint32      FirstConstant,
+                            Uint32      NumConstants)
+    {
+        BindGroup& Group = GetBindGroup(BindGroupIdx);
+        Resource&  Res   = Group.GetResource(CacheOffset);
+        // Copy constants to the staging buffer
+        // IMPORTANT: Do NOT call UpdateRevision() - inline constants can change after SRB commit
+        Res.SetInlineConstants(pConstants, FirstConstant, NumConstants);
+    }
+
+    // Copies inline constant data from source cache to this cache
+    void CopyInlineConstants(const ShaderResourceCacheWebGPU& SrcCache,
+                             Uint32                           BindGroupIdx,
+                             Uint32                           SrcCacheOffset,
+                             Uint32                           DstCacheOffset,
+                             Uint32                           NumConstants);
 
 #ifdef DILIGENT_DEBUG
     // For debug purposes only
@@ -195,18 +251,39 @@ private:
 #ifdef DILIGENT_DEBUG
     const Resource* GetFirstResourcePtr() const
     {
-        return reinterpret_cast<const Resource*>(reinterpret_cast<const BindGroup*>(m_pMemory.get()) + m_NumBindGroups);
+        return AlignUpPtr(reinterpret_cast<const Resource*>(static_cast<const BindGroup*>(m_pMemory.get()) + m_NumBindGroups));
     }
 #endif
+    BindGroup* GetFirstBindGroupPtr()
+    {
+        return reinterpret_cast<BindGroup*>(m_pMemory.get());
+    }
     Resource* GetFirstResourcePtr()
     {
-        return reinterpret_cast<Resource*>(reinterpret_cast<BindGroup*>(m_pMemory.get()) + m_NumBindGroups);
+        Resource* pFirstResource = AlignUpPtr(reinterpret_cast<Resource*>(GetFirstBindGroupPtr() + m_NumBindGroups));
+        VERIFY(reinterpret_cast<Uint8*>(pFirstResource + m_TotalResources) <= m_DbgMemoryEnd,
+               "Resource storage exceeds allocated memory. This indicates a bug in memory calculation logic");
+        return pFirstResource;
     }
-
+    WGPUBindGroupEntry* GetFirstWGPUEntryPtr()
+    {
+        WGPUBindGroupEntry* pFirstWGPUEntry = AlignUpPtr(reinterpret_cast<WGPUBindGroupEntry*>(GetFirstResourcePtr() + m_TotalResources));
+        VERIFY(reinterpret_cast<Uint8*>(pFirstWGPUEntry + m_TotalResources) <= m_DbgMemoryEnd,
+               "WGPUBindGroupEntry storage exceeds allocated memory. This indicates a bug in memory calculation logic");
+        return pFirstWGPUEntry;
+    }
+    Uint32* GetInlineConstantDataPtr(Uint32 Offset = 0)
+    {
+        Uint32* pFirstInlineConstantData = AlignUpPtr(reinterpret_cast<Uint32*>(GetFirstWGPUEntryPtr() + m_TotalResources));
+        VERIFY(Offset < m_DbgAssignedInlineConstants.size(), "Offset exceeds allocated inline constant storage");
+        VERIFY(reinterpret_cast<Uint8*>(pFirstInlineConstantData + m_DbgAssignedInlineConstants.size()) <= m_DbgMemoryEnd,
+               "Inline constant storage exceeds allocated memory. This indicates a bug in memory calculation logic");
+        return pFirstInlineConstantData + Offset;
+    }
     BindGroup& GetBindGroup(Uint32 Index)
     {
         VERIFY_EXPR(Index < m_NumBindGroups);
-        return reinterpret_cast<BindGroup*>(m_pMemory.get())[Index];
+        return GetFirstBindGroupPtr()[Index];
     }
 
 private:
@@ -217,14 +294,19 @@ private:
     // The total actual number of dynamic buffers (that were created with USAGE_DYNAMIC) bound in the resource cache
     // regardless of the variable type.
     Uint16 m_NumDynamicBuffers = 0;
-    Uint32 m_TotalResources : 31;
+    Uint32 m_TotalResources : 30;
 
     // Indicates what types of resources are stored in the cache
     const Uint32 m_ContentType : 1;
 
+    // Indicates whether the cache has inline constants
+    Uint32 m_HasInlineConstants : 1;
+
 #ifdef DILIGENT_DEBUG
     // Debug array that stores flags indicating if resources in the cache have been initialized
     std::vector<std::vector<bool>> m_DbgInitializedResources;
+    std::vector<bool>              m_DbgAssignedInlineConstants;
+    Uint8*                         m_DbgMemoryEnd = nullptr;
 #endif
 };
 

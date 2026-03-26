@@ -20,6 +20,12 @@ if(NOT WEBGPU_SUPPORTED)
     )
 endif()
 
+if(NOT ${DILIGENT_USE_SPIRV_TOOLCHAIN} OR ${DILIGENT_NO_GLSLANG})
+    list(REMOVE_ITEM SOURCE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/ShaderTools/SPIRVShaderResourcesTest.cpp
+    )
+endif()
+
 set_source_files_properties(${SHADERS} PROPERTIES VS_TOOL_OVERRIDE "None")
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -56,6 +62,10 @@ PRIVATE
 
 if(WEBGPU_SUPPORTED)
     target_link_libraries(DiligentCoreTest PRIVATE libtint)
+endif()
+
+if (PLATFORM_WIN32)
+    copy_shader_compiler_dlls(DiligentCoreTest DXCOMPILER_FOR_SPIRV YES)
 endif()
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE} ${SHADERS}})

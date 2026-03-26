@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,8 +40,8 @@ namespace
 
 static void TestCreatePRSFailure(PipelineResourceSignatureDesc CI, const char* ExpectedErrorSubstring)
 {
-    auto* const pEnv    = GPUTestingEnvironment::GetInstance();
-    auto* const pDevice = pEnv->GetDevice();
+    GPUTestingEnvironment* const pEnv    = GPUTestingEnvironment::GetInstance();
+    IRenderDevice* const         pDevice = pEnv->GetDevice();
 
     RefCntAutoPtr<IPipelineResourceSignature> pSignature;
     pEnv->SetErrorAllowance(2, "Errors below are expected: testing PRS creation failure\n");
@@ -166,7 +166,7 @@ TEST(PRSCreationFailureTest, InvalidResourceFlag)
         {SHADER_TYPE_VERTEX, "g_Buffer", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC, PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER | PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER}};
     PRSDesc.Resources    = Resources;
     PRSDesc.NumResources = _countof(Resources);
-    TestCreatePRSFailure(PRSDesc, "Incorrect Desc.Resources[1].Flags (COMBINED_SAMPLER|FORMATTED_BUFFER). Only the following flags are valid for a constant buffer: NO_DYNAMIC_BUFFERS, RUNTIME_ARRAY");
+    TestCreatePRSFailure(PRSDesc, "Incorrect Desc.Resources[1].Flags (COMBINED_SAMPLER|FORMATTED_BUFFER). Only the following flags are valid for a constant buffer: NO_DYNAMIC_BUFFERS, INLINE_CONSTANTS, RUNTIME_ARRAY");
 }
 
 TEST(PRSCreationFailureTest, InvalidTexSRVFlag)
@@ -255,7 +255,7 @@ TEST(PRSCreationFailureTest, InvalidAccelStructFlag)
 
 TEST(PRSCreationFailureTest, InvalidCombinedSamplerFlag)
 {
-    const auto& DeviceInfo = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
+    const RenderDeviceInfo& DeviceInfo = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
     if (!(DeviceInfo.IsD3DDevice() || DeviceInfo.IsMetalDevice()))
     {
         GTEST_SKIP() << "Direct3D11, Direct3D12 and Metal only";
@@ -269,6 +269,30 @@ TEST(PRSCreationFailureTest, InvalidCombinedSamplerFlag)
     PRSDesc.Resources    = Resources;
     PRSDesc.NumResources = _countof(Resources);
     TestCreatePRSFailure(PRSDesc, "Desc.Resources[0].Flags contain COMBINED_SAMPLER flag, but Desc.UseCombinedTextureSamplers is false");
+}
+
+TEST(PRSCreationFailureTest, InvalidInlineConstantsFlag)
+{
+    PipelineResourceSignatureDesc PRSDesc;
+    PRSDesc.Name                       = "Invalid inline constants Flag";
+    PRSDesc.UseCombinedTextureSamplers = false;
+    PipelineResourceDesc Resources[]{
+        {SHADER_TYPE_PIXEL, "g_InlineConstants", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC, PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS | PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS}};
+    PRSDesc.Resources    = Resources;
+    PRSDesc.NumResources = _countof(Resources);
+    TestCreatePRSFailure(PRSDesc, "INLINE_CONSTANTS flag cannot be combined with other flags");
+}
+
+TEST(PRSCreationFailureTest, InvalidInlineConstantCount)
+{
+    PipelineResourceSignatureDesc PRSDesc;
+    PRSDesc.Name                       = "Invalid inline constant count";
+    PRSDesc.UseCombinedTextureSamplers = false;
+    PipelineResourceDesc Resources[]{
+        {SHADER_TYPE_PIXEL, "g_InlineConstants", 65, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC, PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS}};
+    PRSDesc.Resources    = Resources;
+    PRSDesc.NumResources = _countof(Resources);
+    TestCreatePRSFailure(PRSDesc, "Desc.Resources[0].ArraySize (65) exceeds the maximum allowed value (64) for inline constants.");
 }
 
 TEST(PRSCreationFailureTest, InvalidAssignedSamplerResourceType)

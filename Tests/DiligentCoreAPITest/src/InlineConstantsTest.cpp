@@ -1,0 +1,1480 @@
+/*
+ *  Copyright 2025-2026 Diligent Graphics LLC
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
+ *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
+ *  of the possibility of such damages.
+ */
+
+#include "GPUTestingEnvironment.hpp"
+#include "TestingSwapChainBase.hpp"
+
+#include "gtest/gtest.h"
+
+#include "RenderStateCache.hpp"
+#include "GraphicsTypesX.hpp"
+#include "FastRand.hpp"
+#include "MapHelper.hpp"
+
+
+namespace Diligent
+{
+namespace Testing
+{
+void RenderDrawCommandReference(ISwapChain* pSwapChain, const float* pClearColor = nullptr);
+void ComputeShaderReference(ISwapChain* pSwapChain);
+} // namespace Testing
+} // namespace Diligent
+
+
+using namespace Diligent;
+using namespace Diligent::Testing;
+
+namespace
+{
+
+namespace HLSL
+{
+
+const std::string InlineConstantsTest_VS{
+    R"(
+cbuffer cbInlinePositions
+{
+    float4 g_Positions[6];
+}
+
+cbuffer cbInlineColors
+{
+    float4 g_Colors[3];
+}
+
+struct PSInput
+{
+    float4 Pos   : SV_POSITION;
+    float3 Color : COLOR;
+};
+
+void main(uint VertexId : SV_VertexId, 
+          out  PSInput  PSIn)
+{
+    PSIn.Pos   = g_Positions[VertexId];
+    PSIn.Color = g_Colors[VertexId % 3].rgb;
+}
+)"};
+
+const std::string InlineConstantsTest_PS{
+    R"(
+struct PSInput
+{
+    float4 Pos   : SV_POSITION;
+    float3 Color : COLOR;
+};
+
+cbuffer cbInlineColors
+{
+    float4 g_Colors[3];
+}
+
+float4 main(in PSInput PSIn) : SV_Target
+{
+    float3 Color = PSIn.Color.rgb;
+    Color.r *= g_Colors[0].a;
+    Color.g *= g_Colors[1].a;
+    Color.b *= g_Colors[2].a;
+    return float4(Color, 1.0);
+}
+)"};
+
+const std::string VulkanPushConstants_VS{
+    R"(
+struct PushConstants_t
+{
+    float4 g_Positions[6];
+    // Make VS push constant size smaller than PS
+};
+
+[[vk::push_constant]] ConstantBuffer<PushConstants_t> PushConstants;
+
+struct PSInput
+{
+    float4 Pos   : SV_POSITION;
+    float4 Color : COLOR;
+};
+
+void main(uint VertexId : SV_VertexId, out PSInput PSIn)
+{
+    float4 Colors[3];
+    Colors[0] = float4(1.0, 0.0, 0.0, 1.0);
+    Colors[1] = float4(0.0, 1.0, 0.0, 1.0);
+    Colors[2] = float4(0.0, 0.0, 1.0, 1.0);
+    PSIn.Pos = PushConstants.g_Positions[VertexId];
+    PSIn.Color = Colors[VertexId % 3];
+}
+)"};
+
+const std::string VulkanPushConstants_PS{
+    R"(
+struct PushConstants_t
+{
+    float4 g_Positions[6];
+    float4 g_Colors[3]; // Make PS push constant size larger than VS
+};
+
+[[vk::push_constant]] ConstantBuffer<PushConstants_t> PushConstants;
+
+struct PSInput
+{
+    float4 Pos   : SV_POSITION;
+    float4 Color : COLOR;
+};
+
+float4 main(in PSInput PSIn) : SV_Target
+{
+    return float4(
+        PSIn.Color.r * PushConstants.g_Colors[0].r,
+        PSIn.Color.g * PushConstants.g_Colors[1].g,
+        PSIn.Color.b * PushConstants.g_Colors[2].b,
+        PSIn.Color.a);
+}
+)"};
+
+const std::string InlineConstantsTest_CS{
+    R"(
+cbuffer cbInlineData
+{
+    float4 g_Data[4];
+}
+
+#ifndef VK_IMAGE_FORMAT
+#   define VK_IMAGE_FORMAT(x)
+#endif
+
+VK_IMAGE_FORMAT("rgba8") RWTexture2D</*format=rgba8*/ float4> g_Output;
+
+[numthreads(16, 16, 1)]
+void main(uint3 DTid : SV_DispatchThreadID)
+{
+    float4 Color = float4(float2(DTid.xy % 256u) / 256.0, 0.0, 1.0);
+    Color *= (g_Data[0] + g_Data[1] + g_Data[2]) * g_Data[3];
+    g_Output[DTid.xy] = Color;
+}
+)"};
+
+
+const std::string DifferentSizesAcrossStages_VS{
+    R"(
+cbuffer cbInlineConstants
+{
+    float4 g_Positions[6];
+}
+
+struct PSInput
+{
+    float4 Pos   : SV_POSITION;
+    float3 Color : COLOR;
+};
+
+void main(uint VertexId : SV_VertexId, 
+          out  PSInput  PSIn)
+{
+    float3 Colors[3];
+    Colors[0] = float3(1.0, 0.0, 0.0);
+    Colors[1] = float3(0.0, 1.0, 0.0);
+    Colors[2] = float3(0.0, 0.0, 1.0);
+
+    PSIn.Pos   = g_Positions[VertexId];
+    PSIn.Color = Colors[VertexId % 3].rgb;
+}
+)"};
+
+const std::string DifferentSizesAcrossStages_PS{
+    R"(
+struct PSInput
+{
+    float4 Pos   : SV_POSITION;
+    float3 Color : COLOR;
+};
+
+cbuffer cbInlineConstants
+{
+    float4 g_Positions[6];
+    float4 g_ColorFactor;
+}
+
+float4 main(in PSInput PSIn) : SV_Target
+{
+    float3 Color = PSIn.Color.rgb * g_ColorFactor.rgb;
+    return float4(Color, 1.0);
+}
+)"};
+
+
+} // namespace HLSL
+
+float4 g_Positions[] = {
+    float4{-1.0f, -0.5f, 0.f, 1.f},
+    float4{-0.5f, +0.5f, 0.f, 1.f},
+    float4{0.0f, -0.5f, 0.f, 1.f},
+
+    float4{+0.0f, -0.5f, 0.f, 1.f},
+    float4{+0.5f, +0.5f, 0.f, 1.f},
+    float4{+1.0f, -0.5f, 0.f, 1.f},
+};
+
+float4 g_Colors[] = {
+    float4{1.f, 0.f, 0.f, 1.f},
+    float4{0.f, 1.f, 0.f, 1.f},
+    float4{0.f, 0.f, 1.f, 1.f},
+};
+
+float4 g_ComputeData[] = {
+    float4{1.f, 0.f, 0.f, 0.f},
+    float4{0.f, 1.f, 0.f, 0.f},
+    float4{0.f, 0.f, 1.f, 1.f},
+    float4{1.f, 1.f, 1.f, 1.f},
+};
+
+constexpr Uint32 kNumPosConstants     = sizeof(g_Positions) / 4;
+constexpr Uint32 kNumColConstants     = sizeof(g_Colors) / 4;
+constexpr Uint32 kNumComputeConstants = sizeof(g_ComputeData) / 4;
+
+class InlineConstants : public ::testing::Test
+{
+protected:
+    static void SetUpTestSuite()
+    {
+        GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
+        IRenderDevice*         pDevice = pEnv->GetDevice();
+
+        ShaderCreateInfo ShaderCI;
+        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+        ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+
+        {
+            ShaderCI.Desc       = {"Inline constants test", SHADER_TYPE_VERTEX, true};
+            ShaderCI.EntryPoint = "main";
+            ShaderCI.Source     = HLSL::InlineConstantsTest_VS.c_str();
+            pDevice->CreateShader(ShaderCI, &sm_Res.pVS);
+            ASSERT_NE(sm_Res.pVS, nullptr);
+        }
+
+        {
+            ShaderCI.Desc       = {"Inline constants test", SHADER_TYPE_PIXEL, true};
+            ShaderCI.EntryPoint = "main";
+            ShaderCI.Source     = HLSL::InlineConstantsTest_PS.c_str();
+            pDevice->CreateShader(ShaderCI, &sm_Res.pPS);
+            ASSERT_NE(sm_Res.pPS, nullptr);
+        }
+    }
+
+    static void TearDownTestSuite()
+    {
+        sm_Res = {};
+
+        GPUTestingEnvironment* pEnv = GPUTestingEnvironment::GetInstance();
+        pEnv->Reset();
+    }
+
+    static void TestSignatures(Uint32 NumSignatures);
+
+    static void Present()
+    {
+        GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
+        ISwapChain*            pSwapChain = pEnv->GetSwapChain();
+        IDeviceContext*        pContext   = pEnv->GetDeviceContext();
+
+        pSwapChain->Present();
+
+        pContext->Flush();
+        pContext->InvalidateState();
+    }
+
+    static void VerifyPSOFromCache(IPipelineState*         pPSO,
+                                   IShaderResourceBinding* pSRB);
+
+    struct Resources
+    {
+        RefCntAutoPtr<IShader> pVS;
+        RefCntAutoPtr<IShader> pPS;
+    };
+    static Resources sm_Res;
+
+    static FastRandFloat sm_Rnd;
+};
+
+InlineConstants::Resources InlineConstants::sm_Res;
+FastRandFloat              InlineConstants::sm_Rnd{0, 0.f, 1.f};
+
+
+TEST_F(InlineConstants, ResourceLayout1)
+{
+    GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice    = pEnv->GetDevice();
+    IDeviceContext*        pContext   = pEnv->GetDeviceContext();
+    ISwapChain*            pSwapChain = pEnv->GetSwapChain();
+
+    RefCntAutoPtr<IBuffer> pColBuffer = pEnv->CreateBuffer(
+        BufferDesc{
+            "Color buffer",
+            sizeof(g_Colors),
+            BIND_UNIFORM_BUFFER,
+            USAGE_DEFAULT,
+        },
+        g_Colors);
+    ASSERT_TRUE(pColBuffer);
+
+    for (Uint32 pos_type = 0; pos_type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++pos_type)
+    {
+        const float ClearColor[] = {sm_Rnd(), sm_Rnd(), sm_Rnd(), sm_Rnd()};
+        RenderDrawCommandReference(pSwapChain, ClearColor);
+
+        SHADER_RESOURCE_VARIABLE_TYPE PosType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(pos_type);
+
+        GraphicsPipelineStateCreateInfoX PsoCI{"Inline constants test"};
+
+        PipelineResourceLayoutDescX ResLayoutDesc;
+        ResLayoutDesc
+            .AddVariable(SHADER_TYPE_VERTEX, "cbInlinePositions", PosType, SHADER_VARIABLE_FLAG_INLINE_CONSTANTS)
+            .AddVariable(SHADER_TYPE_VS_PS, "cbInlineColors", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
+
+        PsoCI
+            .AddRenderTarget(pSwapChain->GetDesc().ColorBufferFormat)
+            .SetPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+            .AddShader(sm_Res.pVS)
+            .AddShader(sm_Res.pPS)
+            .SetResourceLayout(ResLayoutDesc)
+            .SetSRBAllocationGranularity(4);
+        PsoCI.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+        RefCntAutoPtr<IPipelineState> pPSO;
+        pDevice->CreateGraphicsPipelineState(PsoCI, &pPSO);
+        ASSERT_TRUE(pPSO);
+
+        if (PosType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+        {
+            IShaderResourceVariable* pVar = pPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "cbInlinePositions");
+            ASSERT_TRUE(pVar);
+            pVar->SetInlineConstants(g_Positions, 0, kNumPosConstants);
+        }
+
+        RefCntAutoPtr<IShaderResourceBinding> pSRB;
+        pPSO->CreateShaderResourceBinding(&pSRB, true);
+        ASSERT_TRUE(pSRB);
+
+        IShaderResourceVariable* pPosVar = nullptr;
+        if (PosType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+        {
+            pPosVar = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlinePositions");
+            ASSERT_TRUE(pPosVar);
+        }
+
+        {
+            IShaderResourceVariable* pColVar = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlineColors");
+            ASSERT_TRUE(pColVar);
+            pColVar->Set(pColBuffer);
+        }
+
+        ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+        pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+        pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pContext->SetPipelineState(pPSO);
+
+        if (pPosVar == nullptr)
+        {
+            // Draw both triangles as positions are static
+            pContext->Draw({6, DRAW_FLAG_VERIFY_ALL});
+        }
+        else
+        {
+            // Draw first triangle
+            pPosVar->SetInlineConstants(g_Positions, 0, kNumPosConstants / 2);
+            pContext->Draw({3, DRAW_FLAG_VERIFY_ALL});
+
+            // Draw second triangle
+            pPosVar->SetInlineConstants(g_Positions[0].Data() + kNumPosConstants / 2, 0, kNumPosConstants / 2);
+            pContext->Draw({3, DRAW_FLAG_VERIFY_ALL | DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT});
+        }
+
+        Present();
+
+        std::cout << TestingEnvironment::GetCurrentTestStatusString() << ' '
+                  << " Pos " << GetShaderVariableTypeLiteralName(PosType) << std::endl;
+    }
+}
+
+
+TEST_F(InlineConstants, ResourceLayout2)
+{
+    GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice    = pEnv->GetDevice();
+    IDeviceContext*        pContext   = pEnv->GetDeviceContext();
+    ISwapChain*            pSwapChain = pEnv->GetSwapChain();
+
+    for (Uint32 pos_type = 0; pos_type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++pos_type)
+    {
+        for (Uint32 col_type = 0; col_type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++col_type)
+        {
+            const float ClearColor[] = {sm_Rnd(), sm_Rnd(), sm_Rnd(), sm_Rnd()};
+            RenderDrawCommandReference(pSwapChain, ClearColor);
+
+            SHADER_RESOURCE_VARIABLE_TYPE PosType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(pos_type);
+            SHADER_RESOURCE_VARIABLE_TYPE ColType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(col_type);
+
+            GraphicsPipelineStateCreateInfoX PsoCI{"Inline constants test"};
+
+            PipelineResourceLayoutDescX ResLayoutDesc;
+            ResLayoutDesc
+                .AddVariable(SHADER_TYPE_VERTEX, "cbInlinePositions", PosType, SHADER_VARIABLE_FLAG_INLINE_CONSTANTS)
+                .AddVariable(SHADER_TYPE_VS_PS, "cbInlineColors", ColType, SHADER_VARIABLE_FLAG_INLINE_CONSTANTS);
+
+            PsoCI
+                .AddRenderTarget(pSwapChain->GetDesc().ColorBufferFormat)
+                .SetPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+                .AddShader(sm_Res.pVS)
+                .AddShader(sm_Res.pPS)
+                .SetResourceLayout(ResLayoutDesc)
+                .SetSRBAllocationGranularity(4);
+            PsoCI.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+            RefCntAutoPtr<IPipelineState> pPSO;
+            pDevice->CreateGraphicsPipelineState(PsoCI, &pPSO);
+            ASSERT_TRUE(pPSO);
+
+            if (PosType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            {
+                IShaderResourceVariable* pVar = pPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "cbInlinePositions");
+                ASSERT_TRUE(pVar);
+                pVar->SetInlineConstants(g_Positions, 0, kNumPosConstants);
+            }
+
+            if (ColType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            {
+                IShaderResourceVariable* pVar = pPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "cbInlineColors");
+                ASSERT_TRUE(pVar);
+                pVar->SetInlineConstants(g_Colors, 0, kNumColConstants);
+            }
+
+            RefCntAutoPtr<IShaderResourceBinding> pSRB;
+            pPSO->CreateShaderResourceBinding(&pSRB, true);
+            ASSERT_TRUE(pSRB);
+
+            IShaderResourceVariable* pPosVar = nullptr;
+            if (PosType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            {
+                pPosVar = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlinePositions");
+                ASSERT_TRUE(pPosVar);
+            }
+
+            IShaderResourceVariable* pColVarVS = nullptr;
+            IShaderResourceVariable* pColVarPS = nullptr;
+            if (ColType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            {
+                pColVarVS = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlineColors");
+                ASSERT_TRUE(pColVarVS);
+                pColVarPS = pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "cbInlineColors");
+                ASSERT_TRUE(pColVarPS);
+            }
+
+            ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+            pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+            pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+
+            if (pColVarVS != nullptr)
+            {
+                // Set first half of color constants before committing SRB
+                pColVarVS->SetInlineConstants(g_Colors, 0, kNumColConstants / 2);
+            }
+
+            pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+            if (pColVarPS != nullptr)
+            {
+                // Set second half of color constants after committing SRB
+                pColVarPS->SetInlineConstants(g_Colors[0].Data() + kNumColConstants / 2, kNumColConstants / 2, kNumColConstants / 2);
+            }
+
+            pContext->SetPipelineState(pPSO);
+
+            if (pPosVar == nullptr)
+            {
+                // Draw both triangles as positions are static
+                pContext->Draw({6, DRAW_FLAG_VERIFY_ALL});
+            }
+            else
+            {
+                // Draw first triangle
+                pPosVar->SetInlineConstants(g_Positions, 0, kNumPosConstants / 2);
+                pContext->Draw({3, DRAW_FLAG_VERIFY_ALL});
+
+                // Draw second triangle
+                pPosVar->SetInlineConstants(g_Positions[0].Data() + kNumPosConstants / 2, 0, kNumPosConstants / 2);
+                pContext->Draw({3, DRAW_FLAG_VERIFY_ALL | DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT});
+            }
+
+            Present();
+
+            std::cout << TestingEnvironment::GetCurrentTestStatusString() << ' '
+                      << " Pos " << GetShaderVariableTypeLiteralName(PosType) << ','
+                      << " Col " << GetShaderVariableTypeLiteralName(ColType) << std::endl;
+        }
+    }
+}
+
+
+TEST_F(InlineConstants, ComputeResourceLayout)
+{
+    GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice    = pEnv->GetDevice();
+    IDeviceContext*        pContext   = pEnv->GetDeviceContext();
+    ISwapChain*            pSwapChain = pEnv->GetSwapChain();
+
+    // Check compute shader support
+    if (!pDevice->GetDeviceInfo().Features.ComputeShaders)
+    {
+        GTEST_SKIP() << "Compute shaders are not supported by this device";
+    }
+
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
+    if (!pTestingSwapChain)
+    {
+        GTEST_SKIP() << "Compute shader test requires testing swap chain";
+    }
+
+    const SwapChainDesc& SCDesc = pSwapChain->GetDesc();
+
+    // Create compute shader
+    RefCntAutoPtr<IShader> pCS;
+    {
+        ShaderCreateInfo ShaderCI;
+        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+        ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+        ShaderCI.Desc           = {"Inline constants compute test", SHADER_TYPE_COMPUTE, true};
+        ShaderCI.EntryPoint     = "main";
+        ShaderCI.Source         = HLSL::InlineConstantsTest_CS.c_str();
+        ShaderCI.CompileFlags   = SHADER_COMPILE_FLAG_HLSL_TO_SPIRV_VIA_GLSL;
+        pDevice->CreateShader(ShaderCI, &pCS);
+        ASSERT_NE(pCS, nullptr);
+    }
+
+    ITextureView* pOutputUAV = pTestingSwapChain->GetCurrentBackBufferUAV();
+    ASSERT_NE(pOutputUAV, nullptr);
+
+    for (Uint32 resType = 0; resType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++resType)
+    {
+        ComputeShaderReference(pSwapChain);
+
+        SHADER_RESOURCE_VARIABLE_TYPE ResType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(resType);
+
+        // Create PSO with inline constants
+        ComputePipelineStateCreateInfoX PsoCI{"Inline constants compute test"};
+
+        PipelineResourceLayoutDescX ResLayoutDesc;
+        ResLayoutDesc.AddVariable(SHADER_TYPE_COMPUTE, "cbInlineData", ResType, SHADER_VARIABLE_FLAG_INLINE_CONSTANTS);
+
+        PsoCI
+            .AddShader(pCS)
+            .SetResourceLayout(ResLayoutDesc)
+            .SetSRBAllocationGranularity(4);
+
+        RefCntAutoPtr<IPipelineState> pPSO;
+        pDevice->CreateComputePipelineState(PsoCI, &pPSO);
+        ASSERT_TRUE(pPSO);
+
+        // Set static inline constants on PSO before creating SRB
+        if (ResType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+        {
+            IShaderResourceVariable* pInlineDataVar = pPSO->GetStaticVariableByName(SHADER_TYPE_COMPUTE, "cbInlineData");
+            ASSERT_NE(pInlineDataVar, nullptr);
+            pInlineDataVar->SetInlineConstants(g_ComputeData, 0, kNumComputeConstants);
+        }
+
+        {
+            IShaderResourceVariable* pOutputVar = pPSO->GetStaticVariableByName(SHADER_TYPE_COMPUTE, "g_Output");
+            ASSERT_NE(pOutputVar, nullptr);
+            pOutputVar->Set(pOutputUAV);
+        }
+
+        // Create SRB
+        RefCntAutoPtr<IShaderResourceBinding> pSRB;
+        pPSO->CreateShaderResourceBinding(&pSRB, true);
+        ASSERT_TRUE(pSRB);
+
+        // Set mutable/dynamic inline constants on SRB
+        IShaderResourceVariable* pDataVar = nullptr;
+        if (ResType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+        {
+            pDataVar = pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "cbInlineData");
+            ASSERT_NE(pDataVar, nullptr);
+        }
+
+        pContext->SetPipelineState(pPSO);
+
+        if (pDataVar != nullptr)
+        {
+            // Set first half of constants before committing SRB
+            pDataVar->SetInlineConstants(g_ComputeData, 0, kNumComputeConstants / 2);
+        }
+
+        pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+        if (pDataVar != nullptr)
+        {
+            // Set second half of constants after committing SRB
+            pDataVar->SetInlineConstants(g_ComputeData[0].Data() + kNumComputeConstants / 2, kNumComputeConstants / 2, kNumComputeConstants / 2);
+        }
+
+        // Dispatch
+        DispatchComputeAttribs DispatchAttribs;
+        DispatchAttribs.ThreadGroupCountX = (SCDesc.Width + 15) / 16;
+        DispatchAttribs.ThreadGroupCountY = (SCDesc.Height + 15) / 16;
+        pContext->DispatchCompute(DispatchAttribs);
+
+        Present();
+
+        std::cout << TestingEnvironment::GetCurrentTestStatusString() << ' '
+                  << " ResType " << GetShaderVariableTypeLiteralName(ResType) << std::endl;
+    }
+}
+
+
+void InlineConstants::TestSignatures(Uint32 NumSignatures)
+{
+    GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice    = pEnv->GetDevice();
+    IDeviceContext*        pContext   = pEnv->GetDeviceContext();
+    ISwapChain*            pSwapChain = pEnv->GetSwapChain();
+
+    RefCntAutoPtr<IBuffer> pConstBuffer = pEnv->CreateBuffer({"InlineConstants - dummy const buffer", 256, BIND_UNIFORM_BUFFER});
+    ASSERT_TRUE(pConstBuffer);
+    RefCntAutoPtr<ITexture> pTexture = pEnv->CreateTexture("InlineConstants - dummy texture", TEX_FORMAT_RGBA8_UNORM, BIND_SHADER_RESOURCE, 64, 64);
+    ASSERT_TRUE(pTexture);
+    ITextureView* pTexSRV = pTexture->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
+    ASSERT_TRUE(pTexSRV);
+
+    for (Uint32 pos_type = 0; pos_type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++pos_type)
+    {
+        for (Uint32 col_type = 0; col_type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++col_type)
+        {
+            const float ClearColor[] = {sm_Rnd(), sm_Rnd(), sm_Rnd(), sm_Rnd()};
+            RenderDrawCommandReference(pSwapChain, ClearColor);
+
+            SHADER_RESOURCE_VARIABLE_TYPE PosType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(pos_type);
+            SHADER_RESOURCE_VARIABLE_TYPE ColType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(col_type);
+
+            RefCntAutoPtr<IPipelineResourceSignature> pPosSign;
+            RefCntAutoPtr<IPipelineResourceSignature> pColSign;
+
+            PipelineResourceSignatureDescX SignDesc{"Inline constants test"};
+            SignDesc
+                .AddResource(SHADER_TYPE_VERTEX, "cb0_stat", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC, PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS)
+                .AddResource(SHADER_TYPE_VERTEX, "cb0_mut", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
+                .AddResource(SHADER_TYPE_VERTEX, "cb0_dyn", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+                .AddResource(SHADER_TYPE_VERTEX, "tex0_stat", SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+                .AddResource(SHADER_TYPE_VERTEX, "tex0_mut", SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
+                .AddResource(SHADER_TYPE_VERTEX, "tex0_dyn", SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+
+                .AddResource(SHADER_TYPE_VERTEX, "cbInlinePositions", kNumPosConstants, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, PosType, PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS);
+
+            SignDesc.SetSRBAllocationGranularity(4);
+
+            if (NumSignatures == 2)
+            {
+                pDevice->CreatePipelineResourceSignature(SignDesc, &pPosSign);
+                ASSERT_TRUE(pPosSign);
+
+                SignDesc.Clear();
+                SignDesc.Name         = "Inline constants test 2";
+                SignDesc.BindingIndex = 1;
+            }
+
+            SignDesc.AddResource(SHADER_TYPE_VERTEX, "cb1_stat", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC, PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS)
+                .AddResource(SHADER_TYPE_VERTEX, "cb1_mut", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
+                .AddResource(SHADER_TYPE_VERTEX, "cb1_dyn", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+                .AddResource(SHADER_TYPE_VERTEX, "tex1_stat", SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+                .AddResource(SHADER_TYPE_VERTEX, "tex1_mut", SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
+                .AddResource(SHADER_TYPE_VERTEX, "tex1_dyn", SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+
+                .AddResource(SHADER_TYPE_VS_PS, "cbInlineColors", kNumColConstants, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, ColType, PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
+
+                .AddResource(SHADER_TYPE_VERTEX, "cb2_stat", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC, PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS)
+                .AddResource(SHADER_TYPE_VERTEX, "cb2_mut", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
+                .AddResource(SHADER_TYPE_VERTEX, "cb2_dyn", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+                .AddResource(SHADER_TYPE_VERTEX, "tex2_stat", SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+                .AddResource(SHADER_TYPE_VERTEX, "tex2_mut", SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
+                .AddResource(SHADER_TYPE_VERTEX, "tex2_dyn", SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
+
+            if (NumSignatures == 1)
+            {
+                pDevice->CreatePipelineResourceSignature(SignDesc, &pPosSign);
+                ASSERT_TRUE(pPosSign);
+                pColSign = pPosSign;
+            }
+            else if (NumSignatures == 2)
+            {
+                pDevice->CreatePipelineResourceSignature(SignDesc, &pColSign);
+                ASSERT_TRUE(pColSign);
+            }
+            else
+            {
+                GTEST_FAIL() << "Invalid number of signatures: " << NumSignatures;
+            }
+
+            pPosSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "cb0_stat")->Set(pConstBuffer);
+            pPosSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "tex0_stat")->Set(pTexSRV);
+            pColSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "cb1_stat")->Set(pConstBuffer);
+            pColSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "tex1_stat")->Set(pTexSRV);
+            pColSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "cb2_stat")->Set(pConstBuffer);
+            pColSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "tex2_stat")->Set(pTexSRV);
+
+            GraphicsPipelineStateCreateInfoX PsoCI{"Inline constants test"};
+            PsoCI
+                .AddRenderTarget(pSwapChain->GetDesc().ColorBufferFormat)
+                .SetPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+                .AddShader(sm_Res.pVS)
+                .AddShader(sm_Res.pPS)
+                .AddSignature(pPosSign);
+            if (NumSignatures == 2)
+            {
+                PsoCI.AddSignature(pColSign);
+            }
+            PsoCI.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+            RefCntAutoPtr<IPipelineState> pPSO;
+            pDevice->CreateGraphicsPipelineState(PsoCI, &pPSO);
+            ASSERT_TRUE(pPSO);
+
+            if (PosType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            {
+                IShaderResourceVariable* pVar = pPosSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "cbInlinePositions");
+                ASSERT_TRUE(pVar);
+                pVar->SetInlineConstants(g_Positions, 0, kNumPosConstants);
+            }
+
+            if (ColType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            {
+                IShaderResourceVariable* pVar = pColSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "cbInlineColors");
+                ASSERT_TRUE(pVar);
+                pVar->SetInlineConstants(g_Colors, 0, kNumColConstants);
+            }
+
+            RefCntAutoPtr<IShaderResourceBinding> pPosSRB;
+            pPosSign->CreateShaderResourceBinding(&pPosSRB, true);
+            ASSERT_TRUE(pPosSRB);
+
+            RefCntAutoPtr<IShaderResourceBinding> pColSRB;
+            if (NumSignatures == 1)
+            {
+                pColSRB = pPosSRB;
+            }
+            else if (NumSignatures == 2)
+            {
+                pColSign->CreateShaderResourceBinding(&pColSRB, true);
+                ASSERT_TRUE(pColSRB);
+            }
+
+            pPosSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cb0_mut")->Set(pConstBuffer);
+            pPosSRB->GetVariableByName(SHADER_TYPE_VERTEX, "tex0_mut")->Set(pTexSRV);
+            pColSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cb1_mut")->Set(pConstBuffer);
+            pColSRB->GetVariableByName(SHADER_TYPE_VERTEX, "tex1_mut")->Set(pTexSRV);
+            pColSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cb2_mut")->Set(pConstBuffer);
+            pColSRB->GetVariableByName(SHADER_TYPE_VERTEX, "tex2_mut")->Set(pTexSRV);
+            pPosSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cb0_dyn")->Set(pConstBuffer);
+            pPosSRB->GetVariableByName(SHADER_TYPE_VERTEX, "tex0_dyn")->Set(pTexSRV);
+            pColSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cb1_dyn")->Set(pConstBuffer);
+            pColSRB->GetVariableByName(SHADER_TYPE_VERTEX, "tex1_dyn")->Set(pTexSRV);
+            pColSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cb2_dyn")->Set(pConstBuffer);
+            pColSRB->GetVariableByName(SHADER_TYPE_VERTEX, "tex2_dyn")->Set(pTexSRV);
+
+            IShaderResourceVariable* pPosVar = nullptr;
+            if (PosType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            {
+                pPosVar = pPosSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlinePositions");
+                ASSERT_TRUE(pPosVar);
+            }
+
+            IShaderResourceVariable* pColVarVS = nullptr;
+            IShaderResourceVariable* pColVarPS = nullptr;
+            if (ColType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            {
+                pColVarVS = pColSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlineColors");
+                ASSERT_TRUE(pColVarVS);
+                pColVarPS = pColSRB->GetVariableByName(SHADER_TYPE_PIXEL, "cbInlineColors");
+                ASSERT_TRUE(pColVarPS);
+            }
+
+            ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+            pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+            pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+
+            if (pColVarVS != nullptr)
+            {
+                // Set first half of color constants before committing SRB
+                pColVarVS->SetInlineConstants(g_Colors, 0, kNumColConstants / 2);
+            }
+
+            pContext->CommitShaderResources(pPosSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+            if (NumSignatures == 2)
+            {
+                pContext->TransitionShaderResources(pColSRB);
+                pContext->CommitShaderResources(pColSRB, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+            }
+
+            if (pColVarPS != nullptr)
+            {
+                // Set second half of color constants after committing SRB
+                pColVarPS->SetInlineConstants(g_Colors[0].Data() + kNumColConstants / 2, kNumColConstants / 2, kNumColConstants / 2);
+            }
+
+            pContext->SetPipelineState(pPSO);
+
+            if (pPosVar == nullptr)
+            {
+                // Draw both triangles as positions are static
+                pContext->Draw({6, DRAW_FLAG_VERIFY_ALL});
+            }
+            else
+            {
+                // Draw first triangle
+                pPosVar->SetInlineConstants(g_Positions, 0, kNumPosConstants / 2);
+                pContext->Draw({3, DRAW_FLAG_VERIFY_ALL});
+
+                // Draw second triangle
+                pPosVar->SetInlineConstants(g_Positions[0].Data() + kNumPosConstants / 2, 0, kNumPosConstants / 2);
+                pContext->Draw({3, DRAW_FLAG_VERIFY_ALL});
+            }
+
+            Present();
+
+            std::cout << TestingEnvironment::GetCurrentTestStatusString() << ' '
+                      << " Pos " << GetShaderVariableTypeLiteralName(PosType) << ','
+                      << " Col " << GetShaderVariableTypeLiteralName(ColType) << std::endl;
+        }
+    }
+}
+
+TEST_F(InlineConstants, ResourceSignature)
+{
+    TestSignatures(1);
+}
+
+TEST_F(InlineConstants, TwoResourceSignatures)
+{
+    TestSignatures(2);
+}
+
+// Test for "Inline Constants Cross-Signature Commit Inconsistency" fix.
+//
+// This test verifies that inline constants work correctly when an SRB created
+// from one signature is used with a PSO created from a different but compatible
+// signature instance.
+//
+// Bug scenario:
+// 1. PSO is created with Signature A
+// 2. SRB is created from Signature B (compatible but different instance)
+// 3. Inline constants are set through SRB
+// 4. BindResources() binds buffers from SRB cache (pointing to Signature B's buffers)
+// 5. BUG (fixed): UpdateInlineConstantBuffers() was updating Signature A's buffers
+//    instead of the buffers from SRB cache
+//
+// The fix ensures that UpdateInlineConstantBuffers() updates the buffer from
+// SRB cache - the same buffer that was bound during BindResources().
+//
+// In Vulkan, only the first inline constant uses push constants (always works).
+// The second inline constant uses buffer-emulated path where this bug manifested.
+// Therefore, this test uses TWO inline constant buffers to ensure we test both paths.
+TEST_F(InlineConstants, CrossSignatureSRB)
+{
+    GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice    = pEnv->GetDevice();
+    IDeviceContext*        pContext   = pEnv->GetDeviceContext();
+    ISwapChain*            pSwapChain = pEnv->GetSwapChain();
+
+    const float ClearColor[] = {sm_Rnd(), sm_Rnd(), sm_Rnd(), sm_Rnd()};
+    RenderDrawCommandReference(pSwapChain, ClearColor);
+
+    // Create TWO IDENTICAL but SEPARATE signature instances.
+    // This is the key to reproducing the cross-signature issue:
+    // - pSign1 and pSign2 are compatible (same resources)
+    // - But they are different instances with separate internal buffers
+    RefCntAutoPtr<IPipelineResourceSignature> pSign1, pSign2;
+
+    PipelineResourceSignatureDescX SignDesc{"Cross-Signature Test 1"};
+    SignDesc
+        // First inline constant (Vulkan: push constants path)
+        .AddResource(SHADER_TYPE_VS_PS, "cbInlineColors", kNumColConstants,
+                     SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE,
+                     PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
+        // Second inline constant (Vulkan: buffer-emulated path - where the bug was)
+        .AddResource(SHADER_TYPE_VERTEX, "cbInlinePositions", kNumPosConstants,
+                     SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE,
+                     PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS);
+
+    // Create first signature instance
+    pDevice->CreatePipelineResourceSignature(SignDesc, &pSign1);
+    ASSERT_TRUE(pSign1);
+
+    // Create second signature instance with identical descriptor.
+    // This creates a separate instance with its own internal buffers.
+    SignDesc.SetName("Cross-Signature Test 2");
+    pDevice->CreatePipelineResourceSignature(SignDesc, &pSign2);
+    ASSERT_TRUE(pSign2);
+    EXPECT_NE(pSign1, pSign2);
+
+    // IMPORTANT: pSign1 and pSign2 are compatible but have separate buffer allocations.
+    // Using an SRB from pSign2 with a PSO from pSign1 tests the cross-signature path.
+    EXPECT_TRUE(pSign1->IsCompatibleWith(pSign2));
+
+    // Create PSO using signature 1
+    GraphicsPipelineStateCreateInfoX PsoCI{"Cross-Signature Test"};
+    PsoCI
+        .AddRenderTarget(pSwapChain->GetDesc().ColorBufferFormat)
+        .SetPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+        .AddShader(sm_Res.pVS)
+        .AddShader(sm_Res.pPS)
+        .AddSignature(pSign1); // PSO uses signature 1
+    PsoCI.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+    RefCntAutoPtr<IPipelineState> pPSO;
+    pDevice->CreateGraphicsPipelineState(PsoCI, &pPSO);
+    ASSERT_TRUE(pPSO);
+
+    // Create SRB from signature 2 (DIFFERENT from PSO's signature!).
+    // This is the critical part: SRB is from pSign2, PSO is from pSign1.
+    RefCntAutoPtr<IShaderResourceBinding> pSRB;
+    pSign2->CreateShaderResourceBinding(&pSRB, true);
+    ASSERT_TRUE(pSRB);
+
+    IShaderResourceVariable* pPosVar = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlinePositions");
+    ASSERT_TRUE(pPosVar);
+
+    IShaderResourceVariable* pColVar = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlineColors");
+    ASSERT_TRUE(pColVar);
+
+    // Create a dummy dynamic buffer and map it to allocate dynamic space and make sure
+    // that dynamic offset is non-zero in Vulkan backend.
+    RefCntAutoPtr<IBuffer> pDummyCB = pEnv->CreateBuffer({"InlineConstants - dummy const buffer", 256, BIND_UNIFORM_BUFFER, USAGE_DYNAMIC, CPU_ACCESS_WRITE});
+    {
+        MapHelper<Uint8> pData{pContext, pDummyCB, MAP_WRITE, MAP_FLAG_DISCARD};
+    }
+
+    ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+    pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    pContext->SetPipelineState(pPSO);
+    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    // Set inline constants and draw
+    pColVar->SetInlineConstants(g_Colors, 0, kNumColConstants);
+
+    pPosVar->SetInlineConstants(g_Positions, 0, kNumPosConstants / 2);
+    pContext->Draw({3, DRAW_FLAG_VERIFY_ALL});
+
+    pPosVar->SetInlineConstants(g_Positions[0].Data() + kNumPosConstants / 2, 0, kNumPosConstants / 2);
+    pContext->Draw({3, DRAW_FLAG_VERIFY_ALL});
+
+    Present();
+}
+
+constexpr Uint32 kCacheContentVersion = 7;
+
+RefCntAutoPtr<IRenderStateCache> CreateCache(IRenderDevice*                   pDevice,
+                                             bool                             HotReload,
+                                             bool                             OptimizeGLShaders,
+                                             IDataBlob*                       pCacheData           = nullptr,
+                                             IShaderSourceInputStreamFactory* pShaderReloadFactory = nullptr)
+{
+    RenderStateCacheCreateInfo CacheCI{
+        pDevice,
+        GPUTestingEnvironment::GetInstance()->GetArchiverFactory(),
+        RENDER_STATE_CACHE_LOG_LEVEL_VERBOSE,
+        RENDER_STATE_CACHE_FILE_HASH_MODE_BY_CONTENT,
+        HotReload,
+    };
+
+    RefCntAutoPtr<IRenderStateCache> pCache;
+    CreateRenderStateCache(CacheCI, &pCache);
+
+    if (pCacheData != nullptr)
+        pCache->Load(pCacheData, kCacheContentVersion);
+
+    return pCache;
+}
+
+
+void CreateShadersFromCache(IRenderStateCache* pCache, bool PresentInCache, IShader** ppVS, IShader** ppPS)
+{
+    GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice = pEnv->GetDevice();
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+
+    {
+        ShaderCI.Desc       = {"Inline constants test", SHADER_TYPE_VERTEX, true};
+        ShaderCI.EntryPoint = "main";
+        ShaderCI.Source     = HLSL::InlineConstantsTest_VS.c_str();
+        if (pCache != nullptr)
+        {
+            EXPECT_EQ(pCache->CreateShader(ShaderCI, ppVS), PresentInCache);
+        }
+        else
+        {
+            pDevice->CreateShader(ShaderCI, ppVS);
+            EXPECT_EQ(PresentInCache, false);
+        }
+    }
+
+    {
+        ShaderCI.Desc       = {"Inline constants test", SHADER_TYPE_PIXEL, true};
+        ShaderCI.EntryPoint = "main";
+        ShaderCI.Source     = HLSL::InlineConstantsTest_PS.c_str();
+        if (pCache != nullptr)
+        {
+            EXPECT_EQ(pCache->CreateShader(ShaderCI, ppPS), PresentInCache);
+        }
+        else
+        {
+            pDevice->CreateShader(ShaderCI, ppPS);
+            EXPECT_EQ(PresentInCache, false);
+        }
+    }
+}
+
+void CreatePSOFromCache(IRenderStateCache* pCache, bool PresentInCache, IShader* pVS, IShader* pPS, IPipelineState** ppPSO)
+{
+    GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
+    ISwapChain*            pSwapChain = pEnv->GetSwapChain();
+
+    GraphicsPipelineStateCreateInfo PsoCI;
+    PsoCI.PSODesc.Name = "Render State Cache Test";
+
+    PsoCI.pVS = pVS;
+    PsoCI.pPS = pPS;
+
+    PsoCI.GraphicsPipeline.NumRenderTargets = 1;
+    PsoCI.GraphicsPipeline.RTVFormats[0]    = pSwapChain->GetDesc().ColorBufferFormat;
+
+    PsoCI.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+    static ShaderResourceVariableDesc Vars[] =
+        {
+            {SHADER_TYPE_VERTEX, "cbInlinePositions", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_FLAG_INLINE_CONSTANTS},
+            {SHADER_TYPE_VS_PS, "cbInlineColors", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_FLAG_INLINE_CONSTANTS},
+        };
+    PsoCI.PSODesc.ResourceLayout.Variables    = Vars;
+    PsoCI.PSODesc.ResourceLayout.NumVariables = _countof(Vars);
+
+    if (pCache != nullptr)
+    {
+        bool PSOFound = pCache->CreateGraphicsPipelineState(PsoCI, ppPSO);
+        EXPECT_EQ(PSOFound, PresentInCache);
+    }
+    else
+    {
+        EXPECT_FALSE(PresentInCache);
+        pEnv->GetDevice()->CreateGraphicsPipelineState(PsoCI, ppPSO);
+        ASSERT_NE(*ppPSO, nullptr);
+    }
+
+    if (*ppPSO != nullptr && (*ppPSO)->GetStatus() == PIPELINE_STATE_STATUS_READY)
+    {
+        const PipelineStateDesc& Desc = (*ppPSO)->GetDesc();
+        EXPECT_EQ(PsoCI.PSODesc, Desc);
+    }
+}
+
+void InlineConstants::VerifyPSOFromCache(IPipelineState*         pPSO,
+                                         IShaderResourceBinding* pSRB)
+{
+    GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext   = pEnv->GetDeviceContext();
+    ISwapChain*            pSwapChain = pEnv->GetSwapChain();
+
+    const float ClearColor[] = {sm_Rnd(), sm_Rnd(), sm_Rnd(), sm_Rnd()};
+    RenderDrawCommandReference(pSwapChain, ClearColor);
+
+    ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+    pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    RefCntAutoPtr<IShaderResourceBinding> _pSRB;
+    if (pSRB == nullptr)
+    {
+        pPSO->CreateShaderResourceBinding(&_pSRB, true);
+        pSRB = _pSRB;
+    }
+
+    pContext->SetPipelineState(pPSO);
+    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    IShaderResourceVariable* pColVar = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlineColors");
+    ASSERT_TRUE(pColVar);
+    pColVar->SetInlineConstants(g_Colors, 0, kNumColConstants);
+
+    IShaderResourceVariable* pPosVar = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlinePositions");
+    ASSERT_TRUE(pPosVar);
+    pPosVar->SetInlineConstants(g_Positions, 0, kNumPosConstants / 2);
+    pContext->Draw({3, DRAW_FLAG_VERIFY_ALL});
+
+    pPosVar->SetInlineConstants(g_Positions[0].Data() + kNumPosConstants / 2, 0, kNumPosConstants / 2);
+    pContext->Draw({3, DRAW_FLAG_VERIFY_ALL});
+
+    Present();
+}
+
+TEST_F(InlineConstants, RenderStateCache)
+{
+    GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice = pEnv->GetDevice();
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
+    pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/RenderStateCache", &pShaderSourceFactory);
+    ASSERT_TRUE(pShaderSourceFactory);
+
+    RefCntAutoPtr<IShader> pUncachedVS, pUncachedPS;
+    CreateShadersFromCache(nullptr, false, &pUncachedVS, &pUncachedPS);
+    ASSERT_NE(pUncachedVS, nullptr);
+    ASSERT_NE(pUncachedPS, nullptr);
+
+    RefCntAutoPtr<IPipelineState> pRefPSO;
+    CreatePSOFromCache(nullptr, false, pUncachedVS, pUncachedPS, &pRefPSO);
+    ASSERT_NE(pRefPSO, nullptr);
+
+    RefCntAutoPtr<IShaderResourceBinding> pRefSRB;
+    pRefPSO->CreateShaderResourceBinding(&pRefSRB);
+
+    RefCntAutoPtr<IDataBlob> pData;
+    for (Uint32 pass = 0; pass < 3; ++pass)
+    {
+        // 0: empty cache
+        // 1: loaded cache
+        // 2: reloaded cache (loaded -> stored -> loaded)
+
+        RefCntAutoPtr<IRenderStateCache> pCache = CreateCache(pDevice, false, false, pData);
+        ASSERT_TRUE(pCache);
+
+        RefCntAutoPtr<IShader> pVS1, pPS1;
+        CreateShadersFromCache(pCache, pData != nullptr, &pVS1, &pPS1);
+        ASSERT_NE(pVS1, nullptr);
+        ASSERT_NE(pPS1, nullptr);
+
+        RefCntAutoPtr<IPipelineState> pPSO;
+        {
+            bool PresentInCache = pData != nullptr;
+            if (pass == 1 && pDevice->GetDeviceInfo().IsMetalDevice())
+            {
+                // TODO: why?
+                PresentInCache = false;
+            }
+            CreatePSOFromCache(pCache, PresentInCache, pVS1, pPS1, &pPSO);
+        }
+        ASSERT_NE(pPSO, nullptr);
+        ASSERT_EQ(pPSO->GetStatus(), PIPELINE_STATE_STATUS_READY);
+        EXPECT_TRUE(pRefPSO->IsCompatibleWith(pPSO));
+        EXPECT_TRUE(pPSO->IsCompatibleWith(pRefPSO));
+
+        VerifyPSOFromCache(pPSO, nullptr);
+        VerifyPSOFromCache(pPSO, pRefSRB);
+
+        {
+            RefCntAutoPtr<IPipelineState> pPSO2;
+            CreatePSOFromCache(pCache, true, pVS1, pPS1, &pPSO2);
+            EXPECT_EQ(pPSO, pPSO2);
+        }
+
+        {
+            RefCntAutoPtr<IPipelineState> pPSO2;
+
+            bool PresentInCache = pData != nullptr;
+#if !DILIGENT_DEBUG
+            if (pDevice->GetDeviceInfo().IsD3DDevice())
+            {
+                // For some reason, hash computation consistency depends on D3DCOMPILE_DEBUG flag and differs between debug and release builds
+                PresentInCache = true;
+            }
+#endif
+            if (pDevice->GetDeviceInfo().IsVulkanDevice() ||
+                pDevice->GetDeviceInfo().IsWebGPUDevice() ||
+                pDevice->GetDeviceInfo().IsMetalDevice())
+            {
+                // For some reason, pUncachedVS and pVS1 got same hash computation result on Vulkan and WebGPU.
+                PresentInCache = true;
+            }
+            CreatePSOFromCache(pCache, PresentInCache, pUncachedVS, pUncachedPS, &pPSO2);
+            ASSERT_NE(pPSO2, nullptr);
+            ASSERT_EQ(pPSO2->GetStatus(), PIPELINE_STATE_STATUS_READY);
+            EXPECT_TRUE(pRefPSO->IsCompatibleWith(pPSO2));
+            EXPECT_TRUE(pPSO2->IsCompatibleWith(pRefPSO));
+            VerifyPSOFromCache(pPSO2, nullptr);
+            VerifyPSOFromCache(pPSO2, pRefSRB);
+        }
+
+        pData.Release();
+        pCache->WriteToBlob(pass == 0 ? kCacheContentVersion : ~0u, &pData);
+    }
+}
+
+TEST_F(InlineConstants, VulkanPushConstants)
+{
+    GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice    = pEnv->GetDevice();
+    IDeviceContext*        pContext   = pEnv->GetDeviceContext();
+    ISwapChain*            pSwapChain = pEnv->GetSwapChain();
+
+    // This test is Vulkan-specific
+    if (!pDevice->GetDeviceInfo().IsVulkanDevice())
+    {
+        GTEST_SKIP();
+    }
+
+    // Create shaders with native Vulkan push constants -> [[vk::push_constant]]
+    RefCntAutoPtr<IShader> pVS, pPS;
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+
+    {
+        ShaderCI.Desc       = {"Vulkan Push Constants VS", SHADER_TYPE_VERTEX, true};
+        ShaderCI.EntryPoint = "main";
+        ShaderCI.Source     = HLSL::VulkanPushConstants_VS.c_str();
+        pDevice->CreateShader(ShaderCI, &pVS);
+        ASSERT_NE(pVS, nullptr);
+    }
+
+    {
+        ShaderCI.Desc       = {"Vulkan Push Constants PS", SHADER_TYPE_PIXEL, true};
+        ShaderCI.EntryPoint = "main";
+        ShaderCI.Source     = HLSL::VulkanPushConstants_PS.c_str();
+        pDevice->CreateShader(ShaderCI, &pPS);
+        ASSERT_NE(pPS, nullptr);
+    }
+
+    for (Uint32 resType = 0; resType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++resType)
+    {
+        SHADER_RESOURCE_VARIABLE_TYPE ResType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(resType);
+
+        // Create pipeline without explicit resource layout
+        // Let the system automatically extract push constants from shaders
+        GraphicsPipelineStateCreateInfoX PsoCI{"Vulkan Push Constants Test"};
+
+        PsoCI.PSODesc.ResourceLayout.DefaultVariableType = ResType;
+
+        PsoCI
+            .AddRenderTarget(pSwapChain->GetDesc().ColorBufferFormat)
+            .SetPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+            .AddShader(pVS)
+            .AddShader(pPS);
+        PsoCI.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+        RefCntAutoPtr<IPipelineState> pPSO;
+        pDevice->CreateGraphicsPipelineState(PsoCI, &pPSO);
+        ASSERT_TRUE(pPSO);
+
+        // Verify that resource signature was created with correct ArraySize
+        ASSERT_EQ(pPSO->GetResourceSignatureCount(), 1u);
+        IPipelineResourceSignature* pSign = pPSO->GetResourceSignature(0);
+        ASSERT_NE(pSign, nullptr);
+
+        const PipelineResourceSignatureDesc& SignDesc = pSign->GetDesc();
+
+        // Find VS and PS push constants in the resource signature
+        const PipelineResourceDesc* PushConstantsDesc = nullptr;
+        for (Uint32 i = 0; i < SignDesc.NumResources; ++i)
+        {
+            const auto& Res = SignDesc.Resources[i];
+            if (strcmp(Res.Name, "PushConstants") == 0)
+            {
+                PushConstantsDesc = &Res;
+            }
+        }
+
+        ASSERT_NE(PushConstantsDesc, nullptr) << "PushConstants not found in resource signature";
+        // Verify inline constants flag
+        EXPECT_EQ(PushConstantsDesc->Flags, PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS);
+        // Verify ArraySize
+        EXPECT_EQ(PushConstantsDesc->ArraySize, kNumPosConstants + kNumColConstants);
+        // Verify ShaderStages
+        EXPECT_EQ(PushConstantsDesc->ShaderStages, SHADER_TYPE_VS_PS);
+
+        // Now test runtime usage
+        const float ClearColor[] = {sm_Rnd(), sm_Rnd(), sm_Rnd(), sm_Rnd()};
+        RenderDrawCommandReference(pSwapChain, ClearColor);
+
+        ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+        pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+        //They should all go with resource[0] ("PushConstants") under the hood:
+        if (ResType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+        {
+            IShaderResourceVariable* pVSVar = pPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "PushConstants");
+            ASSERT_NE(pVSVar, nullptr);
+            pVSVar->SetInlineConstants(g_Positions, 0, kNumPosConstants);
+
+            IShaderResourceVariable* pPSVar = pPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "PushConstants");
+            ASSERT_NE(pPSVar, nullptr);
+            pPSVar->SetInlineConstants(g_Colors, kNumPosConstants, kNumColConstants);
+        }
+
+        RefCntAutoPtr<IShaderResourceBinding> pSRB;
+        pPSO->CreateShaderResourceBinding(&pSRB, true);
+        ASSERT_TRUE(pSRB);
+
+        if (ResType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+        {
+            IShaderResourceVariable* pVSVar = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "PushConstants");
+            ASSERT_NE(pVSVar, nullptr);
+            pVSVar->SetInlineConstants(g_Positions, 0, kNumPosConstants);
+
+            IShaderResourceVariable* pPSVar = pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "PushConstants");
+            ASSERT_NE(pPSVar, nullptr);
+            pPSVar->SetInlineConstants(g_Colors, kNumPosConstants, kNumColConstants);
+        }
+
+        // Render
+        pContext->SetPipelineState(pPSO);
+        pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pContext->Draw({6, DRAW_FLAG_VERIFY_ALL});
+
+        Present();
+    }
+}
+
+TEST_F(InlineConstants, DifferentSizesAcrossStages)
+{
+    GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice = pEnv->GetDevice();
+
+    if (!pDevice->GetDeviceInfo().Features.SeparablePrograms)
+        GTEST_SKIP();
+
+    IDeviceContext* pContext   = pEnv->GetDeviceContext();
+    ISwapChain*     pSwapChain = pEnv->GetSwapChain();
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+
+    RefCntAutoPtr<IShader> pVS;
+    {
+        ShaderCI.Desc       = {"Different sizes across stages VS", SHADER_TYPE_VERTEX, true};
+        ShaderCI.EntryPoint = "main";
+        ShaderCI.Source     = HLSL::DifferentSizesAcrossStages_VS.c_str();
+        pDevice->CreateShader(ShaderCI, &pVS);
+        ASSERT_NE(pVS, nullptr);
+    }
+
+    RefCntAutoPtr<IShader> pPS;
+    {
+        ShaderCI.Desc       = {"Different sizes across stages PS", SHADER_TYPE_PIXEL, true};
+        ShaderCI.EntryPoint = "main";
+        ShaderCI.Source     = HLSL::DifferentSizesAcrossStages_PS.c_str();
+        pDevice->CreateShader(ShaderCI, &pPS);
+        ASSERT_NE(pPS, nullptr);
+    }
+
+    for (Uint32 pos_type = 0; pos_type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++pos_type)
+    {
+        const float ClearColor[] = {sm_Rnd(), sm_Rnd(), sm_Rnd(), sm_Rnd()};
+        RenderDrawCommandReference(pSwapChain, ClearColor);
+
+        SHADER_RESOURCE_VARIABLE_TYPE PosType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(pos_type);
+
+        GraphicsPipelineStateCreateInfoX PsoCI{"Different sizes across stages test"};
+
+        PipelineResourceLayoutDescX ResLayoutDesc;
+        ResLayoutDesc
+            .AddVariable(SHADER_TYPE_VS_PS, "cbInlineConstants", PosType, SHADER_VARIABLE_FLAG_INLINE_CONSTANTS);
+
+        PsoCI
+            .AddRenderTarget(pSwapChain->GetDesc().ColorBufferFormat)
+            .SetPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+            .AddShader(pVS)
+            .AddShader(pPS)
+            .SetResourceLayout(ResLayoutDesc)
+            .SetSRBAllocationGranularity(4);
+        PsoCI.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+        RefCntAutoPtr<IPipelineState> pPSO;
+        pDevice->CreateGraphicsPipelineState(PsoCI, &pPSO);
+        ASSERT_TRUE(pPSO);
+
+        constexpr float4 kColorFactor{1, 1, 1, 1};
+        if (PosType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+        {
+            IShaderResourceVariable* pVar = pPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "cbInlineConstants");
+            ASSERT_TRUE(pVar);
+            pVar->SetInlineConstants(g_Positions, 0, kNumPosConstants);
+            pVar->SetInlineConstants(&kColorFactor, kNumPosConstants, 4);
+        }
+
+        RefCntAutoPtr<IShaderResourceBinding> pSRB;
+        pPSO->CreateShaderResourceBinding(&pSRB, true);
+        ASSERT_TRUE(pSRB);
+
+        IShaderResourceVariable* pVar = nullptr;
+        if (PosType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+        {
+            pVar = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlineConstants");
+            ASSERT_TRUE(pVar);
+            pVar->SetInlineConstants(&kColorFactor, kNumPosConstants, 4);
+        }
+
+        ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+        pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+        pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pContext->SetPipelineState(pPSO);
+
+        if (pVar == nullptr)
+        {
+            // Draw both triangles as positions are static
+            pContext->Draw({6, DRAW_FLAG_VERIFY_ALL});
+        }
+        else
+        {
+            // Draw first triangle
+            pVar->SetInlineConstants(g_Positions, 0, kNumPosConstants / 2);
+            pContext->Draw({3, DRAW_FLAG_VERIFY_ALL});
+
+            // Draw second triangle
+            pVar->SetInlineConstants(g_Positions[0].Data() + kNumPosConstants / 2, 0, kNumPosConstants / 2);
+            pContext->Draw({3, DRAW_FLAG_VERIFY_ALL | DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT});
+        }
+        Present();
+
+        std::cout << TestingEnvironment::GetCurrentTestStatusString() << ' '
+                  << " Pos " << GetShaderVariableTypeLiteralName(PosType) << std::endl;
+    }
+}
+
+} // namespace

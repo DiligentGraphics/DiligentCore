@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -101,10 +101,7 @@ struct PRSSerializer
                                       ConstQual<PipelineResourceSignatureInternalDataType>& InternalData,
                                       DynamicLinearAllocator*                               Allocator)
     {
-        if (!Ser(InternalData.ShaderStages,
-                 InternalData.StaticResShaderStages,
-                 InternalData.PipelineType,
-                 InternalData.StaticResStageIndex))
+        if (!Ser(InternalData.ShaderStages))
             return false;
 
         if (!Ser.SerializeArrayRaw(Allocator, InternalData.pResourceAttribs, InternalData.NumResources))

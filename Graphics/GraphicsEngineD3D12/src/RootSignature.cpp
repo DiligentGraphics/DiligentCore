@@ -78,7 +78,7 @@ RootSignatureD3D12::RootSignatureD3D12(IReferenceCounters*                      
         const RootParamsManager& RootParams = pSignature->GetRootParams();
 
         SignInfo.BaseRootIndex = TotalParams;
-        TotalParams += RootParams.GetNumRootTables() + RootParams.GetNumRootViews();
+        TotalParams += RootParams.GetNumRootTables() + RootParams.GetNumRootViews() + RootParams.GetNumRootConstants();
 
         for (Uint32 rt = 0; rt < RootParams.GetNumRootTables(); ++rt)
         {
@@ -166,6 +166,20 @@ RootSignatureD3D12::RootSignatureD3D12(IReferenceCounters*                      
             d3d12Parameters[RootIndex].Descriptor.RegisterSpace += BaseRegisterSpace;
         }
 
+        for (Uint32 rc = 0; rc < RootParams.GetNumRootConstants(); ++rc)
+        {
+            const RootParameter&        RootConsts    = RootParams.GetRootConstants(rc);
+            const D3D12_ROOT_PARAMETER& d3d12SrcParam = RootConsts.d3d12RootParam;
+            const Uint32                RootIndex     = SignInfo.BaseRootIndex + RootConsts.RootIndex;
+            VERIFY(d3d12SrcParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS, "Root 32-bit constants is expected");
+
+            MaxSpaceUsed = std::max(MaxSpaceUsed, d3d12SrcParam.Constants.RegisterSpace);
+
+            d3d12Parameters[RootIndex] = d3d12SrcParam;
+            // Offset register space value by the base register space of the current resource signature.
+            d3d12Parameters[RootIndex].Constants.RegisterSpace += BaseRegisterSpace;
+        }
+
         for (Uint32 samp = 0, SampCount = pSignature->GetImmutableSamplerCount(); samp < SampCount; ++samp)
         {
             const ImmutableSamplerAttribsD3D12& SampAttr = pSignature->GetImmutableSamplerAttribs(samp);
@@ -191,8 +205,8 @@ RootSignatureD3D12::RootSignatureD3D12(IReferenceCounters*                      
                         SamDesc.MaxLOD,
                         SampAttr.ShaderRegister + ArrInd,
                         SampAttr.RegisterSpace + BaseRegisterSpace,
-                        ShaderVisibility //
-                    }                    //
+                        ShaderVisibility,
+                    } //
                 );
             }
         }

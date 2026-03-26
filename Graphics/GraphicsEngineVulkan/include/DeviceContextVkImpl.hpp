@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -496,6 +496,8 @@ private:
 
     void ChooseRenderPassAndFramebuffer();
 
+    __forceinline void CommitDynamicRenderPassIfClearsPending();
+
 private:
     VulkanUtilities::CommandBuffer m_CommandBuffer;
 
@@ -536,7 +538,10 @@ private:
 
             // The total number of descriptors with dynamic offset, given by pSignature->GetDynamicOffsetCount().
             // Note that this is not the actual number of dynamic buffers in the resource cache.
-            Uint32 DynamicOffsetCount = 0;
+            Uint16 DynamicOffsetCount = 0;
+
+            // Index of the first dynamic offset in m_DynamicBufferOffsets
+            Uint16 FirstDynamicOffset = 0;
 
 #ifdef DILIGENT_DEVELOPMENT
             // The descriptor set base index that was used in the last BindDescriptorSets() call
@@ -555,6 +560,9 @@ private:
     __forceinline ResourceBindInfo& GetBindInfo(PIPELINE_TYPE Type);
 
     __forceinline void CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint32 CommitSRBMask);
+
+    void CommitInlineConstants(ResourceBindInfo& BindInfo, Uint32 CommitSRBMask);
+
 #ifdef DILIGENT_DEVELOPMENT
     void DvpValidateCommittedShaderResources(ResourceBindInfo& BindInfo);
 #endif

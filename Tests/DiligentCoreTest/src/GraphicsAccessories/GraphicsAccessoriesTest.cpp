@@ -705,7 +705,7 @@ TEST(GraphicsAccessories_GraphicsAccessories, PipelineTypeFromShaderStages)
 
 TEST(GraphicsAccessories_GraphicsAccessories, GetPipelineResourceFlagsString)
 {
-    static_assert(PIPELINE_RESOURCE_FLAG_LAST == (1u << 4), "Please add a test for the new flag here");
+    static_assert(PIPELINE_RESOURCE_FLAG_LAST == (1u << 5), "Please add a test for the new flag here");
 
     EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_NONE, true).c_str(), "PIPELINE_RESOURCE_FLAG_NONE");
     EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_NONE).c_str(), "UNKNOWN");
@@ -714,11 +714,13 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetPipelineResourceFlagsString)
     EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER, true).c_str(), "PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER");
     EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER, true).c_str(), "PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER");
     EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT, true).c_str(), "PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT");
+    EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS, true).c_str(), "PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS");
 
     EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS).c_str(), "NO_DYNAMIC_BUFFERS");
     EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER).c_str(), "COMBINED_SAMPLER");
     EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER).c_str(), "FORMATTED_BUFFER");
     EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT).c_str(), "GENERAL_INPUT_ATTACHMENT");
+    EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS).c_str(), "INLINE_CONSTANTS");
 
     EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER, true).c_str(),
                  "PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS|PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER");

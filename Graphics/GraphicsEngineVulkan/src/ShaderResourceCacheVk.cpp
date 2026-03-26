@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,16 +41,22 @@
 namespace Diligent
 {
 
-size_t ShaderResourceCacheVk::GetRequiredMemorySize(Uint32 NumSets, const Uint32* SetSizes)
+size_t ShaderResourceCacheVk::GetRequiredMemorySize(Uint32        NumSets,
+                                                    const Uint32* SetSizes,
+                                                    Uint32        TotalInlineConstants)
 {
     Uint32 TotalResources = 0;
     for (Uint32 t = 0; t < NumSets; ++t)
         TotalResources += SetSizes[t];
-    size_t MemorySize = NumSets * sizeof(DescriptorSet) + TotalResources * sizeof(Resource);
+
+    size_t MemorySize = NumSets * sizeof(DescriptorSet) + TotalResources * sizeof(Resource) + TotalInlineConstants * sizeof(Uint32);
     return MemorySize;
 }
 
-void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator, Uint32 NumSets, const Uint32* SetSizes)
+void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator,
+                                           Uint32            NumSets,
+                                           const Uint32*     SetSizes,
+                                           Uint32            TotalInlineConstants)
 {
     VERIFY(!m_pMemory, "Memory has already been allocated");
 
@@ -59,7 +65,7 @@ void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator, Uint3
     //  m_pMemory
     //  |
     //  V
-    // ||  DescriptorSet[0]  |   ....    |  DescriptorSet[Ns-1]  |  Res[0]  |  ... |  Res[n-1]  |    ....     | Res[0]  |  ... |  Res[m-1]  ||
+    // ||  DescriptorSet[0]  |   ....    |  DescriptorSet[Ns-1]  |  Res[0]  |  ... |  Res[n-1]  |    ....     | Res[0]  |  ... |  Res[m-1]  | Inline constant values ||
     //
     //
     //  Ns = m_NumSets
@@ -74,10 +80,11 @@ void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator, Uint3
         m_TotalResources += SetSizes[t];
     }
 
-    const size_t MemorySize = NumSets * sizeof(DescriptorSet) + m_TotalResources * sizeof(Resource);
-    VERIFY_EXPR(MemorySize == GetRequiredMemorySize(NumSets, SetSizes));
+    const size_t MemorySize = NumSets * sizeof(DescriptorSet) + m_TotalResources * sizeof(Resource) + TotalInlineConstants * sizeof(Uint32);
+    VERIFY_EXPR(MemorySize == GetRequiredMemorySize(NumSets, SetSizes, TotalInlineConstants));
 #ifdef DILIGENT_DEBUG
     m_DbgInitializedResources.resize(m_NumSets);
+    m_DbgAssignedInlineConstants.resize(TotalInlineConstants);
 #endif
     if (MemorySize > 0)
     {
@@ -85,9 +92,10 @@ void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator, Uint3
             ALLOCATE_RAW(MemAllocator, "Memory for shader resource cache data", MemorySize),
             STDDeleter<void, IMemoryAllocator>(MemAllocator) //
         };
+        VERIFY((reinterpret_cast<size_t>(m_pMemory.get()) % std::max(alignof(DescriptorSet), alignof(Resource))) == 0, "Resource cache buffer is not properly aligned");
+        memset(m_pMemory.get(), 0, MemorySize);
 
-        DescriptorSet* pSets       = reinterpret_cast<DescriptorSet*>(m_pMemory.get());
-        Resource*      pCurrResPtr = reinterpret_cast<Resource*>(pSets + m_NumSets);
+        Resource* pCurrResPtr = GetFirstResourcePtr();
         for (Uint32 t = 0; t < NumSets; ++t)
         {
             new (&GetDescriptorSet(t)) DescriptorSet{SetSizes[t], SetSizes[t] > 0 ? pCurrResPtr : nullptr};
@@ -96,21 +104,79 @@ void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator, Uint3
             m_DbgInitializedResources[t].resize(SetSizes[t]);
 #endif
         }
-        VERIFY_EXPR((char*)pCurrResPtr == (char*)m_pMemory.get() + MemorySize);
+        VERIFY_EXPR(reinterpret_cast<Uint8*>(pCurrResPtr) + TotalInlineConstants * sizeof(Uint32) == reinterpret_cast<Uint8*>(m_pMemory.get()) + MemorySize);
     }
+
+    m_HasInlineConstants = TotalInlineConstants > 0 ? 1 : 0;
 }
 
-void ShaderResourceCacheVk::InitializeResources(Uint32 Set, Uint32 Offset, Uint32 ArraySize, DescriptorType Type, bool HasImmutableSampler)
+void ShaderResourceCacheVk::InitializeResources(Uint32         Set,
+                                                Uint32         Offset,
+                                                Uint32         ArraySize,
+                                                DescriptorType Type,
+                                                bool           HasImmutableSampler)
 {
     DescriptorSet& DescrSet = GetDescriptorSet(Set);
     for (Uint32 res = 0; res < ArraySize; ++res)
     {
-        new (&DescrSet.GetResource(Offset + res)) Resource{Type, HasImmutableSampler};
+        new (&DescrSet.GetResource(Offset + res)) Resource{
+            Type,
+            HasImmutableSampler,
+        };
 #ifdef DILIGENT_DEBUG
+        VERIFY(!m_DbgInitializedResources[Set][size_t{Offset} + res], "Resource at set ", Set, " offset ", Offset + res, " has already been initialized");
         m_DbgInitializedResources[Set][size_t{Offset} + res] = true;
 #endif
     }
 }
+
+void ShaderResourceCacheVk::InitializeInlineConstantBuffer(Uint32                                Set,
+                                                           Uint32                                Offset,
+                                                           Uint32                                InlineConstantOffset,
+                                                           Uint32                                NumInlineConstants,
+                                                           const VulkanUtilities::LogicalDevice* pLogicalDevice,
+                                                           Uint32                                BindingIndex,
+                                                           RefCntAutoPtr<IDeviceObject>          pBuffer)
+{
+    VERIFY(InlineConstantOffset + NumInlineConstants <= m_DbgAssignedInlineConstants.size(), "Inline constant storage overflow");
+    DescriptorSet& DescrSet  = GetDescriptorSet(Set);
+    Resource*      pInlineCB = new (&DescrSet.GetResource(Offset)) Resource{
+        DescriptorType::UniformBufferDynamic,
+        GetInlineConstantStorage(InlineConstantOffset),
+    };
+
+    pInlineCB->BufferRangeSize = NumInlineConstants * sizeof(Uint32);
+
+#ifdef DILIGENT_DEBUG
+    VERIFY(!m_DbgInitializedResources[Set][size_t{Offset}], "Resource at set ", Set, " offset ", Offset, " has already been initialized");
+    m_DbgInitializedResources[Set][size_t{Offset}] = true;
+
+    for (Uint32 i = 0; i < NumInlineConstants; ++i)
+    {
+        VERIFY(!m_DbgAssignedInlineConstants[InlineConstantOffset + i], "Inline constant storage at offset ", InlineConstantOffset + i, " has already been assigned");
+        m_DbgAssignedInlineConstants[InlineConstantOffset + i] = true;
+    }
+#endif
+
+    if (pLogicalDevice != nullptr)
+    {
+        // Since we use SetResource, the buffer will count towards the number of
+        // dynamic buffers in the cache.
+        SetResource(
+            pLogicalDevice,
+            Set,
+            Offset,
+            {
+                BindingIndex,
+                0, // ArrayIndex
+                std::move(pBuffer),
+                0,                          // BufferBaseOffset
+                pInlineCB->BufferRangeSize, // BufferRangeSize
+            });
+        VERIFY(HasDynamicResources(), "Inline constant buffer must be counted as dynamic resource");
+    }
+}
+
 
 inline bool IsDynamicDescriptorType(DescriptorType DescrType)
 {
@@ -171,6 +237,10 @@ void ShaderResourceCacheVk::DbgVerifyResourceInitialization() const
     {
         for (bool ResInitialized : SetFlags)
             VERIFY(ResInitialized, "Not all resources in the cache have been initialized. This is a bug.");
+    }
+    for (bool InlineConstAssigned : m_DbgAssignedInlineConstants)
+    {
+        VERIFY(InlineConstAssigned, "Not all inline constant storage has been assigned. This is a bug.");
     }
 }
 
@@ -872,22 +942,43 @@ VkWriteDescriptorSetAccelerationStructureKHR ShaderResourceCacheVk::Resource::Ge
 
 
 
-Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(DeviceContextVkImpl*   pCtx,
-                                                      std::vector<uint32_t>& Offsets,
-                                                      Uint32                 StartInd) const
+ShaderResourceCacheVk::WriteDynamicBufferOffsetsResult ShaderResourceCacheVk::WriteDynamicBufferOffsets(
+    DeviceContextVkImpl*   pCtx,
+    std::vector<uint32_t>& Offsets,
+    Uint32                 StartInd) const
 {
+    WriteDynamicBufferOffsetsResult Result;
+
     // If any of the sets being bound include dynamic uniform or storage buffers, then
     // pDynamicOffsets includes one element for each array element in each dynamic descriptor
     // type binding in each set. Values are taken from pDynamicOffsets in an order such that
     // all entries for set N come before set N+1; within a set, entries are ordered by the binding
     // numbers (unclear if this is SPIRV binding or VkDescriptorSetLayoutBinding number) in the
-    // descriptor set layouts; and within a binding array, elements are in order. (13.2.5)
+    // descriptor set layouts; and within a binding array, elements are in order.
 
     // In each descriptor set, all uniform buffers with dynamic offsets (DescriptorType::UniformBufferDynamic)
     // for every shader stage come first, followed by all storage buffers with dynamic offsets
     // (DescriptorType::StorageBufferDynamic and DescriptorType::StorageBufferDynamic_ReadOnly) for every shader stage,
     // followed by all other resources.
     Uint32 OffsetInd = StartInd;
+
+    auto WriteOffset = [&](const BufferVkImpl* pBufferVk, Uint32 BufferDynamicOffset) {
+        // Do not verify dynamic allocation here as there may be some buffers that are not used by the PSO.
+        // The allocations of the buffers that are actually used will be verified by
+        // PipelineResourceSignatureVkImpl::DvpValidateCommittedResource().
+        Uint32 Offset = (pBufferVk != nullptr) ?
+            StaticCast<Uint32>(pCtx->GetDynamicBufferOffset(pBufferVk, /*VerifyAllocation = */ false)) :
+            0;
+
+        // The effective offset used for dynamic uniform and storage buffer bindings is the sum of the relative
+        // offset taken from pDynamicOffsets, and the base address of the buffer plus base offset in the descriptor set.
+        // The range of the dynamic uniform and storage buffer bindings is the buffer range as specified in the descriptor set.
+        Offset += BufferDynamicOffset;
+
+        Result.NumOffsetsChanged += (Offsets[OffsetInd] != Offset) ? 1 : 0;
+        Offsets[OffsetInd++] = Offset;
+    };
+
     for (Uint32 set = 0; set < m_NumSets; ++set)
     {
         const DescriptorSet& DescrSet = GetDescriptorSet(set);
@@ -900,14 +991,7 @@ Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(DeviceContextVkImpl*   pCt
             if (Res.Type == DescriptorType::UniformBufferDynamic)
             {
                 const BufferVkImpl* pBufferVk = Res.pObject.ConstPtr<BufferVkImpl>();
-                // Do not verify dynamic allocation here as there may be some buffers that are not used by the PSO.
-                // The allocations of the buffers that are actually used will be verified by
-                // PipelineResourceSignatureVkImpl::DvpValidateCommittedResource().
-                const size_t Offset = pBufferVk != nullptr ? pCtx->GetDynamicBufferOffset(pBufferVk, /*VerifyAllocation = */ false) : 0;
-                // The effective offset used for dynamic uniform and storage buffer bindings is the sum of the relative
-                // offset taken from pDynamicOffsets, and the base address of the buffer plus base offset in the descriptor set.
-                // The range of the dynamic uniform and storage buffer bindings is the buffer range as specified in the descriptor set.
-                Offsets[OffsetInd++] = StaticCast<Uint32>(Res.BufferDynamicOffset + Offset);
+                WriteOffset(pBufferVk, Res.BufferDynamicOffset);
                 ++res;
             }
             else
@@ -922,14 +1006,7 @@ Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(DeviceContextVkImpl*   pCt
             {
                 const BufferViewVkImpl* pBufferVkView = Res.pObject.ConstPtr<BufferViewVkImpl>();
                 const BufferVkImpl*     pBufferVk     = pBufferVkView != nullptr ? pBufferVkView->GetBuffer<const BufferVkImpl>() : nullptr;
-                // Do not verify dynamic allocation here as there may be some buffers that are not used by the PSO.
-                // The allocations of the buffers that are actually used will be verified by
-                // PipelineResourceSignatureVkImpl::DvpValidateCommittedResource().
-                const size_t Offset = pBufferVk != nullptr ? pCtx->GetDynamicBufferOffset(pBufferVk, /*VerifyAllocation = */ false) : 0;
-                // The effective offset used for dynamic uniform and storage buffer bindings is the sum of the relative
-                // offset taken from pDynamicOffsets, and the base address of the buffer plus base offset in the descriptor set.
-                // The range of the dynamic uniform and storage buffer bindings is the buffer range as specified in the descriptor set.
-                Offsets[OffsetInd++] = StaticCast<Uint32>(Res.BufferDynamicOffset + Offset);
+                WriteOffset(pBufferVk, Res.BufferDynamicOffset);
                 ++res;
             }
             else
@@ -947,7 +1024,31 @@ Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(DeviceContextVkImpl*   pCt
         }
 #endif
     }
-    return OffsetInd - StartInd;
+    Result.NumOffsetsWritten = OffsetInd - StartInd;
+    return Result;
+}
+
+
+void ShaderResourceCacheVk::SetInlineConstants(Uint32      DescrSetIndex,
+                                               Uint32      CacheOffset,
+                                               const void* pConstants,
+                                               Uint32      FirstConstant,
+                                               Uint32      NumConstants)
+{
+    VERIFY(pConstants != nullptr, "Source constant data pointer is null");
+    VERIFY(NumConstants > 0, "Number of constants must be greater than zero");
+
+    DescriptorSet& DescrSet = GetDescriptorSet(DescrSetIndex);
+    Resource&      DstRes   = DescrSet.GetResource(CacheOffset);
+
+    VERIFY(DstRes.pInlineConstantData != nullptr,
+           "Inline constant data pointer is null. Make sure InitializeInlineConstantBuffer was called for this resource.");
+    VERIFY(FirstConstant + NumConstants <= DstRes.BufferRangeSize / sizeof(Uint32),
+           "Too many constants (", FirstConstant + NumConstants, ") for the allocated space (", DstRes.BufferRangeSize / sizeof(Uint32), ")");
+
+    // Copy to CPU-side staging buffer
+    Uint8* pDstConstants = static_cast<Uint8*>(DstRes.pInlineConstantData);
+    memcpy(pDstConstants + FirstConstant * sizeof(Uint32), pConstants, NumConstants * sizeof(Uint32));
 }
 
 } // namespace Diligent

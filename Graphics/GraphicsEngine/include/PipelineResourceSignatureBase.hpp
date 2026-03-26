@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -104,13 +104,10 @@ void CopyPipelineResourceSignatureDesc(FixedLinearAllocator&                    
 template <typename PipelineResourceAttribsType, typename ImmutableSamplerAttribsType>
 struct PipelineResourceSignatureInternalData
 {
-    SHADER_TYPE                               ShaderStages          = SHADER_TYPE_UNKNOWN;
-    SHADER_TYPE                               StaticResShaderStages = SHADER_TYPE_UNKNOWN;
-    PIPELINE_TYPE                             PipelineType          = PIPELINE_TYPE_INVALID;
-    std::array<Int8, MAX_SHADERS_IN_PIPELINE> StaticResStageIndex   = {};
+    SHADER_TYPE ShaderStages = SHADER_TYPE_UNKNOWN;
 
     // The struct is used in serialization and must be tightly packed
-    Uint8 _Padding = 0;
+    Uint32 _Padding = 0;
 
     Uint32 NumResources         = 0;
     Uint32 NumImmutableSamplers = 0;
@@ -121,12 +118,9 @@ struct PipelineResourceSignatureInternalData
     constexpr bool operator==(const PipelineResourceSignatureInternalData& Rhs) const
     {
         // clang-format off
-        if (ShaderStages          != Rhs.ShaderStages ||
-            StaticResShaderStages != Rhs.StaticResShaderStages ||
-            PipelineType          != Rhs.PipelineType ||
-            StaticResStageIndex   != Rhs.StaticResStageIndex ||
-            NumResources          != Rhs.NumResources ||
-            NumImmutableSamplers  != Rhs.NumImmutableSamplers)
+        if (ShaderStages         != Rhs.ShaderStages ||
+            NumResources         != Rhs.NumResources ||
+            NumImmutableSamplers != Rhs.NumImmutableSamplers)
         // clang-format on
         {
             return false;
@@ -283,6 +277,18 @@ public:
         m_Desc.Name = m_Name.c_str();
     }
 
+    Uint32 GetNumResources() const
+    {
+        VERIFY_EXPR(m_Desc.NumResources == m_Resources.size());
+        return m_Desc.NumResources;
+    }
+
+    PipelineResourceDesc& GetResource(Uint32 Index)
+    {
+        VERIFY(Index < m_Desc.NumResources, "Resource index (", Index, ") is out of range (0 - ", m_Desc.NumResources - 1, ")");
+        return m_Resources[Index];
+    }
+
     const PipelineResourceSignatureDesc& Get() const
     {
         return m_Desc;
@@ -343,6 +349,9 @@ public:
     // Sampler implementation type (SamplerD3D12Impl, SamplerVkImpl, etc.)
     using SamplerImplType = typename EngineImplTraits::SamplerImplType;
 
+    // Buffer implementation type (BufferD3D12Impl, BufferVkImpl, etc.)
+    using BufferImplType = typename EngineImplTraits::BufferImplType;
+
     // Pipeline resource signature implementation type (PipelineResourceSignatureD3D12Impl, PipelineResourceSignatureVkImpl, etc.)
     using PipelineResourceSignatureImplType = typename EngineImplTraits::PipelineResourceSignatureImplType;
 
@@ -351,6 +360,9 @@ public:
 
     // Immutable sampler attribs type (ImmutableSamplerAttribsD3D12, ImmutableSamplerAttribsVk, etc.)
     using ImmutableSamplerAttribsType = typename EngineImplTraits::ImmutableSamplerAttribsType;
+
+    // Inline constant buffer attribs type (InlineConstantBufferAttribsD3D12, InlineConstantBufferAttribsVk, etc.)
+    using InlineConstantBufferAttribsType = typename EngineImplTraits::InlineConstantBufferAttribsType;
 
     // Pipeline resource signature internal data type (PipelineResourceSignatureInternalDataD3D12, PipelineResourceSignatureInternalDataVk, etc.)
     using PipelineResourceSignatureInternalDataType = typename EngineImplTraits::PipelineResourceSignatureInternalDataType;
@@ -380,33 +392,7 @@ public:
 
         ValidatePipelineResourceSignatureDesc(Desc, pDevice, EngineImplTraits::DeviceType);
 
-        // Determine shader stages that have any resources as well as
-        // shader stages that have static resources.
-        for (Uint32 i = 0; i < Desc.NumResources; ++i)
-        {
-            const PipelineResourceDesc& ResDesc = Desc.Resources[i];
-
-            m_ShaderStages |= ResDesc.ShaderStages;
-            if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
-                m_StaticResShaderStages |= ResDesc.ShaderStages;
-        }
-
-        if (m_ShaderStages != SHADER_TYPE_UNKNOWN)
-        {
-            m_PipelineType = PipelineTypeFromShaderStages(m_ShaderStages);
-            DEV_CHECK_ERR(m_PipelineType != PIPELINE_TYPE_INVALID, "Failed to deduce pipeline type from shader stages");
-        }
-
-        {
-            Uint32 StaticVarStageIdx = 0;
-            for (SHADER_TYPE StaticResStages = m_StaticResShaderStages; StaticResStages != SHADER_TYPE_UNKNOWN; ++StaticVarStageIdx)
-            {
-                const SHADER_TYPE StageBit           = ExtractLSB(StaticResStages);
-                const Int32       ShaderTypeInd      = GetShaderTypePipelineIndex(StageBit, m_PipelineType);
-                m_StaticResStageIndex[ShaderTypeInd] = static_cast<Int8>(StaticVarStageIdx);
-            }
-            VERIFY_EXPR(StaticVarStageIdx == GetNumStaticResStages());
-        }
+        InitAttribs(Desc);
     }
 
     PipelineResourceSignatureBase(IReferenceCounters*                              pRefCounters,
@@ -414,12 +400,8 @@ public:
                                   const PipelineResourceSignatureDesc&             Desc,
                                   const PipelineResourceSignatureInternalDataType& InternalData) :
         TDeviceObjectBase{pRefCounters, pDevice, Desc, false /*bIsDeviceInternal*/},
-        // clang-format off
-        m_ShaderStages         {InternalData.ShaderStages},
-        m_StaticResShaderStages{InternalData.StaticResShaderStages},
-        m_PipelineType         {InternalData.PipelineType},
-        m_StaticResStageIndex  {InternalData.StaticResStageIndex},
-        m_SRBMemAllocator      {GetRawAllocator()}
+        m_ShaderStages{InternalData.ShaderStages},
+        m_SRBMemAllocator{GetRawAllocator()}
     // clang-format on
     {
         // Don't read from m_Desc until it was allocated and copied in CopyPipelineResourceSignatureDesc()
@@ -430,6 +412,8 @@ public:
 #ifdef DILIGENT_DEVELOPMENT
         ValidatePipelineResourceSignatureDesc(Desc, pDevice, EngineImplTraits::DeviceType);
 #endif
+
+        InitAttribs(Desc);
     }
 
     ~PipelineResourceSignatureBase()
@@ -714,6 +698,17 @@ public:
         return m_pImmutableSamplerAttribs[SampIndex];
     }
 
+    const InlineConstantBufferAttribsType& GetInlineConstantBufferAttribs(Uint32 Index) const
+    {
+        VERIFY_EXPR(Index < this->m_NumInlineConstantBuffers);
+        return m_pInlineConstantBuffers[Index];
+    }
+
+    bool HasInlineConstants() const
+    {
+        return m_NumInlineConstantBuffers > 0;
+    }
+
     static bool SignaturesCompatible(const PipelineResourceSignatureImplType* pSign0,
                                      const PipelineResourceSignatureImplType* pSign1)
     {
@@ -775,10 +770,7 @@ public:
     {
         PipelineResourceSignatureInternalDataType InternalData;
 
-        InternalData.ShaderStages          = m_ShaderStages;
-        InternalData.StaticResShaderStages = m_StaticResShaderStages;
-        InternalData.PipelineType          = m_PipelineType;
-        InternalData.StaticResStageIndex   = m_StaticResStageIndex;
+        InternalData.ShaderStages = m_ShaderStages;
 
         InternalData.pResourceAttribs     = m_pResourceAttribs;
         InternalData.NumResources         = this->m_Desc.NumResources;
@@ -786,6 +778,68 @@ public:
         InternalData.NumImmutableSamplers = this->m_Desc.NumImmutableSamplers;
 
         return InternalData;
+    }
+
+private:
+    void InitAttribs(const PipelineResourceSignatureDesc& Desc)
+    {
+        // Determine shader stages that have any resources as well as
+        // shader stages that have static resources.
+        for (Uint32 i = 0; i < Desc.NumResources; ++i)
+        {
+            const PipelineResourceDesc& ResDesc = Desc.Resources[i];
+
+            m_ShaderStages |= ResDesc.ShaderStages;
+            if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+                m_StaticResShaderStages |= ResDesc.ShaderStages;
+
+            // Count the number of inline constant buffers and inline constants.
+            if (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
+            {
+                VERIFY(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, "Only constant buffers can have INLINE_CONSTANTS flag");
+
+                static constexpr Uint32 MaxInlineConstantBuffers = std::numeric_limits<decltype(m_NumInlineConstantBuffers)>::max();
+                VERIFY(m_NumInlineConstantBuffers < MaxInlineConstantBuffers,
+                       "Number of inline constant buffers (", Uint32{m_NumInlineConstantBuffers} + 1,
+                       ") exceeds the maximum storable value (", MaxInlineConstantBuffers,
+                       "). Do you really need ", Uint32{m_NumInlineConstantBuffers} + 1, " inline constant buffers?");
+                ++m_NumInlineConstantBuffers;
+
+                static constexpr Uint32 MaxStorableInlineConstants = std::numeric_limits<decltype(m_TotalInlineConstants)>::max();
+                static_assert(MaxStorableInlineConstants >= MAX_INLINE_CONSTANTS, "MaxStorableInlineConstants is less than MAX_INLINE_CONSTANTS");
+
+                VERIFY(Uint32{m_TotalInlineConstants} + ResDesc.ArraySize <= MAX_INLINE_CONSTANTS,
+                       "Total number of inline constants exceeds the maximum (", MAX_INLINE_CONSTANTS,
+                       "). This error should have been caught in ValidatePipelineResourceSignatureDesc().");
+                VERIFY(Uint32{m_TotalInlineConstants} + ResDesc.ArraySize <= MaxStorableInlineConstants,
+                       "Total number of inline constants (", Uint32{m_TotalInlineConstants} + ResDesc.ArraySize,
+                       ") exceeds the maximum storable value (", MaxStorableInlineConstants, ").");
+                m_TotalInlineConstants += static_cast<decltype(m_TotalInlineConstants)>(ResDesc.ArraySize);
+
+                if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+                {
+                    ++m_NumStaticInlineConstantBuffers;
+                    m_TotalStaticInlineConstants += static_cast<decltype(m_TotalStaticInlineConstants)>(ResDesc.ArraySize);
+                }
+            }
+        }
+
+        if (m_ShaderStages != SHADER_TYPE_UNKNOWN)
+        {
+            m_PipelineType = PipelineTypeFromShaderStages(m_ShaderStages);
+            DEV_CHECK_ERR(m_PipelineType != PIPELINE_TYPE_INVALID, "Failed to deduce pipeline type from shader stages");
+        }
+
+        {
+            Uint32 StaticVarStageIdx = 0;
+            for (SHADER_TYPE StaticResStages = m_StaticResShaderStages; StaticResStages != SHADER_TYPE_UNKNOWN; ++StaticVarStageIdx)
+            {
+                const SHADER_TYPE StageBit           = ExtractLSB(StaticResStages);
+                const Int32       ShaderTypeInd      = GetShaderTypePipelineIndex(StageBit, m_PipelineType);
+                m_StaticResStageIndex[ShaderTypeInd] = static_cast<Int8>(StaticVarStageIdx);
+            }
+            VERIFY_EXPR(StaticVarStageIdx == GetNumStaticResStages());
+        }
     }
 
 protected:
@@ -817,6 +871,11 @@ protected:
         if (CreateImmutableSamplers)
         {
             Allocator.AddSpace<RefCntAutoPtr<SamplerImplType>>(Desc.NumImmutableSamplers);
+        }
+
+        if (m_NumInlineConstantBuffers > 0)
+        {
+            Allocator.AddSpace<InlineConstantBufferAttribsType>(m_NumInlineConstantBuffers);
         }
 
         Allocator.Reserve();
@@ -868,6 +927,11 @@ protected:
                     VERIFY_EXPR(pSampler);
                 }
             }
+        }
+
+        if (m_NumInlineConstantBuffers > 0)
+        {
+            m_pInlineConstantBuffers = Allocator.ConstructArray<InlineConstantBufferAttribsType>(m_NumInlineConstantBuffers);
         }
 
         InitResourceLayout();
@@ -1011,6 +1075,14 @@ protected:
         {
             for (size_t i = 0; i < this->m_Desc.NumImmutableSamplers; ++i)
                 m_pImmutableSamplers[i].~RefCntAutoPtr<SamplerImplType>();
+            m_pImmutableSamplers = nullptr;
+        }
+
+        if (m_pInlineConstantBuffers != nullptr)
+        {
+            for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
+                m_pInlineConstantBuffers[i].~InlineConstantBufferAttribsType();
+            m_pInlineConstantBuffers = nullptr;
         }
 
         m_pRawMemory.reset();
@@ -1061,6 +1133,22 @@ protected:
         }
     }
 
+    RefCntAutoPtr<BufferImplType> CreateInlineConstantBuffer(const char* ResName, Uint32 NumConstants) const
+    {
+        RefCntAutoPtr<IBuffer> pBuffer;
+        if (this->m_pDevice)
+        {
+            std::string Name = this->m_Desc.Name;
+            Name += " - ";
+            Name += ResName;
+            BufferDesc CBDesc{Name.c_str(), NumConstants * sizeof(Uint32), BIND_UNIFORM_BUFFER, USAGE_DYNAMIC, CPU_ACCESS_WRITE};
+
+            this->m_pDevice->CreateBuffer(CBDesc, nullptr, &pBuffer);
+            VERIFY_EXPR(pBuffer);
+        }
+        return RefCntAutoPtr<BufferImplType>{pBuffer.RawPtr<BufferImplType>()};
+    }
+
 protected:
     std::unique_ptr<void, STDDeleterRawMem<void>> m_pRawMemory;
 
@@ -1073,6 +1161,9 @@ protected:
     // Immutable samplers
     RefCntAutoPtr<SamplerImplType>* m_pImmutableSamplers = nullptr; // [m_Desc.NumImmutableSamplers]
 
+    // Inline constant buffer attributes
+    InlineConstantBufferAttribsType* m_pInlineConstantBuffers = nullptr; // [m_NumInlineConstantBuffers]
+
     // Static resource cache for all static resources
     ShaderResourceCacheImplType* m_pStaticResCache = nullptr;
 
@@ -1083,6 +1174,18 @@ protected:
 
     // Resource offsets (e.g. index of the first resource), for each variable type.
     std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + 1> m_ResourceOffsets = {};
+
+    // The number of inline constant buffers (constant buffers with PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS flag)
+    Uint16 m_NumInlineConstantBuffers = 0;
+
+    // The number of static inline constant buffers
+    Uint16 m_NumStaticInlineConstantBuffers = 0;
+
+    // The total number of inline constants (32-bit values) in all inline constant buffers
+    Uint16 m_TotalInlineConstants = 0;
+
+    // The total number of inline constants (32-bit values) in static inline constant buffers
+    Uint16 m_TotalStaticInlineConstants = 0;
 
     // Shader stages that have resources.
     SHADER_TYPE m_ShaderStages = SHADER_TYPE_UNKNOWN;

@@ -2,6 +2,15 @@
 
 ## Current progress
 
+* Added `TextureUpdateOffsetAlignment` and `TextureUpdateStrideAlignment` members to `BufferProperties` struct (API256015)
+* Added pipeline specialization constants (API256014)
+  * Added `SpecializationConstants` device feature
+  * Added `SpecializationConstant` struct
+  * Added `pSpecializationConstants` and `NumSpecializationConstants` members to `PipelineStateCreateInfo` struct
+* Added inline constants (API256013)
+  * Added `IShaderResourceVariable::SetInlineConstants` method
+  * Added `SHADER_VARIABLE_FLAG_INLINE_CONSTANTS` and `PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS` enum values
+  * Added `DRAW_FLAG_INLINE_CONSTANTS_INTACT` flag
 * Added `SHADER_SOURCE_LANGUAGE_BYTECODE` enum value (API256012)
 * Replaced `EngineCreateInfo::pRawMemAllocator` with `IEngineFactory::SetMemoryAllocator()`,
   added `IArchiverFactory::SetMemoryAllocator()` (API256011)

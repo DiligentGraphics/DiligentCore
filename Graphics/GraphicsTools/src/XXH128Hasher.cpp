@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -47,11 +47,12 @@ XXH128State::~XXH128State()
     XXH3_freeState(m_State);
 }
 
-void XXH128State::UpdateRaw(const void* pData, uint64_t Size) noexcept
+XXH128State& XXH128State::UpdateRaw(const void* pData, uint64_t Size) noexcept
 {
     VERIFY_EXPR(pData != nullptr);
     VERIFY_EXPR(Size != 0);
     XXH3_128bits_update(m_State, pData, StaticCast<size_t>(Size));
+    return *this;
 }
 
 XXH128Hash XXH128State::Digest() noexcept
@@ -60,7 +61,7 @@ XXH128Hash XXH128State::Digest() noexcept
     return {Hash.low64, Hash.high64};
 }
 
-void XXH128State::Update(const ShaderCreateInfo& ShaderCI) noexcept
+XXH128State& XXH128State::Update(const ShaderCreateInfo& ShaderCI) noexcept
 {
     ASSERT_SIZEOF64(ShaderCI, 152, "Did you add new members to ShaderCreateInfo? Please handle them here.");
 
@@ -106,6 +107,8 @@ void XXH128State::Update(const ShaderCreateInfo& ShaderCI) noexcept
     {
         UpdateStr(ShaderCI.WebGPUEmulatedArrayIndexSuffix);
     }
+
+    return *this;
 }
 
 } // namespace Diligent

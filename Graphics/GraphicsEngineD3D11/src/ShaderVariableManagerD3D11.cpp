@@ -300,6 +300,19 @@ void ShaderVariableManagerD3D11::ConstBuffBindInfo::SetDynamicOffset(Uint32 Arra
     m_ParentManager.m_ResourceCache.SetDynamicCBOffset(Attr.BindPoints + ArrayIndex, Offset);
 }
 
+void ShaderVariableManagerD3D11::ConstBuffBindInfo::SetConstants(const void* pConstants, Uint32 FirstConstant, Uint32 NumConstants)
+{
+    const PipelineResourceAttribsD3D11& Attr = GetAttribs();
+    const PipelineResourceDesc&         Desc = GetDesc();
+    VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
+#ifdef DILIGENT_DEVELOPMENT
+    {
+        VerifyInlineConstants(Desc, pConstants, FirstConstant, NumConstants);
+    }
+#endif
+    m_ParentManager.m_ResourceCache.SetInlineConstants(Attr.BindPoints, pConstants, FirstConstant, NumConstants);
+}
+
 void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(const BindResourceInfo& BindInfo)
 {
     const PipelineResourceDesc&         Desc = GetDesc();

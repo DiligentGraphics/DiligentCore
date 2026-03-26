@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -245,6 +245,30 @@ TEST(Common_Align, AlignDownToPowerOfTwo)
     TestAlignDownToPowerOfTwo<Uint16>();
     TestAlignDownToPowerOfTwo<Uint32>();
     TestAlignDownToPowerOfTwo<Uint64>();
+}
+
+TEST(Common_Align, AlignUpPointer)
+{
+    EXPECT_EQ(AlignUp(reinterpret_cast<Uint8*>(0x1), 2), reinterpret_cast<Uint8*>(0x2));
+    EXPECT_EQ(AlignUp(reinterpret_cast<Uint8*>(0x2), 2), reinterpret_cast<Uint8*>(0x2));
+    EXPECT_EQ(AlignUp(reinterpret_cast<Uint8*>(0x1), 4), reinterpret_cast<Uint8*>(0x4));
+    EXPECT_EQ(AlignUp(reinterpret_cast<Uint8*>(0x1), 8), reinterpret_cast<Uint8*>(0x8));
+
+    EXPECT_EQ(AlignUpPtr(reinterpret_cast<Uint8*>(0x1)), reinterpret_cast<Uint8*>(0x1));
+    EXPECT_EQ(AlignUpPtr(reinterpret_cast<Uint16*>(0x1)), reinterpret_cast<Uint16*>(0x2));
+    EXPECT_EQ(AlignUpPtr(reinterpret_cast<Uint32*>(0x1)), reinterpret_cast<Uint32*>(0x4));
+    EXPECT_EQ(AlignUpPtr(reinterpret_cast<Uint64*>(0x1)), reinterpret_cast<Uint64*>(0x8));
+}
+
+TEST(Common_Align, AlignDownPointer)
+{
+    EXPECT_EQ(AlignDown(reinterpret_cast<Uint8*>(15), 2), reinterpret_cast<Uint8*>(14));
+    EXPECT_EQ(AlignDown(reinterpret_cast<Uint8*>(15), 4), reinterpret_cast<Uint8*>(12));
+    EXPECT_EQ(AlignDown(reinterpret_cast<Uint8*>(15), 8), reinterpret_cast<Uint8*>(8));
+
+    EXPECT_EQ(AlignDownPtr(reinterpret_cast<Uint16*>(15)), reinterpret_cast<Uint16*>(14));
+    EXPECT_EQ(AlignDownPtr(reinterpret_cast<Uint32*>(15)), reinterpret_cast<Uint32*>(12));
+    EXPECT_EQ(AlignDownPtr(reinterpret_cast<Uint64*>(15)), reinterpret_cast<Uint64*>(8));
 }
 
 } // namespace

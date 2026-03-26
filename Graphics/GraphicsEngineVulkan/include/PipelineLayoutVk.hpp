@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,6 +31,7 @@
 /// Declaration of Diligent::PipelineLayoutVk class
 
 #include <array>
+#include <memory>
 
 #include "VulkanUtilities/ObjectWrappers.hpp"
 
@@ -47,7 +48,9 @@ public:
     PipelineLayoutVk();
     ~PipelineLayoutVk();
 
-    void Create(RenderDeviceVkImpl* pDeviceVk, RefCntAutoPtr<PipelineResourceSignatureVkImpl> ppSignatures[], Uint32 SignatureCount) noexcept(false);
+    void Create(RenderDeviceVkImpl*                             pDeviceVk,
+                RefCntAutoPtr<PipelineResourceSignatureVkImpl>* ppSignatures,
+                Uint32                                          SignatureCount) noexcept(false);
     void Release(RenderDeviceVkImpl* pDeviceVkImpl, Uint64 CommandQueueMask);
 
     VkPipelineLayout GetVkPipelineLayout() const { return m_VkPipelineLayout; }
@@ -57,6 +60,26 @@ public:
     {
         VERIFY_EXPR(Index <= m_DbgMaxBindIndex);
         return m_FirstDescrSetIndex[Index];
+    }
+
+    struct PushConstantInfo
+    {
+        VkPushConstantRange vkRange = {};
+
+        std::string Name;
+
+        Uint32 SignatureIndex = ~0u;
+        Uint32 ResourceIndex  = ~0u;
+
+        constexpr explicit operator bool() const { return vkRange.size != 0; }
+    };
+    static PushConstantInfo GetPushConstantInfo(const RefCntAutoPtr<PipelineResourceSignatureVkImpl>* ppSignatures,
+                                                Uint32                                                SignatureCount);
+
+    const PushConstantInfo& GetPushConstantInfo() const
+    {
+        static const PushConstantInfo NullPCInfo;
+        return m_PushConstantInfo ? *m_PushConstantInfo : NullPCInfo;
     }
 
 private:
@@ -69,6 +92,8 @@ private:
     // The total number of descriptor sets used by this pipeline layout
     // (Maximum is MAX_RESOURCE_SIGNATURES * 2)
     Uint8 m_DescrSetCount = 0;
+
+    std::unique_ptr<PushConstantInfo> m_PushConstantInfo;
 
 #ifdef DILIGENT_DEBUG
     Uint32 m_DbgMaxBindIndex = 0;

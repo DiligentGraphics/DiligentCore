@@ -1,0 +1,360 @@
+/*
+ *  Copyright 2026 Diligent Graphics LLC
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
+ *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
+ *  of the possibility of such damages.
+ */
+
+#include "GPUUploadManager.h"
+#include "../include/GPUUploadManagerImpl.hpp"
+#include "ThreadSignal.hpp"
+#include "CallbackWrapper.hpp"
+
+#include "gtest/gtest.h"
+
+#include <atomic>
+#include <thread>
+#include <array>
+
+using namespace Diligent;
+
+namespace
+{
+
+static const size_t kNumThreads = std::max(4u, std::thread::hardware_concurrency());
+
+TEST(GPUUploadManagerPageTest, States)
+{
+    {
+        GPUUploadManagerImpl::Page         Page{0};
+        GPUUploadManagerImpl::Page::Writer Writer = Page.TryBeginWriting();
+        EXPECT_TRUE(Writer) << "Should be able to begin writing to a new page";
+        EXPECT_TRUE(Writer.EndWriting() == GPUUploadManagerImpl::Page::WritingStatus::NotSealed) << "Page should not be sealed after the first writer finishes";
+    }
+
+    {
+        GPUUploadManagerImpl::Page Page{0};
+        EXPECT_EQ(Page.TrySeal(), GPUUploadManagerImpl::Page::SealStatus::Ready) << "Page with no active writers should be ready immediately";
+        EXPECT_EQ(Page.TrySeal(), GPUUploadManagerImpl::Page::SealStatus::AlreadySealed) << "Sealing an already sealed page should return AlreadySealed";
+        EXPECT_FALSE(Page.TryBeginWriting()) << "Should not be able to begin writing to a sealed page";
+
+        Page.Reset(nullptr);
+        Page.Unseal();
+        GPUUploadManagerImpl::Page::Writer Writer = Page.TryBeginWriting();
+        EXPECT_TRUE(Writer) << "Should be able to begin writing after resetting the page";
+        EXPECT_EQ(Writer.EndWriting(), GPUUploadManagerImpl::Page::WritingStatus::NotSealed) << "Page should not be sealed after the first writer finishes";
+        EXPECT_EQ(Page.TrySeal(), GPUUploadManagerImpl::Page::SealStatus::Ready) << "Page with no active writers should be ready immediately";
+    }
+
+    {
+        GPUUploadManagerImpl::Page         Page{0};
+        GPUUploadManagerImpl::Page::Writer Writer1 = Page.TryBeginWriting();
+        GPUUploadManagerImpl::Page::Writer Writer2 = Page.TryBeginWriting();
+
+        EXPECT_TRUE(Writer1) << "Should be able to begin writing to a new page";
+        EXPECT_TRUE(Writer2);
+        EXPECT_EQ(Page.TrySeal(), GPUUploadManagerImpl::Page::SealStatus::NotReady) << "Page with active writers should not be ready";
+        EXPECT_TRUE(Writer1.EndWriting() == GPUUploadManagerImpl::Page::WritingStatus::NotLastWriter) << "Writer should not be the last one to finish";
+        EXPECT_TRUE(Writer2.EndWriting() == GPUUploadManagerImpl::Page::WritingStatus::LastWriterSealed) << "Writer should be the last one to finish";
+    }
+
+    {
+        GPUUploadManagerImpl::Page         Page{1024};
+        GPUUploadManagerImpl::Page::Writer Writer = Page.TryBeginWriting();
+        EXPECT_TRUE(Writer) << "Should be able to begin writing to a new page";
+        EXPECT_TRUE(Writer.ScheduleBufferUpdate({nullptr, nullptr, 0, 512, nullptr}));
+        EXPECT_TRUE(Writer.ScheduleBufferUpdate({nullptr, nullptr, 512, 512, nullptr}));
+        EXPECT_FALSE(Writer.ScheduleBufferUpdate({nullptr, nullptr, 1024, 512, nullptr})) << "Should not be able to schedule an update that exceeds the page size";
+        EXPECT_EQ(Page.GetNumPendingOps(), size_t{2});
+        EXPECT_TRUE(Writer.EndWriting() == GPUUploadManagerImpl::Page::WritingStatus::NotSealed) << "Page should not be sealed";
+        EXPECT_EQ(Page.TrySeal(), GPUUploadManagerImpl::Page::SealStatus::Ready) << "Page with no active writers should be ready immediately";
+        EXPECT_EQ(Page.GetNumPendingOps(), size_t{2});
+        Page.ExecutePendingOps(nullptr, 0);
+        EXPECT_EQ(Page.GetNumPendingOps(), size_t{0});
+    }
+
+    {
+        GPUUploadManagerImpl::Page         Page{1024};
+        GPUUploadManagerImpl::Page::Writer Writer = Page.TryBeginWriting();
+        EXPECT_TRUE(Writer) << "Should be able to begin writing to a new page";
+        EXPECT_TRUE(Writer.ScheduleBufferUpdate({nullptr, nullptr, 0, 512, nullptr}));
+        EXPECT_FALSE(Writer.ScheduleBufferUpdate({nullptr, nullptr, 0, 1024, nullptr}));
+        EXPECT_TRUE(Writer.ScheduleBufferUpdate({nullptr, nullptr, 0, 256, nullptr}));
+        EXPECT_FALSE(Writer.ScheduleBufferUpdate({nullptr, nullptr, 0, 512, nullptr}));
+        EXPECT_TRUE(Writer.ScheduleBufferUpdate({nullptr, nullptr, 0, 256, nullptr}));
+        EXPECT_FALSE(Writer.ScheduleBufferUpdate({nullptr, nullptr, 0, 256, nullptr}));
+        EXPECT_EQ(Writer.EndWriting(), GPUUploadManagerImpl::Page::WritingStatus::NotSealed) << "Page should not be sealed";
+        EXPECT_EQ(Page.TrySeal(), GPUUploadManagerImpl::Page::SealStatus::Ready) << "Page with no active writers should be ready immediately";
+    }
+}
+
+TEST(GPUUploadManagerPageTest, ParallelTryBeginWriting)
+{
+    GPUUploadManagerImpl::Page Page{0};
+
+    Threading::Signal StartSignal;
+
+    std::vector<std::thread> threads;
+
+    static constexpr size_t kNumIterations = 1000;
+
+    std::atomic<Uint32> NumPagesAlreadySealed{0};
+    std::atomic<Uint32> NumLastWriters{0};
+    std::atomic<Uint32> TotalWrites{0};
+    for (size_t t = 0; t < kNumThreads; ++t)
+    {
+        threads.emplace_back([&]() {
+            StartSignal.Wait(true, static_cast<int>(kNumThreads));
+
+            std::vector<GPUUploadManagerImpl::Page::Writer> Writers;
+            Writers.reserve(kNumIterations);
+
+            bool IsSealed = false;
+            for (size_t i = 0; i < kNumIterations; ++i)
+            {
+                GPUUploadManagerImpl::Page::Writer Writer = Page.TryBeginWriting();
+                if (Writer)
+                    Writers.emplace_back(std::move(Writer));
+                else
+                    IsSealed = true;
+
+                if (IsSealed)
+                    EXPECT_FALSE(Writer) << "No writes can be started after the page is sealed";
+            }
+
+            if (Page.TrySeal() == GPUUploadManagerImpl::Page::SealStatus::AlreadySealed)
+                NumPagesAlreadySealed.fetch_add(1);
+
+            for (size_t i = 0; i < kNumIterations; ++i)
+            {
+                EXPECT_FALSE(Page.TryBeginWriting()) << "No writes can be started after the page is sealed";
+            }
+
+            for (GPUUploadManagerImpl::Page::Writer& Writer : Writers)
+            {
+                if (Writer.EndWriting() == GPUUploadManagerImpl::Page::WritingStatus::LastWriterSealed)
+                    NumLastWriters.fetch_add(1);
+            }
+
+            TotalWrites.fetch_add(static_cast<Uint32>(Writers.size()));
+        });
+    }
+
+    StartSignal.Trigger(true);
+
+    for (auto& thread : threads)
+        thread.join();
+
+    LOG_INFO_MESSAGE("Total writes: ", TotalWrites.load(), " out of ", kNumThreads * kNumIterations);
+
+    EXPECT_EQ(NumPagesAlreadySealed.load(), kNumThreads - 1) << "Only one thread should be able to seal the page";
+    EXPECT_EQ(NumLastWriters.load(), 1u) << "Only one thread should be the last writer";
+}
+
+
+TEST(GPUUploadManagerPageTest, NoWritesAfterSeal)
+{
+    GPUUploadManagerImpl::Page Page{0};
+
+    Threading::Signal StartSignal;
+
+    std::vector<std::thread> threads;
+
+    static constexpr size_t kNumIterations = 1000;
+
+    std::atomic<bool>   IsSealed{false};
+    std::atomic<size_t> NumWritesStarted{0};
+    for (size_t t = 0; t < kNumThreads; ++t)
+    {
+        threads.emplace_back(
+            [&](size_t ThreadId) {
+                StartSignal.Wait(true, static_cast<int>(kNumThreads));
+                if (ThreadId == 0)
+                {
+                    Page.TrySeal();
+                    IsSealed.store(true);
+                }
+                else
+                {
+                    for (size_t i = 0; i < kNumIterations; ++i)
+                    {
+                        if (IsSealed.load())
+                        {
+                            GPUUploadManagerImpl::Page::Writer Writer = Page.TryBeginWriting();
+                            EXPECT_FALSE(Writer) << "No writes can be started after the page is sealed";
+                        }
+                        else
+                        {
+                            GPUUploadManagerImpl::Page::Writer Writer = Page.TryBeginWriting();
+                            if (Writer)
+                            {
+                                NumWritesStarted.fetch_add(1);
+                                Writer.EndWriting();
+                            }
+                        }
+                    }
+                }
+            },
+            t);
+    }
+
+    StartSignal.Trigger(true);
+
+    for (auto& thread : threads)
+        thread.join();
+
+    LOG_INFO_MESSAGE("Number of writes started before the page was sealed: ", NumWritesStarted.load());
+}
+
+
+TEST(GPUUploadManagerPageTest, ScheduleBufferUpdateParallel)
+{
+    constexpr Uint32 kPageSize   = 16384;
+    constexpr Uint32 kUpdateSize = 32;
+    constexpr Uint32 kNumUpdates = kPageSize / kUpdateSize;
+
+    GPUUploadManagerImpl::Page Page{kPageSize};
+
+    Threading::Signal StartSignal;
+
+    std::vector<std::thread> threads;
+
+    static constexpr size_t kNumIterations = kNumUpdates;
+
+    Uint32 NumUpdatesScheduled = 0;
+    auto   Callback =
+        MakeCallback(
+            [&NumUpdatesScheduled](IBuffer* pDstBuffer,
+                                   Uint32   DstOffset,
+                                   Uint32   NumBytes) {
+                NumUpdatesScheduled++;
+            });
+
+    std::atomic<size_t> UpdatesScheduled{0};
+    for (size_t t = 0; t < kNumThreads; ++t)
+    {
+        threads.emplace_back(
+            [&](size_t ThreadId) {
+                StartSignal.Wait(true, static_cast<int>(kNumThreads));
+
+                GPUUploadManagerImpl::Page::Writer Writer = Page.TryBeginWriting();
+                if (Writer)
+                {
+                    for (size_t i = 0; i < kNumIterations; ++i)
+                    {
+                        if (Writer.ScheduleBufferUpdate({nullptr, nullptr, 0, kUpdateSize, nullptr, Callback, Callback}))
+                        {
+                            UpdatesScheduled.fetch_add(1);
+                        }
+                    }
+                    Writer.EndWriting();
+                }
+            },
+            t);
+    }
+
+    StartSignal.Trigger(true);
+
+    for (auto& thread : threads)
+        thread.join();
+
+    EXPECT_EQ(Page.GetNumPendingOps(), kNumUpdates);
+    EXPECT_EQ(UpdatesScheduled.load(), kNumUpdates) << "Should be able to schedule updates until the page size is reached";
+    EXPECT_EQ(Page.TrySeal() == GPUUploadManagerImpl::Page::SealStatus::Ready, true) << "Page should be ready for sealing after all updates are scheduled";
+    Page.ExecutePendingOps(nullptr, 0);
+    EXPECT_EQ(NumUpdatesScheduled, kNumUpdates) << "All scheduled updates should have been executed";
+}
+
+TEST(GPUUploadManagerPageTest, TryEnqueueParallel)
+{
+    GPUUploadManagerImpl::Page Page{0};
+
+    Threading::Signal StartSignal;
+
+    std::vector<std::thread> threads;
+
+    EXPECT_EQ(Page.TrySeal(), GPUUploadManagerImpl::Page::SealStatus::Ready) << "Page with no active writers should be sealed immediately";
+
+    std::atomic<size_t> NumEnqueued{0};
+    for (size_t t = 0; t < kNumThreads; ++t)
+    {
+        threads.emplace_back(
+            [&]() {
+                StartSignal.Wait(true, static_cast<int>(kNumThreads));
+                if (Page.TryEnqueue())
+                {
+                    NumEnqueued.fetch_add(1);
+                }
+            });
+    }
+
+    StartSignal.Trigger(true);
+
+    for (auto& thread : threads)
+        thread.join();
+
+    EXPECT_EQ(NumEnqueued.load(), size_t{1}) << "Only one thread should be able to enqueue the page";
+}
+
+
+TEST(GPUUploadManagerPageTest, ReleaseCallbackData)
+{
+    bool UploadEnqueuedCallbackCalled = false;
+    bool CopyBufferCallbackCalled     = false;
+
+    auto UploadEnqueuedCallback = MakeCallback(
+        [&UploadEnqueuedCallbackCalled](IBuffer* pDstBuffer,
+                                        Uint32   DstOffset,
+                                        Uint32   NumBytes) {
+            EXPECT_EQ(pDstBuffer, nullptr);
+            EXPECT_EQ(DstOffset, 128u);
+            EXPECT_EQ(NumBytes, 256u);
+            UploadEnqueuedCallbackCalled = true;
+        });
+
+    auto CopyBufferCallback = MakeCallback(
+        [&CopyBufferCallbackCalled](IDeviceContext* pContext,
+                                    IBuffer*        pSrcBuffer,
+                                    Uint32          SrcOffset,
+                                    Uint32          NumBytes) {
+            EXPECT_EQ(pContext, nullptr);
+            EXPECT_EQ(pSrcBuffer, nullptr);
+            EXPECT_EQ(SrcOffset, ~0u);
+            EXPECT_EQ(NumBytes, 1024u);
+            CopyBufferCallbackCalled = true;
+        });
+
+    {
+        GPUUploadManagerImpl::Page         Page{8192};
+        GPUUploadManagerImpl::Page::Writer Writer = Page.TryBeginWriting();
+        ASSERT_TRUE(Writer);
+
+        Writer.ScheduleBufferUpdate({nullptr, nullptr, 128, 256, nullptr, UploadEnqueuedCallback, UploadEnqueuedCallback});
+        Writer.ScheduleBufferUpdate({nullptr, 1024, nullptr, CopyBufferCallback, CopyBufferCallback});
+        Writer.EndWriting();
+    }
+
+    EXPECT_TRUE(UploadEnqueuedCallbackCalled) << "UploadEnqueued callback should have been called before the page is destroyed";
+    EXPECT_TRUE(CopyBufferCallbackCalled) << "CopyBuffer callback should have been called before the page is destroyed";
+}
+
+} // namespace

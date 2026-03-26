@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,6 +49,11 @@ namespace Diligent
 
 class DeviceContextVkImpl;
 
+namespace
+{
+struct ShaderStageSpecializationData;
+}
+
 /// Pipeline state object implementation in Vulkan backend.
 class PipelineStateVkImpl final : public PipelineStateBase<EngineVkImplTraits>
 {
@@ -73,6 +78,7 @@ public:
 
     const PipelineLayoutVk& GetPipelineLayout() const { return m_PipelineLayout; }
 
+    using ShaderResourcesSharedPtr = std::shared_ptr<const SPIRVShaderResources>;
     struct ShaderStageInfo
     {
         ShaderStageInfo() {}
@@ -84,8 +90,14 @@ public:
         // Shader stage type. All shaders in the stage must have the same type.
         SHADER_TYPE Type = SHADER_TYPE_UNKNOWN;
 
-        std::vector<const ShaderVkImpl*>   Shaders;
-        std::vector<std::vector<uint32_t>> SPIRVs;
+        struct Item
+        {
+            const ShaderVkImpl*   pShader = nullptr;
+            std::vector<uint32_t> SPIRV;
+
+            explicit Item(const ShaderVkImpl* _pShader);
+        };
+        std::vector<Item> Items;
 
         friend SHADER_TYPE GetShaderStageType(const ShaderStageInfo& Stage) { return Stage.Type; }
     };
@@ -124,7 +136,8 @@ private:
     template <typename PSOCreateInfoType>
     TShaderStages InitInternalObjects(const PSOCreateInfoType&                           CreateInfo,
                                       std::vector<VkPipelineShaderStageCreateInfo>&      vkShaderStages,
-                                      std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules) noexcept(false);
+                                      std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules,
+                                      std::vector<ShaderStageSpecializationData>&        SpecDataPerStage) noexcept(false);
 
     void InitPipelineLayout(const PipelineStateCreateInfo& CreateInfo,
                             TShaderStages&                 ShaderStages) noexcept(false);

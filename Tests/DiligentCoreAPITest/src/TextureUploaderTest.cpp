@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -291,12 +291,14 @@ void TestAutoRecycle(bool IsRenderThread, TEXTURE_UPLOADER_MODE Mode)
         WorkerThread.join();
     }
 
+    // Flush queued copy
+    pTexUploader->RenderThreadUpdate(pContext);
     pContext->WaitForIdle();
     pTexUploader->RenderThreadUpdate(pContext);
 
     RefCntAutoPtr<IUploadBuffer> pUploadBuffer2;
     pTexUploader->AllocateUploadBuffer(pContext, UploadBuffDesc, &pUploadBuffer2);
-    EXPECT_EQ(pUploadBuffer, pUploadBuffer2);
+    ASSERT_EQ(pUploadBuffer, pUploadBuffer2);
 
     MappedTextureSubresource MappedData = pUploadBuffer->GetMappedData(0, 0);
     Uint32                   cnt        = 0;

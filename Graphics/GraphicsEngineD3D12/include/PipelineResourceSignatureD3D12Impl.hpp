@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -91,6 +91,10 @@ public:
 };
 ASSERT_SIZEOF(ImmutableSamplerAttribsD3D12, 8, "The struct is used in serialization and must be tightly packed");
 
+struct InlineConstantBufferAttribsD3D12
+{
+    Uint8 Dummy = 0;
+};
 
 struct PipelineResourceSignatureInternalDataD3D12 : PipelineResourceSignatureInternalData<PipelineResourceAttribsD3D12, ImmutableSamplerAttribsD3D12>
 {
@@ -125,7 +129,7 @@ public:
 
     Uint32 GetTotalRootParamsCount() const
     {
-        return m_RootParams.GetNumRootTables() + m_RootParams.GetNumRootViews();
+        return m_RootParams.GetNumRootTables() + m_RootParams.GetNumRootViews() + m_RootParams.GetNumRootConstants();
     }
 
     Uint32 GetNumRootTables() const
@@ -136,6 +140,11 @@ public:
     Uint32 GetNumRootViews() const
     {
         return m_RootParams.GetNumRootViews();
+    }
+
+    Uint32 GetNumRootConstants() const
+    {
+        return m_RootParams.GetNumRootConstants();
     }
 
     void InitSRBResourceCache(ShaderResourceCacheD3D12& ResourceCache);
@@ -157,6 +166,9 @@ public:
 
     void CommitRootViews(const CommitCacheResourcesAttribs& CommitAttribs,
                          Uint64                             BuffersMask) const;
+
+    void CommitRootConstants(const CommitCacheResourcesAttribs& CommitAttribs,
+                             Uint64                             ConstantsMask) const;
 
     const RootParamsManager& GetRootParams() const { return m_RootParams; }
 

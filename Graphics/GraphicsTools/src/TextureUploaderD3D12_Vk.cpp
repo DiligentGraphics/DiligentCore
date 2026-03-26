@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,6 +33,7 @@
 #include "TextureUploaderD3D12_Vk.hpp"
 #include "ThreadSignal.hpp"
 #include "GraphicsAccessories.hpp"
+#include "MPSCQueue.hpp"
 
 namespace Diligent
 {
@@ -169,23 +170,19 @@ struct TextureUploaderD3D12_Vk::InternalData
         }
     }
 
-    std::vector<PendingBufferOperation>& SwapMapQueues()
-    {
-        std::lock_guard<std::mutex> QueueLock(m_PendingOperationsMtx);
-        m_PendingOperations.swap(m_InWorkOperations);
-        return m_InWorkOperations;
-    }
-
     void EnqueueCopy(UploadTexture* pUploadBuffer, ITexture* pDstTex, Uint32 dstSlice, Uint32 dstMip, bool AutoRecycle)
     {
-        std::lock_guard<std::mutex> QueueLock(m_PendingOperationsMtx);
-        m_PendingOperations.emplace_back(PendingBufferOperation::Type::Copy, pUploadBuffer, pDstTex, dstSlice, dstMip, AutoRecycle);
+        m_PendingOperations.Enqueue(PendingBufferOperation{PendingBufferOperation::Type::Copy, pUploadBuffer, pDstTex, dstSlice, dstMip, AutoRecycle});
     }
 
     void EnqueueMap(UploadTexture* pUploadBuffer)
     {
-        std::lock_guard<std::mutex> QueueLock(m_PendingOperationsMtx);
-        m_PendingOperations.emplace_back(PendingBufferOperation::Type::Map, pUploadBuffer);
+        m_PendingOperations.Enqueue(PendingBufferOperation{PendingBufferOperation::Type::Map, pUploadBuffer});
+    }
+
+    bool Dequeue(InternalData::PendingBufferOperation& Operation)
+    {
+        return m_PendingOperations.Dequeue(Operation);
     }
 
     Uint64 SignalFence(IDeviceContext* pContext)
@@ -242,15 +239,15 @@ struct TextureUploaderD3D12_Vk::InternalData
 
     Uint32 GetNumPendingOperations()
     {
-        std::lock_guard<std::mutex> QueueLock(m_PendingOperationsMtx);
-        return static_cast<Uint32>(m_PendingOperations.size());
+        return static_cast<Uint32>(m_PendingOperations.Size());
     }
 
     void Execute(IDeviceContext* pContext, PendingBufferOperation& Operation);
 
+    std::vector<PendingBufferOperation>& GetInWorkOperations() { return m_InWorkOperations; }
+
 private:
-    std::mutex                          m_PendingOperationsMtx;
-    std::vector<PendingBufferOperation> m_PendingOperations;
+    MPSCQueue<PendingBufferOperation>   m_PendingOperations;
     std::vector<PendingBufferOperation> m_InWorkOperations;
 
     std::mutex                                                                     m_UploadTexturesCacheMtx;
@@ -281,38 +278,40 @@ TextureUploaderD3D12_Vk::~TextureUploaderD3D12_Vk()
 
 void TextureUploaderD3D12_Vk::RenderThreadUpdate(IDeviceContext* pContext)
 {
-    auto& InWorkOperations = m_pInternalData->SwapMapQueues();
-    if (!InWorkOperations.empty())
+    Uint32 NumCopyOperations = 0;
+    auto&  InWorkOperations  = m_pInternalData->GetInWorkOperations();
+    InWorkOperations.clear();
     {
-        Uint32 NumCopyOperations = 0;
-        for (InternalData::PendingBufferOperation& Operation : InWorkOperations)
+        InternalData::PendingBufferOperation Operation;
+        while (m_pInternalData->Dequeue(Operation))
         {
             m_pInternalData->Execute(pContext, Operation);
             if (Operation.OpType == InternalData::PendingBufferOperation::Type::Copy)
                 ++NumCopyOperations;
+            InWorkOperations.push_back(std::move(Operation));
         }
+    }
 
-        if (NumCopyOperations > 0)
+    if (NumCopyOperations > 0)
+    {
+        // The buffer may be recycled immediately after the copy scheduled is signaled,
+        // so we must signal the fence first.
+        Uint64 SignaledFenceValue = m_pInternalData->SignalFence(pContext);
+
+        for (InternalData::PendingBufferOperation& Operation : InWorkOperations)
         {
-            // The buffer may be recycled immediately after the copy scheduled is signaled,
-            // so we must signal the fence first.
-            Uint64 SignaledFenceValue = m_pInternalData->SignalFence(pContext);
-
-            for (InternalData::PendingBufferOperation& Operation : InWorkOperations)
+            if (Operation.OpType == InternalData::PendingBufferOperation::Type::Copy)
             {
-                if (Operation.OpType == InternalData::PendingBufferOperation::Type::Copy)
+                Operation.pUploadBuffer->SignalCopyScheduled(SignaledFenceValue);
+                if (Operation.AutoRecycle)
                 {
-                    Operation.pUploadBuffer->SignalCopyScheduled(SignaledFenceValue);
-                    if (Operation.AutoRecycle)
-                    {
-                        m_pInternalData->RecycleUploadTexture(Operation.pUploadBuffer);
-                    }
+                    m_pInternalData->RecycleUploadTexture(Operation.pUploadBuffer);
                 }
             }
         }
-
-        InWorkOperations.clear();
     }
+
+    InWorkOperations.clear();
 
     // This must be called by the same thread that signals the fence
     m_pInternalData->UpdatedCompletedFenceValue();

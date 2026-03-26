@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -388,7 +388,12 @@ void ValidateTextureRegion(const TextureDesc& TexDesc, Uint32 MipLevel, Uint32 S
 #endif
 }
 
-void ValidateUpdateTextureParams(const TextureDesc& TexDesc, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData)
+void ValidateUpdateTextureParams(const TextureDesc&       TexDesc,
+                                 Uint32                   MipLevel,
+                                 Uint32                   Slice,
+                                 const Box&               DstBox,
+                                 const TextureSubResData& SubresData,
+                                 const BufferProperties&  BufferProps)
 {
     VERIFY((SubresData.pData != nullptr) ^ (SubresData.pSrcBuffer != nullptr), "Either CPU data pointer (pData) or GPU buffer (pSrcBuffer) must not be null, but not both.");
     ValidateTextureRegion(TexDesc, MipLevel, Slice, DstBox);
@@ -397,6 +402,17 @@ void ValidateUpdateTextureParams(const TextureDesc& TexDesc, Uint32 MipLevel, Ui
     VERIFY_TEX_PARAMS(TexDesc.SampleCount == 1, "Only non-multisampled textures can be updated with UpdateData().");
     VERIFY_TEX_PARAMS((SubresData.Stride & 0x03) == 0, "Texture data stride (", SubresData.Stride, ") must be at least 32-bit aligned.");
     VERIFY_TEX_PARAMS((SubresData.DepthStride & 0x03) == 0, "Texture data depth stride (", SubresData.DepthStride, ") must be at least 32-bit aligned.");
+
+    if (SubresData.pSrcBuffer)
+    {
+        VERIFY_TEX_PARAMS((SubresData.SrcOffset % BufferProps.TextureUpdateOffsetAlignment) == 0,
+                          "Source buffer offset (", SubresData.SrcOffset, ") must be a multiple of device's TextureUpdateOffsetAlignment (",
+                          BufferProps.TextureUpdateOffsetAlignment, ").");
+
+        VERIFY_TEX_PARAMS((SubresData.Stride % BufferProps.TextureUpdateStrideAlignment) == 0,
+                          "Texture data stride (", SubresData.Stride, ") must be a multiple of device's TextureUpdateStrideAlignment (",
+                          BufferProps.TextureUpdateStrideAlignment, ").");
+    }
 
     Uint32                      UpdateRegionWidth  = DstBox.Width();
     Uint32                      UpdateRegionHeight = DstBox.Height();

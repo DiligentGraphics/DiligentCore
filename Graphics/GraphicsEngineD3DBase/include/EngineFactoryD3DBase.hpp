@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -244,6 +244,7 @@ public:
             Features.NativeMultiDraw               = DEVICE_FEATURE_STATE_DISABLED;
             Features.AsyncShaderCompilation        = DEVICE_FEATURE_STATE_ENABLED;
             Features.FormattedBuffers              = DEVICE_FEATURE_STATE_ENABLED;
+            Features.SpecializationConstants       = DEVICE_FEATURE_STATE_DISABLED;
         }
 
         // Set memory properties

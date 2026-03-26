@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -133,6 +133,9 @@ BufferD3D11Impl::BufferD3D11Impl(IReferenceCounters*        pRefCounters,
 
     // The memory is always coherent in Direct3D11
     m_MemoryProperties = MEMORY_PROPERTY_HOST_COHERENT;
+
+    if (m_Desc.Usage == USAGE_SPARSE)
+        InitSparseProperties();
 }
 
 static BufferDesc BuffDescFromD3D11Buffer(ID3D11Buffer* pd3d11Buffer, BufferDesc BuffDesc)
@@ -231,6 +234,9 @@ BufferD3D11Impl::BufferD3D11Impl(IReferenceCounters*          pRefCounters,
 
     // The memory is always coherent in Direct3D11
     m_MemoryProperties = MEMORY_PROPERTY_HOST_COHERENT;
+
+    if (m_Desc.Usage == USAGE_SPARSE)
+        InitSparseProperties();
 }
 
 BufferD3D11Impl::~BufferD3D11Impl()
@@ -299,11 +305,9 @@ void BufferD3D11Impl::CreateSRV(struct BufferViewDesc& SRVDesc, ID3D11ShaderReso
                            "Failed to create D3D11 shader resource view");
 }
 
-SparseBufferProperties BufferD3D11Impl::GetSparseProperties() const
+void BufferD3D11Impl::InitSparseProperties()
 {
-    DEV_CHECK_ERR(m_Desc.Usage == USAGE_SPARSE,
-                  "IBuffer::GetSparseProperties() should only be used for sparse buffer");
-
+    VERIFY_EXPR(m_Desc.Usage == USAGE_SPARSE);
     ID3D11Device2* pd3d11Device2 = m_pDevice->GetD3D11Device2();
 
     UINT             NumTilesForEntireResource = 0;
@@ -319,10 +323,8 @@ SparseBufferProperties BufferD3D11Impl::GetSparseProperties() const
     VERIFY(StandardTileShapeForNonPackedMips.WidthInTexels == D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES,
            "Expected to be a standard block size");
 
-    SparseBufferProperties Props;
-    Props.AddressSpaceSize = Uint64{NumTilesForEntireResource} * StandardTileShapeForNonPackedMips.WidthInTexels;
-    Props.BlockSize        = StandardTileShapeForNonPackedMips.WidthInTexels;
-    return Props;
+    m_SparseProps.AddressSpaceSize = Uint64{NumTilesForEntireResource} * StandardTileShapeForNonPackedMips.WidthInTexels;
+    m_SparseProps.BlockSize        = StandardTileShapeForNonPackedMips.WidthInTexels;
 }
 
 } // namespace Diligent

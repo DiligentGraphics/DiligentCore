@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -653,12 +653,14 @@ void RenderDeviceGLImpl::CreateDeferredContext(IDeviceContext** ppContext)
     *ppContext = nullptr;
 }
 
-SparseTextureFormatInfo RenderDeviceGLImpl::GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,
-                                                                       RESOURCE_DIMENSION Dimension,
-                                                                       Uint32             SampleCount) const
+Bool RenderDeviceGLImpl::GetSparseTextureFormatInfo(TEXTURE_FORMAT           TexFormat,
+                                                    RESOURCE_DIMENSION       Dimension,
+                                                    Uint32                   SampleCount,
+                                                    SparseTextureFormatInfo& FormatInfo) const
 {
     UNSUPPORTED("GetSparseTextureFormatInfo is not supported in OpenGL");
-    return {};
+    FormatInfo = {};
+    return false;
 }
 
 bool RenderDeviceGLImpl::CheckExtension(const Char* ExtensionString) const
@@ -796,6 +798,7 @@ void RenderDeviceGLImpl::InitAdapterInfo()
         Features.TileShaders                 = DEVICE_FEATURE_STATE_DISABLED;
         Features.SubpassFramebufferFetch     = DEVICE_FEATURE_STATE_DISABLED;
         Features.TextureComponentSwizzle     = DEVICE_FEATURE_STATE_DISABLED;
+        Features.SpecializationConstants     = DEVICE_FEATURE_STATE_DISABLED;
 
         {
             bool WireframeFillSupported = (glPolygonMode != nullptr);
@@ -1035,7 +1038,9 @@ void RenderDeviceGLImpl::InitAdapterInfo()
             BufferProperties& BufferProps{m_AdapterInfo.Buffer};
             BufferProps.ConstantBufferOffsetAlignment   = 256;
             BufferProps.StructuredBufferOffsetAlignment = 16;
-            ASSERT_SIZEOF(BufferProps, 8, "Did you add a new member to BufferProperites? Please initialize it here.");
+            BufferProps.TextureUpdateOffsetAlignment    = 4;
+            BufferProps.TextureUpdateStrideAlignment    = 4;
+            ASSERT_SIZEOF(BufferProps, 16, "Did you add a new member to BufferProperites? Please initialize it here.");
         }
 #undef ENABLE_FEATURE
     }
@@ -1129,7 +1134,7 @@ void RenderDeviceGLImpl::InitAdapterInfo()
         m_AdapterInfo.Queues[0].TextureCopyGranularity[2] = 1;
     }
 
-    ASSERT_SIZEOF(DeviceFeatures, 47, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
+    ASSERT_SIZEOF(DeviceFeatures, 48, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
 }
 
 void RenderDeviceGLImpl::FlagSupportedTexFormats()

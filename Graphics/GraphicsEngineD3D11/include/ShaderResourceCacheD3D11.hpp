@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,13 +49,15 @@
 namespace Diligent
 {
 
+struct InlineConstantBufferAttribsD3D11;
+
 /// The class implements a cache that holds resources bound to all shader stages.
 // All resources are stored in the continuous memory using the following layout:
 //
-//   |         CachedCB         |      ID3D11Buffer*     ||       CachedResource     | ID3D11ShaderResourceView* ||         CachedSampler        |      ID3D11SamplerState*    ||      CachedResource     | ID3D11UnorderedAccessView*||
-//   |--------------------------|------------------------||--------------------------|---------------------------||------------------------------|-----------------------------||-------------------------|---------------------------||
-//   |  0 | 1 | ... | CBCount-1 | 0 | 1 | ...| CBCount-1 || 0 | 1 | ... | SRVCount-1 | 0 | 1 |  ... | SRVCount-1 || 0 | 1 | ... | SamplerCount-1 | 0 | 1 | ...| SamplerCount-1 ||0 | 1 | ... | UAVCount-1 | 0 | 1 | ...  | UAVCount-1 ||
-//    --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//   |         CachedCB         |      ID3D11Buffer*     ||       CachedResource     | ID3D11ShaderResourceView* ||         CachedSampler        |      ID3D11SamplerState*    ||      CachedResource     | ID3D11UnorderedAccessView*| Inline Constants |
+//   |--------------------------|------------------------||--------------------------|---------------------------||------------------------------|-----------------------------||-------------------------|---------------------------|------------------|
+//   |  0 | 1 | ... | CBCount-1 | 0 | 1 | ...| CBCount-1 || 0 | 1 | ... | SRVCount-1 | 0 | 1 |  ... | SRVCount-1 || 0 | 1 | ... | SamplerCount-1 | 0 | 1 | ...| SamplerCount-1 ||0 | 1 | ... | UAVCount-1 | 0 | 1 | ...  | UAVCount-1 | 0 |  1 |   ...   |
+//    ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //
 class ShaderResourceCacheD3D11 : public ShaderResourceCacheBase
 {
@@ -88,6 +90,9 @@ public:
 
         // Dynamic offset in bytes
         Uint32 DynamicOffset = 0;
+
+        // Pointer to inline constant data
+        void* pInlineConstantData = nullptr;
 
         explicit operator bool() const noexcept
         {
@@ -136,6 +141,17 @@ public:
         bool AllowsDynamicOffset() const
         {
             return pBuff && RangeSize != 0 && RangeSize < pBuff->GetDesc().Size;
+        }
+
+        void SetInlineConstants(const void* pSrcConstants, Uint32 FirstConstant, Uint32 NumConstants)
+        {
+            VERIFY(pSrcConstants != nullptr, "Source constant data pointer is null");
+            VERIFY(FirstConstant + NumConstants <= RangeSize / sizeof(Uint32),
+                   "Too many constants (", FirstConstant + NumConstants, ") for the allocated space (", RangeSize / sizeof(Uint32), ")");
+            VERIFY(pInlineConstantData != nullptr, "Inline constant data pointer is null");
+            memcpy(reinterpret_cast<Uint8*>(pInlineConstantData) + FirstConstant * sizeof(Uint32),
+                   pSrcConstants,
+                   NumConstants * sizeof(Uint32));
         }
 
         // Returns ID3D11Buffer
@@ -239,7 +255,9 @@ public:
 
     static constexpr int NumShaderTypes = D3D11ResourceBindPoints::NumShaderTypes;
 
-    static size_t GetRequiredMemorySize(const D3D11ShaderResourceCounters& ResCount);
+    static size_t GetRequiredMemorySize(const D3D11ShaderResourceCounters&      ResCount,
+                                        const InlineConstantBufferAttribsD3D11* pInlineCBs,
+                                        Uint32                                  NumInlineCBs);
 
     // pDynamicCBSlotsMask is the optional pointer to the array of dynamic constant buffer
     // slot masks for each shader stage. Dynamic constant buffer in D3D11 is a buffer that
@@ -247,7 +265,9 @@ public:
     // Static resource cache does not allow dynamic buffers (pDynamicCBSlotsMask == null).
     void Initialize(const D3D11ShaderResourceCounters&        ResCount,
                     IMemoryAllocator&                         MemAllocator,
-                    const std::array<Uint16, NumShaderTypes>* pDynamicCBSlotsMask);
+                    const std::array<Uint16, NumShaderTypes>* pDynamicCBSlotsMask,
+                    const InlineConstantBufferAttribsD3D11*   pInlineCBs,
+                    Uint32                                    NumInlineCBs);
 
     template <D3D11_RESOURCE_RANGE ResRange, typename TSrcResourceType, typename... ExtraArgsType>
     inline void SetResource(const D3D11ResourceBindPoints& BindPoints,
@@ -256,9 +276,15 @@ public:
 
     __forceinline void SetDynamicCBOffset(const D3D11ResourceBindPoints& BindPoints, Uint32 DynamicOffset);
 
+    __forceinline void SetInlineConstants(const D3D11ResourceBindPoints& BindPoints,
+                                          const void*                    pConstants,
+                                          Uint32                         FirstConstant,
+                                          Uint32                         NumConstants);
 
     template <D3D11_RESOURCE_RANGE ResRange>
-    __forceinline const typename CachedResourceTraits<ResRange>::CachedResourceType& GetResource(const D3D11ResourceBindPoints& BindPoints) const
+    __forceinline const typename CachedResourceTraits<ResRange>::CachedResourceType& GetResource(
+        const D3D11ResourceBindPoints&                               BindPoints,
+        typename CachedResourceTraits<ResRange>::D3D11ResourceType** ppd3d11Resource = nullptr) const
     {
         VERIFY(BindPoints.GetActiveStages() != SHADER_TYPE_UNKNOWN, "No active shader stage");
         const Int32 FirstStageInd     = GetFirstShaderStageIndex(BindPoints.GetActiveStages());
@@ -266,9 +292,9 @@ public:
         VERIFY(FirstStageBinding < GetResourceCount<ResRange>(FirstStageInd), "Resource slot is out of range");
         const auto  FirstStageResArrays = GetConstResourceArrays<ResRange>(FirstStageInd);
         const auto& CachedRes           = FirstStageResArrays.first[FirstStageBinding];
+        auto*       pd3d11Res           = FirstStageResArrays.second[FirstStageBinding];
 #ifdef DILIGENT_DEBUG
         {
-            const auto* pd3d11Res = FirstStageResArrays.second[FirstStageBinding];
             for (SHADER_TYPE ActiveStages = BindPoints.GetActiveStages(); ActiveStages != SHADER_TYPE_UNKNOWN;)
             {
                 const Int32 ShaderInd = ExtractFirstShaderStageIndex(ActiveStages);
@@ -278,6 +304,8 @@ public:
             }
         }
 #endif
+        if (ppd3d11Resource != nullptr)
+            *ppd3d11Resource = pd3d11Res;
         return CachedRes;
     }
 
@@ -288,6 +316,8 @@ public:
 
     template <D3D11_RESOURCE_RANGE ResRange>
     bool CopyResource(const ShaderResourceCacheD3D11& SrcCache, const D3D11ResourceBindPoints& BindPoints);
+
+    inline void CopyInlineConstants(const ShaderResourceCacheD3D11& SrcCache, const D3D11ResourceBindPoints& BindPoints, Uint32 NumConstants);
 
     template <D3D11_RESOURCE_RANGE ResRange>
     __forceinline bool IsResourceBound(const D3D11ResourceBindPoints& BindPoints) const
@@ -320,7 +350,7 @@ public:
     template <D3D11_RESOURCE_RANGE>
     __forceinline Uint32 GetResourceCount(Uint32 ShaderInd) const;
 
-    bool IsInitialized() const { return m_IsInitialized; }
+    bool IsInitialized() const { return m_Flags & FLAG_IS_INITIALIZED; }
 
     ResourceCacheContentType GetContentType() const { return m_ContentType; }
 
@@ -392,11 +422,21 @@ public:
         return false;
     }
 
+    bool HasInlineConstants() const
+    {
+        return m_Flags & FLAG_HAS_INLINE_CONSTANTS;
+    }
+
 #ifdef DILIGENT_DEBUG
     void DbgVerifyDynamicBufferMasks() const;
 #endif
 
 private:
+    void InitInlineConstantBuffer(const D3D11ResourceBindPoints& BindPoints,
+                                  RefCntAutoPtr<BufferD3D11Impl> pBuffer,
+                                  Uint32                         NumConstants,
+                                  void*                          pInlineConstantData);
+
     template <D3D11_RESOURCE_RANGE>
     __forceinline Uint32 GetResourceDataOffset(Uint32 ShaderInd) const;
 
@@ -407,7 +447,7 @@ private:
     {
         using CachedResourceType = typename CachedResourceTraits<ResRange>::CachedResourceType;
         using D3D11ResourceType  = typename CachedResourceTraits<ResRange>::D3D11ResourceType;
-        static_assert(alignof(CachedResourceType) == alignof(D3D11ResourceType*), "Alignment mismatch, pointer to D3D11 resource may not be properly aligned");
+        static_assert((sizeof(CachedResourceType) % alignof(D3D11ResourceType*)) == 0, "Alignment mismatch, pointer to D3D11 resource may not be properly aligned");
 
         const Uint32              DataOffset      = GetResourceDataOffset<ResRange>(ShaderInd);
         const Uint32              ResCount        = GetResourceCount<ResRange>(ShaderInd);
@@ -466,7 +506,14 @@ private:
 
     std::array<OffsetType, MaxOffsets> m_Offsets = {};
 
-    bool m_IsInitialized = false;
+    enum FLAGS : Uint8
+    {
+        FLAG_NONE                 = 0,
+        FLAG_IS_INITIALIZED       = 1u << 0u,
+        FLAG_HAS_INLINE_CONSTANTS = 1u << 1u,
+    };
+    DECLARE_FRIEND_FLAG_ENUM_OPERATORS(FLAGS)
+    FLAGS m_Flags = FLAG_NONE;
 
     // Indicates what types of resources are stored in the cache
     const ResourceCacheContentType m_ContentType;
@@ -480,6 +527,7 @@ private:
 
     std::unique_ptr<Uint8, STDDeleter<Uint8, IMemoryAllocator>> m_pResourceData;
 };
+DEFINE_FLAG_ENUM_OPERATORS(ShaderResourceCacheD3D11::FLAGS)
 
 template <>
 struct ShaderResourceCacheD3D11::CachedResourceTraits<D3D11_RESOURCE_RANGE_CBV>
@@ -641,7 +689,7 @@ inline ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindCBs(
         // Offsets in Direct3D11 are measure in float4 constants.
         const UINT FirstCBConstant = StaticCast<UINT>((ResArrays.first[res].BaseOffset + ResArrays.first[res].DynamicOffset) / 16u);
         // The number of constants must be a multiple of 16 constants. It is OK if it is past the end of the buffer.
-        const UINT NumCBConstants = StaticCast<UINT>(AlignUp(ResArrays.first[res].RangeSize / 16u, 16u));
+        const UINT NumCBConstants = StaticCast<UINT>(AlignUp((ResArrays.first[res].RangeSize + 15u) / 16u, 16u));
         // clang-format off
         if (CommittedD3D11Resources[Slot] != pd3d11CB        ||
             FirstConstants[Slot]          != FirstCBConstant ||
@@ -688,7 +736,7 @@ inline void ShaderResourceCacheD3D11::BindDynamicCBs(Uint32                     
         // Offsets in Direct3D11 are measure in float4 constants.
         const UINT FirstCBConstant = StaticCast<UINT>((CB.BaseOffset + CB.DynamicOffset) / 16u);
         // The number of constants must be a multiple of 16 constants. It is OK if it is past the end of the buffer.
-        const UINT NumCBConstants = StaticCast<UINT>(AlignUp(CB.RangeSize / 16u, 16u));
+        const UINT NumCBConstants = StaticCast<UINT>(AlignUp((CB.RangeSize + 15u) / 16u, 16u));
         // clang-format off
         if (CommittedD3D11Resources[Slot] != pd3d11CB        ||
             FirstConstants[Slot]          != FirstCBConstant ||
@@ -723,6 +771,36 @@ __forceinline void ShaderResourceCacheD3D11::SetDynamicCBOffset(const D3D11Resou
 
         ResArrays.first[Binding].DynamicOffset = DynamicOffset;
     }
+}
+
+__forceinline void ShaderResourceCacheD3D11::SetInlineConstants(const D3D11ResourceBindPoints& BindPoints,
+                                                                const void*                    pConstants,
+                                                                Uint32                         FirstConstant,
+                                                                Uint32                         NumConstants)
+{
+    // Since all shader stages share the same inline constant data, we can just set it for one stage
+    SHADER_TYPE ActiveStages = BindPoints.GetActiveStages();
+    VERIFY_EXPR(ActiveStages != SHADER_TYPE_UNKNOWN);
+    const Uint32 ShaderInd0 = ExtractFirstShaderStageIndex(ActiveStages);
+    const Uint32 Binding0   = BindPoints[ShaderInd0];
+    VERIFY(Binding0 < GetResourceCount<D3D11_RESOURCE_RANGE_CBV>(ShaderInd0), "Cache offset is out of range");
+    const auto ResArrays0 = GetResourceArrays<D3D11_RESOURCE_RANGE_CBV>(ShaderInd0);
+    ResArrays0.first[Binding0].SetInlineConstants(pConstants, FirstConstant, NumConstants);
+
+#ifdef DILIGENT_DEBUG
+    while (ActiveStages != SHADER_TYPE_UNKNOWN)
+    {
+        const Uint32 ShaderInd = ExtractFirstShaderStageIndex(ActiveStages);
+        const Uint32 Binding   = BindPoints[ShaderInd];
+        VERIFY(Binding < GetResourceCount<D3D11_RESOURCE_RANGE_CBV>(ShaderInd), "Cache offset is out of range");
+
+        const auto ResArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_CBV>(ShaderInd);
+        VERIFY(ResArrays.first[Binding].pInlineConstantData == ResArrays0.first[Binding0].pInlineConstantData,
+               "All shader stages must share the same inline constant data (ensured by InitInlineConstantBuffer)");
+        VERIFY(ResArrays.first[Binding] == ResArrays0.first[Binding0],
+               "All shader stages must share the same inline constant data attributes (ensured by InitInlineConstantBuffer)");
+    }
+#endif
 }
 
 template <>
@@ -780,6 +858,51 @@ bool ShaderResourceCacheD3D11::CopyResource(const ShaderResourceCacheD3D11& SrcC
 
     VERIFY_EXPR(IsBound == IsResourceBound<ResRange>(BindPoints));
     return IsBound;
+}
+
+inline void ShaderResourceCacheD3D11::CopyInlineConstants(const ShaderResourceCacheD3D11& SrcCache, const D3D11ResourceBindPoints& BindPoints, Uint32 NumConstants)
+{
+    // Since all shader stages share the same inline constant data, we can just copy from one stage
+    SHADER_TYPE ActiveStages = BindPoints.GetActiveStages();
+    VERIFY_EXPR(ActiveStages != SHADER_TYPE_UNKNOWN);
+
+    const Int32 ShaderInd0 = ExtractFirstShaderStageIndex(ActiveStages);
+
+    const auto SrcResArrays0 = SrcCache.GetConstResourceArrays<D3D11_RESOURCE_RANGE_CBV>(ShaderInd0);
+    const auto DstResArrays0 = GetResourceArrays<D3D11_RESOURCE_RANGE_CBV>(ShaderInd0);
+
+    const Uint32 Binding0 = BindPoints[ShaderInd0];
+    VERIFY(Binding0 < GetResourceCount<D3D11_RESOURCE_RANGE_CBV>(ShaderInd0), "Destination index is out of range");
+    VERIFY(Binding0 < SrcCache.GetResourceCount<D3D11_RESOURCE_RANGE_CBV>(ShaderInd0), "Source index is out of range");
+    VERIFY(SrcResArrays0.first[Binding0].pInlineConstantData != nullptr, "Source inline constant data is null");
+    VERIFY(DstResArrays0.first[Binding0].pInlineConstantData != nullptr, "Destination inline constant data is null");
+    VERIFY(SrcResArrays0.first[Binding0].RangeSize == NumConstants * sizeof(Uint32), "Source inline constant buffer size mismatch");
+    VERIFY(DstResArrays0.first[Binding0].RangeSize == NumConstants * sizeof(Uint32), "Destination inline constant buffer size mismatch");
+    memcpy(DstResArrays0.first[Binding0].pInlineConstantData,
+           SrcResArrays0.first[Binding0].pInlineConstantData,
+           NumConstants * sizeof(Uint32));
+
+#ifdef DILIGENT_DEBUG
+    while (ActiveStages != SHADER_TYPE_UNKNOWN)
+    {
+        const Int32 ShaderInd = ExtractFirstShaderStageIndex(ActiveStages);
+
+        const auto SrcResArrays = SrcCache.GetConstResourceArrays<D3D11_RESOURCE_RANGE_CBV>(ShaderInd);
+        const auto DstResArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_CBV>(ShaderInd);
+
+        const Uint32 Binding = BindPoints[ShaderInd];
+        VERIFY(Binding < GetResourceCount<D3D11_RESOURCE_RANGE_CBV>(ShaderInd), "Index is out of range");
+        VERIFY(Binding < SrcCache.GetResourceCount<D3D11_RESOURCE_RANGE_CBV>(ShaderInd), "Index is out of range");
+        VERIFY(SrcResArrays0.first[Binding0] == SrcResArrays.first[Binding],
+               "All shader stages must share the same inline constant data attributes (ensured by InitInlineConstantBuffer)");
+        VERIFY(DstResArrays0.first[Binding0] == DstResArrays.first[Binding],
+               "All shader stages must share the same inline constant data attributes (ensured by InitInlineConstantBuffer)");
+        VERIFY(SrcResArrays0.first[Binding0].pInlineConstantData == SrcResArrays.first[Binding].pInlineConstantData,
+               "All shader stages must share the same inline constant data (ensured by InitInlineConstantBuffer)");
+        VERIFY(DstResArrays0.first[Binding0].pInlineConstantData == DstResArrays.first[Binding].pInlineConstantData,
+               "All shader stages must share the same inline constant data (ensured by InitInlineConstantBuffer)");
+    }
+#endif
 }
 
 template <>

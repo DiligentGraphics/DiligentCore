@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,7 +41,7 @@ void TestBottomLevelAS_CInterface(IBottomLevelAS* pBLAS)
     Uint32 GeomCount = IBottomLevelAS_GetActualGeometryCount(pBLAS);
     (void)GeomCount;
 
-    ScratchBufferSizes ScratchSizes = IBottomLevelAS_GetScratchBufferSizes(pBLAS);
+    const ScratchBufferSizes* ScratchSizes = IBottomLevelAS_GetScratchBufferSizes(pBLAS);
     (void)ScratchSizes;
 
     Uint64 NativeHandle = IBottomLevelAS_GetNativeHandle(pBLAS);

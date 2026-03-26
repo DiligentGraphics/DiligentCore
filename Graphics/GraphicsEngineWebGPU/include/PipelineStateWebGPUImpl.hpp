@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2024 Diligent Graphics LLC
+ *  Copyright 2023-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -84,6 +84,12 @@ public:
         const SHADER_TYPE       Type;
         ShaderWebGPUImpl* const pShader;
         std::string             PatchedWGSL;
+
+        // Per-stage specialization constant entries, built from user input
+        // and WGSL override reflection during InitializePipeline().
+        // Entries reference names in the shader resource name pool,
+        // which is kept alive by ShaderWebGPUImpl.
+        std::vector<WGPUConstantEntry> SpecConstEntries;
 
         ShaderStageInfo(ShaderWebGPUImpl* _pShader) :
             Type{_pShader->GetDesc().ShaderType},

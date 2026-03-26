@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -698,7 +698,7 @@ void DeviceContextGLImpl::DvpValidateCommittedShaderResources()
 }
 #endif
 
-void DeviceContextGLImpl::BindProgramResources(Uint32 BindSRBMask)
+void DeviceContextGLImpl::BindProgramResources(Uint32 BindSRBMask, bool DynamicBuffersIntact, bool InlineConstantsIntact)
 {
     VERIFY_EXPR(BindSRBMask != 0);
     //if (m_CommittedResourcesTentativeBarriers != 0)
@@ -721,16 +721,56 @@ void DeviceContextGLImpl::BindProgramResources(Uint32 BindSRBMask)
 
         const ShaderResourceCacheImplType* pResourceCache = m_BindInfo.ResourceCaches[sign];
         DEV_CHECK_ERR(pResourceCache != nullptr, "Resource cache at index ", sign, " is null");
-        if (m_BindInfo.StaleSRBMask & SignBit)
+
+        const bool SRBStale = (m_BindInfo.StaleSRBMask & SignBit) != 0;
+        if (SRBStale)
+        {
             pResourceCache->BindResources(GetContextState(), BaseBindings, m_BoundWritableTextures, m_BoundWritableBuffers);
+        }
         else
         {
-            VERIFY((m_BindInfo.DynamicSRBMask & SignBit) != 0,
-                   "When bit in StaleSRBMask is not set, the same bit in DynamicSRBMask must be set. Check GetCommitMask().");
-            DEV_CHECK_ERR(pResourceCache->HasDynamicResources(),
-                          "Bit in DynamicSRBMask is set, but the cache does not contain dynamic resources. This may indicate that resources "
-                          "in the cache have changed, but the SRB has not been committed before the draw/dispatch command.");
-            pResourceCache->BindDynamicBuffers(GetContextState(), BaseBindings);
+            VERIFY(((m_BindInfo.DynamicSRBMask | m_BindInfo.InlineConstantsSRBMask) & SignBit) != 0,
+                   "When bit in StaleSRBMask is not set, the same bit in either DynamicSRBMask or InlineConstantsSRBMask must be set. Check GetCommitMask().");
+
+            if ((m_BindInfo.DynamicSRBMask & SignBit) != 0)
+            {
+                DEV_CHECK_ERR(pResourceCache->HasDynamicResources(),
+                              "Bit in DynamicSRBMask is set, but the cache does not contain dynamic resources. This may indicate that resources "
+                              "in the cache have changed, but the SRB has not been committed before the draw/dispatch command.");
+                if (!DynamicBuffersIntact)
+                {
+                    pResourceCache->BindDynamicBuffers(GetContextState(), BaseBindings);
+                }
+            }
+        }
+
+        // Update inline constant buffers if needed.
+        // Note that inline constant buffers in the cache don't count as dynamic.
+        if ((m_BindInfo.InlineConstantsSRBMask & SignBit) != 0)
+        {
+            VERIFY(pResourceCache->HasInlineConstants(),
+                   "Shader resource cache does not contain inline constants, but the corresponding bit in InlineConstantsSRBMask is set. "
+                   "This may be a bug because inline constants flag in the cache never changes after SRB creation, "
+                   "while m_BindInfo.InlineConstantsSRBMask is initialized when SRB is committed.");
+            // Always update inline constant buffers if the SRB is stale
+            if (SRBStale || !InlineConstantsIntact)
+            {
+                if (PipelineResourceSignatureGLImpl* pSign = m_pPipelineState->GetResourceSignature(sign))
+                {
+                    pSign->UpdateInlineConstantBuffers(*pResourceCache, GetContextState());
+                }
+                else
+                {
+                    UNEXPECTED("Pipeline resource signature is null for signature index ", sign);
+                }
+            }
+        }
+        else
+        {
+            VERIFY(!pResourceCache->HasInlineConstants(),
+                   "Shader resource cache contains inline constants, but the corresponding bit in InlineConstantsSRBMask is not set. "
+                   "This may be a bug because inline constants flag in the cache never changes after SRB creation, "
+                   "while m_BindInfo.InlineConstantsSRBMask is initialized when SRB is committed.");
         }
     }
     m_BindInfo.StaleSRBMask &= ~m_BindInfo.ActiveSRBMask;
@@ -797,9 +837,11 @@ void DeviceContextGLImpl::PrepareForDraw(DRAW_FLAGS Flags, bool IsIndexed, GLenu
     // The program might have changed since the last SetPipelineState call if a shader was
     // created after the call (ShaderResourcesGL needs to bind a program to load uniforms).
     m_pPipelineState->CommitProgram(m_ContextState);
-    if (Uint32 BindSRBMask = m_BindInfo.GetCommitMask(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT))
+    const bool DynamicBuffersIntact  = (Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT) != 0;
+    const bool InlineConstantsIntact = (Flags & DRAW_FLAG_INLINE_CONSTANTS_INTACT) != 0;
+    if (Uint32 BindSRBMask = m_BindInfo.GetCommitMask(DynamicBuffersIntact, InlineConstantsIntact))
     {
-        BindProgramResources(BindSRBMask);
+        BindProgramResources(BindSRBMask, DynamicBuffersIntact, InlineConstantsIntact);
     }
 
 #ifdef DILIGENT_DEVELOPMENT
@@ -1815,66 +1857,72 @@ void DeviceContextGLImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
     }
     else if (SrcTexDesc.Usage != USAGE_STAGING && DstTexDesc.Usage == USAGE_STAGING)
     {
-        if (pSrcTexGL->GetGLTextureHandle() == 0)
-        {
-            GLuint DefaultFBOHandle = m_pSwapChain->GetDefaultFBO();
-            glBindFramebuffer(GL_READ_FRAMEBUFFER, DefaultFBOHandle);
-            DEV_CHECK_GL_ERROR("Failed to bind default FBO as read framebuffer");
-        }
-        else
-        {
-            const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(SrcTexDesc.Format);
-            DEV_CHECK_ERR(FmtAttribs.ComponentType != COMPONENT_TYPE_COMPRESSED,
-                          "Reading pixels from compressed-format textures to pixel pack buffer is not supported");
-
-            TextureViewDesc SrcTexViewDesc;
-            SrcTexViewDesc.Format = SrcTexDesc.Format;
-            SrcTexViewDesc.ViewType =
-                (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH || FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL) ?
-                TEXTURE_VIEW_DEPTH_STENCIL :
-                TEXTURE_VIEW_RENDER_TARGET;
-            SrcTexViewDesc.MostDetailedMip = CopyAttribs.SrcMipLevel;
-            SrcTexViewDesc.FirstArraySlice = CopyAttribs.SrcSlice;
-            SrcTexViewDesc.NumArraySlices  = 1;
-            SrcTexViewDesc.NumMipLevels    = 1;
-            TextureViewGLImpl SrcTexView //
-                {
-                    nullptr, // pRefCounters
-                    m_pDevice,
-                    SrcTexViewDesc,
-                    pSrcTexGL,
-                    false, // bCreateGLViewTex
-                    false  // bIsDefaultView
-                };
-
-            GLContext::NativeGLContextType CurrNativeGLCtx = m_ContextState.GetCurrentGLContext();
-            FBOCache&                      fboCache        = m_pDevice->GetFBOCache(CurrNativeGLCtx);
-
-            TextureViewGLImpl* pSrcViews[] = {&SrcTexView};
-
-            const GLObjectWrappers::GLFrameBufferObj& SrcFBO =
-                (SrcTexViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET) ?
-                fboCache.GetFBO(1, pSrcViews, nullptr, m_ContextState) :
-                fboCache.GetFBO(0, nullptr, pSrcViews[0], m_ContextState);
-            glBindFramebuffer(GL_READ_FRAMEBUFFER, SrcFBO);
-            DEV_CHECK_GL_ERROR("Failed to bind FBO as read framebuffer");
-        }
-
         BufferGLImpl* pDstBuffer = ClassPtrCast<BufferGLImpl>(pDstTexGL->GetPBO());
         VERIFY(pDstBuffer != nullptr, "Internal staging buffer must not be null");
-        // GetStagingTextureLocationOffset assumes pixels are tightly packed in every subresource - no padding
-        // except between subresources.
-        const Uint64 DstOffset =
-            GetStagingTextureLocationOffset(DstTexDesc, CopyAttribs.DstSlice, CopyAttribs.DstMipLevel,
-                                            TextureBaseGL::PBOOffsetAlignment,
-                                            CopyAttribs.DstX, CopyAttribs.DstY, CopyAttribs.DstZ);
-
-        m_ContextState.BindBuffer(GL_PIXEL_PACK_BUFFER, pDstBuffer->GetGLHandle(), true);
-
         const NativePixelAttribs& TransferAttribs = GetNativePixelTransferAttribs(SrcTexDesc.Format);
-        glReadPixels(pSrcBox->MinX, pSrcBox->MinY, pSrcBox->Width(), pSrcBox->Height(),
-                     TransferAttribs.PixelFormat, TransferAttribs.DataType, reinterpret_cast<void*>(StaticCast<size_t>(DstOffset)));
-        DEV_CHECK_GL_ERROR("Failed to read pixel from framebuffer to pixel pack buffer");
+
+        GLContext::NativeGLContextType CurrNativeGLCtx = m_ContextState.GetCurrentGLContext();
+        FBOCache&                      fboCache        = m_pDevice->GetFBOCache(CurrNativeGLCtx);
+
+        for (Uint32 ZSlice = pSrcBox->MinZ; ZSlice < pSrcBox->MaxZ; ++ZSlice)
+        {
+            if (pSrcTexGL->GetGLTextureHandle() == 0)
+            {
+                VERIFY(ZSlice == 0, "Default FBO must have only one Z slice");
+                GLuint DefaultFBOHandle = m_pSwapChain->GetDefaultFBO();
+                glBindFramebuffer(GL_READ_FRAMEBUFFER, DefaultFBOHandle);
+                DEV_CHECK_GL_ERROR("Failed to bind default FBO as read framebuffer");
+            }
+            else
+            {
+                const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(SrcTexDesc.Format);
+                DEV_CHECK_ERR(FmtAttribs.ComponentType != COMPONENT_TYPE_COMPRESSED,
+                              "Reading pixels from compressed-format textures to pixel pack buffer is not supported");
+
+                TextureViewDesc SrcTexViewDesc;
+                SrcTexViewDesc.Format = SrcTexDesc.Format;
+                SrcTexViewDesc.ViewType =
+                    (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH || FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL) ?
+                    TEXTURE_VIEW_DEPTH_STENCIL :
+                    TEXTURE_VIEW_RENDER_TARGET;
+                SrcTexViewDesc.MostDetailedMip = CopyAttribs.SrcMipLevel;
+                SrcTexViewDesc.FirstArraySlice = CopyAttribs.SrcSlice + ZSlice;
+                SrcTexViewDesc.NumArraySlices  = 1;
+                SrcTexViewDesc.NumMipLevels    = 1;
+                TextureViewGLImpl SrcTexView //
+                    {
+                        nullptr, // pRefCounters
+                        m_pDevice,
+                        SrcTexViewDesc,
+                        pSrcTexGL,
+                        false, // bCreateGLViewTex
+                        false, // bIsDefaultView
+                    };
+
+                TextureViewGLImpl* pSrcViews[] = {&SrcTexView};
+
+                const GLObjectWrappers::GLFrameBufferObj& SrcFBO =
+                    (SrcTexViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET) ?
+                    fboCache.GetFBO(1, pSrcViews, nullptr, m_ContextState) :
+                    fboCache.GetFBO(0, nullptr, pSrcViews[0], m_ContextState);
+                glBindFramebuffer(GL_READ_FRAMEBUFFER, SrcFBO);
+                DEV_CHECK_GL_ERROR("Failed to bind FBO as read framebuffer");
+            }
+
+            // GetStagingTextureLocationOffset assumes pixels are tightly packed in every subresource - no padding
+            // except between subresources.
+            const Uint64 DstOffset =
+                GetStagingTextureLocationOffset(DstTexDesc, CopyAttribs.DstSlice, CopyAttribs.DstMipLevel,
+                                                TextureBaseGL::PBOOffsetAlignment,
+                                                CopyAttribs.DstX, CopyAttribs.DstY, CopyAttribs.DstZ + (ZSlice - pSrcBox->MinZ));
+
+            m_ContextState.BindBuffer(GL_PIXEL_PACK_BUFFER, pDstBuffer->GetGLHandle(), true);
+
+            glReadPixels(pSrcBox->MinX, pSrcBox->MinY, pSrcBox->Width(), pSrcBox->Height(),
+                         TransferAttribs.PixelFormat, TransferAttribs.DataType,
+                         reinterpret_cast<void*>(StaticCast<size_t>(DstOffset)));
+            DEV_CHECK_GL_ERROR("Failed to read pixel from framebuffer to pixel pack buffer");
+        }
 
         m_ContextState.BindBuffer(GL_PIXEL_PACK_BUFFER, GLObjectWrappers::GLBufferObj::Null(), true);
         // Restore original FBO
@@ -1908,7 +1956,7 @@ void DeviceContextGLImpl::MapTextureSubresource(ITexture*                 pTextu
         pPBO->MapRange(m_ContextState, MapType, MapFlags, PBOOffset, MipLevelAttribs.MipSize, MappedData.pData);
 
         MappedData.Stride      = MipLevelAttribs.RowSize;
-        MappedData.DepthStride = MipLevelAttribs.MipSize;
+        MappedData.DepthStride = MipLevelAttribs.DepthSliceSize;
     }
     else
     {

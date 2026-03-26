@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -58,7 +58,12 @@ bool VerifySparseTextureCompatibility(IRenderDevice* pDevice, const TextureDesc&
         return false;
     }
 
-    const SparseTextureFormatInfo& SparseInfo = pDevice->GetSparseTextureFormatInfo(Desc.Format, Desc.Type, Desc.SampleCount);
+    SparseTextureFormatInfo SparseInfo;
+    if (!pDevice->GetSparseTextureFormatInfo(Desc.Format, Desc.Type, Desc.SampleCount, SparseInfo))
+    {
+        LOG_WARNING_MESSAGE("Failed to retrieve sparse texture format info.");
+        return false;
+    }
     if ((SparseInfo.BindFlags & Desc.BindFlags) != Desc.BindFlags)
     {
         LOG_WARNING_MESSAGE("The following bind flags requested for the sparse dynamic texture array are not supported by device: ", GetBindFlagsString(Desc.BindFlags & ~SparseInfo.BindFlags, ", "));

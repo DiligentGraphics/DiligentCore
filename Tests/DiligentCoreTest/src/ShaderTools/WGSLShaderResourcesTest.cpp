@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -256,6 +256,71 @@ TEST(WGSLShaderResources, RWStructBufferArrays)
                           {"g_RWBuffArr1", WGSLResourceType::RWStorageBuffer, 3, RESOURCE_DIM_BUFFER},
                           {"g_RWBuffArr2", WGSLResourceType::RWStorageBuffer, 2, RESOURCE_DIM_BUFFER},
                       });
+}
+
+TEST(WGSLShaderResources, SpecializationConstants)
+{
+    // WGSL source with override (specialization) constants of various types.
+    static constexpr char WGSL[] = R"(
+        override sc_float: f32 = 1.0;
+        override sc_int: i32 = 0;
+        override sc_uint: u32 = 0;
+        override sc_bool: bool = false;
+
+        @group(0) @binding(0) var<storage, read_write> output: array<f32>;
+
+        @compute @workgroup_size(1)
+        fn main() {
+            output[0] = sc_float;
+            output[1] = f32(sc_int);
+            output[2] = f32(sc_uint);
+            if sc_bool {
+                output[3] = 1.0;
+            }
+        }
+    )";
+
+    WGSLShaderResources Resources{
+        GetRawAllocator(),
+        WGSL,
+        SHADER_SOURCE_LANGUAGE_WGSL,
+        "SpecConst test",
+        nullptr, // CombinedSamplerSuffix
+        "main",  // EntryPoint
+        nullptr, // ArrayIndexSuffix
+        false,   // LoadUniformBufferReflection
+        nullptr  // ppTintOutput
+    };
+    LOG_INFO_MESSAGE("WGSL Resources:\n", Resources.DumpResources());
+
+    // One storage buffer resource
+    EXPECT_EQ(Resources.GetTotalResources(), 1u);
+    EXPECT_EQ(Resources.GetNumSBs(), 1u);
+
+    const std::vector<WGSLSpecializationConstantAttribs> RefSpecConstants = {
+        {"sc_float", 0, SHADER_CODE_BASIC_TYPE_FLOAT},
+        {"sc_int", 0, SHADER_CODE_BASIC_TYPE_INT},
+        {"sc_uint", 0, SHADER_CODE_BASIC_TYPE_UINT},
+        {"sc_bool", 0, SHADER_CODE_BASIC_TYPE_BOOL},
+    };
+
+    const WGSLShaderResources& ConstResources = Resources;
+    EXPECT_EQ(ConstResources.GetNumSpecConstants(), static_cast<Uint32>(RefSpecConstants.size()));
+
+    // Build a map from name to reference for order-independent matching
+    std::unordered_map<std::string, const WGSLSpecializationConstantAttribs*> RefMap;
+    for (const WGSLSpecializationConstantAttribs& Ref : RefSpecConstants)
+        RefMap[Ref.Name] = &Ref;
+
+    for (Uint32 i = 0; i < ConstResources.GetNumSpecConstants(); ++i)
+    {
+        const WGSLSpecializationConstantAttribs& SC = ConstResources.GetSpecConstant(i);
+        const auto                               it = RefMap.find(SC.Name);
+        ASSERT_NE(it, RefMap.end()) << "Specialization constant '" << SC.Name << "' is not found in the reference list";
+
+        const WGSLSpecializationConstantAttribs* pRef = it->second;
+        EXPECT_EQ(SC.GetType(), pRef->GetType()) << SC.Name;
+    }
 }
 
 } // namespace

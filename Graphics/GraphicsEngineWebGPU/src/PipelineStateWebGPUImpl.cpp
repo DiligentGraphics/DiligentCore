@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024-2025 Diligent Graphics LLC
+ *  Copyright 2024-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -32,9 +32,124 @@
 #include "RenderPassWebGPUImpl.hpp"
 #include "WebGPUTypeConversions.hpp"
 #include "WGSLUtils.hpp"
+#include "Float16.hpp"
 
 namespace Diligent
 {
+
+namespace
+{
+
+double ConvertSpecConstantToDouble(const void* pData, Uint32 DataSize, SHADER_CODE_BASIC_TYPE Type)
+{
+    switch (Type)
+    {
+        case SHADER_CODE_BASIC_TYPE_BOOL:
+        {
+            // WGSL bool override: any non-zero value is true.
+            Uint32 Val = 0;
+            memcpy(&Val, pData, std::min(DataSize, Uint32{4}));
+            return Val != 0 ? 1.0 : 0.0;
+        }
+
+        case SHADER_CODE_BASIC_TYPE_INT:
+        {
+            Int32 Val = 0;
+            memcpy(&Val, pData, std::min(DataSize, Uint32{4}));
+            return static_cast<double>(Val);
+        }
+
+        case SHADER_CODE_BASIC_TYPE_UINT:
+        {
+            Uint32 Val = 0;
+            memcpy(&Val, pData, std::min(DataSize, Uint32{4}));
+            return static_cast<double>(Val);
+        }
+
+        case SHADER_CODE_BASIC_TYPE_FLOAT:
+        {
+            float Val = 0;
+            memcpy(&Val, pData, std::min(DataSize, Uint32{4}));
+            return static_cast<double>(Val);
+        }
+
+        case SHADER_CODE_BASIC_TYPE_FLOAT16:
+        {
+            Uint16 HalfBits = 0;
+            memcpy(&HalfBits, pData, std::min(DataSize, Uint32{2}));
+            return Float16::HalfBitsToFloat(HalfBits);
+        }
+
+        default:
+            UNEXPECTED("Unexpected specialization constant type ", GetShaderCodeBasicTypeString(Type));
+            return 0;
+    }
+}
+
+void BuildSpecializationDataWebGPU(PipelineStateWebGPUImpl::TShaderStages& ShaderStages,
+                                   Uint32                                  NumSpecializationConstants,
+                                   const SpecializationConstant*           pSpecializationConstants,
+                                   const PipelineStateDesc&                PSODesc)
+{
+    if (NumSpecializationConstants == 0)
+        return;
+
+    for (size_t StageIdx = 0; StageIdx < ShaderStages.size(); ++StageIdx)
+    {
+        PipelineStateWebGPUImpl::ShaderStageInfo&         Stage            = ShaderStages[StageIdx];
+        const ShaderWebGPUImpl*                           pShader          = Stage.pShader;
+        const std::shared_ptr<const WGSLShaderResources>& pShaderResources = pShader->GetShaderResources();
+
+        if (!pShaderResources)
+            continue;
+
+        for (Uint32 r = 0; r < pShaderResources->GetNumSpecConstants(); ++r)
+        {
+            const WGSLSpecializationConstantAttribs& ReflectedSC = pShaderResources->GetSpecConstant(r);
+
+            // Search for a matching user-provided constant by name and stage flag.
+            const SpecializationConstant* pUserConst = nullptr;
+            for (Uint32 sc = 0; sc < NumSpecializationConstants; ++sc)
+            {
+                const SpecializationConstant& Candidate = pSpecializationConstants[sc];
+                if ((Candidate.ShaderStages & Stage.Type) != 0 &&
+                    strcmp(Candidate.Name, ReflectedSC.Name) == 0)
+                {
+                    pUserConst = &Candidate;
+                    break;
+                }
+            }
+
+            // No user constant for this reflected entry -- skip silently.
+            if (pUserConst == nullptr)
+                continue;
+
+            const SHADER_CODE_BASIC_TYPE ReflectedType = ReflectedSC.GetType();
+            const Uint32                 ReflectedSize = GetShaderCodeBasicTypeBitSize(ReflectedType) / 8;
+
+            if (pUserConst->Size < ReflectedSize)
+            {
+                LOG_ERROR_AND_THROW("Description of ", GetPipelineTypeString(PSODesc.PipelineType),
+                                    " PSO '", (PSODesc.Name != nullptr ? PSODesc.Name : ""),
+                                    "' is invalid: specialization constant '", pUserConst->Name,
+                                    "' in ", GetShaderTypeLiteralName(Stage.Type),
+                                    " shader '", pShader->GetDesc().Name,
+                                    "' has insufficient data: user provided ", pUserConst->Size,
+                                    " bytes, but the shader declares ",
+                                    GetShaderCodeBasicTypeString(ReflectedType),
+                                    " (", ReflectedSize, " bytes).");
+            }
+
+            WGPUConstantEntry Entry{};
+            Entry.key   = GetWGPUStringView(ReflectedSC.Name);
+            Entry.value = ConvertSpecConstantToDouble(pUserConst->pData, pUserConst->Size, ReflectedType);
+
+            Stage.SpecConstEntries.push_back(Entry);
+        }
+    }
+}
+
+} // anonymous namespace
 
 constexpr INTERFACE_ID PipelineStateWebGPUImpl::IID_InternalImpl;
 
@@ -342,6 +457,15 @@ struct PipelineStateWebGPUImpl::AsyncPipelineBuilder : public ObjectBase<IObject
 void PipelineStateWebGPUImpl::InitializePipeline(const GraphicsPipelineStateCreateInfo& CreateInfo)
 {
     TShaderStages ShaderStages = InitInternalObjects(CreateInfo);
+
+    // Build specialization constant entries while CreateInfo is still valid.
+    // The entries are stored per-stage in ShaderStageInfo::SpecConstEntries,
+    // which are moved into AsyncPipelineBuilder for async creation.
+    BuildSpecializationDataWebGPU(ShaderStages,
+                                  CreateInfo.NumSpecializationConstants,
+                                  CreateInfo.pSpecializationConstants,
+                                  m_Desc);
+
     // NB: it is not safe to check m_AsyncInitializer here as, first, it is set after the async task is started,
     //     and second, it is not atomic or protected by mutex.
     if ((CreateInfo.Flags & PSO_CREATE_FLAG_ASYNCHRONOUS) == 0)
@@ -358,6 +482,13 @@ void PipelineStateWebGPUImpl::InitializePipeline(const GraphicsPipelineStateCrea
 void PipelineStateWebGPUImpl::InitializePipeline(const ComputePipelineStateCreateInfo& CreateInfo)
 {
     TShaderStages ShaderStages = InitInternalObjects(CreateInfo);
+
+    // Build specialization constant entries while CreateInfo is still valid.
+    BuildSpecializationDataWebGPU(ShaderStages,
+                                  CreateInfo.NumSpecializationConstants,
+                                  CreateInfo.pSpecializationConstants,
+                                  m_Desc);
+
     // NB: it is not safe to check m_AsyncInitializer here as, first, it is set after the async task is started,
     //     and second, it is not atomic or protected by mutex.
     if ((CreateInfo.Flags & PSO_CREATE_FLAG_ASYNCHRONOUS) == 0)
@@ -402,14 +533,18 @@ void PipelineStateWebGPUImpl::InitializeWebGPURenderPipeline(const TShaderStages
         {
             case SHADER_TYPE_VERTEX:
                 VERIFY(wgpuRenderPipelineDesc.vertex.module == nullptr, "Only one vertex shader is allowed");
-                wgpuRenderPipelineDesc.vertex.module     = wgpuShaderModules[ShaderIdx].Get();
-                wgpuRenderPipelineDesc.vertex.entryPoint = GetWGPUStringView(Stage.pShader->GetEntryPoint());
+                wgpuRenderPipelineDesc.vertex.module        = wgpuShaderModules[ShaderIdx].Get();
+                wgpuRenderPipelineDesc.vertex.entryPoint    = GetWGPUStringView(Stage.pShader->GetEntryPoint());
+                wgpuRenderPipelineDesc.vertex.constantCount = Stage.SpecConstEntries.size();
+                wgpuRenderPipelineDesc.vertex.constants     = Stage.SpecConstEntries.empty() ? nullptr : Stage.SpecConstEntries.data();
                 break;
 
             case SHADER_TYPE_PIXEL:
                 VERIFY(wgpuFragmentState.module == nullptr, "Only one vertex shader is allowed");
                 wgpuFragmentState.module        = wgpuShaderModules[ShaderIdx].Get();
                 wgpuFragmentState.entryPoint    = GetWGPUStringView(Stage.pShader->GetEntryPoint());
+                wgpuFragmentState.constantCount = Stage.SpecConstEntries.size();
+                wgpuFragmentState.constants     = Stage.SpecConstEntries.empty() ? nullptr : Stage.SpecConstEntries.data();
                 wgpuRenderPipelineDesc.fragment = &wgpuFragmentState;
                 break;
 
@@ -615,6 +750,10 @@ void PipelineStateWebGPUImpl::InitializeWebGPUComputePipeline(const TShaderStage
     wgpuComputePipelineDesc.compute.entryPoint = GetWGPUStringView(pShaderWebGPU->GetEntryPoint());
     wgpuComputePipelineDesc.layout             = m_PipelineLayout.GetWebGPUPipelineLayout();
 
+    const std::vector<WGPUConstantEntry>& SpecConstEntries = ShaderStages[0].SpecConstEntries;
+    wgpuComputePipelineDesc.compute.constantCount          = SpecConstEntries.size();
+    wgpuComputePipelineDesc.compute.constants              = SpecConstEntries.empty() ? nullptr : SpecConstEntries.data();
+
     if (AsyncBuilder)
     {
         // The reference will be released from the callback.
@@ -748,9 +887,9 @@ PipelineResourceSignatureDescWrapper PipelineStateWebGPUImpl::GetDefaultResource
                                                                                               const PipelineResourceLayoutDesc& ResourceLayout,
                                                                                               Uint32                            SRBAllocationGranularity)
 {
-    PipelineResourceSignatureDescWrapper SignDesc{PSOName, ResourceLayout, SRBAllocationGranularity};
+    PipelineResourceSignatureDescWrapper                   SignDesc{PSOName, ResourceLayout, SRBAllocationGranularity};
+    DefaultSignatureDescBuilder<WGSLShaderResourceAttribs> Builder{PSOName, ResourceLayout, VerifyResourceMerge, SignDesc};
 
-    std::unordered_map<ShaderResourceHashKey, const WGSLShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
     for (const ShaderStageInfo& Stage : ShaderStages)
     {
         const ShaderWebGPUImpl*    pShader         = Stage.pShader;
@@ -759,31 +898,28 @@ PipelineResourceSignatureDescWrapper PipelineStateWebGPUImpl::GetDefaultResource
         ShaderResources.ProcessResources(
             [&](const WGSLShaderResourceAttribs& Attribs, Uint32) //
             {
+                if (Attribs.ArraySize == 0)
+                {
+                    LOG_ERROR_AND_THROW("Resource '", Attribs.Name, "' in shader '", pShader->GetDesc().Name, "' is a runtime-sized array. ",
+                                        "You must use explicit resource signature to specify the array size.");
+                }
+
                 const char* const SamplerSuffix =
                     (ShaderResources.IsUsingCombinedSamplers() && (Attribs.Type == WGSLShaderResourceAttribs::ResourceType::Sampler || Attribs.Type == WGSLShaderResourceAttribs::ResourceType::ComparisonSampler)) ?
                     ShaderResources.GetCombinedSamplerSuffix() :
                     nullptr;
 
-                const ShaderResourceVariableDesc VarDesc = FindPipelineResourceLayoutVariable(ResourceLayout, Attribs.Name, Stage.Type, SamplerSuffix);
-                // Note that Attribs.Name != VarDesc.Name for combined samplers
-                const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{VarDesc.ShaderStages, Attribs.Name}, Attribs);
-                if (it_assigned.second)
-                {
-                    if (Attribs.ArraySize == 0)
-                    {
-                        LOG_ERROR_AND_THROW("Resource '", Attribs.Name, "' in shader '", pShader->GetDesc().Name, "' is a runtime-sized array. ",
-                                            "You must use explicit resource signature to specify the array size.");
-                    }
+                const ShaderResourceVariableDesc VarDesc       = FindPipelineResourceLayoutVariable(ResourceLayout, Attribs.Name, Stage.Type, SamplerSuffix);
+                const PIPELINE_RESOURCE_FLAGS    Flags         = WGSLShaderResourceAttribs::GetPipelineResourceFlags(Attribs.Type) | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
+                const SHADER_RESOURCE_TYPE       ResType       = WGSLShaderResourceAttribs::GetShaderResourceType(Attribs.Type);
+                const WebGPUResourceAttribs      WebGPUAttribs = Attribs.GetWebGPUAttribs(VarDesc.Flags);
 
-                    const SHADER_RESOURCE_TYPE    ResType       = WGSLShaderResourceAttribs::GetShaderResourceType(Attribs.Type);
-                    const PIPELINE_RESOURCE_FLAGS Flags         = WGSLShaderResourceAttribs::GetPipelineResourceFlags(Attribs.Type) | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
-                    const WebGPUResourceAttribs   WebGPUAttribs = Attribs.GetWebGPUAttribs(VarDesc.Flags);
-                    SignDesc.AddResource(VarDesc.ShaderStages, Attribs.Name, Attribs.ArraySize, ResType, VarDesc.Type, Flags, WebGPUAttribs);
-                }
-                else
-                {
-                    VerifyResourceMerge(PSOName, it_assigned.first->second, Attribs);
-                }
+                const Uint32 ArraySize = (Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) ?
+                    Attribs.GetInlineConstantCountOrThrow() :
+                    Attribs.ArraySize;
+
+                // Note that Attribs.Name != VarDesc.Name for combined samplers
+                Builder.AddResource(Attribs.Name, Attribs, VarDesc, ArraySize, ResType, Flags, WebGPUAttribs);
             });
 
         // Merge combined sampler suffixes

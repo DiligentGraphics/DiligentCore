@@ -117,6 +117,7 @@ if(ENABLE_SPIRV)
 
     if (${USE_SPIRV_TOOLS})
         list(APPEND SOURCE src/SPIRVTools.cpp)
+        list(APPEND SOURCE src/ConvertUBOToPushConstant.cpp)
         list(APPEND INCLUDE include/SPIRVTools.hpp)
     endif()
 
@@ -180,6 +181,17 @@ if(ENABLE_SPIRV)
         PRIVATE
             SPIRV-Tools-opt
         )
+        # Add SPIRV-Tools internal headers path for custom pass implementation
+        # We need both the source directory (for internal headers like pass.h)
+        # and the binary directory (for generated headers like NonSemanticShaderDebugInfo100.h)
+        get_target_property(SPIRV_TOOLS_SOURCE_DIR SPIRV-Tools-opt SOURCE_DIR)
+        get_target_property(SPIRV_TOOLS_BINARY_DIR SPIRV-Tools-opt BINARY_DIR)
+        get_filename_component(SPIRV_TOOLS_ROOT_DIR "${SPIRV_TOOLS_SOURCE_DIR}/../.." ABSOLUTE)
+        get_filename_component(SPIRV_TOOLS_ROOT_BINARY_DIR "${SPIRV_TOOLS_BINARY_DIR}/../.." ABSOLUTE)
+        target_include_directories(Diligent-ShaderTools PRIVATE 
+            ${SPIRV_TOOLS_ROOT_DIR}
+            ${SPIRV_TOOLS_ROOT_BINARY_DIR}
+        )
         target_compile_definitions(Diligent-ShaderTools PRIVATE USE_SPIRV_TOOLS=1)
     endif()
 
@@ -220,7 +232,7 @@ target_sources(Diligent-ShaderTools PRIVATE
 
 find_package(Python3 REQUIRED)
 add_custom_command(OUTPUT ${HLSL_DEFINITIONS_INC} # We must use full path here!
-                   COMMAND ${Python3_EXECUTABLE} ${FILE2STRING_PATH} ${HLSL_DEFINITIONS} ${HLSL_DEFINITIONS_INC}
+                   COMMAND ${Python3_EXECUTABLE} ${FILE2STRING_PATH} ${HLSL_DEFINITIONS} ${HLSL_DEFINITIONS_INC} --strip-comments
                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
                    MAIN_DEPENDENCY ${HLSL_DEFINITIONS}
                    COMMENT "Processing HLSLDefinitions.fxh"

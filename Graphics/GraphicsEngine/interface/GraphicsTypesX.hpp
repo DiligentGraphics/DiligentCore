@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -840,6 +840,12 @@ struct PipelineResourceSignatureDescX : DeviceObjectAttribsX<PipelineResourceSig
         return *this;
     }
 
+    PipelineResourceSignatureDescX& SetSRBAllocationGranularity(Uint32 _SRBAllocationGranularity) noexcept
+    {
+        SRBAllocationGranularity = _SRBAllocationGranularity;
+        return *this;
+    }
+
     PipelineResourceSignatureDescX& Clear()
     {
         PipelineResourceSignatureDescX CleanDesc;
@@ -1230,6 +1236,8 @@ struct PipelineStateCreateInfoX : CreateInfoType
             AddSignature(CI.ppResourceSignatures[i]);
         if (CI.pPSOCache != nullptr)
             SetPipelineStateCache(CI.pPSOCache);
+        for (Uint32 i = 0; i < CI.NumSpecializationConstants; ++i)
+            AddSpecializationConstant(CI.pSpecializationConstants[i]);
         this->PSODesc.ResourceLayout = ResourceLayout;
         this->pInternalData          = InternalData.get();
     }
@@ -1350,6 +1358,44 @@ struct PipelineStateCreateInfoX : CreateInfoType
         return static_cast<DerivedType&>(*this);
     }
 
+    DerivedType& AddSpecializationConstant(const SpecializationConstant& SpecConst)
+    {
+        SpecConstCopy.push_back(SpecConst);
+        SpecializationConstant& Entry = SpecConstCopy.back();
+
+        // Deep-copy name
+        if (SpecConst.Name != nullptr)
+            Entry.Name = StringPool.emplace(SpecConst.Name).first->c_str();
+
+        // Deep-copy data
+        if (SpecConst.Size > 0 && SpecConst.pData != nullptr)
+        {
+            const Uint8* pSrcData = static_cast<const Uint8*>(SpecConst.pData);
+            SpecConstDataCopy.emplace_back(pSrcData, pSrcData + SpecConst.Size);
+            Entry.pData = SpecConstDataCopy.back().data();
+        }
+        else
+        {
+            SpecConstDataCopy.emplace_back();
+            Entry.pData = nullptr;
+        }
+
+        this->pSpecializationConstants   = SpecConstCopy.data();
+        this->NumSpecializationConstants = static_cast<Uint32>(SpecConstCopy.size());
+
+        return static_cast<DerivedType&>(*this);
+    }
+
+    DerivedType& ClearSpecializationConstants()
+    {
+        SpecConstCopy.clear();
+        SpecConstDataCopy.clear();
+        this->pSpecializationConstants   = nullptr;
+        this->NumSpecializationConstants = 0;
+
+        return static_cast<DerivedType&>(*this);
+    }
+
 protected:
     DerivedType& SetShader(IShader*& pDstShader, IShader* pShader)
     {
@@ -1383,6 +1429,8 @@ protected:
     std::vector<RefCntAutoPtr<IDeviceObject>> Objects;
     std::vector<IPipelineResourceSignature*>  Signatures;
     std::unique_ptr<Uint8[]>                  InternalData;
+    std::vector<SpecializationConstant>       SpecConstCopy;
+    std::vector<std::vector<Uint8>>           SpecConstDataCopy;
 };
 
 
@@ -2242,11 +2290,12 @@ public:
         return m_pDevice->GetTextureFormatInfoExt(TexFormat);
     }
 
-    SparseTextureFormatInfo GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,
-                                                       RESOURCE_DIMENSION Dimension,
-                                                       Uint32             SampleCount) const noexcept
+    Bool GetSparseTextureFormatInfo(TEXTURE_FORMAT           TexFormat,
+                                    RESOURCE_DIMENSION       Dimension,
+                                    Uint32                   SampleCount,
+                                    SparseTextureFormatInfo& FormatInfo) const noexcept
     {
-        return m_pDevice->GetSparseTextureFormatInfo(TexFormat, Dimension, SampleCount);
+        return m_pDevice->GetSparseTextureFormatInfo(TexFormat, Dimension, SampleCount, FormatInfo);
     }
 
     void ReleaseStaleResources(bool ForceRelease = false) const noexcept
@@ -2398,6 +2447,16 @@ public:
             return true;
         }
         return false;
+    }
+
+    void SetInlineConstants(const void* pConstants,
+                            Uint32      FirstConstant,
+                            Uint32      NumConstants)
+    {
+        if (m_pVar)
+        {
+            m_pVar->SetInlineConstants(pConstants, FirstConstant, NumConstants);
+        }
     }
 
     IDeviceObject* Get(Uint32 ArrayIndex = 0) const

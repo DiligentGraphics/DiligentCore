@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,33 +35,50 @@
 namespace Diligent
 {
 
-size_t ShaderResourceCacheGL::GetRequiredMemorySize(const TResourceCount& ResCount)
+size_t ShaderResourceCacheGL::GetRequiredMemorySize(const TResourceCount& ResCount, Uint32 TotalInlineConstants)
 {
     static_assert(std::is_same<TResourceCount, PipelineResourceSignatureGLImpl::TBindings>::value,
                   "ShaderResourceCacheGL::TResourceCount must be the same type as PipelineResourceSignatureGLImpl::TBindings");
+
+    size_t MemSize = 0;
     // clang-format off
-    size_t MemSize =
-                sizeof(CachedUB)           * ResCount[BINDING_RANGE_UNIFORM_BUFFER] +
-                sizeof(CachedResourceView) * ResCount[BINDING_RANGE_TEXTURE]        +
-                sizeof(CachedResourceView) * ResCount[BINDING_RANGE_IMAGE]          +
-                sizeof(CachedSSBO)         * ResCount[BINDING_RANGE_STORAGE_BUFFER];
+    MemSize = AlignUp(MemSize + sizeof(CachedUB)           * ResCount[BINDING_RANGE_UNIFORM_BUFFER], alignof(CachedResourceView));
+    MemSize = AlignUp(MemSize + sizeof(CachedResourceView) * ResCount[BINDING_RANGE_TEXTURE],        alignof(CachedResourceView));
+    MemSize = AlignUp(MemSize + sizeof(CachedResourceView) * ResCount[BINDING_RANGE_IMAGE],          alignof(CachedSSBO));
+    MemSize = AlignUp(MemSize + sizeof(CachedSSBO)         * ResCount[BINDING_RANGE_STORAGE_BUFFER], alignof(Uint32));
     // clang-format on
+    MemSize += TotalInlineConstants * sizeof(Uint32);
+
     VERIFY(MemSize < InvalidResourceOffset, "Memory size exceed the maximum allowed size.");
     return MemSize;
 }
 
-void ShaderResourceCacheGL::Initialize(const TResourceCount& ResCount, IMemoryAllocator& MemAllocator, Uint64 DynamicUBOSlotMask, Uint64 DynamicSSBOSlotMask)
+void ShaderResourceCacheGL::Initialize(const InitAttribs& Attribs)
 {
-    m_DynamicUBOSlotMask  = DynamicUBOSlotMask;
-    m_DynamicSSBOSlotMask = DynamicSSBOSlotMask;
-
     VERIFY(!m_pResourceData, "Cache has already been initialized");
 
+    m_DynamicUBOSlotMask  = Attribs.DynamicUBOSlotMask;
+    m_DynamicSSBOSlotMask = Attribs.DynamicSSBOSlotMask;
+
+    const TResourceCount& ResCount = Attribs.ResCount;
+
+    // Count the total number of inline constants in range
+    Uint32 TotalInlineConstants = 0;
+    for (Uint32 i = 0; i < Attribs.NumInlineConstantBuffers; ++i)
+    {
+        const InlineConstantBufferAttribsGL& InlineCBAttribs = Attribs.pInlineConstantBuffers[i];
+        if (InlineCBAttribs.CacheOffset < ResCount[BINDING_RANGE_UNIFORM_BUFFER])
+            TotalInlineConstants += InlineCBAttribs.NumConstants;
+    }
+    VERIFY_EXPR(TotalInlineConstants == Attribs.DbgTotalInlineConstants);
+
+    m_HasInlineConstants = (TotalInlineConstants > 0);
+
     // clang-format off
-    m_TexturesOffset  = static_cast<Uint16>(m_UBsOffset      + sizeof(CachedUB)           * ResCount[BINDING_RANGE_UNIFORM_BUFFER]);
-    m_ImagesOffset    = static_cast<Uint16>(m_TexturesOffset + sizeof(CachedResourceView) * ResCount[BINDING_RANGE_TEXTURE]);
-    m_SSBOsOffset     = static_cast<Uint16>(m_ImagesOffset   + sizeof(CachedResourceView) * ResCount[BINDING_RANGE_IMAGE]);
-    m_MemoryEndOffset = static_cast<Uint16>(m_SSBOsOffset    + sizeof(CachedSSBO)         * ResCount[BINDING_RANGE_STORAGE_BUFFER]);
+    m_TexturesOffset       = AlignUp(static_cast<Uint16>(m_UBsOffset      + sizeof(CachedUB)           * ResCount[BINDING_RANGE_UNIFORM_BUFFER]), Uint16{alignof(CachedResourceView)});
+    m_ImagesOffset         = AlignUp(static_cast<Uint16>(m_TexturesOffset + sizeof(CachedResourceView) * ResCount[BINDING_RANGE_TEXTURE]),        Uint16{alignof(CachedResourceView)});
+    m_SSBOsOffset          = AlignUp(static_cast<Uint16>(m_ImagesOffset   + sizeof(CachedResourceView) * ResCount[BINDING_RANGE_IMAGE]),          Uint16{alignof(CachedSSBO)});
+    m_InlineConstantOffset = AlignUp(static_cast<Uint16>(m_SSBOsOffset    + sizeof(CachedSSBO)         * ResCount[BINDING_RANGE_STORAGE_BUFFER]), Uint16{alignof(Uint32)});
 
     VERIFY_EXPR(GetUBCount()      == static_cast<Uint32>(ResCount[BINDING_RANGE_UNIFORM_BUFFER]));
     VERIFY_EXPR(GetTextureCount() == static_cast<Uint32>(ResCount[BINDING_RANGE_TEXTURE]));
@@ -69,16 +86,18 @@ void ShaderResourceCacheGL::Initialize(const TResourceCount& ResCount, IMemoryAl
     VERIFY_EXPR(GetSSBOCount()    == static_cast<Uint32>(ResCount[BINDING_RANGE_STORAGE_BUFFER]));
     // clang-format on
 
-    size_t BufferSize = m_MemoryEndOffset;
+    // Inline constant data tail is after resources.
+    size_t BufferSize = m_InlineConstantOffset + TotalInlineConstants * sizeof(Uint32);
 
-    VERIFY_EXPR(BufferSize == GetRequiredMemorySize(ResCount));
+    VERIFY_EXPR(BufferSize == GetRequiredMemorySize(ResCount, TotalInlineConstants));
 
     if (BufferSize > 0)
     {
         m_pResourceData = decltype(m_pResourceData){
-            ALLOCATE(MemAllocator, "Shader resource cache data buffer", Uint8, BufferSize),
-            STDDeleter<Uint8, IMemoryAllocator>(MemAllocator) //
+            ALLOCATE(Attribs.MemAllocator, "Shader resource cache data buffer", Uint8, BufferSize),
+            STDDeleter<Uint8, IMemoryAllocator>(Attribs.MemAllocator) //
         };
+        VERIFY((reinterpret_cast<size_t>(m_pResourceData.get()) % std::max(alignof(CachedUB), std::max(alignof(CachedResourceView), alignof(CachedSSBO)))) == 0, "Resource cache buffer is not properly aligned");
         memset(m_pResourceData.get(), 0, BufferSize);
     }
 
@@ -94,6 +113,27 @@ void ShaderResourceCacheGL::Initialize(const TResourceCount& ResCount, IMemoryAl
 
     for (Uint32 s = 0; s < GetSSBOCount(); ++s)
         new (&GetSSBO(s)) CachedSSBO;
+
+    // Initialize inline constant buffers
+    Uint32 InlineConstantOffset = 0;
+    for (Uint32 i = 0; i < Attribs.NumInlineConstantBuffers; ++i)
+    {
+        const InlineConstantBufferAttribsGL& InlineCBAttribs = Attribs.pInlineConstantBuffers[i];
+        if (InlineCBAttribs.CacheOffset < ResCount[BINDING_RANGE_UNIFORM_BUFFER])
+        {
+            // Note that the buffer does not count as dynamic.
+            CachedUB& UB           = GetUB(InlineCBAttribs.CacheOffset);
+            UB.pBuffer             = InlineCBAttribs.pBuffer;
+            UB.BaseOffset          = 0;
+            UB.RangeSize           = InlineCBAttribs.NumConstants * sizeof(Uint32);
+            UB.DynamicOffset       = 0;
+            UB.pInlineConstantData = reinterpret_cast<Uint32*>(m_pResourceData.get() + m_InlineConstantOffset) + InlineConstantOffset;
+
+            InlineConstantOffset += InlineCBAttribs.NumConstants;
+        }
+    }
+
+    VERIFY_EXPR(InlineConstantOffset == TotalInlineConstants);
 }
 
 ShaderResourceCacheGL::~ShaderResourceCacheGL()
@@ -112,10 +152,10 @@ ShaderResourceCacheGL::~ShaderResourceCacheGL()
         for (Uint32 s = 0; s < GetSSBOCount(); ++s)
             GetSSBO(s).~CachedSSBO();
 
-        m_TexturesOffset  = InvalidResourceOffset;
-        m_ImagesOffset    = InvalidResourceOffset;
-        m_SSBOsOffset     = InvalidResourceOffset;
-        m_MemoryEndOffset = InvalidResourceOffset;
+        m_TexturesOffset       = InvalidResourceOffset;
+        m_ImagesOffset         = InvalidResourceOffset;
+        m_SSBOsOffset          = InvalidResourceOffset;
+        m_InlineConstantOffset = InvalidResourceOffset;
     }
     m_pResourceData.reset();
 }
@@ -278,7 +318,7 @@ void ShaderResourceCacheGL::BindResources(GLContextState&              GLState,
     {
         const CachedSSBO& SSBO = GetConstSSBO(ssbo);
         if (!SSBO.pBufferView)
-            return;
+            continue;
 
         const BufferViewGLImpl* pBufferViewGL = SSBO.pBufferView.ConstPtr();
         const BufferViewDesc&   ViewDesc      = pBufferViewGL->GetDesc();
@@ -336,6 +376,26 @@ void ShaderResourceCacheGL::BindDynamicBuffers(GLContextState&              GLSt
     }
 }
 
+void ShaderResourceCacheGL::CopyInlineConstants(const ShaderResourceCacheGL& SrcCache,
+                                                Uint32                       CacheOffset,
+                                                Uint32                       NumConstants)
+{
+    VERIFY(CacheOffset < GetUBCount(), "Destination index is out of range");
+    VERIFY(CacheOffset < SrcCache.GetUBCount(), "Source index is out of range");
+
+    const CachedUB& SrcUB = SrcCache.GetConstUB(CacheOffset);
+    CachedUB&       DstUB = GetUB(CacheOffset);
+
+    VERIFY(SrcUB.pInlineConstantData != nullptr, "Source inline constant data is null");
+    VERIFY(DstUB.pInlineConstantData != nullptr, "Destination inline constant data is null");
+    VERIFY(SrcUB.RangeSize == NumConstants * sizeof(Uint32), "Source inline constant buffer size mismatch");
+    VERIFY(DstUB.RangeSize == NumConstants * sizeof(Uint32), "Destination inline constant buffer size mismatch");
+
+    memcpy(DstUB.pInlineConstantData,
+           SrcUB.pInlineConstantData,
+           NumConstants * sizeof(Uint32));
+}
+
 #ifdef DILIGENT_DEBUG
 void ShaderResourceCacheGL::DbgVerifyDynamicBufferMasks() const
 {
@@ -344,6 +404,7 @@ void ShaderResourceCacheGL::DbgVerifyDynamicBufferMasks() const
         const CachedUB& UB    = GetConstUB(ub);
         const Uint64    UBBit = Uint64{1} << Uint64{ub};
         VERIFY(((m_DynamicUBOMask & UBBit) != 0) == (UB.IsDynamic() && (m_DynamicUBOSlotMask & UBBit) != 0), "Bit ", ub, " in m_DynamicUBOMask is invalid");
+        VERIFY(UB.pInlineConstantData == nullptr || (m_DynamicUBOSlotMask & UBBit) == 0, "Inline constant buffer cannot be dynamic");
     }
 
     for (Uint32 ssbo = 0; ssbo < GetSSBOCount(); ++ssbo)

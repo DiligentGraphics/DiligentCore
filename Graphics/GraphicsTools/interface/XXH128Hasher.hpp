@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -73,55 +73,55 @@ struct XXH128State final
     }
 
     template <typename T>
-    typename std::enable_if<std::is_fundamental<T>::value || std::is_enum<T>::value>::type Update(const T& Val) noexcept
+    typename std::enable_if<std::is_fundamental<T>::value || std::is_enum<T>::value, XXH128State&>::type Update(const T& Val) noexcept
     {
-        UpdateRaw(&Val, sizeof(Val));
+        return UpdateRaw(&Val, sizeof(Val));
     }
 
     template <typename T>
     typename std::enable_if<(std::is_same<typename std::remove_cv<T>::type, char>::value ||
                              std::is_same<typename std::remove_cv<T>::type, wchar_t>::value),
-                            void>::type
+                            XXH128State&>::type
     Update(T* Str) noexcept
     {
-        UpdateStr(Str);
+        return UpdateStr(Str);
     }
 
     template <typename CharType>
-    void Update(const std::basic_string<CharType>& str) noexcept
+    XXH128State& Update(const std::basic_string<CharType>& str) noexcept
     {
-        UpdateStr(str.c_str(), str.length());
+        return UpdateStr(str.c_str(), str.length());
     }
 
     template <typename FirstArgType, typename... RestArgsType>
-    void Update(const FirstArgType& FirstArg, const RestArgsType&... RestArgs) noexcept
+    XXH128State& Update(const FirstArgType& FirstArg, const RestArgsType&... RestArgs) noexcept
     {
         Update(FirstArg);
-        Update(RestArgs...);
+        return Update(RestArgs...);
     }
 
-    void UpdateRaw(const void* pData, uint64_t Size) noexcept;
+    XXH128State& UpdateRaw(const void* pData, uint64_t Size) noexcept;
 
     template <typename T>
     typename std::enable_if<(std::is_same<typename std::remove_cv<T>::type, char>::value ||
                              std::is_same<typename std::remove_cv<T>::type, wchar_t>::value),
-                            void>::type
+                            XXH128State&>::type
     UpdateStr(T* pStr, size_t Len = 0) noexcept
     {
         if (pStr == nullptr)
-            return;
+            return *this;
         if (Len == 0)
             Len = StrLen(pStr);
-        UpdateRaw(pStr, Len);
+        return UpdateRaw(pStr, Len);
     }
 
     template <typename... ArgsType>
-    void operator()(const ArgsType&... Args) noexcept
+    XXH128State& operator()(const ArgsType&... Args) noexcept
     {
-        Update(Args...);
+        return Update(Args...);
     }
 
-    void Update(const ShaderCreateInfo& ShaderCI) noexcept;
+    XXH128State& Update(const ShaderCreateInfo& ShaderCI) noexcept;
 
     template <typename T>
     typename std::enable_if<(std::is_same<typename std::remove_cv<T>::type, SamplerDesc>::value ||
@@ -156,11 +156,12 @@ struct XXH128State final
                              std::is_same<typename std::remove_cv<T>::type, RayTracingPipelineStateCreateInfo>::value ||
                              std::is_same<typename std::remove_cv<T>::type, TilePipelineStateCreateInfo>::value ||
                              std::is_same<typename std::remove_cv<T>::type, VertexPoolElementDesc>::value),
-                            void>::type
+                            XXH128State&>::type
     Update(const T& Val) noexcept
     {
         HashCombiner<XXH128State, T> Combiner{*this};
         Combiner(Val);
+        return *this;
     }
 
 

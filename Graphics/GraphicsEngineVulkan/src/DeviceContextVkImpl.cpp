@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -369,7 +369,7 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
 
     BindInfo.vkPipelineLayout = Layout.GetVkPipelineLayout();
 
-    Uint32 TotalDynamicOffsetCount = 0;
+    Uint16 TotalDynamicOffsetCount = 0;
     for (Uint32 i = 0; i < SignCount; ++i)
     {
         ResourceBindInfo::DescriptorSetInfo& SetInfo = BindInfo.SetInfo[i];
@@ -384,12 +384,14 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
         VERIFY_EXPR(BindInfo.ActiveSRBMask & (1u << i));
 
         SetInfo.BaseInd            = Layout.GetFirstDescrSetIndex(pSignature->GetDesc().BindingIndex);
-        SetInfo.DynamicOffsetCount = pSignature->GetDynamicOffsetCount();
+        SetInfo.DynamicOffsetCount = static_cast<Uint16>(pSignature->GetDynamicOffsetCount());
+        SetInfo.FirstDynamicOffset = TotalDynamicOffsetCount;
         TotalDynamicOffsetCount += SetInfo.DynamicOffsetCount;
     }
 
     // Reserve space to store all dynamic buffer offsets
     m_DynamicBufferOffsets.resize(TotalDynamicOffsetCount);
+    std::fill(m_DynamicBufferOffsets.begin(), m_DynamicBufferOffsets.end(), 0);
 }
 
 DeviceContextVkImpl::ResourceBindInfo& DeviceContextVkImpl::GetBindInfo(PIPELINE_TYPE Type)
@@ -415,6 +417,51 @@ DeviceContextVkImpl::ResourceBindInfo& DeviceContextVkImpl::GetBindInfo(PIPELINE
     return m_BindInfo[Indices[Uint32{Type}]];
 }
 
+void DeviceContextVkImpl::CommitInlineConstants(ResourceBindInfo& BindInfo, Uint32 CommitSRBMask)
+{
+    const PipelineLayoutVk&                   Layout = m_pPipelineState->GetPipelineLayout();
+    const PipelineLayoutVk::PushConstantInfo& PCInfo = Layout.GetPushConstantInfo();
+    VERIFY(PCInfo, "There are no push constants defined in the currently bound pipeline layout. "
+                   "This method should not be called in this case as InlineConstantsSRBMask should be zero.");
+
+    PipelineResourceSignatureVkImpl::CommitInlineConstantsAttribs CommitAttribs{
+        *this,
+        Layout.GetVkPipelineLayout(),
+        PCInfo.vkRange,
+    };
+
+    VERIFY(CommitSRBMask != 0, "This method should not be called when there is nothing to commit");
+    while (CommitSRBMask != 0)
+    {
+        const Uint32 SignBit = ExtractLSB(CommitSRBMask);
+        const Uint32 sign    = PlatformMisc::GetLSB(SignBit);
+        VERIFY_EXPR(sign < m_pPipelineState->GetResourceSignatureCount());
+
+        const PipelineResourceSignatureVkImpl* pSign = m_pPipelineState->GetResourceSignature(sign);
+        VERIFY_EXPR(pSign != nullptr && pSign->HasInlineConstants());
+
+        CommitAttribs.pResourceCache = BindInfo.ResourceCaches[sign];
+        if (CommitAttribs.pResourceCache == nullptr)
+        {
+            // Each signature with inline constants must have a bound SRB with a valid resource cache
+            DEV_ERROR("Signature '", pSign->GetDesc().Name,
+                      "' has inline constants but no SRB is bound. Did you call CommitShaderResources()?");
+            continue;
+        }
+        DEV_CHECK_ERR(CommitAttribs.pResourceCache->HasInlineConstants(),
+                      "Resource cache for signature '", pSign->GetDesc().Name,
+                      "' has no inline constants, but the signature declares them.");
+
+        // Determine which resource (if any) in this signature should use push constant path.
+        // If this signature contains the selected push constant, pass its resource index
+        // Otherwise pass ~0u to use emulated buffer path for all.
+        CommitAttribs.PushConstantResIndex = (sign == PCInfo.SignatureIndex) ? PCInfo.ResourceIndex : ~0u;
+
+        // Update inline constant buffers
+        pSign->CommitInlineConstants(CommitAttribs);
+    }
+}
+
 void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint32 CommitSRBMask)
 {
     VERIFY(CommitSRBMask != 0, "This method should not be called when there is nothing to commit");
@@ -427,6 +474,14 @@ void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint3
     uint32_t     DynamicOffsetCount = 0;
     uint32_t     TotalSetCount      = 0;
     const Uint32 FirstSetToBind     = BindInfo.SetInfo[FirstSign].BaseInd;
+    const Uint16 FirstDynamicOffset = BindInfo.SetInfo[FirstSign].FirstDynamicOffset;
+
+    // Note that in current implementation, if any of the dynamic offsets change,
+    // all descriptor sets are rebound. This may be further optimized to only rebind
+    // the sets that have changed dynamic offsets. This will complicate the code though,
+    // and may not be worth the effort as the main goal of skipping descriptor set binding
+    // if no dynamic offsets have changed is already achieved.
+    bool DynamicOffsetsChanged = false;
     for (Uint32 sign = FirstSign; sign <= LastSign; ++sign)
     {
         ResourceBindInfo::DescriptorSetInfo& SetInfo = BindInfo.SetInfo[sign];
@@ -453,12 +508,15 @@ void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint3
 
         if (SetInfo.DynamicOffsetCount > 0)
         {
-            VERIFY(m_DynamicBufferOffsets.size() >= size_t{DynamicOffsetCount} + size_t{SetInfo.DynamicOffsetCount},
+            VERIFY(m_DynamicBufferOffsets.size() >= size_t{FirstDynamicOffset} + size_t{DynamicOffsetCount} + size_t{SetInfo.DynamicOffsetCount},
                    "m_DynamicBufferOffsets must've been resized by SetPipelineState() to have enough space");
 
-            Uint32 NumOffsetsWritten = pResourceCache->GetDynamicBufferOffsets(this, m_DynamicBufferOffsets, DynamicOffsetCount);
-            VERIFY_EXPR(NumOffsetsWritten == SetInfo.DynamicOffsetCount);
+            auto WriteResult = pResourceCache->WriteDynamicBufferOffsets(this, m_DynamicBufferOffsets, FirstDynamicOffset + DynamicOffsetCount);
+            VERIFY_EXPR(WriteResult.NumOffsetsWritten == SetInfo.DynamicOffsetCount);
             DynamicOffsetCount += SetInfo.DynamicOffsetCount;
+
+            if (WriteResult.NumOffsetsChanged > 0)
+                DynamicOffsetsChanged = true;
         }
 
 #ifdef DILIGENT_DEVELOPMENT
@@ -466,17 +524,20 @@ void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint3
 #endif
     }
 
-    // Note that there is one global dynamic buffer from which all dynamic resources are suballocated in Vulkan back-end,
-    // and this buffer is not resizable, so the buffer handle can never change.
+    if ((BindInfo.StaleSRBMask & BindInfo.ActiveSRBMask) != 0 || DynamicOffsetsChanged)
+    {
+        // Note that there is one global dynamic buffer from which all dynamic resources are suballocated in Vulkan back-end,
+        // and this buffer is not resizable, so the buffer handle can never change.
 
-    // vkCmdBindDescriptorSets causes the sets numbered [firstSet .. firstSet+descriptorSetCount-1] to use the
-    // bindings stored in pDescriptorSets[0 .. descriptorSetCount-1] for subsequent rendering commands
-    // (either compute or graphics, according to the pipelineBindPoint). Any bindings that were previously
-    // applied via these sets are no longer valid.
-    // https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/vkCmdBindDescriptorSets.html
-    VERIFY_EXPR(m_State.vkPipelineBindPoint != VK_PIPELINE_BIND_POINT_MAX_ENUM);
-    m_CommandBuffer.BindDescriptorSets(m_State.vkPipelineBindPoint, BindInfo.vkPipelineLayout, FirstSetToBind, TotalSetCount,
-                                       m_DescriptorSets.data(), DynamicOffsetCount, m_DynamicBufferOffsets.data());
+        // vkCmdBindDescriptorSets causes the sets numbered [firstSet .. firstSet+descriptorSetCount-1] to use the
+        // bindings stored in pDescriptorSets[0 .. descriptorSetCount-1] for subsequent rendering commands
+        // (either compute or graphics, according to the pipelineBindPoint). Any bindings that were previously
+        // applied via these sets are no longer valid.
+        // https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/vkCmdBindDescriptorSets.html
+        VERIFY_EXPR(m_State.vkPipelineBindPoint != VK_PIPELINE_BIND_POINT_MAX_ENUM);
+        m_CommandBuffer.BindDescriptorSets(m_State.vkPipelineBindPoint, BindInfo.vkPipelineLayout, FirstSetToBind, TotalSetCount,
+                                           m_DescriptorSets.data(), DynamicOffsetCount, DynamicOffsetCount > 0 ? &m_DynamicBufferOffsets[FirstDynamicOffset] : nullptr);
+    }
 
     BindInfo.StaleSRBMask &= ~BindInfo.ActiveSRBMask;
 }
@@ -544,6 +605,9 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
 
 #ifdef DILIGENT_DEBUG
     ResourceCache.DbgVerifyDynamicBuffersCounter();
+    VERIFY(!ResourceCache.HasInlineConstants() || ResourceCache.HasDynamicResources(),
+           "Inline constant buffers count towards the number of dynamic resources, "
+           "so a resource cache with inline constants must also have dynamic resources.");
 #endif
 
     if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
@@ -566,6 +630,8 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
     // We must not clear entire ResInfo as DescriptorSetBaseInd and DynamicOffsetCount
     // are set by SetPipelineState().
     SetInfo.vkSets = {};
+    VERIFY((BindInfo.DynamicSRBMask & BindInfo.InlineConstantsSRBMask) == BindInfo.InlineConstantsSRBMask,
+           "SRBs with inline constants must also be marked as dynamic.");
 
     Uint32 DSIndex = 0;
     if (pSignature->HasDescriptorSet(PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE))
@@ -758,13 +824,36 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
 #endif
 
     ResourceBindInfo& BindInfo = GetBindInfo(PIPELINE_TYPE_GRAPHICS);
+
+    const bool DynamicBuffersIntact  = (Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT) != 0;
+    const bool InlineConstantsIntact = (Flags & DRAW_FLAG_INLINE_CONSTANTS_INTACT) != 0;
+
+    // Commit inline constants first, because emulated inline constant buffers
+    // need to be committed in CommitDescriptorSets.
+    const Uint32 InlineConstantSRBCommitMask = BindInfo.GetInlineConstantSRBCommitMask(InlineConstantsIntact);
+    if (InlineConstantSRBCommitMask != 0)
+    {
+        CommitInlineConstants(BindInfo, InlineConstantSRBCommitMask);
+        // CommitDescriptorSets is always called for SRBs that have inline constants.
+        // First time (when StaleSRBMask != 0), it always binds the descriptor sets, but after that
+        // it checks if any dynamic offsets have changed to decide whether to rebind the sets.
+        // If no inline constant buffers have been updated, CommitDescriptorSets will skip binding.
+    }
+
     // First time we must always bind descriptor sets with dynamic offsets as SRBs are stale.
     // If there are no dynamic buffers bound in the resource cache, for all subsequent
     // calls we do not need to bind the sets again.
-    if (Uint32 CommitMask = BindInfo.GetCommitMask(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT))
+    const Uint32 CommitMask = BindInfo.GetCommitMask(DynamicBuffersIntact, InlineConstantsIntact);
+    VERIFY((CommitMask & InlineConstantSRBCommitMask) == InlineConstantSRBCommitMask,
+           "All bits in InlineConstantSRBCommitMask must be also set in CommitMask because "
+           "inline constant buffers count towards dynamic resources.");
+    if (CommitMask != 0)
     {
+        // CommitDescriptorSets is always called for SRBs that have inline constants,
+        // but if dynamic offsets have not changed, it will skip binding.
         CommitDescriptorSets(BindInfo, CommitMask);
     }
+
 #ifdef DILIGENT_DEVELOPMENT
     // Must be called after CommitDescriptorSets as it needs SetInfo.BaseInd
     DvpValidateCommittedShaderResources(BindInfo);
@@ -1059,8 +1148,23 @@ void DeviceContextVkImpl::PrepareForDispatchCompute()
     EndRenderScope();
 
     ResourceBindInfo& BindInfo = GetBindInfo(PIPELINE_TYPE_COMPUTE);
-    if (Uint32 CommitMask = BindInfo.GetCommitMask())
+
+    // Commit inline constants first, because emulated inline constant buffers
+    // need to be committed in CommitDescriptorSets.
+    const Uint32 InlineConstantSRBCommitMask = BindInfo.GetInlineConstantSRBCommitMask();
+    if (InlineConstantSRBCommitMask != 0)
     {
+        CommitInlineConstants(BindInfo, InlineConstantSRBCommitMask);
+    }
+
+    const Uint32 CommitMask = BindInfo.GetCommitMask();
+    VERIFY((CommitMask & InlineConstantSRBCommitMask) == InlineConstantSRBCommitMask,
+           "All bits in InlineConstantSRBCommitMask must be also set in CommitMask because "
+           "inline constant buffers count towards dynamic resources.");
+    if (CommitMask != 0)
+    {
+        // CommitDescriptorSets is always called for SRBs that have inline constants,
+        // but if dynamic offsets have not changed, it will skip binding.
         CommitDescriptorSets(BindInfo, CommitMask);
     }
 
@@ -1075,8 +1179,23 @@ void DeviceContextVkImpl::PrepareForRayTracing()
     EnsureVkCmdBuffer();
 
     ResourceBindInfo& BindInfo = GetBindInfo(PIPELINE_TYPE_RAY_TRACING);
-    if (Uint32 CommitMask = BindInfo.GetCommitMask())
+
+    // Commit inline constants first, because emulated inline constant buffers
+    // need to be committed in CommitDescriptorSets.
+    const Uint32 InlineConstantSRBCommitMask = BindInfo.GetInlineConstantSRBCommitMask();
+    if (InlineConstantSRBCommitMask != 0)
     {
+        CommitInlineConstants(BindInfo, InlineConstantSRBCommitMask);
+    }
+
+    const Uint32 CommitMask = BindInfo.GetCommitMask();
+    VERIFY((CommitMask & InlineConstantSRBCommitMask) == InlineConstantSRBCommitMask,
+           "All bits in InlineConstantSRBCommitMask must be also set in CommitMask because "
+           "inline constant buffers count towards dynamic resources.");
+    if (CommitMask != 0)
+    {
+        // CommitDescriptorSets is always called for SRBs that have inline constants,
+        // but if dynamic offsets have not changed, it will skip binding.
         CommitDescriptorSets(BindInfo, CommitMask);
     }
 
@@ -1361,12 +1480,15 @@ void DeviceContextVkImpl::ClearRenderTarget(ITextureView* pView, const void* RGB
 void DeviceContextVkImpl::FinishFrame()
 {
 #ifdef DILIGENT_DEBUG
-    for (const auto& MappedBuffIt : m_DbgMappedBuffers)
+    for (auto& MappedBuffIt : m_DbgMappedBuffers)
     {
-        const BufferDesc& BuffDesc = MappedBuffIt.first->GetDesc();
-        if (BuffDesc.Usage == USAGE_DYNAMIC)
+        if (MappedBuffIt.second.Usage == USAGE_DYNAMIC)
         {
-            LOG_WARNING_MESSAGE("Dynamic buffer '", BuffDesc.Name, "' is still mapped when finishing the frame. The contents of the buffer and mapped address will become invalid");
+            if (RefCntAutoPtr<IBuffer> pBuffer = MappedBuffIt.second.pBuffer.Lock())
+            {
+                const BufferDesc& BuffDesc = pBuffer->GetDesc();
+                LOG_WARNING_MESSAGE("Dynamic buffer '", BuffDesc.Name, "' is still mapped when finishing the frame. The contents of the buffer and mapped address will become invalid");
+            }
         }
     }
 #endif
@@ -1964,7 +2086,7 @@ void DeviceContextVkImpl::ChooseRenderPassAndFramebuffer()
     }
 }
 
-void DeviceContextVkImpl::EndRenderScope()
+void DeviceContextVkImpl::CommitDynamicRenderPassIfClearsPending()
 {
     if (m_DynamicRenderingInfo && m_DynamicRenderingInfo->HasClears())
     {
@@ -1973,6 +2095,11 @@ void DeviceContextVkImpl::EndRenderScope()
         // Apply clears
         CommitRenderPassAndFramebuffer(/*VerifyStates = */ false);
     }
+}
+
+void DeviceContextVkImpl::EndRenderScope()
+{
+    CommitDynamicRenderPassIfClearsPending();
 
     if (m_CommandBuffer.GetVkCmdBuffer() != VK_NULL_HANDLE)
     {
@@ -1986,12 +2113,7 @@ void DeviceContextVkImpl::SetRenderTargetsExt(const SetRenderTargetsAttribs& Att
 
     if (TDeviceContextBase::SetRenderTargets(Attribs))
     {
-        if (m_DynamicRenderingInfo && m_DynamicRenderingInfo->HasClears())
-        {
-            // If there are pending clears, we must begin and end the render pass to apply the clears
-            CommitRenderPassAndFramebuffer(/*VerifyStates = */ false);
-        }
-
+        CommitDynamicRenderPassIfClearsPending();
         ChooseRenderPassAndFramebuffer();
 
         // Set the viewport to match the render target size
@@ -2332,7 +2454,30 @@ void DeviceContextVkImpl::UpdateTexture(ITexture*                      pTexture,
 
     if (SubresData.pSrcBuffer != nullptr)
     {
-        UNSUPPORTED("Copying buffer to texture is not implemented");
+        BufferVkImpl*               pSrcBuffVk = ClassPtrCast<BufferVkImpl>(SubresData.pSrcBuffer);
+        const TextureDesc&          DstTexDesc = pTexVk->GetDesc();
+        const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(DstTexDesc.Format);
+
+        TransitionOrVerifyBufferState(*pSrcBuffVk, SrcBufferStateTransitionMode, RESOURCE_STATE_COPY_SOURCE, VK_ACCESS_TRANSFER_READ_BIT,
+                                      "Using buffer as copy source (DeviceContextVkImpl::UpdateTexture)");
+
+        // We must unbind the texture from framebuffer because we will transition its state.
+        // If we later try to commit it as a render target (e.g. from SetPipelineState()), a
+        // state mismatch error will occur.
+        UnbindTextureFromFramebuffer(pTexVk, true);
+
+        const Uint32 SrcBufferRowStrideInTexels = (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED) ?
+            StaticCast<Uint32>(SubresData.Stride / Uint64{FmtAttribs.ComponentSize} * Uint64{FmtAttribs.BlockWidth}) :
+            StaticCast<Uint32>(SubresData.Stride / (Uint64{FmtAttribs.ComponentSize} * Uint64{FmtAttribs.NumComponents}));
+
+        CopyBufferToTexture(pSrcBuffVk->GetVkBuffer(),
+                            SubresData.SrcOffset,
+                            SrcBufferRowStrideInTexels,
+                            *pTexVk,
+                            DstBox,
+                            MipLevel,
+                            Slice,
+                            TextureStateTransitionMode);
     }
     else
     {
@@ -3366,6 +3511,11 @@ void DeviceContextVkImpl::TransitionResourceStates(Uint32 BarrierCount, const St
 
     EnsureVkCmdBuffer();
 
+    // If there are any pending clears in the dynamic render pass, we need to commit it
+    // before transitioning resource states. Otherwise, the render pass will be
+    // committed after the state transitions, which may lead to incorrect behavior.
+    CommitDynamicRenderPassIfClearsPending();
+
     for (Uint32 i = 0; i < BarrierCount; ++i)
     {
         const StateTransitionDesc& Barrier = pResourceBarriers[i];
@@ -3712,12 +3862,17 @@ void DeviceContextVkImpl::BuildTLAS(const BuildTLASAttribs& Attribs)
 
         for (Uint32 i = 0; i < Attribs.InstanceCount; ++i)
         {
-            const TLASBuildInstanceData& Inst     = Attribs.pInstances[i];
-            const TLASInstanceDesc       InstDesc = pTLASVk->GetInstanceDesc(Inst.InstanceName);
+            const TLASBuildInstanceData& Inst = Attribs.pInstances[i];
 
+            TLASInstanceDesc InstDesc;
+            if (!pTLASVk->GetInstanceDesc(Inst.InstanceName, InstDesc))
+            {
+                UNEXPECTED("Failed to find instance '", Inst.InstanceName, '\'');
+                continue;
+            }
             if (InstDesc.InstanceIndex >= Attribs.InstanceCount)
             {
-                UNEXPECTED("Failed to find instance by name");
+                UNEXPECTED("Failed to find instance '", Inst.InstanceName, '\'');
                 return;
             }
 

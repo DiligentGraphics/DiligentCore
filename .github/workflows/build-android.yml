@@ -25,7 +25,7 @@ jobs:
 
     - name: Set up build environment
       if: success()
-      uses: DiligentGraphics/github-action/setup-build-env@v9
+      uses: DiligentGraphics/github-action/setup-build-env@v10
       with:
         platform: Android
 

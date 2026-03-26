@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,15 +45,15 @@ namespace Diligent
 
 constexpr INTERFACE_ID PipelineStateGLImpl::IID_InternalImpl;
 
-static void VerifyResourceMerge(const PipelineStateDesc&                    PSODesc,
+static void VerifyResourceMerge(const char*                                 PSOName,
                                 const ShaderResourcesGL::GLResourceAttribs& ExistingRes,
                                 const ShaderResourcesGL::GLResourceAttribs& NewResAttribs)
 {
-#define LOG_RESOURCE_MERGE_ERROR_AND_THROW(PropertyName)                                                          \
-    LOG_ERROR_AND_THROW("Shader variable '", NewResAttribs.Name,                                                  \
-                        "' is shared between multiple shaders in pipeline '", (PSODesc.Name ? PSODesc.Name : ""), \
-                        "', but its " PropertyName " varies. A variable shared between multiple shaders "         \
-                        "must be defined identically in all shaders. Either use separate variables for "          \
+#define LOG_RESOURCE_MERGE_ERROR_AND_THROW(PropertyName)                                                  \
+    LOG_ERROR_AND_THROW("Shader variable '", NewResAttribs.Name,                                          \
+                        "' is shared between multiple shaders in pipeline '", (PSOName ? PSOName : ""),   \
+                        "', but its " PropertyName " varies. A variable shared between multiple shaders " \
+                        "must be defined identically in all shaders. Either use separate variables for "  \
                         "different shader stages, change resource name or make sure that " PropertyName " is consistent.");
 
     if (ExistingRes.ResourceType != NewResAttribs.ResourceType)
@@ -112,22 +112,27 @@ PipelineResourceSignatureDescWrapper PipelineStateGLImpl::GetDefaultSignatureDes
 
     PipelineResourceSignatureDescWrapper SignDesc{m_Desc.Name, ResourceLayout, m_Desc.SRBAllocationGranularity};
     SignDesc.SetCombinedSamplerSuffix(PipelineResourceSignatureDesc{}.CombinedSamplerSuffix);
-
-    std::unordered_map<ShaderResourceHashKey, const ShaderResourcesGL::GLResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
+    DefaultSignatureDescBuilder<ShaderResourcesGL::GLResourceAttribs> Builder{m_Desc.Name, ResourceLayout, VerifyResourceMerge, SignDesc};
 
     const auto HandleResource = [&](const ShaderResourcesGL::GLResourceAttribs& Attribs) //
     {
-        const ShaderResourceVariableDesc VarDesc     = FindPipelineResourceLayoutVariable(ResourceLayout, Attribs.Name, Attribs.ShaderStages, nullptr);
-        const auto                       it_assigned = UniqueResources.emplace(ShaderResourceHashKey{VarDesc.ShaderStages, Attribs.Name}, Attribs);
-        if (it_assigned.second)
-        {
-            const PIPELINE_RESOURCE_FLAGS Flags = Attribs.ResourceFlags | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
-            SignDesc.AddResource(VarDesc.ShaderStages, Attribs.Name, Attribs.ArraySize, Attribs.ResourceType, VarDesc.Type, Flags);
-        }
-        else
-        {
-            VerifyResourceMerge(m_Desc, it_assigned.first->second, Attribs);
-        }
+        const ShaderResourceVariableDesc VarDesc = FindPipelineResourceLayoutVariable(ResourceLayout, Attribs.Name, Attribs.ShaderStages, nullptr);
+        const PIPELINE_RESOURCE_FLAGS    Flags   = Attribs.ResourceFlags | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
+
+        Builder.AddResource(Attribs.Name, Attribs, VarDesc, Attribs.ArraySize, Attribs.ResourceType, Flags);
+    };
+
+    // Specialized handler for uniform buffers to handle inline constants correctly
+    const auto HandleUniformBuffer = [&](const ShaderResourcesGL::UniformBufferInfo& UB) //
+    {
+        const ShaderResourceVariableDesc VarDesc = FindPipelineResourceLayoutVariable(ResourceLayout, UB.Name, UB.ShaderStages, nullptr);
+        const PIPELINE_RESOURCE_FLAGS    Flags   = UB.ResourceFlags | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
+
+        const Uint32 ArraySize = (Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) ?
+            UB.GetInlineConstantCountOrThrow() :
+            UB.ArraySize;
+
+        Builder.AddResource(UB.Name, UB, VarDesc, ArraySize, UB.ResourceType, Flags);
     };
 
     if (m_IsProgramPipelineSupported)
@@ -135,7 +140,7 @@ PipelineResourceSignatureDescWrapper PipelineStateGLImpl::GetDefaultSignatureDes
         for (size_t i = 0; i < ShaderStages.size(); ++i)
         {
             ShaderGLImpl* pShaderGL = ShaderStages[i];
-            pShaderGL->GetShaderResources()->ProcessConstResources(HandleResource, HandleResource, HandleResource, HandleResource);
+            pShaderGL->GetShaderResources()->ProcessConstResources(HandleUniformBuffer, HandleResource, HandleResource, HandleResource);
         }
     }
     else
@@ -153,7 +158,7 @@ PipelineResourceSignatureDescWrapper PipelineStateGLImpl::GetDefaultSignatureDes
                 SamplerResFlag,
                 pImmediateCtx->GetContextState());
         }
-        m_GLPrograms[0]->GetResources()->ProcessConstResources(HandleResource, HandleResource, HandleResource, HandleResource);
+        m_GLPrograms[0]->GetResources()->ProcessConstResources(HandleUniformBuffer, HandleResource, HandleResource, HandleResource);
 
         if (ResourceLayout.NumImmutableSamplers > 0)
         {

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024-2025 Diligent Graphics LLC
+ *  Copyright 2024-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@
 #include "GraphicsAccessories.hpp"
 #include "ThreadSignal.hpp"
 #include "RenderDeviceWebGPU.h"
+#include "MPSCQueue.hpp"
 
 namespace Diligent
 {
@@ -175,22 +176,14 @@ struct TextureUploaderWebGPU::InternalData
         m_pDeviceWebGPU = pDeviceWebGPU;
     }
 
-    void SwapMapQueues()
-    {
-        std::lock_guard<std::mutex> QueueLock(m_PendingOperationsMtx);
-        m_PendingOperations.swap(m_InWorkOperations);
-    }
-
     void EnqueueCopy(UploadBufferWebGPU* pUploadBuffer, ITexture* pDstTexture, Uint32 Slice, Uint32 MipLevel, bool AutoRecycle)
     {
-        std::lock_guard<std::mutex> QueueLock(m_PendingOperationsMtx);
-        m_PendingOperations.emplace_back(PendingBufferOperation::Type::Copy, pUploadBuffer, pDstTexture, Slice, MipLevel, AutoRecycle);
+        m_PendingOperations.Enqueue(PendingBufferOperation{PendingBufferOperation::Type::Copy, pUploadBuffer, pDstTexture, Slice, MipLevel, AutoRecycle});
     }
 
     void EnqueueMap(UploadBufferWebGPU* pUploadBuffer)
     {
-        std::lock_guard<std::mutex> QueueLock(m_PendingOperationsMtx);
-        m_PendingOperations.emplace_back(PendingBufferOperation::Type::Map, pUploadBuffer);
+        m_PendingOperations.Enqueue(PendingBufferOperation{PendingBufferOperation::Type::Map, pUploadBuffer});
     }
 
     void Execute(IDeviceContext*         pContext,
@@ -282,9 +275,7 @@ struct TextureUploaderWebGPU::InternalData
         Deque.emplace_back(pUploadBufferWebGPU);
     }
 
-    std::mutex                          m_PendingOperationsMtx;
-    std::vector<PendingBufferOperation> m_PendingOperations;
-    std::vector<PendingBufferOperation> m_InWorkOperations;
+    MPSCQueue<PendingBufferOperation> m_PendingOperations;
 
     std::mutex                                                                          m_UploadBuffCacheMtx;
     std::unordered_map<UploadBufferDesc, std::deque<RefCntAutoPtr<UploadBufferWebGPU>>> m_UploadBufferCache;
@@ -314,13 +305,10 @@ TextureUploaderWebGPU::~TextureUploaderWebGPU()
 
 void TextureUploaderWebGPU::RenderThreadUpdate(IDeviceContext* pContext)
 {
-    m_pInternalData->SwapMapQueues();
-    if (!m_pInternalData->m_InWorkOperations.empty())
+    InternalData::PendingBufferOperation Operation;
+    while (m_pInternalData->m_PendingOperations.Dequeue(Operation))
     {
-        for (InternalData::PendingBufferOperation& Operation : m_pInternalData->m_InWorkOperations)
-            m_pInternalData->Execute(pContext, Operation);
-
-        m_pInternalData->m_InWorkOperations.clear();
+        m_pInternalData->Execute(pContext, Operation);
     }
 }
 
@@ -417,9 +405,8 @@ void TextureUploaderWebGPU::RecycleBuffer(IUploadBuffer* pUploadBuffer)
 
 TextureUploaderStats TextureUploaderWebGPU::GetStats()
 {
-    TextureUploaderStats        Stats;
-    std::lock_guard<std::mutex> QueueLock(m_pInternalData->m_PendingOperationsMtx);
-    Stats.NumPendingOperations = static_cast<Uint32>(m_pInternalData->m_PendingOperations.size());
+    TextureUploaderStats Stats;
+    Stats.NumPendingOperations = static_cast<Uint32>(m_pInternalData->m_PendingOperations.Size());
     return Stats;
 }
 

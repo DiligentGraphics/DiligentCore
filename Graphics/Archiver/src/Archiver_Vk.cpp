@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -128,9 +128,8 @@ void SerializedPipelineStateImpl::PatchShadersVk(const CreateInfoType& CreateInf
     {
         ShaderStageInfoVk&                    Src{ShaderStages[i]};
         PipelineStateVkImpl::ShaderStageInfo& Dst{ShaderStagesVk[i]};
-        Dst.Type    = Src.Type;
-        Dst.Shaders = std::move(Src.Shaders);
-        Dst.SPIRVs  = std::move(Src.SPIRVs);
+        Dst.Type  = Src.Type;
+        Dst.Items = std::move(Src.Items);
     }
 
     IPipelineResourceSignature** ppSignatures    = CreateInfo.ppResourceSignatures;
@@ -189,7 +188,7 @@ void SerializedPipelineStateImpl::PatchShadersVk(const CreateInfoType& CreateInf
         const PipelineStateVkImpl::ShaderStageInfo& Stage = ShaderStagesVk[j];
         for (size_t i = 0; i < Stage.Count(); ++i)
         {
-            const std::vector<Uint32>& SPIRV    = Stage.SPIRVs[i];
+            const std::vector<Uint32>& SPIRV    = Stage.Items[i].SPIRV;
             ShaderCreateInfo           ShaderCI = ShaderStages[j].Serialized[i]->GetCreateInfo();
 
             ShaderCI.Source       = nullptr;

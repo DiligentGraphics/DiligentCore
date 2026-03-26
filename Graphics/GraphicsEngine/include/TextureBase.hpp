@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -53,7 +53,12 @@ void ValidateTextureDesc(const TextureDesc& TexDesc, const IRenderDevice* pDevic
 void ValidatedAndCorrectTextureViewDesc(const TextureDesc& TexDesc, TextureViewDesc& ViewDesc) noexcept(false);
 
 /// Validates update texture command parameters.
-void ValidateUpdateTextureParams(const TextureDesc& TexDesc, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData);
+void ValidateUpdateTextureParams(const TextureDesc&       TexDesc,
+                                 Uint32                   MipLevel,
+                                 Uint32                   Slice,
+                                 const Box&               DstBox,
+                                 const TextureSubResData& SubresData,
+                                 const BufferProperties&  BufferProps);
 
 /// Validates copy texture command parameters.
 void ValidateCopyTextureParams(const CopyTextureAttribs& CopyAttribs);
@@ -335,9 +340,10 @@ public:
     virtual const SparseTextureProperties& DILIGENT_CALL_TYPE GetSparseProperties() const override final
     {
         DEV_CHECK_ERR(this->m_Desc.Usage == USAGE_SPARSE,
-                      "ITexture::GetSparseProperties() must be used for sparse texture");
+                      "ITexture::GetSparseProperties() must be used for sparse textures only");
         VERIFY_EXPR(m_pSparseProps != nullptr);
-        return *m_pSparseProps;
+        static constexpr SparseTextureProperties kDefaultSparseProps{};
+        return m_pSparseProps ? *m_pSparseProps : kDefaultSparseProps;
     }
 
 protected:

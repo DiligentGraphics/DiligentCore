@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,6 +31,7 @@
 /// Declaration of Diligent::PipelineResourceSignatureGLImpl class
 
 #include <array>
+#include <memory>
 
 #include "EngineGLImplTraits.hpp"
 #include "PipelineResourceAttribsGL.hpp"
@@ -61,6 +62,19 @@ const char*   GetBindingRangeName(BINDING_RANGE Range);
 struct ImmutableSamplerAttribsGL
 {
     Uint32 Dummy = 0;
+};
+
+/// Attributes of an inline constant buffer in OpenGL.
+/// OpenGL does not support push constants, so inline constants are emulated
+/// using a shared dynamic UBO that is updated before each draw/dispatch.
+struct InlineConstantBufferAttribsGL
+{
+    Uint32 CacheOffset  = 0; // UBO cache slot offset for this resource
+    Uint32 NumConstants = 0; // Number of 32-bit constants (from ResDesc.ArraySize)
+
+    // Shared dynamic UBO created in the Signature.
+    // All SRBs reference this same buffer to reduce memory usage.
+    RefCntAutoPtr<BufferGLImpl> pBuffer;
 };
 
 struct PipelineResourceSignatureInternalDataGL : PipelineResourceSignatureInternalData<PipelineResourceAttribsGL, ImmutableSamplerAttribsGL>
@@ -126,6 +140,11 @@ public:
     void CopyStaticResources(ShaderResourceCacheGL& ResourceCache) const;
     // Make the base class method visible
     using TPipelineResourceSignatureBase::CopyStaticResources;
+
+    // Updates inline constant buffers by mapping the shared dynamic UBOs and copying
+    // data from the CPU-side staging buffer in the resource cache.
+    void UpdateInlineConstantBuffers(const ShaderResourceCacheGL& ResourceCache,
+                                     class GLContextState&        CtxState) const;
 
     Uint32 GetImmutableSamplerIdx(const ResourceAttribs& Res) const
     {

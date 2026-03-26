@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -78,7 +78,7 @@ std::vector<uint32_t> CompileShaderDXC(const ShaderCreateInfo&         ShaderCI,
     {
         // SPIR-V bytecode generated from HLSL must be legalized to
         // turn it into a valid vulkan SPIR-V shader.
-        std::vector<uint32_t> LegalizedSPIRV = OptimizeSPIRV(SPIRV, SPV_ENV_MAX, SPIRV_OPTIMIZATION_FLAG_LEGALIZATION);
+        std::vector<uint32_t> LegalizedSPIRV = OptimizeSPIRV(SPIRV, SPIRV_OPTIMIZATION_FLAG_LEGALIZATION);
         if (!LegalizedSPIRV.empty())
             SPIRV = std::move(LegalizedSPIRV);
         else
@@ -235,28 +235,19 @@ void ShaderVkImpl::Initialize(const ShaderCreateInfo& ShaderCI,
     {
         if ((ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_SKIP_REFLECTION) == 0)
         {
-            IMemoryAllocator& Allocator = GetRawAllocator();
+            SPIRVShaderResources::CreateInfo ResCI;
+            ResCI.ShaderType                  = m_Desc.ShaderType;
+            ResCI.Name                        = m_Desc.Name;
+            ResCI.CombinedSamplerSuffix       = m_Desc.UseCombinedTextureSamplers ? m_Desc.CombinedSamplerSuffix : nullptr;
+            ResCI.LoadShaderStageInputs       = m_Desc.ShaderType == SHADER_TYPE_VERTEX;
+            ResCI.LoadUniformBufferReflection = ShaderCI.LoadConstantBufferReflection;
 
-            std::unique_ptr<void, STDDeleterRawMem<void>> pRawMem{
-                ALLOCATE(Allocator, "Memory for SPIRVShaderResources", SPIRVShaderResources, 1),
-                STDDeleterRawMem<void>(Allocator),
-            };
-            const bool LoadShaderInputs = m_Desc.ShaderType == SHADER_TYPE_VERTEX;
-            new (pRawMem.get()) SPIRVShaderResources // May throw
-                {
-                    Allocator,
-                    m_SPIRV,
-                    m_Desc,
-                    m_Desc.UseCombinedTextureSamplers ? m_Desc.CombinedSamplerSuffix : nullptr,
-                    LoadShaderInputs,
-                    ShaderCI.LoadConstantBufferReflection,
-                    m_EntryPoint //
-                };
+            m_pShaderResources = SPIRVShaderResources::Create(GetRawAllocator(), m_SPIRV, ResCI, &m_EntryPoint);
+
             VERIFY_EXPR(ShaderCI.ByteCode != nullptr || m_EntryPoint == ShaderCI.EntryPoint ||
                         (m_EntryPoint == "main" && (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_HLSL_TO_SPIRV_VIA_GLSL) != 0));
-            m_pShaderResources.reset(static_cast<SPIRVShaderResources*>(pRawMem.release()), STDDeleterRawMem<SPIRVShaderResources>(Allocator));
 
-            if (LoadShaderInputs && m_pShaderResources->IsHLSLSource())
+            if (ResCI.LoadShaderStageInputs && m_pShaderResources->IsHLSLSource())
             {
                 m_pShaderResources->MapHLSLVertexShaderInputs(m_SPIRV);
             }

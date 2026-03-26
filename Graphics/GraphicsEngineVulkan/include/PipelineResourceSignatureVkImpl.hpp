@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -50,6 +50,7 @@ namespace Diligent
 
 struct SPIRVShaderResourceAttribs;
 class DeviceContextVkImpl;
+class BufferVkImpl;
 
 struct ImmutableSamplerAttribsVk
 {
@@ -57,6 +58,27 @@ struct ImmutableSamplerAttribsVk
     Uint32 BindingIndex = ~0u;
 };
 ASSERT_SIZEOF(ImmutableSamplerAttribsVk, 8, "The struct is used in serialization and must be tightly packed");
+
+/// Inline constant buffer attributes for Vulkan backend.
+/// All inline constants are treated as uniform buffers by the signature,
+/// and similar to other uniform buffers, they get:
+/// - DescriptorSet binding and cache allocation
+/// - Shared emulated buffer (created in the Signature, shared by all SRBs)
+///
+/// Push constant selection is deferred to PSO creation time, when
+/// one inline constant is selected to be the native push constant block.
+struct InlineConstantBufferAttribsVk
+{
+    Uint32 ResIndex       = 0; // Resource index in the signature
+    Uint32 DescrSet       = 0; // Descriptor set index
+    Uint32 BindingIndex   = 0; // Binding index within the descriptor set
+    Uint32 NumConstants   = 0; // Number of 32-bit constants
+    Uint32 SRBCacheOffset = 0; // Offset in the SRB resource cache
+
+    // Shared buffer created in the Signature.
+    // All SRBs reference this same buffer to reduce memory usage.
+    RefCntAutoPtr<BufferVkImpl> pBuffer;
+};
 
 struct PipelineResourceSignatureInternalDataVk : PipelineResourceSignatureInternalData<PipelineResourceAttribsVk, ImmutableSamplerAttribsVk>
 {
@@ -133,6 +155,18 @@ public:
     // Commits dynamic resources from ResourceCache to vkDynamicDescriptorSet
     void CommitDynamicResources(const ShaderResourceCacheVk& ResourceCache,
                                 VkDescriptorSet              vkDynamicDescriptorSet) const;
+
+    struct CommitInlineConstantsAttribs
+    {
+        DeviceContextVkImpl&         Ctx;
+        VkPipelineLayout             vkPipelineLayout     = VK_NULL_HANDLE;
+        VkPushConstantRange          vkPushConstRange     = {};
+        const ShaderResourceCacheVk* pResourceCache       = nullptr;
+        Uint32                       PushConstantResIndex = ~0u;
+    };
+    // Commits inline constants from the ResourceCache using push constants or
+    // by mapping and updating the inline constant buffer.
+    void CommitInlineConstants(const CommitInlineConstantsAttribs& Attribs) const;
 
 #ifdef DILIGENT_DEVELOPMENT
     /// Verifies committed resource using the SPIRV resource attributes from the PSO.

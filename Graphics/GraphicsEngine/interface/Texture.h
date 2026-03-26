@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -274,25 +274,32 @@ typedef struct TextureDesc TextureDesc;
 struct TextureSubResData
 {
     /// Pointer to the subresource data in CPU memory.
-
-    /// If provided, `pSrcBuffer` must be null
+    ///
+    /// If provided, `pSrcBuffer` must be null.
     const void* pData           DEFAULT_INITIALIZER(nullptr);
 
-    /// Pointer to the GPU buffer that contains subresource data.
-
-    /// If provided, `pData` must be null
+    /// Pointer to the GPU buffer that contains the subresource data.
+    ///
+    /// If provided, `pData` must be null.
     struct IBuffer* pSrcBuffer   DEFAULT_INITIALIZER(nullptr);
 
-    /// When updating data from the buffer (pSrcBuffer is not null),
-    /// offset from the beginning of the buffer to the data start
+    /// If `pSrcBuffer` is not null, offset, in bytes, from the beginning of the source
+    /// buffer to the subresource data.
+    ///
+    /// This value must be a multiple of `BufferProperties::TextureUpdateOffsetAlignment`,
+    /// which can be queried through `IRenderDevice::GetAdapterInfo()`.
     Uint64 SrcOffset            DEFAULT_INITIALIZER(0);
 
-    /// For 2D and 3D textures, row stride in bytes
+    /// Row stride, in bytes, for 2D and 3D textures.
+    ///
+    /// When `pSrcBuffer` is not null, this value must be a multiple of
+    /// `BufferProperties::TextureUpdateStrideAlignment`, which can be queried through
+    /// `IRenderDevice::GetAdapterInfo()`.
     Uint64 Stride               DEFAULT_INITIALIZER(0);
 
-    /// For 3D textures, depth slice stride in bytes.
-
-    /// On OpenGL, this must be a multiple of `Stride`
+    /// Depth slice stride, in bytes, for 3D textures.
+    ///
+    /// On OpenGL, this value must be a multiple of `Stride`.
     Uint64 DepthStride          DEFAULT_INITIALIZER(0);
 
 

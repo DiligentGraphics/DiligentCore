@@ -250,6 +250,20 @@ DILIGENT_BEGIN_INTERFACE(IShaderResourceVariable, IObject)
                                          Uint32 ArrayIndex DEFAULT_VALUE(0)) PURE;
 
 
+    /// For inline constant variables, sets the constant values
+
+    /// Inline constant variables are defined using Diligent::SHADER_RESOURCE_VARIABLE_FLAG_INLINE_CONSTANTS
+    /// or Diligent::PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS flags.
+    ///
+    /// \param [in] pConstants    - pointer to the array of 32-bit constant values.
+    /// \param [in] FirstConstant - index of the first 32-bit constant to set.
+    /// \param [in] NumConstants  - number of 32-bit constants to set.
+    VIRTUAL void METHOD(SetInlineConstants)(THIS_
+                                            const void* pConstants,
+                                            Uint32      FirstConstant,
+                                            Uint32      NumConstants) PURE;
+
+
     /// Returns the shader resource variable type
     VIRTUAL SHADER_RESOURCE_VARIABLE_TYPE METHOD(GetType)(THIS) CONST PURE;
 
@@ -278,14 +292,15 @@ DILIGENT_END_INTERFACE
 
 // clang-format off
 
-#    define IShaderResourceVariable_Set(This, ...)             CALL_IFACE_METHOD(ShaderResourceVariable, Set,             This, __VA_ARGS__)
-#    define IShaderResourceVariable_SetArray(This, ...)        CALL_IFACE_METHOD(ShaderResourceVariable, SetArray,        This, __VA_ARGS__)
-#    define IShaderResourceVariable_SetBufferRange(This, ...)  CALL_IFACE_METHOD(ShaderResourceVariable, SetBufferRange,  This, __VA_ARGS__)
-#    define IShaderResourceVariable_SetBufferOffset(This, ...) CALL_IFACE_METHOD(ShaderResourceVariable, SetBufferOffset, This, __VA_ARGS__)
-#    define IShaderResourceVariable_GetType(This)              CALL_IFACE_METHOD(ShaderResourceVariable, GetType,         This)
-#    define IShaderResourceVariable_GetResourceDesc(This, ...) CALL_IFACE_METHOD(ShaderResourceVariable, GetResourceDesc, This, __VA_ARGS__)
-#    define IShaderResourceVariable_GetIndex(This)             CALL_IFACE_METHOD(ShaderResourceVariable, GetIndex,        This)
-#    define IShaderResourceVariable_Get(This, ...)             CALL_IFACE_METHOD(ShaderResourceVariable, Get,             This, __VA_ARGS__)
+#    define IShaderResourceVariable_Set(This, ...)              CALL_IFACE_METHOD(ShaderResourceVariable, Set,                This, __VA_ARGS__)
+#    define IShaderResourceVariable_SetArray(This, ...)         CALL_IFACE_METHOD(ShaderResourceVariable, SetArray,           This, __VA_ARGS__)
+#    define IShaderResourceVariable_SetBufferRange(This, ...)   CALL_IFACE_METHOD(ShaderResourceVariable, SetBufferRange,     This, __VA_ARGS__)
+#    define IShaderResourceVariable_SetBufferOffset(This, ...)  CALL_IFACE_METHOD(ShaderResourceVariable, SetBufferOffset,    This, __VA_ARGS__)
+#    define IShaderResourceVariable_SetInlineConstants(This,...)CALL_IFACE_METHOD(ShaderResourceVariable, SetInlineConstants, This, __VA_ARGS__)
+#    define IShaderResourceVariable_GetType(This)               CALL_IFACE_METHOD(ShaderResourceVariable, GetType,            This)
+#    define IShaderResourceVariable_GetResourceDesc(This, ...)  CALL_IFACE_METHOD(ShaderResourceVariable, GetResourceDesc,    This, __VA_ARGS__)
+#    define IShaderResourceVariable_GetIndex(This)              CALL_IFACE_METHOD(ShaderResourceVariable, GetIndex,           This)
+#    define IShaderResourceVariable_Get(This, ...)              CALL_IFACE_METHOD(ShaderResourceVariable, Get,                This, __VA_ARGS__)
 
 // clang-format on
 

@@ -450,6 +450,14 @@ private:
         Options.enable_420pack_extension = false;
 #    endif
 
+        if (!Options.separate_shader_objects)
+        {
+            // We do not emit binding qualifiers when separate_shader_objects disable.
+            // Let OpenGL driver do the binding qualifiers allocation.
+            Options.version                  = 410;
+            Options.enable_420pack_extension = false;
+        }
+
         CompilerGLSL Compiler{std::move(SPIRV)};
         Compiler.set_common_options(Options);
 

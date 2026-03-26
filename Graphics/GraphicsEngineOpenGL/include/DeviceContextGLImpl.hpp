@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -325,7 +325,7 @@ private:
     __forceinline void PostDraw();
 
     using TBindings = PipelineResourceSignatureGLImpl::TBindings;
-    void BindProgramResources(Uint32 BindSRBMask);
+    void BindProgramResources(Uint32 BindSRBMask, bool DynamicBuffersIntact = false, bool InlineConstantsIntact = false);
 
 #ifdef DILIGENT_DEVELOPMENT
     void DvpValidateCommittedShaderResources();

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2025 Diligent Graphics LLC
+ *  Copyright 2023-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -69,16 +69,17 @@ std::vector<uint32_t> CompileShaderToSPIRV(const ShaderCreateInfo&             S
     {
         SPIRV = GLSLangUtils::HLSLtoSPIRV(ShaderCI, GLSLangUtils::SpirvVersion::Vk100, WebGPUDefine, WebGPUShaderCI.ppCompilerOutput);
 
-        std::string EntryPoint;
+        SPIRVShaderResources::CreateInfo ResCI;
+        ResCI.ShaderType                  = ShaderCI.Desc.ShaderType;
+        ResCI.Name                        = ShaderCI.Desc.Name;
+        ResCI.CombinedSamplerSuffix       = ShaderCI.Desc.UseCombinedTextureSamplers ? ShaderCI.Desc.CombinedSamplerSuffix : nullptr;
+        ResCI.LoadShaderStageInputs       = ShaderCI.Desc.ShaderType == SHADER_TYPE_VERTEX;
+        ResCI.LoadUniformBufferReflection = false;
 
         SPIRVShaderResources Resources{
             GetRawAllocator(),
             SPIRV,
-            ShaderCI.Desc,
-            ShaderCI.Desc.UseCombinedTextureSamplers ? ShaderCI.Desc.CombinedSamplerSuffix : nullptr,
-            ShaderCI.Desc.ShaderType == SHADER_TYPE_VERTEX, // LoadShaderStageInputs
-            false,                                          // LoadUniformBufferReflection
-            EntryPoint,
+            ResCI,
         };
 
         if (ShaderCI.Desc.ShaderType == SHADER_TYPE_VERTEX)

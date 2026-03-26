@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -665,7 +665,8 @@ enum class TestTokenType
     Keyword1,
     Keyword2,
     Keyword3,
-    kw_void
+    kw_void,
+    Struct
 };
 
 struct TestToken
@@ -725,6 +726,9 @@ struct TestToken
 
         if (strncmp(IdentifierStart, "void", IdentifierEnd - IdentifierStart) == 0)
             return TokenType::kw_void;
+
+        if (strncmp(IdentifierStart, "struct", IdentifierEnd - IdentifierStart) == 0)
+            return TokenType::Struct;
 
         return TokenType::Identifier;
     }
@@ -1660,6 +1664,281 @@ void main()
 {
 })",
          {{"version"}, {"extension"}, {"error"}});
+}
+
+
+struct ReferenceTypeDesc
+{
+    using TokenVectorType = std::vector<TestToken>;
+    using TokenVectorIter = TokenVectorType::const_iterator;
+
+    std::string Name;
+
+    struct Member
+    {
+        std::string              Type;
+        std::string              Name;
+        std::vector<std::string> ArrayDimensions = {};
+        std::string              Semantics       = "";
+    };
+    std::vector<Member> Members = {};
+
+    bool operator==(const Parsing::TypeDesc<TokenVectorIter>& Other) const
+    {
+        if (Name != (Other ? (*Other.Name)->Literal : ""))
+            return false;
+        if (Members.size() != Other.Members.size())
+            return false;
+        for (size_t i = 0; i < Members.size(); ++i)
+        {
+            const Member& RefMember   = Members[i];
+            const auto&   OtherMember = Other.Members[i];
+            if (RefMember.Name != OtherMember.Name->Literal)
+                return false;
+            if (RefMember.Type != OtherMember.GetFullTypeString())
+                return false;
+            if (RefMember.ArrayDimensions.size() != OtherMember.ArrayDimensions.size())
+                return false;
+            for (size_t j = 0; j < RefMember.ArrayDimensions.size(); ++j)
+            {
+                if (RefMember.ArrayDimensions[j] != OtherMember.ArrayDimensions[j]->Literal)
+                    return false;
+            }
+            if ((OtherMember.Semantics ? (*OtherMember.Semantics)->Literal : "") != RefMember.Semantics)
+                return false;
+        }
+        return true;
+    }
+};
+
+TEST(Common_ParsingTools, ParseType)
+{
+    auto Test = [](std::string Source, const ReferenceTypeDesc& RefType) {
+        const auto Tokens = Tokenize<TestToken, std::vector<TestToken>>(Source.c_str(), Source.c_str() + Source.length(), TestToken::Create, TestToken::FindType);
+
+        auto it = std::find_if(Tokens.begin(), Tokens.end(), [](const TestToken& Tok) { return Tok.GetType() == TestTokenType::Struct; });
+        if (it == Tokens.end())
+        {
+            ADD_FAILURE() << "Struct keyword not found in the test source";
+            return;
+        }
+        ++it;
+
+        auto Type = Parsing::ParseType<TestToken>(Tokens.begin(), Tokens.end(), it);
+        EXPECT_EQ(RefType, Type) << Source;
+    };
+
+    Test(R"(struct TestStruct
+            {
+            })",
+         {"TestStruct"});
+
+    Test(R"(struct TestStruct
+            {
+                int x;
+            })",
+         {
+             "TestStruct",
+             {
+                 {"int", "x"},
+             },
+         });
+
+    Test(R"(struct TestStruct
+            {
+                int         i;
+                float       f[10];
+                double      d[5][20];
+                InnerStruct inner;
+                InnerStruct inner2[10];
+            })",
+         {
+             "TestStruct",
+             {
+                 {"int", "i"},
+                 {"float", "f", {"10"}},
+                 {"double", "d", {"5", "20"}},
+                 {"InnerStruct", "inner"},
+                 {"InnerStruct", "inner2", {"10"}},
+             },
+         });
+
+    Test(R"(struct TestStruct)",
+         {});
+
+    Test(R"(struct TestStruct int)",
+         {});
+
+    Test(R"(struct TestStruct
+            {
+                int x;
+                int i;)",
+         {});
+
+    Test(R"(struct TestStruct
+            {
+                int x;
+                int i
+            })",
+         {});
+
+    Test(R"(struct TestStruct
+            {
+                int x;
+                int i, j
+            })",
+         {});
+
+    Test(R"(struct TestStruct
+            {
+                int x;
+                int;
+            })",
+         {});
+
+    Test(R"(struct TestStruct
+            {
+                int x;
+                int
+            })",
+         {});
+
+    Test(R"(struct TestStruct
+            {
+                int x;
+                int i[;
+            })",
+         {});
+
+    Test(R"(struct TestStruct
+            {
+                int x;
+                int i[10;
+            })",
+         {});
+
+    Test(R"(struct TestStruct
+            {
+                int x;
+                int i[];
+            })",
+         {});
+
+    Test(R"(struct TestStruct
+            {
+                int x;
+                int i[10][;
+            })",
+         {});
+
+    Test(R"(struct TestStruct
+            {
+                int x;
+                int i[10][]
+            })",
+         {});
+
+    Test(R"(struct TestStruct
+            {
+                int x;
+                atomic<int 
+            })",
+         {});
+
+    Test(R"(struct TestStruct
+            {
+                int x;
+                atomic<int y;
+            })",
+         {});
+
+    Test(R"(struct TestStruct
+            {
+                int x;
+                float4 position :
+            })",
+         {});
+
+    Test(R"(struct TestStruct
+            {
+                unsigned int x;
+                const int y[5];
+                flat float4 z[16][128];
+                atomic<int> a;
+                texture2D<float, access::read> tex;
+                texture2D<vector<float, 3>, access::read> tex2;
+            })",
+         {
+             "TestStruct",
+             {
+                 {"unsigned int", "x"},
+                 {"const int", "y", {"5"}},
+                 {"flat float4", "z", {"16", "128"}},
+                 {"atomic < int >", "a"},
+                 {"texture2D < float , access :: read >", "tex"},
+                 {"texture2D < vector < float , 3 > , access :: read >", "tex2"},
+             },
+         });
+
+    Test(R"(struct TestStruct
+            {
+                float4 pos : POSITION;
+                float4 color0 : COLOR0, color1[2] : COLOR1;
+            })",
+         {
+             "TestStruct",
+             {
+                 {"float4", "pos", {}, "POSITION"},
+                 {"float4", "color0", {}, "COLOR0"},
+                 {"float4", "color1", {"2"}, "COLOR1"},
+             },
+         });
+
+    Test(R"(struct TestStruct
+            {
+                int x, y, z;
+                float a[10], b[20][30], c[40][50][60];
+                unsigned int m, n[5], o[6][7];
+                atomic<int> p, q[8], r[9][10];
+                texture2D<float, access::read> tex1, tex2[4], tex3[5][6];
+                texture3D<float, access::read> tex4 : TEX4, tex5[4] : TEX5, tex6[5][6] : TEX6;
+            })",
+         {
+             "TestStruct",
+             {
+                 {"int", "x"},
+                 {"int", "y"},
+                 {"int", "z"},
+                 {"float", "a", {"10"}},
+                 {"float", "b", {"20", "30"}},
+                 {"float", "c", {"40", "50", "60"}},
+                 {"unsigned int", "m"},
+                 {"unsigned int", "n", {"5"}},
+                 {"unsigned int", "o", {"6", "7"}},
+                 {"atomic < int >", "p"},
+                 {"atomic < int >", "q", {"8"}},
+                 {"atomic < int >", "r", {"9", "10"}},
+                 {"texture2D < float , access :: read >", "tex1"},
+                 {"texture2D < float , access :: read >", "tex2", {"4"}},
+                 {"texture2D < float , access :: read >", "tex3", {"5", "6"}},
+                 {"texture3D < float , access :: read >", "tex4", {}, "TEX4"},
+                 {"texture3D < float , access :: read >", "tex5", {"4"}, "TEX5"},
+                 {"texture3D < float , access :: read >", "tex6", {"5", "6"}, "TEX6"},
+             },
+         });
+
+    Test(R"(struct TestStruct
+            {
+                float4 position[[position]];
+                float2 uv[[id(0)]];
+            })",
+         {
+             "TestStruct",
+             {
+                 {"float4", "position"},
+                 {"float2", "uv"},
+             },
+         });
 }
 
 } // namespace

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -242,6 +242,23 @@ public:
                                        const Char* PathTo,
                                        bool        IsToDirectory,
                                        Char        Slash = 0);
+
+    /// Returns the longest common *path-component* prefix of two paths.
+    ///
+    /// Components are separated by '/' or '\\'. Prefix matching is done
+    /// component-by-component (no partial component matches). If one path is absolute
+    /// and the other is relative, the prefix is empty. Repeated separators are ignored
+    /// for matching, but the returned lengths count characters in the original strings,
+    /// so Prefix1Len and Prefix2Len may differ.
+    ///
+    /// \param [in]  Path1         - First path. Must not be null.
+    /// \param [in]  Path2         - Second path. Must not be null.
+    /// \param [out] Prefix1Len    - Length of the common prefix in Path1.
+    /// \param [out] Prefix2Len    - Length of the common prefix in Path2.
+    static void GetCommonPathPrefix(const char* Path1,
+                                    const char* Path2,
+                                    size_t&     Prefix1Len,
+                                    size_t&     Prefix2Len);
 
     static std::string FileDialog(const FileDialogAttribs& DialogAttribs);
     static std::string OpenFolderDialog(const char* Title);

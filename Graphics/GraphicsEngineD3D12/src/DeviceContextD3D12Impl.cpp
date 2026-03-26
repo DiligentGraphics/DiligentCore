@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -370,7 +370,11 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
 }
 
 template <bool IsCompute>
-void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo& RootInfo, Uint32 CommitSRBMask, CommandContext& CmdCtx) const
+void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo&  RootInfo,
+                                                      Uint32          CommitSRBMask,
+                                                      CommandContext& CmdCtx,
+                                                      bool            DynamicBuffersIntact,
+                                                      bool            InlineConstantsIntact) const
 {
     const RootSignatureD3D12& RootSig = m_pPipelineState->GetRootSignature();
 
@@ -397,7 +401,9 @@ void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo& RootInfo, U
 
         CommitAttribs.pResourceCache = pResourceCache;
         CommitAttribs.BaseRootIndex  = RootSig.GetBaseRootIndex(sign);
-        if ((RootInfo.StaleSRBMask & SignBit) != 0)
+
+        const bool SRBStale = (RootInfo.StaleSRBMask & SignBit) != 0;
+        if (SRBStale)
         {
             // Commit root tables for stale SRBs only
             pSignature->CommitRootTables(CommitAttribs);
@@ -410,13 +416,35 @@ void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo& RootInfo, U
             DEV_CHECK_ERR((RootInfo.DynamicSRBMask & SignBit) != 0,
                           "There are dynamic root buffers in the cache, but the bit in DynamicSRBMask is not set. This may indicate that resources "
                           "in the cache have changed, but the SRB has not been committed before the draw/dispatch command.");
-            pSignature->CommitRootViews(CommitAttribs, DynamicRootBuffersMask);
+            if (SRBStale || !DynamicBuffersIntact)
+            {
+                pSignature->CommitRootViews(CommitAttribs, DynamicRootBuffersMask);
+            }
         }
         else
         {
             DEV_CHECK_ERR((RootInfo.DynamicSRBMask & SignBit) == 0,
                           "There are no dynamic root buffers in the cache, but the bit in DynamicSRBMask is set. This may indicate that resources "
                           "in the cache have changed, but the SRB has not been committed before the draw/dispatch command.");
+        }
+
+        if (Uint64 RootConstantsMask = pResourceCache->GetRootConstantsMask())
+        {
+            VERIFY((RootInfo.InlineConstantsSRBMask & SignBit) != 0,
+                   "There are root constants in the cache, but the bit in InlineConstantsSRBMask is not set. "
+                   "This may be a bug because root constants mask in the cache never changes after SRB creation, "
+                   "while RootInfo.InlineConstantsSRBMask is initialized when SRB is committed.");
+            if (SRBStale || !InlineConstantsIntact)
+            {
+                pSignature->CommitRootConstants(CommitAttribs, RootConstantsMask);
+            }
+        }
+        else
+        {
+            VERIFY((RootInfo.InlineConstantsSRBMask & SignBit) == 0,
+                   "There are no root constants in the cache, but the bit in InlineConstantsSRBMask is set. "
+                   "This may be a bug because root constants mask in the cache never changes after SRB creation, "
+                   "while RootInfo.InlineConstantsSRBMask is initialized when SRB is committed.");
         }
     }
 
@@ -629,9 +657,11 @@ void DeviceContextD3D12Impl::PrepareForDraw(GraphicsContext& GraphCtx, DRAW_FLAG
 #ifdef DILIGENT_DEVELOPMENT
     DvpValidateCommittedShaderResources(RootInfo);
 #endif
-    if (Uint32 CommitSRBMask = RootInfo.GetCommitMask(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT))
+    const bool DynamicBuffersIntact  = (Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT) != 0;
+    const bool InlineConstantsIntact = (Flags & DRAW_FLAG_INLINE_CONSTANTS_INTACT) != 0;
+    if (Uint32 CommitSRBMask = RootInfo.GetCommitMask(DynamicBuffersIntact, InlineConstantsIntact))
     {
-        CommitRootTablesAndViews<false>(RootInfo, CommitSRBMask, GraphCtx);
+        CommitRootTablesAndViews<false>(RootInfo, CommitSRBMask, GraphCtx, DynamicBuffersIntact, InlineConstantsIntact);
     }
 
 #ifdef NTDDI_WIN10_19H1
@@ -1075,14 +1105,17 @@ void DeviceContextD3D12Impl::Flush()
 void DeviceContextD3D12Impl::FinishFrame()
 {
 #ifdef DILIGENT_DEBUG
-    for (const auto& MappedBuffIt : m_DbgMappedBuffers)
+    for (auto& MappedBuffIt : m_DbgMappedBuffers)
     {
-        const BufferDesc& BuffDesc = MappedBuffIt.first->GetDesc();
-        if (BuffDesc.Usage == USAGE_DYNAMIC)
+        if (MappedBuffIt.second.Usage == USAGE_DYNAMIC)
         {
-            LOG_WARNING_MESSAGE("Dynamic buffer '", BuffDesc.Name,
-                                "' is still mapped when finishing the frame. The contents of the buffer and "
-                                "mapped address will become invalid");
+            if (RefCntAutoPtr<IBuffer> pBuffer = MappedBuffIt.second.pBuffer.Lock())
+            {
+                const BufferDesc& BuffDesc = pBuffer->GetDesc();
+                LOG_WARNING_MESSAGE("Dynamic buffer '", BuffDesc.Name,
+                                    "' is still mapped when finishing the frame. The contents of the buffer and "
+                                    "mapped address will become invalid");
+            }
         }
     }
 #endif
@@ -1930,7 +1963,7 @@ void DeviceContextD3D12Impl::UpdateTexture(ITexture*                      pTextu
     }
     else
     {
-        CopyTextureRegion(SubresData.pSrcBuffer, 0, SubresData.Stride, SubresData.DepthStride,
+        CopyTextureRegion(SubresData.pSrcBuffer, SubresData.SrcOffset, SubresData.Stride, SubresData.DepthStride,
                           *pTexD3D12, DstSubResIndex, *pBox,
                           SrcBufferTransitionMode, TextureTransitionMode);
     }
@@ -2928,12 +2961,17 @@ void DeviceContextD3D12Impl::BuildTLAS(const BuildTLASAttribs& Attribs)
 
         for (Uint32 i = 0; i < Attribs.InstanceCount; ++i)
         {
-            const TLASBuildInstanceData& Inst     = Attribs.pInstances[i];
-            const TLASInstanceDesc       InstDesc = pTLASD3D12->GetInstanceDesc(Inst.InstanceName);
+            const TLASBuildInstanceData& Inst = Attribs.pInstances[i];
 
+            TLASInstanceDesc InstDesc;
+            if (!pTLASD3D12->GetInstanceDesc(Inst.InstanceName, InstDesc))
+            {
+                UNEXPECTED("Failed to find instance '", Inst.InstanceName, '\'');
+                continue;
+            }
             if (InstDesc.InstanceIndex >= Attribs.InstanceCount)
             {
-                UNEXPECTED("Failed to find instance by name");
+                UNEXPECTED("Failed to find instance '", Inst.InstanceName, '\'');
                 return;
             }
 
