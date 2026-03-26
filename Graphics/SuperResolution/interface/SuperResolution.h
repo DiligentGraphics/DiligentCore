@@ -149,7 +149,7 @@ struct ExecuteSuperResolutionAttribs
 
     /// Output (upscaled) texture (unordered access view or render target view).
     ///
-    /// Must match SuperResolutionDesc::OutputWidth x OutputHeight.
+    /// Must match SuperResolutionDesc::OutputWidth x SuperResolutionDesc::OutputWidthOutputHeight.
     ITextureView* pOutputTextureView     DEFAULT_INITIALIZER(nullptr);
 
     /// Exposure texture (shader resource view).
@@ -176,6 +176,11 @@ struct ExecuteSuperResolutionAttribs
     /// this is a binary decision (discard or keep).
     /// Format must be TEX_FORMAT_R8_UINT.
     ITextureView* pIgnoreHistoryMaskTextureSRV DEFAULT_INITIALIZER(nullptr);
+
+    /// Resource state transition mode.
+    ///
+    /// Specifies whether the upscaler should perform resource state transitions for the input and output textures.
+    RESOURCE_STATE_TRANSITION_MODE StateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     /// Jitter offset X applied to the projection matrix (in pixels).
     ///
@@ -294,7 +299,7 @@ DILIGENT_BEGIN_INTERFACE(ISuperResolution, IObject)
     ///
     /// The command must be called outside of a render pass.
     /// All input textures must be in the appropriate states or
-    /// TransitionMode should be set to RESOURCE_STATE_TRANSITION_MODE_TRANSITION.
+    /// StateTransitionMode should be set to RESOURCE_STATE_TRANSITION_MODE_TRANSITION.
     ///
     /// \remarks Supported contexts: graphics.
     VIRTUAL void METHOD(Execute)(THIS_

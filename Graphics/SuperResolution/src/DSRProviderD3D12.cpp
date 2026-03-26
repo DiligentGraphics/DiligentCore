@@ -230,19 +230,11 @@ void DILIGENT_CALL_TYPE SuperResolutionD3D12_DSR::Execute(const ExecuteSuperReso
     if (Attribs.ResetHistory)
         Flags |= DSR_SUPERRES_UPSCALER_EXECUTE_FLAG_RESET_HISTORY;
 
-    // Transition all textures to the states expected by DirectSR and flush the context.
-    // DirectSR submits its own command list(s) to the command queue, so all rendering work must be submitted before DirectSR reads the inputs.
     // Input textures must be in D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, output must be in D3D12_RESOURCE_STATE_UNORDERED_ACCESS.
-    pDeviceCtx->TransitionTextureState(Attribs.pColorTextureSRV->GetTexture(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-    pDeviceCtx->TransitionTextureState(Attribs.pDepthTextureSRV->GetTexture(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-    pDeviceCtx->TransitionTextureState(Attribs.pMotionVectorsSRV->GetTexture(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-    pDeviceCtx->TransitionTextureState(Attribs.pOutputTextureView->GetTexture(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-    if (Attribs.pExposureTextureSRV)
-        pDeviceCtx->TransitionTextureState(Attribs.pExposureTextureSRV->GetTexture(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-    if (Attribs.pReactiveMaskTextureSRV)
-        pDeviceCtx->TransitionTextureState(Attribs.pReactiveMaskTextureSRV->GetTexture(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-    if (Attribs.pIgnoreHistoryMaskTextureSRV)
-        pDeviceCtx->TransitionTextureState(Attribs.pIgnoreHistoryMaskTextureSRV->GetTexture(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+    TransitionResourceStates(Attribs, RESOURCE_STATE_UNORDERED_ACCESS);
+
+    // Flush the context.
+    // DirectSR submits its own command list(s) to the command queue, so all rendering work must be submitted before DirectSR reads the inputs.
     pDeviceCtx->Flush();
 
     if (HRESULT hr = pDSRUpscaler->Execute(&ExecuteParams, Attribs.TimeDeltaInSeconds, Flags); FAILED(hr))
