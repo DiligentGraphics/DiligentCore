@@ -43,8 +43,8 @@ namespace Diligent
 namespace HLSL
 {
 #define FFX_CPU
-#include "../shaders/fsr1/ffx_core.h"
-#include "../shaders/fsr1/ffx_fsr1.h"
+#include "../../ThirdParty/FSR/shaders/ffx_core.h"
+#include "../../ThirdParty/FSR/shaders/ffx_fsr1.h"
 #undef FFX_CPU
 
 #include "../shaders/FSRStructures.fxh"
