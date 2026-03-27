@@ -65,21 +65,23 @@ set(SOURCE
     src/SuperResolutionFactory.cpp
 )
 
+set(FSR_SHADERS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../ThirdParty/FSR/shaders)
+
 if(DILIGENT_FSR_SUPPORTED)
     set(FSR_SHADERS
         ${CMAKE_CURRENT_SOURCE_DIR}/shaders/FSR_FullQuad.fx
         ${CMAKE_CURRENT_SOURCE_DIR}/shaders/FSRStructures.fxh
         ${CMAKE_CURRENT_SOURCE_DIR}/shaders/FSR_EdgeAdaptiveUpsampling.fx
         ${CMAKE_CURRENT_SOURCE_DIR}/shaders/FSR_ContrastAdaptiveSharpening.fx
-        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/fsr1/ffx_common_types.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/fsr1/ffx_core.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/fsr1/ffx_core_cpu.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/fsr1/ffx_core_glsl.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/fsr1/ffx_core_gpu_common.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/fsr1/ffx_core_gpu_common_half.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/fsr1/ffx_core_hlsl.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/fsr1/ffx_core_portability.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/fsr1/ffx_fsr1.h
+        ${FSR_SHADERS_DIR}/ffx_common_types.h
+        ${FSR_SHADERS_DIR}/ffx_core.h
+        ${FSR_SHADERS_DIR}/ffx_core_cpu.h
+        ${FSR_SHADERS_DIR}/ffx_core_glsl.h
+        ${FSR_SHADERS_DIR}/ffx_core_gpu_common.h
+        ${FSR_SHADERS_DIR}/ffx_core_gpu_common_half.h
+        ${FSR_SHADERS_DIR}/ffx_core_hlsl.h
+        ${FSR_SHADERS_DIR}/ffx_core_portability.h
+        ${FSR_SHADERS_DIR}/ffx_fsr1.h
     )
     set_source_files_properties(${FSR_SHADERS} PROPERTIES VS_TOOL_OVERRIDE "None")
 
