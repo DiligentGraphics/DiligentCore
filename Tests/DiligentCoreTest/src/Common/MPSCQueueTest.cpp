@@ -46,30 +46,39 @@ TEST(Common_MPSCQueue, EnqueueDequeue)
     Queue.Enqueue(84);
     Queue.Enqueue(126);
     EXPECT_FALSE(Queue.IsEmpty());
+    EXPECT_EQ(Queue.Size(), size_t{3});
 
     int Value = 0;
     EXPECT_TRUE(Queue.Dequeue(Value));
     EXPECT_EQ(Value, 42);
+    EXPECT_EQ(Queue.Size(), size_t{2});
     EXPECT_TRUE(Queue.Dequeue(Value));
     EXPECT_EQ(Value, 84);
+    EXPECT_EQ(Queue.Size(), size_t{1});
     EXPECT_TRUE(Queue.Dequeue(Value));
     EXPECT_EQ(Value, 126);
+    EXPECT_EQ(Queue.Size(), size_t{0});
 
     EXPECT_TRUE(Queue.IsEmpty());
     EXPECT_FALSE(Queue.Dequeue(Value));
+    EXPECT_EQ(Queue.Size(), size_t{0});
 
     Queue.Enqueue(168);
     Queue.Enqueue(210);
+    EXPECT_EQ(Queue.Size(), size_t{2});
     EXPECT_TRUE(Queue.Dequeue(Value));
     EXPECT_EQ(Value, 168);
     EXPECT_TRUE(Queue.Dequeue(Value));
     EXPECT_EQ(Value, 210);
 
+    EXPECT_EQ(Queue.Size(), size_t{0});
     EXPECT_TRUE(Queue.IsEmpty());
     EXPECT_FALSE(Queue.Dequeue(Value));
+    EXPECT_EQ(Queue.Size(), size_t{0});
 
     Queue.Enqueue(252);
     Queue.Enqueue(294);
+    EXPECT_EQ(Queue.Size(), size_t{2});
 }
 
 TEST(Common_MPSCQueue, EnqueueDequeueMoveOnly)
@@ -79,6 +88,7 @@ TEST(Common_MPSCQueue, EnqueueDequeueMoveOnly)
     Queue.Enqueue(std::make_unique<int>(42));
     Queue.Enqueue(std::make_unique<int>(84));
     Queue.Enqueue(std::make_unique<int>(126));
+    EXPECT_EQ(Queue.Size(), size_t{3});
 
     std::unique_ptr<int> Value;
     EXPECT_TRUE(Queue.Dequeue(Value));
@@ -87,20 +97,26 @@ TEST(Common_MPSCQueue, EnqueueDequeueMoveOnly)
     EXPECT_EQ(*Value, 84);
     EXPECT_TRUE(Queue.Dequeue(Value));
     EXPECT_EQ(*Value, 126);
+    EXPECT_EQ(Queue.Size(), size_t{0});
 
     EXPECT_FALSE(Queue.Dequeue(Value));
+    EXPECT_EQ(Queue.Size(), size_t{0});
 
     Queue.Enqueue(std::make_unique<int>(168));
     Queue.Enqueue(std::make_unique<int>(210));
+    EXPECT_EQ(Queue.Size(), size_t{2});
     EXPECT_TRUE(Queue.Dequeue(Value));
     EXPECT_EQ(*Value, 168);
     EXPECT_TRUE(Queue.Dequeue(Value));
     EXPECT_EQ(*Value, 210);
+    EXPECT_EQ(Queue.Size(), size_t{0});
 
     EXPECT_FALSE(Queue.Dequeue(Value));
+    EXPECT_EQ(Queue.Size(), size_t{0});
 
     Queue.Enqueue(std::make_unique<int>(252));
     Queue.Enqueue(std::make_unique<int>(294));
+    EXPECT_EQ(Queue.Size(), size_t{2});
 }
 
 
@@ -157,6 +173,7 @@ TEST(Common_MPSCQueue, EnqueueDequeueParallel)
     Consumer.join();
 
     EXPECT_TRUE(Queue.IsEmpty());
+    EXPECT_EQ(Queue.Size(), size_t{0});
 
     EXPECT_EQ(ProducedData.size(), NumProducers * NumItemsPerProducer);
     std::vector<Uint32> CurrProducedValue(NumProducers, 0);

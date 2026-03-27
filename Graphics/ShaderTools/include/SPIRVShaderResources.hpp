@@ -44,6 +44,7 @@
 //    | Accel Structs     |
 //    | Push Constants    | _ _ _ m_TotalResources
 //    | Stage Inputs      |
+//    | Spec Constants    |
 //    | Resource Names    |
 
 #include <memory>
@@ -192,6 +193,28 @@ struct SPIRVShaderStageInputAttribs
 };
 static_assert(sizeof(SPIRVShaderStageInputAttribs) % sizeof(void*) == 0, "Size of SPIRVShaderStageInputAttribs struct must be multiple of sizeof(void*)");
 
+// sizeof(SPIRVSpecializationConstantAttribs) == 24, msvc x64
+struct SPIRVSpecializationConstantAttribs
+{
+    // clang-format off
+    SPIRVSpecializationConstantAttribs(const char*            _Name,
+                                       uint32_t               _SpecId,
+                                       uint32_t               _Size,
+                                       SHADER_CODE_BASIC_TYPE _BasicType) :
+        Name     {_Name},
+        SpecId   {_SpecId},
+        Size     {_Size},
+        BasicType{_BasicType}
+    {}
+    // clang-format on
+
+    const char* const            Name;
+    const uint32_t               SpecId;
+    const uint32_t               Size; // Byte size of the scalar type
+    const SHADER_CODE_BASIC_TYPE BasicType;
+};
+static_assert(sizeof(SPIRVSpecializationConstantAttribs) % sizeof(void*) == 0, "Size of SPIRVSpecializationConstantAttribs struct must be multiple of sizeof(void*)");
+
 /// Diligent::SPIRVShaderResources class
 class SPIRVShaderResources
 {
@@ -271,8 +294,9 @@ public:
     Uint32 GetNumAccelStructs ()const noexcept{ return GetNumResources(ResourceClass::AccelStruct);     }
     Uint32 GetNumPushConstants()const noexcept{ return GetNumResources(ResourceClass::PushConstant);    }
 
-    Uint32 GetTotalResources()      const noexcept { return m_Offsets[static_cast<size_t>(ResourceClass::NumClasses)]; }
-    Uint32 GetNumShaderStageInputs()const noexcept { return m_NumShaderStageInputs; }
+    Uint32 GetTotalResources()        const noexcept { return m_Offsets[static_cast<size_t>(ResourceClass::NumClasses)]; }
+    Uint32 GetNumShaderStageInputs()  const noexcept { return m_NumShaderStageInputs; }
+    Uint32 GetNumSpecConstants()      const noexcept { return m_NumSpecConstants; }
 
     const SPIRVShaderResourceAttribs& GetUB          (Uint32 n)const noexcept{ return GetResAttribs(ResourceClass::UniformBuffer,   n); }
     const SPIRVShaderResourceAttribs& GetSB          (Uint32 n)const noexcept{ return GetResAttribs(ResourceClass::StorageBuffer,   n); }
@@ -292,6 +316,14 @@ public:
         VERIFY(n < m_NumShaderStageInputs, "Shader stage input index (", n, ") is out of range. Total input count: ", m_NumShaderStageInputs);
         const SPIRVShaderResourceAttribs* ResourceMemoryEnd = reinterpret_cast<const SPIRVShaderResourceAttribs*>(m_MemoryBuffer.get()) + GetTotalResources();
         return reinterpret_cast<const SPIRVShaderStageInputAttribs*>(ResourceMemoryEnd)[n];
+    }
+
+    const SPIRVSpecializationConstantAttribs& GetSpecConstant(Uint32 n) const noexcept
+    {
+        VERIFY(n < m_NumSpecConstants, "Specialization constant index (", n, ") is out of range. Total spec constant count: ", m_NumSpecConstants);
+        const SPIRVShaderResourceAttribs*   ResourceMemoryEnd = reinterpret_cast<const SPIRVShaderResourceAttribs*>(m_MemoryBuffer.get()) + GetTotalResources();
+        const SPIRVShaderStageInputAttribs* StageInputsEnd    = reinterpret_cast<const SPIRVShaderStageInputAttribs*>(ResourceMemoryEnd) + m_NumShaderStageInputs;
+        return reinterpret_cast<const SPIRVSpecializationConstantAttribs*>(StageInputsEnd)[n];
     }
 
     const ShaderCodeBufferDesc* GetUniformBufferDesc(Uint32 Index) const
@@ -452,6 +484,7 @@ private:
     void Initialize(IMemoryAllocator&       Allocator,
                     const ResourceCounters& Counters,
                     Uint32                  NumShaderStageInputs,
+                    Uint32                  NumSpecConstants,
                     size_t                  ResourceNamesPoolSize,
                     StringPool&             ResourceNamesPool);
 
@@ -486,8 +519,13 @@ private:
         return const_cast<SPIRVShaderStageInputAttribs&>(const_cast<const SPIRVShaderResources*>(this)->GetShaderStageInputAttribs(n));
     }
 
+    SPIRVSpecializationConstantAttribs& GetSpecConstant(Uint32 n) noexcept
+    {
+        return const_cast<SPIRVSpecializationConstantAttribs&>(const_cast<const SPIRVShaderResources*>(this)->GetSpecConstant(n));
+    }
+
     // Memory buffer that holds all resources as continuous chunk of memory:
-    // |  UBs  |  SBs  |  StrgImgs  |  SmplImgs  |  ACs  |  SepSamplers  |  SepImgs  | Stage Inputs | Resource Names |
+    // |  UBs  |  SBs  |  StrgImgs  |  SmplImgs  |  ACs  |  SepSamplers  |  SepImgs  | Stage Inputs | Spec Constants | Resource Names |
     std::unique_ptr<void, STDDeleterRawMem<void>> m_MemoryBuffer;
     std::unique_ptr<void, STDDeleterRawMem<void>> m_UBReflectionBuffer;
 
@@ -498,6 +536,7 @@ private:
     std::array<OffsetType, static_cast<size_t>(ResourceClass::NumClasses) + 1> m_Offsets;
 
     OffsetType m_NumShaderStageInputs = 0;
+    OffsetType m_NumSpecConstants     = 0;
 
     SHADER_TYPE m_ShaderType = SHADER_TYPE_UNKNOWN;
 

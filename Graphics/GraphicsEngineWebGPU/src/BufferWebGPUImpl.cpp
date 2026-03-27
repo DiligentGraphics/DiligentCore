@@ -181,7 +181,7 @@ WGPUBuffer BufferWebGPUImpl::GetWebGPUBuffer() const
 
 void* BufferWebGPUImpl::Map(MAP_TYPE MapType)
 {
-    VERIFY(m_Desc.Usage == USAGE_STAGING, "Map is only allowed USAGE_STAGING buffers");
+    VERIFY(m_Desc.Usage == USAGE_STAGING, "Map is only allowed for USAGE_STAGING buffers");
     return WebGPUResourceBase::Map(MapType, 0);
 }
 

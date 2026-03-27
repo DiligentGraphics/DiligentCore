@@ -595,7 +595,7 @@ DILIGENT_BEGIN_INTERFACE(IPipelineResourceSignature, IDeviceObject)
 
     /// Returns true if the signature is compatible with another one.
 
-    /// Two signatures are compatible if they contain identical resources and immutabke samplers,
+    /// Two signatures are compatible if they contain identical resources and immutable samplers,
     /// defined in the same order disregarding their names.
     VIRTUAL Bool METHOD(IsCompatibleWith)(THIS_
                                           const struct IPipelineResourceSignature* pPRS) CONST PURE;

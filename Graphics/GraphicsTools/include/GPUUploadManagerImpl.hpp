@@ -138,7 +138,7 @@ public:
         Uint32 GetSize() const { return m_Size; }
 
         // Returns the number of pending operations.
-        size_t GetNumPendingOps() const { return m_NumPendingOps.load(std::memory_order_acquire); }
+        size_t GetNumPendingOps() const { return m_PendingOps.Size(); }
 
 #ifdef DILIGENT_DEBUG
         // Returns the number of active writers. This is used for testing and debugging purposes.
@@ -171,8 +171,7 @@ public:
         static constexpr Uint32 WRITER_MASK = ~SEALED_BIT; // low 31 bits
         std::atomic<Uint32>     m_State{0};
 
-        std::atomic<size_t> m_NumPendingOps{0};
-        std::atomic<bool>   m_Enqueued{false};
+        std::atomic<bool> m_Enqueued{false};
 
         Uint64 m_FenceValue = 0;
 

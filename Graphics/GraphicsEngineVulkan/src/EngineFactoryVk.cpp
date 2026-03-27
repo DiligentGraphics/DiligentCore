@@ -184,7 +184,9 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
         BufferProperties& BufferProps{AdapterInfo.Buffer};
         BufferProps.ConstantBufferOffsetAlignment   = static_cast<Uint32>(vkDeviceLimits.minUniformBufferOffsetAlignment);
         BufferProps.StructuredBufferOffsetAlignment = static_cast<Uint32>(vkDeviceLimits.minStorageBufferOffsetAlignment);
-        ASSERT_SIZEOF(BufferProps, 8, "Did you add a new member to BufferProperites? Please initialize it here.");
+        BufferProps.TextureUpdateOffsetAlignment    = static_cast<Uint32>(vkDeviceLimits.optimalBufferCopyOffsetAlignment);
+        BufferProps.TextureUpdateStrideAlignment    = static_cast<Uint32>(vkDeviceLimits.optimalBufferCopyRowPitchAlignment);
+        ASSERT_SIZEOF(BufferProps, 16, "Did you add a new member to BufferProperites? Please initialize it here.");
     }
 
     // Texture properties
@@ -1284,7 +1286,29 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
                 LOG_ERROR_MESSAGE("Can not enable extended device features when VK_KHR_get_physical_device_properties2 extension is not supported by device");
         }
 
-        ASSERT_SIZEOF(DeviceFeatures, 47, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
+        // Extensions required by DLSS
+        {
+            constexpr std::array<const char*, 3> DLSSReqExts = {
+                VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME,
+                VK_NVX_BINARY_IMPORT_EXTENSION_NAME,
+                VK_NVX_IMAGE_VIEW_HANDLE_EXTENSION_NAME,
+            };
+            bool DLSSReqExtsSupported = true;
+            for (const char* Ext : DLSSReqExts)
+            {
+                if (!PhysicalDevice->IsExtensionSupported(Ext))
+                {
+                    DLSSReqExtsSupported = false;
+                    break;
+                }
+            }
+            if (DLSSReqExtsSupported)
+            {
+                DeviceExtensions.insert(DeviceExtensions.end(), DLSSReqExts.begin(), DLSSReqExts.end());
+            }
+        }
+
+        ASSERT_SIZEOF(DeviceFeatures, 48, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
 
         for (Uint32 i = 0; i < EngineCI.DeviceExtensionCount; ++i)
         {

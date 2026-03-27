@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2025 Diligent Graphics LLC
+ *  Copyright 2023-2026 Diligent Graphics LLC
  *
  *  You may not use this file except in compliance with the License (see License.txt).
  *
@@ -403,13 +403,14 @@ DeviceFeatures GetSupportedFeatures(WGPUAdapter wgpuAdapter, WGPUDevice wgpuDevi
     Features.NativeMultiDraw                   = DEVICE_FEATURE_STATE_DISABLED;
     Features.AsyncShaderCompilation            = DEVICE_FEATURE_STATE_ENABLED;
     Features.FormattedBuffers                  = DEVICE_FEATURE_STATE_DISABLED;
+    Features.SpecializationConstants           = DEVICE_FEATURE_STATE_ENABLED;
 
     Features.TimestampQueries = CheckFeature(WGPUFeatureName_TimestampQuery);
     Features.DurationQueries  = Features.TimestampQueries ?
         CheckFeature(WGPUFeatureName_ChromiumExperimentalTimestampQueryInsidePasses) :
         DEVICE_FEATURE_STATE_DISABLED;
 
-    ASSERT_SIZEOF(DeviceFeatures, 47, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
+    ASSERT_SIZEOF(DeviceFeatures, 48, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
 
     return Features;
 }
@@ -526,6 +527,9 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter, WGPUDevice w
         BufferProperties& BufferInfo{AdapterInfo.Buffer};
         BufferInfo.ConstantBufferOffsetAlignment   = wgpuSupportedLimits.limits.minUniformBufferOffsetAlignment;
         BufferInfo.StructuredBufferOffsetAlignment = wgpuSupportedLimits.limits.minStorageBufferOffsetAlignment;
+        BufferInfo.TextureUpdateOffsetAlignment    = 256; // Where is this specified?
+        BufferInfo.TextureUpdateStrideAlignment    = 256; // From spec
+        ASSERT_SIZEOF(BufferInfo, 16, "Did you add a new member to BufferProperties? Please initialize it here.");
     }
 
     // Set sampler info

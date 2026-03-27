@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -32,8 +32,8 @@
 // WGSLShaderResources class uses continuous chunk of memory to store all resources, as follows:
 //
 //   m_MemoryBuffer
-//    |                                                                                                                                                                    |
-//    | Uniform Buffers | Storage Buffers | Textures | Storage Textures | Samplers | Ext Textures |   Resource Names   |
+//    |                                                                                                                                                                                                  |
+//    | Uniform Buffers | Storage Buffers | Textures | Storage Textures | Samplers | Ext Textures | Spec Constants |   Resource Names   |
 
 #include <memory>
 #include <string>
@@ -159,6 +159,31 @@ struct WGSLShaderResourceAttribs
 static_assert(sizeof(WGSLShaderResourceAttribs) % sizeof(void*) == 0, "Size of WGSLShaderResourceAttribs struct must be a multiple of sizeof(void*)");
 
 
+struct WGSLSpecializationConstantAttribs
+{
+    // clang-format off
+
+/*  0  */const char* const Name;
+/*  8  */const Uint16      OverrideId;
+/* 10  */const Uint8       Type; // SHADER_CODE_BASIC_TYPE
+/* 11  */
+/* 16 */ // End of structure
+
+    // clang-format on
+
+    WGSLSpecializationConstantAttribs(const char*            _Name,
+                                      Uint16                 _OverrideId,
+                                      SHADER_CODE_BASIC_TYPE _Type) noexcept :
+        Name{_Name},
+        OverrideId{_OverrideId},
+        Type{static_cast<Uint8>(_Type)}
+    {}
+
+    SHADER_CODE_BASIC_TYPE GetType() const { return static_cast<SHADER_CODE_BASIC_TYPE>(Type); }
+};
+static_assert(sizeof(WGSLSpecializationConstantAttribs) % sizeof(void*) == 0, "Size of WGSLSpecializationConstantAttribs struct must be a multiple of sizeof(void*)");
+
+
 /// Diligent::WGSLShaderResources class
 class WGSLShaderResources
 {
@@ -191,6 +216,7 @@ public:
     Uint32 GetNumSamplers    ()const noexcept{ return (m_ExternalTextureOffset - m_SamplerOffset);        }
     Uint32 GetNumExtTextures ()const noexcept{ return (m_TotalResources        - m_ExternalTextureOffset);}
     Uint32 GetTotalResources ()const noexcept{ return m_TotalResources; }
+    Uint32 GetNumSpecConstants()const noexcept{ return m_NumSpecConstants; }
 
     const WGSLShaderResourceAttribs& GetUB        (Uint32 n) const noexcept { return GetResAttribs(n, GetNumUBs(),          0                      ); }
     const WGSLShaderResourceAttribs& GetSB        (Uint32 n) const noexcept { return GetResAttribs(n, GetNumSBs(),          m_StorageBufferOffset  ); }
@@ -199,6 +225,8 @@ public:
     const WGSLShaderResourceAttribs& GetSampler   (Uint32 n) const noexcept { return GetResAttribs(n, GetNumSamplers(),     m_SamplerOffset        ); }
     const WGSLShaderResourceAttribs& GetExtTexture(Uint32 n) const noexcept { return GetResAttribs(n, GetNumExtTextures(),  m_ExternalTextureOffset); }
     const WGSLShaderResourceAttribs& GetResource  (Uint32 n) const noexcept { return GetResAttribs(n, GetTotalResources(),  0                      ); }
+
+    const WGSLSpecializationConstantAttribs& GetSpecConstant(Uint32 n) const noexcept;
 
     // clang-format on
 
@@ -308,6 +336,7 @@ public:
 private:
     void Initialize(IMemoryAllocator&       Allocator,
                     const ResourceCounters& Counters,
+                    Uint32                  NumSpecConstants,
                     size_t                  ResourceNamesPoolSize,
                     StringPool&             ResourceNamesPool);
 
@@ -335,11 +364,13 @@ private:
     WGSLShaderResourceAttribs& GetExtTexture(Uint32 n) noexcept { return GetResAttribs(n, GetNumExtTextures(),  m_ExternalTextureOffset); }
     WGSLShaderResourceAttribs& GetResource  (Uint32 n) noexcept { return GetResAttribs(n, GetTotalResources(),  0                      ); }
 
+    WGSLSpecializationConstantAttribs& GetSpecConstant(Uint32 n) noexcept;
+
     // clang-format on
 
 private:
     // Memory buffer that holds all resources as continuous chunk of memory:
-    // |  UBs  |  SBs  |  Textures  |  StorageTex  |  Samplers |  ExternalTex | Resource Names |
+    // |  UBs  |  SBs  |  Textures  |  StorageTex  |  Samplers |  ExternalTex | Spec Constants | Resource Names |
     std::unique_ptr<void, STDDeleterRawMem<void>> m_MemoryBuffer;
     std::unique_ptr<void, STDDeleterRawMem<void>> m_UBReflectionBuffer;
 
@@ -355,6 +386,7 @@ private:
     OffsetType m_SamplerOffset         = 0;
     OffsetType m_ExternalTextureOffset = 0;
     OffsetType m_TotalResources        = 0;
+    OffsetType m_NumSpecConstants      = 0;
 
     SHADER_TYPE m_ShaderType = SHADER_TYPE_UNKNOWN;
 };

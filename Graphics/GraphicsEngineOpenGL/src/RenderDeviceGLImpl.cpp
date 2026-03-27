@@ -798,6 +798,7 @@ void RenderDeviceGLImpl::InitAdapterInfo()
         Features.TileShaders                 = DEVICE_FEATURE_STATE_DISABLED;
         Features.SubpassFramebufferFetch     = DEVICE_FEATURE_STATE_DISABLED;
         Features.TextureComponentSwizzle     = DEVICE_FEATURE_STATE_DISABLED;
+        Features.SpecializationConstants     = DEVICE_FEATURE_STATE_DISABLED;
 
         {
             bool WireframeFillSupported = (glPolygonMode != nullptr);
@@ -1037,7 +1038,9 @@ void RenderDeviceGLImpl::InitAdapterInfo()
             BufferProperties& BufferProps{m_AdapterInfo.Buffer};
             BufferProps.ConstantBufferOffsetAlignment   = 256;
             BufferProps.StructuredBufferOffsetAlignment = 16;
-            ASSERT_SIZEOF(BufferProps, 8, "Did you add a new member to BufferProperites? Please initialize it here.");
+            BufferProps.TextureUpdateOffsetAlignment    = 4;
+            BufferProps.TextureUpdateStrideAlignment    = 4;
+            ASSERT_SIZEOF(BufferProps, 16, "Did you add a new member to BufferProperites? Please initialize it here.");
         }
 #undef ENABLE_FEATURE
     }
@@ -1131,7 +1134,7 @@ void RenderDeviceGLImpl::InitAdapterInfo()
         m_AdapterInfo.Queues[0].TextureCopyGranularity[2] = 1;
     }
 
-    ASSERT_SIZEOF(DeviceFeatures, 47, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
+    ASSERT_SIZEOF(DeviceFeatures, 48, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
 }
 
 void RenderDeviceGLImpl::FlagSupportedTexFormats()

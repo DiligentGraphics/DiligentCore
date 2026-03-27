@@ -1963,7 +1963,7 @@ void DeviceContextD3D12Impl::UpdateTexture(ITexture*                      pTextu
     }
     else
     {
-        CopyTextureRegion(SubresData.pSrcBuffer, 0, SubresData.Stride, SubresData.DepthStride,
+        CopyTextureRegion(SubresData.pSrcBuffer, SubresData.SrcOffset, SubresData.Stride, SubresData.DepthStride,
                           *pTexD3D12, DstSubResIndex, *pBox,
                           SrcBufferTransitionMode, TextureTransitionMode);
     }

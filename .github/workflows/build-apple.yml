@@ -61,6 +61,14 @@ jobs:
       with:
         platform: ${{ matrix.platform }}
 
+    - name: Test Build Scripts
+      if: success()
+      shell: bash
+      run: |
+        # Test File2Include utility
+        cd "${{ github.workspace }}/BuildTools/File2Include"
+        python -m unittest tests.py
+
     - name: Configure CMake
       if:   success()
       uses: DiligentGraphics/github-action/configure-cmake@v10

@@ -2454,7 +2454,30 @@ void DeviceContextVkImpl::UpdateTexture(ITexture*                      pTexture,
 
     if (SubresData.pSrcBuffer != nullptr)
     {
-        UNSUPPORTED("Copying buffer to texture is not implemented");
+        BufferVkImpl*               pSrcBuffVk = ClassPtrCast<BufferVkImpl>(SubresData.pSrcBuffer);
+        const TextureDesc&          DstTexDesc = pTexVk->GetDesc();
+        const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(DstTexDesc.Format);
+
+        TransitionOrVerifyBufferState(*pSrcBuffVk, SrcBufferStateTransitionMode, RESOURCE_STATE_COPY_SOURCE, VK_ACCESS_TRANSFER_READ_BIT,
+                                      "Using buffer as copy source (DeviceContextVkImpl::UpdateTexture)");
+
+        // We must unbind the texture from framebuffer because we will transition its state.
+        // If we later try to commit it as a render target (e.g. from SetPipelineState()), a
+        // state mismatch error will occur.
+        UnbindTextureFromFramebuffer(pTexVk, true);
+
+        const Uint32 SrcBufferRowStrideInTexels = (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED) ?
+            StaticCast<Uint32>(SubresData.Stride / Uint64{FmtAttribs.ComponentSize} * Uint64{FmtAttribs.BlockWidth}) :
+            StaticCast<Uint32>(SubresData.Stride / (Uint64{FmtAttribs.ComponentSize} * Uint64{FmtAttribs.NumComponents}));
+
+        CopyBufferToTexture(pSrcBuffVk->GetVkBuffer(),
+                            SubresData.SrcOffset,
+                            SrcBufferRowStrideInTexels,
+                            *pTexVk,
+                            DstBox,
+                            MipLevel,
+                            Slice,
+                            TextureStateTransitionMode);
     }
     else
     {

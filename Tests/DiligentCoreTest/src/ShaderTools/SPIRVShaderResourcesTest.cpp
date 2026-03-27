@@ -589,4 +589,61 @@ TEST_F(SPIRVShaderResourcesTest, MixedResources_DXC)
     TestMixedResources(SHADER_COMPILER_DXC);
 }
 
+void TestSpecializationConstants(SHADER_COMPILER Compiler)
+{
+    std::vector<unsigned int> SPIRV;
+    ASSERT_NO_FATAL_FAILURE(CompileSPIRV("SpecializationConstants.psh", Compiler, SHADER_TYPE_PIXEL, SHADER_SOURCE_LANGUAGE_HLSL, SPIRV));
+
+    if (::testing::Test::IsSkipped())
+        return;
+
+    SPIRVShaderResources::CreateInfo ResCI;
+    ResCI.ShaderType = SHADER_TYPE_PIXEL;
+    ResCI.Name       = "SpecConstants test";
+    SPIRVShaderResources Resources{
+        GetRawAllocator(),
+        SPIRV,
+        ResCI,
+    };
+
+    LOG_INFO_MESSAGE("SPIRV Resources:\n", Resources.DumpResources());
+
+    const std::vector<SPIRVSpecializationConstantAttribs> RefSpecConstants = {
+        {"g_EnableFeature", 0, 4, SHADER_CODE_BASIC_TYPE_BOOL},
+        {"g_IntParam", 1, 4, SHADER_CODE_BASIC_TYPE_INT},
+        {"g_UintParam", 2, 4, SHADER_CODE_BASIC_TYPE_UINT},
+        {"g_FloatParam", 3, 4, SHADER_CODE_BASIC_TYPE_FLOAT},
+    };
+
+    const SPIRVShaderResources& ConstResources = Resources;
+    EXPECT_EQ(ConstResources.GetNumSpecConstants(), static_cast<Uint32>(RefSpecConstants.size()));
+
+    // Build a map from name to reference for order-independent matching
+    std::unordered_map<std::string, const SPIRVSpecializationConstantAttribs*> RefMap;
+    for (const SPIRVSpecializationConstantAttribs& Ref : RefSpecConstants)
+        RefMap[Ref.Name] = &Ref;
+
+    for (Uint32 i = 0; i < ConstResources.GetNumSpecConstants(); ++i)
+    {
+        const SPIRVSpecializationConstantAttribs& SC = ConstResources.GetSpecConstant(i);
+        const auto                                it = RefMap.find(SC.Name);
+        ASSERT_NE(it, RefMap.end()) << "Specialization constant '" << SC.Name << "' is not found in the reference list";
+
+        const SPIRVSpecializationConstantAttribs* pRef = it->second;
+        EXPECT_EQ(SC.SpecId, pRef->SpecId) << SC.Name;
+        EXPECT_EQ(SC.Size, pRef->Size) << SC.Name;
+        EXPECT_EQ(SC.BasicType, pRef->BasicType) << SC.Name;
+    }
+}
+
+TEST_F(SPIRVShaderResourcesTest, SpecializationConstants_GLSLang)
+{
+    TestSpecializationConstants(SHADER_COMPILER_GLSLANG);
+}
+
+TEST_F(SPIRVShaderResourcesTest, SpecializationConstants_DXC)
+{
+    TestSpecializationConstants(SHADER_COMPILER_DXC);
+}
+
 } // namespace

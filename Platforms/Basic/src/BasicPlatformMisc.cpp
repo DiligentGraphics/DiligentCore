@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -45,6 +45,18 @@ ThreadPriority BasicPlatformMisc::SetCurrentThreadPriority(ThreadPriority Priori
 Uint64 BasicPlatformMisc::SetCurrentThreadAffinity(Uint64 Mask)
 {
     LOG_WARNING_MESSAGE_ONCE("SetCurrentThreadAffinity is not implemented on this platform.");
+    return 0;
+}
+
+Bool BasicPlatformMisc::SetProcessAffinity(Uint64 Mask)
+{
+    LOG_WARNING_MESSAGE_ONCE("SetProcessAffinity is not implemented on this platform.");
+    return false;
+}
+
+Uint64 BasicPlatformMisc::GetProcessAffinity()
+{
+    LOG_WARNING_MESSAGE_ONCE("GetProcessAffinity is not implemented on this platform.");
     return 0;
 }
 

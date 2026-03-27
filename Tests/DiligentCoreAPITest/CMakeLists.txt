@@ -35,6 +35,11 @@ if(NOT ARCHIVER_SUPPORTED)
     list(REMOVE_ITEM SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/RenderStateCacheTest.cpp)
 endif()
 
+if(NOT SUPER_RESOLUTION_SUPPORTED)
+    list(REMOVE_ITEM SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/SuperResolutionTest.cpp)
+    list(REMOVE_ITEM SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/c_interface/SuperResolution_C_Test.c)
+endif()
+
 if(D3D11_SUPPORTED)
     file(GLOB D3D11_SOURCE LIST_DIRECTORIES false src/D3D11/*)
     file(GLOB D3D11_INCLUDE LIST_DIRECTORIES false include/D3D11/*)
@@ -113,6 +118,17 @@ PRIVATE
     Diligent-GraphicsTools
     Diligent-ShaderTools
 )
+
+if(SUPER_RESOLUTION_SUPPORTED)
+    target_link_libraries(DiligentCoreAPITest PRIVATE Diligent-SuperResolution-static)
+    if(DILIGENT_DSR_SUPPORTED)
+        target_link_libraries(DiligentCoreAPITest PRIVATE DirectSR-AgilitySDK)
+        copy_directsr_dlls(DiligentCoreAPITest)
+    endif()
+    if (DILIGENT_DLSS_SUPPORTED)
+        copy_dlss_dlls(DiligentCoreAPITest)
+    endif()
+endif()
 
 if(TARGET Diligent-HLSL2GLSLConverterLib)
     target_link_libraries(DiligentCoreAPITest PRIVATE Diligent-HLSL2GLSLConverterLib)

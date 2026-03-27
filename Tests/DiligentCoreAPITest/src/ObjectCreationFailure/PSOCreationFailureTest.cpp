@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -1611,5 +1611,331 @@ TEST_F(PSOCreationFailureTest, MissingCombinedImageSampler)
     TestCreatePSOFailure(PsoCI, "contains combined image sampler 'g_Texture', while the same resource is defined by the pipeline "
                                 "resource signature 'PSO Create Failure - Missing Combined Image Sampler' as separate image");
 }
+
+
+TEST_F(PSOCreationFailureTest, SpecConst_NullPointerWithNonZeroCount)
+{
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - SpecConst NullPointerWithNonZeroCount")};
+    PsoCI.NumSpecializationConstants = 1;
+    PsoCI.pSpecializationConstants   = nullptr;
+    TestCreatePSOFailure(PsoCI, "pSpecializationConstants is null");
+}
+
+TEST_F(PSOCreationFailureTest, SpecConst_FeatureDisabled)
+{
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.SpecializationConstants == DEVICE_FEATURE_STATE_ENABLED)
+        GTEST_SKIP() << "Specialization constants are supported by this device";
+
+    const float Data = 1.0f;
+
+    SpecializationConstant SpecConsts[] = {
+        {"Constant0", SHADER_TYPE_VERTEX, sizeof(Data), &Data},
+    };
+
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - SpecConst FeatureDisabled")};
+    PsoCI.NumSpecializationConstants = _countof(SpecConsts);
+    PsoCI.pSpecializationConstants   = SpecConsts;
+    TestCreatePSOFailure(PsoCI, "SpecializationConstants device feature is not enabled");
+}
+
+TEST_F(PSOCreationFailureTest, SpecConst_NullName)
+{
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.SpecializationConstants != DEVICE_FEATURE_STATE_ENABLED)
+        GTEST_SKIP() << "Specialization constants are not supported by this device";
+
+    const float Data = 1.0f;
+
+    SpecializationConstant SpecConsts[] = {
+        {nullptr, SHADER_TYPE_VERTEX, sizeof(Data), &Data},
+    };
+
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - SpecConst NullName")};
+    PsoCI.NumSpecializationConstants = _countof(SpecConsts);
+    PsoCI.pSpecializationConstants   = SpecConsts;
+    TestCreatePSOFailure(PsoCI, "Name must not be null");
+}
+
+TEST_F(PSOCreationFailureTest, SpecConst_EmptyName)
+{
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.SpecializationConstants != DEVICE_FEATURE_STATE_ENABLED)
+        GTEST_SKIP() << "Specialization constants are not supported by this device";
+
+    const float Data = 1.0f;
+
+    SpecializationConstant SpecConsts[] = {
+        {"", SHADER_TYPE_VERTEX, sizeof(Data), &Data},
+    };
+
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - SpecConst EmptyName")};
+    PsoCI.NumSpecializationConstants = _countof(SpecConsts);
+    PsoCI.pSpecializationConstants   = SpecConsts;
+    TestCreatePSOFailure(PsoCI, "Name must not be empty");
+}
+
+TEST_F(PSOCreationFailureTest, SpecConst_UnknownShaderStages)
+{
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.SpecializationConstants != DEVICE_FEATURE_STATE_ENABLED)
+        GTEST_SKIP() << "Specialization constants are not supported by this device";
+
+    const float Data = 1.0f;
+
+    SpecializationConstant SpecConsts[] = {
+        {"Constant0", SHADER_TYPE_UNKNOWN, sizeof(Data), &Data},
+    };
+
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - SpecConst UnknownShaderStages")};
+    PsoCI.NumSpecializationConstants = _countof(SpecConsts);
+    PsoCI.pSpecializationConstants   = SpecConsts;
+    TestCreatePSOFailure(PsoCI, "ShaderStages must not be SHADER_TYPE_UNKNOWN");
+}
+
+TEST_F(PSOCreationFailureTest, SpecConst_ZeroSize)
+{
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.SpecializationConstants != DEVICE_FEATURE_STATE_ENABLED)
+        GTEST_SKIP() << "Specialization constants are not supported by this device";
+
+    const float Data = 1.0f;
+
+    SpecializationConstant SpecConsts[] = {
+        {"Constant0", SHADER_TYPE_VERTEX, 0, &Data},
+    };
+
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - SpecConst ZeroSize")};
+    PsoCI.NumSpecializationConstants = _countof(SpecConsts);
+    PsoCI.pSpecializationConstants   = SpecConsts;
+    TestCreatePSOFailure(PsoCI, "Size must not be zero");
+}
+
+TEST_F(PSOCreationFailureTest, SpecConst_NullData)
+{
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.SpecializationConstants != DEVICE_FEATURE_STATE_ENABLED)
+        GTEST_SKIP() << "Specialization constants are not supported by this device";
+
+    SpecializationConstant SpecConsts[] = {
+        {"Constant0", SHADER_TYPE_VERTEX, sizeof(float), nullptr},
+    };
+
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - SpecConst NullData")};
+    PsoCI.NumSpecializationConstants = _countof(SpecConsts);
+    PsoCI.pSpecializationConstants   = SpecConsts;
+    TestCreatePSOFailure(PsoCI, "pData must not be null");
+}
+
+TEST_F(PSOCreationFailureTest, SpecConst_DuplicateNameOverlappingStages)
+{
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.SpecializationConstants != DEVICE_FEATURE_STATE_ENABLED)
+        GTEST_SKIP() << "Specialization constants are not supported by this device";
+
+    const float Data = 1.0f;
+
+    SpecializationConstant SpecConsts[] = {
+        {"Constant0", SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, sizeof(Data), &Data},
+        {"Constant0", SHADER_TYPE_VERTEX | SHADER_TYPE_GEOMETRY, sizeof(Data), &Data},
+    };
+
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - SpecConst DuplicateNameOverlappingStages")};
+    PsoCI.NumSpecializationConstants = _countof(SpecConsts);
+    PsoCI.pSpecializationConstants   = SpecConsts;
+    TestCreatePSOFailure(PsoCI, "is defined in overlapping shader stages");
+}
+
+TEST_F(PSOCreationFailureTest, SpecConst_ErrorAtSecondElement)
+{
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.SpecializationConstants != DEVICE_FEATURE_STATE_ENABLED)
+        GTEST_SKIP() << "Specialization constants are not supported by this device";
+
+    const float Data = 1.0f;
+
+    // First element is valid, second has null name
+    SpecializationConstant SpecConsts[] = {
+        {"Constant0", SHADER_TYPE_VERTEX, sizeof(Data), &Data},
+        {nullptr, SHADER_TYPE_PIXEL, sizeof(Data), &Data},
+    };
+
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - SpecConst ErrorAtSecondElement")};
+    PsoCI.NumSpecializationConstants = _countof(SpecConsts);
+    PsoCI.pSpecializationConstants   = SpecConsts;
+    TestCreatePSOFailure(PsoCI, "pSpecializationConstants[1].Name must not be null");
+}
+
+
+// ---------------------------------------------------------------------------
+// Backend-specific tests for specialization constant matching (name-based).
+// These require backend-specific shaders with specialization constant
+// declarations so that reflected constants are available for matching.
+// ---------------------------------------------------------------------------
+
+// Providing a user constant whose name does not match any reflected constant
+// in the shader should succeed silently (the constant is simply skipped).
+TEST_F(PSOCreationFailureTest, SpecConst_UnmatchedNameIsSkipped)
+{
+    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
+    auto* const pDevice    = pEnv->GetDevice();
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
+
+    if (!DeviceInfo.IsVulkanDevice() && !DeviceInfo.IsWebGPUDevice())
+        GTEST_SKIP() << "Name-based spec constant matching requires Vulkan or WebGPU";
+    if (DeviceInfo.Features.SpecializationConstants != DEVICE_FEATURE_STATE_ENABLED)
+        GTEST_SKIP() << "Specialization constants are not supported by this device";
+
+    // GLSL vertex shader with one specialization constant named "sc_Scale".
+    static constexpr char VSSource_GLSL[] = R"(
+        #version 450
+        layout(constant_id = 0) const float sc_Scale = 1.0;
+        #ifndef GL_ES
+        out gl_PerVertex { vec4 gl_Position; };
+        #endif
+        void main()
+        {
+            gl_Position = vec4(0.0, 0.0, 0.0, sc_Scale);
+        }
+    )";
+
+    static constexpr char PSSource_GLSL[] = R"(
+        #version 450
+        layout(location = 0) out vec4 out_Color;
+        void main()
+        {
+            out_Color = vec4(0.0, 0.0, 0.0, 1.0);
+        }
+    )";
+
+    static constexpr char VSSource_WGSL[] = R"(
+        override sc_Scale: f32 = 1.0;
+
+        @vertex
+        fn main() -> @builtin(position) vec4<f32> {
+            return vec4<f32>(0.0, 0.0, 0.0, sc_Scale);
+        }
+    )";
+
+    static constexpr char PSSource_WGSL[] = R"(
+        @fragment
+        fn main() -> @location(0) vec4<f32> {
+            return vec4<f32>(0.0, 0.0, 0.0, 1.0);
+        }
+    )";
+
+    ShaderCreateInfo ShaderCI;
+
+    RefCntAutoPtr<IShader> pVS;
+    {
+        ShaderCI.Desc       = {"SpecConst UnmatchedName VS", SHADER_TYPE_VERTEX, true};
+        ShaderCI.EntryPoint = "main";
+        if (DeviceInfo.IsWebGPUDevice())
+        {
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_WGSL;
+            ShaderCI.Source         = VSSource_WGSL;
+        }
+        else
+        {
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
+            ShaderCI.Source         = VSSource_GLSL;
+        }
+        pDevice->CreateShader(ShaderCI, &pVS);
+        ASSERT_TRUE(pVS);
+    }
+
+    RefCntAutoPtr<IShader> pPS;
+    {
+        ShaderCI.Desc       = {"SpecConst UnmatchedName PS", SHADER_TYPE_PIXEL, true};
+        ShaderCI.EntryPoint = "main";
+        if (DeviceInfo.IsWebGPUDevice())
+        {
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_WGSL;
+            ShaderCI.Source         = PSSource_WGSL;
+        }
+        else
+        {
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
+            ShaderCI.Source         = PSSource_GLSL;
+        }
+        pDevice->CreateShader(ShaderCI, &pPS);
+        ASSERT_TRUE(pPS);
+    }
+
+    const float            Data         = 2.0f;
+    SpecializationConstant SpecConsts[] = {
+        // This name does not exist in the shader; it should be silently skipped.
+        {"sc_NonExistent", SHADER_TYPE_VERTEX, sizeof(Data), &Data},
+    };
+
+    auto PsoCI{GetGraphicsPSOCreateInfo("SpecConst UnmatchedNameIsSkipped")};
+    PsoCI.pVS                        = pVS;
+    PsoCI.pPS                        = pPS;
+    PsoCI.NumSpecializationConstants = _countof(SpecConsts);
+    PsoCI.pSpecializationConstants   = SpecConsts;
+
+    RefCntAutoPtr<IPipelineState> pPSO;
+    pDevice->CreateGraphicsPipelineState(PsoCI, &pPSO);
+    EXPECT_NE(pPSO, nullptr) << "Unmatched specialization constant name should be silently skipped";
+}
+
+TEST_F(PSOCreationFailureTest, SpecConst_InsufficientData)
+{
+    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
+    auto* const pDevice    = pEnv->GetDevice();
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
+
+    if (!DeviceInfo.IsVulkanDevice() && !DeviceInfo.IsWebGPUDevice())
+        GTEST_SKIP() << "Name-based spec constant matching requires Vulkan or WebGPU";
+    if (DeviceInfo.Features.SpecializationConstants != DEVICE_FEATURE_STATE_ENABLED)
+        GTEST_SKIP() << "Specialization constants are not supported by this device";
+
+    // GLSL compute shader with a float specialization constant (4 bytes).
+    // The spec constant must be used so the compiler does not optimize it away.
+    static constexpr char CSSource_GLSL[] = R"(
+        #version 450
+        layout(constant_id = 0) const float sc_Value = 1.0;
+        layout(rgba8, binding = 0) writeonly uniform image2D g_DummyUAV;
+        layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+        void main()
+        {
+            imageStore(g_DummyUAV, ivec2(0), vec4(sc_Value));
+        }
+    )";
+
+    static constexpr char CSSource_WGSL[] = R"(
+        override sc_Value: f32 = 1.0;
+
+        @group(0) @binding(0) var g_DummyUAV: texture_storage_2d<rgba8unorm, write>;
+
+        @compute @workgroup_size(1, 1, 1)
+        fn main() {
+            textureStore(g_DummyUAV, vec2<i32>(0), vec4<f32>(sc_Value));
+        }
+    )";
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.Desc       = {"SpecConst InsufficientData CS", SHADER_TYPE_COMPUTE, true};
+    ShaderCI.EntryPoint = "main";
+    if (DeviceInfo.IsWebGPUDevice())
+    {
+        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_WGSL;
+        ShaderCI.Source         = CSSource_WGSL;
+    }
+    else
+    {
+        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
+        ShaderCI.Source         = CSSource_GLSL;
+    }
+
+    RefCntAutoPtr<IShader> pCS;
+    pDevice->CreateShader(ShaderCI, &pCS);
+    ASSERT_TRUE(pCS);
+
+    // Provide 2 bytes for a 4-byte float constant (insufficient).
+    const Uint16           SmallData    = 0;
+    SpecializationConstant SpecConsts[] = {
+        {"sc_Value", SHADER_TYPE_COMPUTE, sizeof(SmallData), &SmallData},
+    };
+
+    auto PsoCI{GetComputePSOCreateInfo("PSO Create Failure - SpecConst InsufficientData")};
+    PsoCI.pCS                        = pCS;
+    PsoCI.NumSpecializationConstants = _countof(SpecConsts);
+    PsoCI.pSpecializationConstants   = SpecConsts;
+    TestCreatePSOFailure(PsoCI, "insufficient data");
+}
+
 
 } // namespace

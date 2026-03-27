@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -167,6 +167,13 @@ struct WindowsMisc : public BasicPlatformMisc
     /// Sets the current thread affinity mask and on success returns the previous mask.
     /// On failure, returns 0.
     static Uint64 SetCurrentThreadAffinity(Uint64 Mask);
+
+    /// Sets the current process affinity mask.
+    /// On success, returns true. On failure, returns false and the affinity mask is not changed.
+    static Bool SetProcessAffinity(Uint64 Mask);
+
+    /// Returns the process affinity mask. On failure, returns 0.
+    static Uint64 GetProcessAffinity();
 
     static ThreadPriority GetCurrentThreadPriority();
 

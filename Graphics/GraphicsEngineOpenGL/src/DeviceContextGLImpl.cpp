@@ -1857,66 +1857,72 @@ void DeviceContextGLImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
     }
     else if (SrcTexDesc.Usage != USAGE_STAGING && DstTexDesc.Usage == USAGE_STAGING)
     {
-        if (pSrcTexGL->GetGLTextureHandle() == 0)
-        {
-            GLuint DefaultFBOHandle = m_pSwapChain->GetDefaultFBO();
-            glBindFramebuffer(GL_READ_FRAMEBUFFER, DefaultFBOHandle);
-            DEV_CHECK_GL_ERROR("Failed to bind default FBO as read framebuffer");
-        }
-        else
-        {
-            const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(SrcTexDesc.Format);
-            DEV_CHECK_ERR(FmtAttribs.ComponentType != COMPONENT_TYPE_COMPRESSED,
-                          "Reading pixels from compressed-format textures to pixel pack buffer is not supported");
-
-            TextureViewDesc SrcTexViewDesc;
-            SrcTexViewDesc.Format = SrcTexDesc.Format;
-            SrcTexViewDesc.ViewType =
-                (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH || FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL) ?
-                TEXTURE_VIEW_DEPTH_STENCIL :
-                TEXTURE_VIEW_RENDER_TARGET;
-            SrcTexViewDesc.MostDetailedMip = CopyAttribs.SrcMipLevel;
-            SrcTexViewDesc.FirstArraySlice = CopyAttribs.SrcSlice;
-            SrcTexViewDesc.NumArraySlices  = 1;
-            SrcTexViewDesc.NumMipLevels    = 1;
-            TextureViewGLImpl SrcTexView //
-                {
-                    nullptr, // pRefCounters
-                    m_pDevice,
-                    SrcTexViewDesc,
-                    pSrcTexGL,
-                    false, // bCreateGLViewTex
-                    false  // bIsDefaultView
-                };
-
-            GLContext::NativeGLContextType CurrNativeGLCtx = m_ContextState.GetCurrentGLContext();
-            FBOCache&                      fboCache        = m_pDevice->GetFBOCache(CurrNativeGLCtx);
-
-            TextureViewGLImpl* pSrcViews[] = {&SrcTexView};
-
-            const GLObjectWrappers::GLFrameBufferObj& SrcFBO =
-                (SrcTexViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET) ?
-                fboCache.GetFBO(1, pSrcViews, nullptr, m_ContextState) :
-                fboCache.GetFBO(0, nullptr, pSrcViews[0], m_ContextState);
-            glBindFramebuffer(GL_READ_FRAMEBUFFER, SrcFBO);
-            DEV_CHECK_GL_ERROR("Failed to bind FBO as read framebuffer");
-        }
-
         BufferGLImpl* pDstBuffer = ClassPtrCast<BufferGLImpl>(pDstTexGL->GetPBO());
         VERIFY(pDstBuffer != nullptr, "Internal staging buffer must not be null");
-        // GetStagingTextureLocationOffset assumes pixels are tightly packed in every subresource - no padding
-        // except between subresources.
-        const Uint64 DstOffset =
-            GetStagingTextureLocationOffset(DstTexDesc, CopyAttribs.DstSlice, CopyAttribs.DstMipLevel,
-                                            TextureBaseGL::PBOOffsetAlignment,
-                                            CopyAttribs.DstX, CopyAttribs.DstY, CopyAttribs.DstZ);
-
-        m_ContextState.BindBuffer(GL_PIXEL_PACK_BUFFER, pDstBuffer->GetGLHandle(), true);
-
         const NativePixelAttribs& TransferAttribs = GetNativePixelTransferAttribs(SrcTexDesc.Format);
-        glReadPixels(pSrcBox->MinX, pSrcBox->MinY, pSrcBox->Width(), pSrcBox->Height(),
-                     TransferAttribs.PixelFormat, TransferAttribs.DataType, reinterpret_cast<void*>(StaticCast<size_t>(DstOffset)));
-        DEV_CHECK_GL_ERROR("Failed to read pixel from framebuffer to pixel pack buffer");
+
+        GLContext::NativeGLContextType CurrNativeGLCtx = m_ContextState.GetCurrentGLContext();
+        FBOCache&                      fboCache        = m_pDevice->GetFBOCache(CurrNativeGLCtx);
+
+        for (Uint32 ZSlice = pSrcBox->MinZ; ZSlice < pSrcBox->MaxZ; ++ZSlice)
+        {
+            if (pSrcTexGL->GetGLTextureHandle() == 0)
+            {
+                VERIFY(ZSlice == 0, "Default FBO must have only one Z slice");
+                GLuint DefaultFBOHandle = m_pSwapChain->GetDefaultFBO();
+                glBindFramebuffer(GL_READ_FRAMEBUFFER, DefaultFBOHandle);
+                DEV_CHECK_GL_ERROR("Failed to bind default FBO as read framebuffer");
+            }
+            else
+            {
+                const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(SrcTexDesc.Format);
+                DEV_CHECK_ERR(FmtAttribs.ComponentType != COMPONENT_TYPE_COMPRESSED,
+                              "Reading pixels from compressed-format textures to pixel pack buffer is not supported");
+
+                TextureViewDesc SrcTexViewDesc;
+                SrcTexViewDesc.Format = SrcTexDesc.Format;
+                SrcTexViewDesc.ViewType =
+                    (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH || FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL) ?
+                    TEXTURE_VIEW_DEPTH_STENCIL :
+                    TEXTURE_VIEW_RENDER_TARGET;
+                SrcTexViewDesc.MostDetailedMip = CopyAttribs.SrcMipLevel;
+                SrcTexViewDesc.FirstArraySlice = CopyAttribs.SrcSlice + ZSlice;
+                SrcTexViewDesc.NumArraySlices  = 1;
+                SrcTexViewDesc.NumMipLevels    = 1;
+                TextureViewGLImpl SrcTexView //
+                    {
+                        nullptr, // pRefCounters
+                        m_pDevice,
+                        SrcTexViewDesc,
+                        pSrcTexGL,
+                        false, // bCreateGLViewTex
+                        false, // bIsDefaultView
+                    };
+
+                TextureViewGLImpl* pSrcViews[] = {&SrcTexView};
+
+                const GLObjectWrappers::GLFrameBufferObj& SrcFBO =
+                    (SrcTexViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET) ?
+                    fboCache.GetFBO(1, pSrcViews, nullptr, m_ContextState) :
+                    fboCache.GetFBO(0, nullptr, pSrcViews[0], m_ContextState);
+                glBindFramebuffer(GL_READ_FRAMEBUFFER, SrcFBO);
+                DEV_CHECK_GL_ERROR("Failed to bind FBO as read framebuffer");
+            }
+
+            // GetStagingTextureLocationOffset assumes pixels are tightly packed in every subresource - no padding
+            // except between subresources.
+            const Uint64 DstOffset =
+                GetStagingTextureLocationOffset(DstTexDesc, CopyAttribs.DstSlice, CopyAttribs.DstMipLevel,
+                                                TextureBaseGL::PBOOffsetAlignment,
+                                                CopyAttribs.DstX, CopyAttribs.DstY, CopyAttribs.DstZ + (ZSlice - pSrcBox->MinZ));
+
+            m_ContextState.BindBuffer(GL_PIXEL_PACK_BUFFER, pDstBuffer->GetGLHandle(), true);
+
+            glReadPixels(pSrcBox->MinX, pSrcBox->MinY, pSrcBox->Width(), pSrcBox->Height(),
+                         TransferAttribs.PixelFormat, TransferAttribs.DataType,
+                         reinterpret_cast<void*>(StaticCast<size_t>(DstOffset)));
+            DEV_CHECK_GL_ERROR("Failed to read pixel from framebuffer to pixel pack buffer");
+        }
 
         m_ContextState.BindBuffer(GL_PIXEL_PACK_BUFFER, GLObjectWrappers::GLBufferObj::Null(), true);
         // Restore original FBO
@@ -1950,7 +1956,7 @@ void DeviceContextGLImpl::MapTextureSubresource(ITexture*                 pTextu
         pPBO->MapRange(m_ContextState, MapType, MapFlags, PBOOffset, MipLevelAttribs.MipSize, MappedData.pData);
 
         MappedData.Stride      = MipLevelAttribs.RowSize;
-        MappedData.DepthStride = MipLevelAttribs.MipSize;
+        MappedData.DepthStride = MipLevelAttribs.DepthSliceSize;
     }
     else
     {

@@ -1236,6 +1236,8 @@ struct PipelineStateCreateInfoX : CreateInfoType
             AddSignature(CI.ppResourceSignatures[i]);
         if (CI.pPSOCache != nullptr)
             SetPipelineStateCache(CI.pPSOCache);
+        for (Uint32 i = 0; i < CI.NumSpecializationConstants; ++i)
+            AddSpecializationConstant(CI.pSpecializationConstants[i]);
         this->PSODesc.ResourceLayout = ResourceLayout;
         this->pInternalData          = InternalData.get();
     }
@@ -1356,6 +1358,44 @@ struct PipelineStateCreateInfoX : CreateInfoType
         return static_cast<DerivedType&>(*this);
     }
 
+    DerivedType& AddSpecializationConstant(const SpecializationConstant& SpecConst)
+    {
+        SpecConstCopy.push_back(SpecConst);
+        SpecializationConstant& Entry = SpecConstCopy.back();
+
+        // Deep-copy name
+        if (SpecConst.Name != nullptr)
+            Entry.Name = StringPool.emplace(SpecConst.Name).first->c_str();
+
+        // Deep-copy data
+        if (SpecConst.Size > 0 && SpecConst.pData != nullptr)
+        {
+            const Uint8* pSrcData = static_cast<const Uint8*>(SpecConst.pData);
+            SpecConstDataCopy.emplace_back(pSrcData, pSrcData + SpecConst.Size);
+            Entry.pData = SpecConstDataCopy.back().data();
+        }
+        else
+        {
+            SpecConstDataCopy.emplace_back();
+            Entry.pData = nullptr;
+        }
+
+        this->pSpecializationConstants   = SpecConstCopy.data();
+        this->NumSpecializationConstants = static_cast<Uint32>(SpecConstCopy.size());
+
+        return static_cast<DerivedType&>(*this);
+    }
+
+    DerivedType& ClearSpecializationConstants()
+    {
+        SpecConstCopy.clear();
+        SpecConstDataCopy.clear();
+        this->pSpecializationConstants   = nullptr;
+        this->NumSpecializationConstants = 0;
+
+        return static_cast<DerivedType&>(*this);
+    }
+
 protected:
     DerivedType& SetShader(IShader*& pDstShader, IShader* pShader)
     {
@@ -1389,6 +1429,8 @@ protected:
     std::vector<RefCntAutoPtr<IDeviceObject>> Objects;
     std::vector<IPipelineResourceSignature*>  Signatures;
     std::unique_ptr<Uint8[]>                  InternalData;
+    std::vector<SpecializationConstant>       SpecConstCopy;
+    std::vector<std::vector<Uint8>>           SpecConstDataCopy;
 };
 
 

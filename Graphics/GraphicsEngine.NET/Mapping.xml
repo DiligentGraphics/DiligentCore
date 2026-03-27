@@ -171,6 +171,7 @@
 		<map field="EngineVkCreateInfo::IgnoreDebugMessageCount" relation="length(ppIgnoreDebugMessageNames)"/>
 
 		<map field="PipelineStateCreateInfo::ResourceSignaturesCount" relation="length(ppResourceSignatures)"/>
+		<map field="PipelineStateCreateInfo::NumSpecializationConstants" relation="length(pSpecializationConstants)"/>
 		<map field="PipelineStateCreateInfo::pInternalData" visibility="private"/>
 
 		<map field="RayTracingPipelineStateCreateInfo::GeneralShaderCount" relation="length(pGeneralShaders)"/>
