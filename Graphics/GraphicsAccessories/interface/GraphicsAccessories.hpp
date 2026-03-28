@@ -530,6 +530,9 @@ Uint32 ComputeMipLevelsCount(Uint32 Width, Uint32 Height);
 /// Returns the number of mip levels for the specified texture dimensions
 Uint32 ComputeMipLevelsCount(Uint32 Width, Uint32 Height, Uint32 Depth);
 
+/// Returns the number of mip levels for the specified texture description
+Uint32 ComputeMipLevelsCount(const TextureDesc& TexDesc);
+
 /// Checks if the specified filter type is a point filter
 inline bool IsComparisonFilter(FILTER_TYPE FilterType)
 {
