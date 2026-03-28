@@ -2028,6 +2028,11 @@ Uint32 ComputeMipLevelsCount(Uint32 Width, Uint32 Height, Uint32 Depth)
     return ComputeMipLevelsCount(std::max(std::max(Width, Height), Depth));
 }
 
+Uint32 ComputeMipLevelsCount(const TextureDesc& TexDesc)
+{
+    return ComputeMipLevelsCount(TexDesc.GetWidth(), TexDesc.GetHeight(), TexDesc.GetDepth());
+}
+
 bool VerifyResourceStates(RESOURCE_STATE State, bool IsTexture)
 {
     static_assert(RESOURCE_STATE_MAX_BIT == (1u << 21), "Please update this function to handle the new resource state");
