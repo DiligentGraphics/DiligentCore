@@ -26,6 +26,7 @@
 
 #include "GPUTestingEnvironment.hpp"
 #include "FastRand.hpp"
+#include "GraphicsAccessories.hpp"
 
 #include "gtest/gtest.h"
 
@@ -59,15 +60,12 @@ struct AxisSplit
     Uint32 Size   = 0;
 };
 
-AxisSplit GetAxisSplit(Uint32 Dim, Uint32 Split)
+AxisSplit GetAxisSplit(Uint32 Dim, Uint32 NumSplits, Uint32 Split)
 {
-    if (Dim <= 1)
-        return {0, 1};
-
-    const Uint32 Half = Dim / 2;
-    return Split == 0 ?
-        AxisSplit{0, Half} :
-        AxisSplit{Half, Dim - Half};
+    return AxisSplit{
+        Split * (Dim / NumSplits),
+        Dim / NumSplits,
+    };
 }
 
 TextureDesc CreateTestTextureDesc(const char*        Name,
@@ -75,8 +73,7 @@ TextureDesc CreateTestTextureDesc(const char*        Name,
                                   TEXTURE_FORMAT     Format,
                                   Uint32             Width,
                                   Uint32             Height,
-                                  Uint32             ArraySizeOrDepth,
-                                  Uint32             MipLevels)
+                                  Uint32             ArraySizeOrDepth)
 {
     TextureDesc TexDesc;
     TexDesc.Name      = Name;
@@ -85,7 +82,7 @@ TextureDesc CreateTestTextureDesc(const char*        Name,
     TexDesc.BindFlags = BIND_SHADER_RESOURCE;
     TexDesc.Width     = Width;
     TexDesc.Height    = Height;
-    TexDesc.MipLevels = MipLevels;
+    TexDesc.MipLevels = ComputeMipLevelsCount(TexDesc);
     TexDesc.Usage     = USAGE_DEFAULT;
 
     if (Type == RESOURCE_DIM_TEX_3D)
@@ -161,37 +158,34 @@ void RunCopyBufferToTextureTest(const TextureDesc& BaseTexDesc)
             auto& Subres = RefSubresources[GetSubresourceIndex(mip, slice)];
             Subres.resize(static_cast<size_t>(Mip.MipSize));
 
-            const Uint32 MipWidth  = Mip.LogicalWidth;
-            const Uint32 MipHeight = Mip.LogicalHeight;
-            const Uint32 MipDepth  = Mip.Depth;
-            VERIFY((MipWidth % FmtAttribs.BlockWidth) == 0, "Logical mip width (", MipWidth, ") is expected to be a multiple of block width (", FmtAttribs.BlockWidth, ")");
-            VERIFY((MipHeight % FmtAttribs.BlockHeight) == 0, "Logical mip height (", MipHeight, ") is expected to be a multiple of block height (", FmtAttribs.BlockHeight, ")");
+            VERIFY((Mip.StorageWidth % FmtAttribs.BlockWidth) == 0, "Storage mip width (", Mip.StorageWidth, ") is expected to be a multiple of block width (", FmtAttribs.BlockWidth, ")");
+            VERIFY((Mip.StorageHeight % FmtAttribs.BlockHeight) == 0, "Storage mip height (", Mip.StorageHeight, ") is expected to be a multiple of block height (", FmtAttribs.BlockHeight, ")");
 
             for (Uint8& pixel : Subres)
                 pixel = static_cast<Uint8>(rnd());
 
-            const Uint32 NumXSplits = MipWidth > 1 ? 2u : 1u;
-            const Uint32 NumYSplits = MipHeight > 1 ? 2u : 1u;
-            const Uint32 NumZSplits = MipDepth > 1 ? 2u : 1u;
+            const Uint32 NumXSplits = Mip.LogicalWidth > FmtAttribs.BlockWidth ? 2u : 1u;
+            const Uint32 NumYSplits = Mip.LogicalHeight > FmtAttribs.BlockHeight ? 2u : 1u;
+            const Uint32 NumZSplits = Mip.Depth > 1 ? 2u : 1u;
 
             for (Uint32 zSplit = 0; zSplit < NumZSplits; ++zSplit)
             {
-                const AxisSplit Z = GetAxisSplit(MipDepth, zSplit);
+                const AxisSplit Z = GetAxisSplit(Mip.Depth, NumZSplits, zSplit);
 
                 for (Uint32 ySplit = 0; ySplit < NumYSplits; ++ySplit)
                 {
-                    const AxisSplit Y = GetAxisSplit(MipHeight, ySplit);
+                    const AxisSplit Y = GetAxisSplit(Mip.LogicalHeight, NumYSplits, ySplit);
 
                     for (Uint32 xSplit = 0; xSplit < NumXSplits; ++xSplit)
                     {
-                        const AxisSplit X = GetAxisSplit(MipWidth, xSplit);
+                        const AxisSplit X = GetAxisSplit(Mip.LogicalWidth, NumXSplits, xSplit);
 
                         const Uint64 AlignedOffset = AlignUp(static_cast<Uint64>(UploadData.size()),
                                                              static_cast<Uint64>(TextureUpdateOffsetAlignment));
                         UploadData.resize(static_cast<size_t>(AlignedOffset));
 
-                        const Uint32 Stride      = AlignUp(X.Size / FmtAttribs.BlockWidth * ElementSize, TextureUpdateStrideAlignment);
-                        const Uint32 DepthStride = Y.Size / FmtAttribs.BlockHeight * Stride;
+                        const Uint32 Stride      = AlignUp(AlignUp(X.Size, FmtAttribs.BlockWidth) / FmtAttribs.BlockWidth * ElementSize, TextureUpdateStrideAlignment);
+                        const Uint32 DepthStride = AlignUp(Y.Size, FmtAttribs.BlockHeight) / FmtAttribs.BlockHeight * Stride;
                         const Uint64 SrcOffset   = static_cast<Uint64>(UploadData.size());
                         const Uint64 RegionSize  = static_cast<Uint64>(Z.Size) * DepthStride;
 
@@ -199,7 +193,7 @@ void RunCopyBufferToTextureTest(const TextureDesc& BaseTexDesc)
 
                         for (Uint32 z = 0; z < Z.Size; ++z)
                         {
-                            for (Uint32 row = 0; row < Y.Size / FmtAttribs.BlockHeight; ++row)
+                            for (Uint32 row = 0; row < AlignUp(Y.Size, FmtAttribs.BlockHeight) / FmtAttribs.BlockHeight; ++row)
                             {
                                 const Uint8* pSrcRow =
                                     &Subres[static_cast<size_t>(
@@ -213,7 +207,7 @@ void RunCopyBufferToTextureTest(const TextureDesc& BaseTexDesc)
                                     static_cast<size_t>(z) * DepthStride +
                                     static_cast<size_t>(row) * Stride;
 
-                                memcpy(pDstRow, pSrcRow, X.Size / FmtAttribs.BlockWidth * ElementSize);
+                                memcpy(pDstRow, pSrcRow, AlignUp(X.Size, FmtAttribs.BlockWidth) / FmtAttribs.BlockWidth * ElementSize);
                             }
                         }
 
@@ -311,7 +305,7 @@ void RunCopyBufferToTextureTest(const TextureDesc& BaseTexDesc)
 
             for (Uint32 z = 0; z < Mip.Depth; ++z)
             {
-                for (Uint32 row = 0; row < Mip.LogicalHeight / FmtAttribs.BlockHeight; ++row)
+                for (Uint32 row = 0; row < AlignUp(Mip.LogicalHeight, FmtAttribs.BlockHeight) / FmtAttribs.BlockHeight; ++row)
                 {
                     const void* pRefRow = &Subres[static_cast<size_t>(z * Mip.DepthSliceSize + row * Mip.RowSize)];
                     const void* pTexRow =
@@ -340,8 +334,7 @@ TEST(UpdateTextureFromBuffer, Texture2D_RGBA8)
                               TEX_FORMAT_RGBA8_UNORM,
                               128,
                               128,
-                              1,
-                              4));
+                              1));
 }
 
 
@@ -353,8 +346,7 @@ TEST(UpdateTextureFromBuffer, Texture2D_BC1)
                               TEX_FORMAT_BC1_UNORM,
                               512,
                               512,
-                              1,
-                              4));
+                              1));
 }
 
 TEST(UpdateTextureFromBuffer, Texture2DArray_RGBA8)
@@ -365,7 +357,6 @@ TEST(UpdateTextureFromBuffer, Texture2DArray_RGBA8)
                               TEX_FORMAT_RGBA8_UNORM,
                               128,
                               128,
-                              4,
                               4));
 }
 
@@ -378,7 +369,6 @@ TEST(UpdateTextureFromBuffer, Texture2DArray_BC1)
                               TEX_FORMAT_BC1_UNORM,
                               512,
                               512,
-                              4,
                               4));
 }
 
@@ -390,8 +380,7 @@ TEST(UpdateTextureFromBuffer, Texture3D_RGBA8)
                               TEX_FORMAT_RGBA8_UNORM,
                               128,
                               128,
-                              8,
-                              4));
+                              8));
 }
 
 } // namespace
