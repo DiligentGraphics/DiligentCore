@@ -28,6 +28,7 @@
 #include "DebugUtilities.hpp"
 #include "Align.hpp"
 #include "Atomics.hpp"
+#include "GraphicsAccessories.hpp"
 
 #include <vector>
 #include <cstring>
@@ -52,6 +53,19 @@ bool GPUUploadManagerImpl::Page::Writer::ScheduleBufferUpdate(const ScheduleBuff
     }
 
     return m_pPage->ScheduleBufferUpdate(UpdateInfo);
+}
+
+bool GPUUploadManagerImpl::Page::Writer::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo,
+                                                               const BufferToTextureCopyInfo&   CopyInfo,
+                                                               Uint32                           OffsetAlignment)
+{
+    if (m_pPage == nullptr)
+    {
+        UNEXPECTED("Attempting to schedule a buffer update with an invalid writer.");
+        return false;
+    }
+
+    return m_pPage->ScheduleTextureUpdate(UpdateInfo, CopyInfo, OffsetAlignment);
 }
 
 GPUUploadManagerImpl::Page::WritingStatus GPUUploadManagerImpl::Page::Writer::EndWriting()
@@ -109,14 +123,35 @@ GPUUploadManagerImpl::Page::~Page()
 {
     for (PendingOp Op; m_PendingOps.Dequeue(Op);)
     {
-        if (Op.CopyBuffer != nullptr)
+        if (Op.index() == 0)
         {
-            Op.CopyBuffer(nullptr, nullptr, ~0u, Op.NumBytes, Op.pCopyBufferData);
-        }
+            const PendingBufferOp& BuffOp = std::get<PendingBufferOp>(Op);
+            if (BuffOp.CopyBuffer != nullptr)
+            {
+                BuffOp.CopyBuffer(nullptr, nullptr, ~0u, BuffOp.NumBytes, BuffOp.pCopyBufferData);
+            }
 
-        if (Op.UploadEnqueued != nullptr)
+            if (BuffOp.UploadEnqueued != nullptr)
+            {
+                BuffOp.UploadEnqueued(nullptr, BuffOp.DstOffset, BuffOp.NumBytes, BuffOp.pUploadEnqueuedData);
+            }
+        }
+        else if (Op.index() == 1)
         {
-            Op.UploadEnqueued(nullptr, Op.DstOffset, Op.NumBytes, Op.pUploadEnqueuedData);
+            const PendingTextureOp& TexOp = std::get<PendingTextureOp>(Op);
+            if (TexOp.CopyTexture != nullptr)
+            {
+                TexOp.CopyTexture(nullptr, TexOp.DstMipLevel, TexOp.DstSlice, TexOp.DstBox, TextureSubResData{}, TexOp.pCopyTextureData);
+            }
+
+            if (TexOp.UploadEnqueued != nullptr)
+            {
+                TexOp.UploadEnqueued(nullptr, TexOp.DstMipLevel, TexOp.DstSlice, TexOp.DstBox, TexOp.pUploadEnqueuedData);
+            }
+        }
+        else
+        {
+            UNEXPECTED("Unexpected pending operation type");
         }
     }
 }
@@ -199,6 +234,21 @@ void GPUUploadManagerImpl::Page::Seal()
     m_State.fetch_or(SEALED_BIT, std::memory_order_release);
 }
 
+Uint32 GPUUploadManagerImpl::Page::Allocate(Uint32 NumBytes, Uint32 Alignment)
+{
+    const Uint32 AlignedSize = AlignUp(NumBytes, Alignment);
+    for (;;)
+    {
+        Uint32 Offset        = m_Offset.load(std::memory_order_acquire);
+        Uint32 AlignedOffset = AlignUp(Offset, Alignment);
+        if (AlignedOffset + AlignedSize > m_Size)
+            return ~0u; // Fail without incrementing offset
+
+        if (m_Offset.compare_exchange_weak(Offset, AlignedOffset + AlignedSize, std::memory_order_acq_rel))
+            return AlignedOffset; // Success
+    }
+}
+
 bool GPUUploadManagerImpl::Page::ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& UpdateInfo)
 {
     VERIFY_EXPR(DbgGetWriterCount() > 0);
@@ -210,18 +260,10 @@ bool GPUUploadManagerImpl::Page::ScheduleBufferUpdate(const ScheduleBufferUpdate
     Uint32 Offset = 0;
     if (UpdateInfo.NumBytes > 0)
     {
-        constexpr Uint32 Alignment   = 16;
-        const Uint32     AlignedSize = AlignUp(UpdateInfo.NumBytes, Alignment);
-
-        Offset = m_Offset.load(std::memory_order_acquire);
-        for (;;)
+        Offset = Allocate(UpdateInfo.NumBytes, kMinimumOffsetAlignment);
+        if (Offset == ~0u)
         {
-            VERIFY_EXPR((Offset % Alignment) == 0);
-            if (Offset + AlignedSize > m_Size)
-                return false; // Fail without incrementing offset
-
-            if (m_Offset.compare_exchange_weak(Offset, Offset + AlignedSize, std::memory_order_acq_rel))
-                break; // Success
+            return false;
         }
 
         if (m_pData != nullptr)
@@ -238,7 +280,7 @@ bool GPUUploadManagerImpl::Page::ScheduleBufferUpdate(const ScheduleBufferUpdate
         }
     }
 
-    PendingOp Op;
+    PendingBufferOp Op;
     Op.pDstBuffer      = UpdateInfo.pDstBuffer;
     Op.CopyBuffer      = UpdateInfo.CopyBuffer;
     Op.pCopyBufferData = UpdateInfo.pCopyBufferData;
@@ -250,6 +292,72 @@ bool GPUUploadManagerImpl::Page::ScheduleBufferUpdate(const ScheduleBufferUpdate
     Op.SrcOffset = Offset;
     Op.DstOffset = UpdateInfo.DstOffset;
     Op.NumBytes  = UpdateInfo.NumBytes;
+    m_PendingOps.Enqueue(std::move(Op));
+
+    return true;
+}
+
+
+bool GPUUploadManagerImpl::Page::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo,
+                                                       const BufferToTextureCopyInfo&   CopyInfo,
+                                                       Uint32                           OffsetAlignment)
+{
+    VERIFY_EXPR(DbgGetWriterCount() > 0);
+
+    // Note that the page may be sealed for new writes at this point,
+    // but we can still schedule the update since we have an active writer
+    // that prevents the page from being submitted for execution.
+
+    Uint32 Offset = 0;
+    if (CopyInfo.MemorySize > 0)
+    {
+        Offset = Allocate(static_cast<Uint32>(CopyInfo.MemorySize), std::max(kMinimumOffsetAlignment, OffsetAlignment));
+        if (Offset == ~0u)
+        {
+            return false;
+        }
+
+        if (m_pData != nullptr)
+        {
+            Uint8* pDst = static_cast<Uint8*>(m_pData) + Offset;
+            if (UpdateInfo.WriteDataCallback != nullptr)
+            {
+                UpdateInfo.WriteDataCallback(pDst, static_cast<Uint32>(CopyInfo.RowStride), static_cast<Uint32>(CopyInfo.DepthStride), UpdateInfo.DstBox, UpdateInfo.pWriteDataCallbackUserData);
+            }
+            else if (UpdateInfo.pSrcData != nullptr)
+            {
+                const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(UpdateInfo.pDstTexture->GetDesc().Format);
+                const Uint32                NumRows    = AlignUp(UpdateInfo.DstBox.Height(), FmtAttribs.BlockHeight) / FmtAttribs.BlockHeight;
+                for (Uint32 DepthSlice = 0; DepthSlice < UpdateInfo.DstBox.Depth(); ++DepthSlice)
+                {
+                    for (Uint32 row = 0; row < NumRows; ++row)
+                    {
+                        const size_t SrcRowOffset = static_cast<size_t>(DepthSlice * UpdateInfo.DepthStride + row * UpdateInfo.Stride);
+                        const size_t DstRowOffset = static_cast<size_t>(DepthSlice * CopyInfo.DepthStride + row * CopyInfo.RowStride);
+                        const void*  pSrcRow      = static_cast<const Uint8*>(UpdateInfo.pSrcData) + SrcRowOffset;
+                        void*        pDstRow      = pDst + DstRowOffset;
+                        std::memcpy(pDstRow, pSrcRow, static_cast<size_t>(CopyInfo.RowSize));
+                    }
+                }
+            }
+        }
+    }
+
+    PendingTextureOp Op;
+    Op.pDstTexture      = UpdateInfo.pDstTexture;
+    Op.CopyTexture      = UpdateInfo.CopyTexture;
+    Op.pCopyTextureData = UpdateInfo.pCopyTextureData;
+    Op.SrcOffset        = Offset;
+    Op.SrcStride        = static_cast<Uint32>(CopyInfo.RowStride);
+    Op.SrcDepthStride   = static_cast<Uint32>(CopyInfo.DepthStride);
+    Op.DstMipLevel      = UpdateInfo.DstMipLevel;
+    Op.DstSlice         = UpdateInfo.DstSlice;
+    Op.DstBox           = UpdateInfo.DstBox;
+    if (Op.CopyTexture == nullptr)
+    {
+        Op.UploadEnqueued      = UpdateInfo.UploadEnqueued;
+        Op.pUploadEnqueuedData = UpdateInfo.pUploadEnqueuedData;
+    }
     m_PendingOps.Enqueue(std::move(Op));
 
     return true;
@@ -269,21 +377,54 @@ void GPUUploadManagerImpl::Page::ExecutePendingOps(IDeviceContext* pContext, Uin
 
     for (PendingOp Op; m_PendingOps.Dequeue(Op);)
     {
-        if (Op.CopyBuffer != nullptr)
+        if (Op.index() == 0)
         {
-            Op.CopyBuffer(pContext, m_pStagingBuffer, Op.SrcOffset, Op.NumBytes, Op.pCopyBufferData);
-        }
-        else
-        {
-            if (pContext != nullptr && Op.pDstBuffer != nullptr && Op.NumBytes > 0)
+            const PendingBufferOp& BuffOp = std::get<PendingBufferOp>(Op);
+            if (BuffOp.CopyBuffer != nullptr)
             {
-                pContext->CopyBuffer(m_pStagingBuffer, Op.SrcOffset, RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
-                                     Op.pDstBuffer, Op.DstOffset, Op.NumBytes, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                BuffOp.CopyBuffer(pContext, m_pStagingBuffer, BuffOp.SrcOffset, BuffOp.NumBytes, BuffOp.pCopyBufferData);
             }
-
-            if (Op.UploadEnqueued != nullptr)
+            else
             {
-                Op.UploadEnqueued(Op.pDstBuffer, Op.DstOffset, Op.NumBytes, Op.pUploadEnqueuedData);
+                if (pContext != nullptr && BuffOp.pDstBuffer != nullptr && BuffOp.NumBytes > 0)
+                {
+                    pContext->CopyBuffer(m_pStagingBuffer, BuffOp.SrcOffset, RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
+                                         BuffOp.pDstBuffer, BuffOp.DstOffset, BuffOp.NumBytes, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                }
+
+                if (BuffOp.UploadEnqueued != nullptr)
+                {
+                    BuffOp.UploadEnqueued(BuffOp.pDstBuffer, BuffOp.DstOffset, BuffOp.NumBytes, BuffOp.pUploadEnqueuedData);
+                }
+            }
+        }
+        else if (Op.index() == 1)
+        {
+            const PendingTextureOp& TexOp = std::get<PendingTextureOp>(Op);
+
+            TextureSubResData SrcData;
+            SrcData.pSrcBuffer  = m_pStagingBuffer;
+            SrcData.SrcOffset   = TexOp.SrcOffset;
+            SrcData.Stride      = TexOp.SrcStride;
+            SrcData.DepthStride = TexOp.SrcDepthStride;
+
+            if (TexOp.CopyTexture)
+            {
+                TexOp.CopyTexture(pContext, TexOp.DstMipLevel, TexOp.DstSlice, TexOp.DstBox, SrcData, TexOp.pCopyTextureData);
+            }
+            else
+            {
+                if (pContext != nullptr && TexOp.pDstTexture != nullptr)
+                {
+                    pContext->UpdateTexture(TexOp.pDstTexture, TexOp.DstMipLevel, TexOp.DstSlice, TexOp.DstBox, SrcData,
+                                            RESOURCE_STATE_TRANSITION_MODE_TRANSITION, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                }
+
+                if (TexOp.UploadEnqueued != nullptr)
+                {
+                    TexOp.UploadEnqueued(TexOp.pDstTexture, TexOp.DstMipLevel, TexOp.DstSlice,
+                                         TexOp.DstBox, TexOp.pUploadEnqueuedData);
+                }
             }
         }
     }
@@ -393,7 +534,9 @@ GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, con
     // Ensure that the max page count is at least 2 to allow for double buffering, unless it's set to 0 which means no limit.
     m_MaxPageCount{CI.MaxPageCount != 0 ? std::max(CI.MaxPageCount, 2u) : 0},
     m_pDevice{CI.pDevice},
-    m_pContext{CI.pContext}
+    m_pContext{CI.pContext},
+    m_TextureUpdateOffsetAlignment{m_pDevice->GetAdapterInfo().Buffer.TextureUpdateOffsetAlignment},
+    m_TextureUpdateStrideAlignment{m_pDevice->GetAdapterInfo().Buffer.TextureUpdateStrideAlignment}
 {
     FenceDesc Desc;
     Desc.Name = "GPU upload manager fence";
@@ -494,11 +637,14 @@ void GPUUploadManagerImpl::RenderThreadUpdate(IDeviceContext* pContext)
     m_PageRotatedSignal.Tick();
 }
 
-void GPUUploadManagerImpl::ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& UpdateInfo)
-
+void GPUUploadManagerImpl::ScheduleUpdate(IDeviceContext* pContext,
+                                          Uint32          UpdateSize,
+                                          const void*     pUpdateInfo,
+                                          bool            ScheduleUpdate(Page::Writer& Writer, const void* pUpdateInfo))
 {
-    DEV_CHECK_ERR(UpdateInfo.pContext == nullptr || UpdateInfo.pContext == m_pContext,
-                  "If a context is provided to ScheduleBufferUpdate, it must be the same as the one used to create the GPUUploadManagerImpl");
+    DEV_CHECK_ERR(pContext == nullptr || pContext == m_pContext,
+                  "If a context is provided to ScheduleBufferUpdate/ScheduleTextureUpdate, it must be the same as the "
+                  "one used to create the GPUUploadManagerImpl");
 
     class RunningUpdatesGuard
     {
@@ -529,13 +675,13 @@ void GPUUploadManagerImpl::ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& 
 
     auto UpdatePendingSizeAndTryRotate = [&](Page* P) {
         Uint64 PageEpoch = m_PageRotatedSignal.CurrentEpoch();
-        if (!TryRotatePage(UpdateInfo.pContext, P, UpdateInfo.NumBytes))
+        if (!TryRotatePage(pContext, P, UpdateSize))
         {
             // Atomically update the max pending update size to ensure the next page is large enough
-            AtomicMax(m_MaxPendingUpdateSize, UpdateInfo.NumBytes, std::memory_order_acq_rel);
+            AtomicMax(m_MaxPendingUpdateSize, UpdateSize, std::memory_order_acq_rel);
             if (IsFirstAttempt)
             {
-                m_TotalPendingUpdateSize.fetch_add(UpdateInfo.NumBytes, std::memory_order_acq_rel);
+                m_TotalPendingUpdateSize.fetch_add(UpdateSize, std::memory_order_acq_rel);
                 IsFirstAttempt = false;
             }
             AbortUpdate = m_PageRotatedSignal.WaitNext(PageEpoch) == 0;
@@ -577,7 +723,7 @@ void GPUUploadManagerImpl::ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& 
             continue;
         }
 
-        const bool UpdateScheduled = Writer.ScheduleBufferUpdate(UpdateInfo);
+        const bool UpdateScheduled = ScheduleUpdate(Writer, pUpdateInfo);
         EndWriting();
 
         if (UpdateScheduled)
@@ -590,7 +736,46 @@ void GPUUploadManagerImpl::ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& 
         }
     }
 
-    AtomicMax(m_PeakUpdateSize, UpdateInfo.NumBytes, std::memory_order_relaxed);
+    AtomicMax(m_PeakUpdateSize, UpdateSize, std::memory_order_relaxed);
+}
+
+
+void GPUUploadManagerImpl::ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& UpdateInfo)
+{
+    ScheduleUpdate(UpdateInfo.pContext, UpdateInfo.NumBytes, &UpdateInfo,
+                   [](Page::Writer& Writer, const void* pUpdateData) {
+                       const ScheduleBufferUpdateInfo* pBufferUpdateInfo = static_cast<const ScheduleBufferUpdateInfo*>(pUpdateData);
+                       return Writer.ScheduleBufferUpdate(*pBufferUpdateInfo);
+                   });
+}
+
+void GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo)
+{
+    if (UpdateInfo.pDstTexture == nullptr)
+    {
+        DEV_ERROR("Dst texture must not be null");
+        return;
+    }
+
+    const TextureDesc& TexDesc = UpdateInfo.pDstTexture->GetDesc();
+
+    struct ScheduleUpdateData
+    {
+        const ScheduleTextureUpdateInfo& UpdateInfo;
+        const BufferToTextureCopyInfo    CopyInfo;
+        const Uint32                     OffsetAlignment;
+    };
+    ScheduleUpdateData UpdateData{
+        UpdateInfo,
+        GetBufferToTextureCopyInfo(TexDesc.Format, UpdateInfo.DstBox, m_TextureUpdateStrideAlignment),
+        m_TextureUpdateOffsetAlignment,
+    };
+
+    ScheduleUpdate(UpdateInfo.pContext, static_cast<Uint32>(UpdateData.CopyInfo.MemorySize), &UpdateData,
+                   [](Page::Writer& Writer, const void* pData) {
+                       const ScheduleUpdateData* pUpdateData = static_cast<const ScheduleUpdateData*>(pData);
+                       return Writer.ScheduleTextureUpdate(pUpdateData->UpdateInfo, pUpdateData->CopyInfo, pUpdateData->OffsetAlignment);
+                   });
 }
 
 GPUUploadManagerImpl::Page* GPUUploadManagerImpl::CreatePage(IDeviceContext* pContext, Uint32 RequiredSize)
