@@ -41,9 +41,12 @@
 #include <mutex>
 #include <map>
 #include <unordered_map>
+#include <variant>
 
 namespace Diligent
 {
+
+struct BufferToTextureCopyInfo;
 
 /// Implementation of the asynchronous GPU upload manager.
 class GPUUploadManagerImpl final : public ObjectBase<IGPUUploadManager>
@@ -57,6 +60,8 @@ public:
     virtual void DILIGENT_CALL_TYPE RenderThreadUpdate(IDeviceContext* pContext) override final;
 
     virtual void DILIGENT_CALL_TYPE ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& UpdateInfo) override final;
+
+    virtual void DILIGENT_CALL_TYPE ScheduleTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo) override final;
 
     virtual void DILIGENT_CALL_TYPE GetStats(GPUUploadManagerStats& Stats) const override final;
 
@@ -88,6 +93,9 @@ public:
             // clang-format on
 
             bool ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& UpdateInfo);
+            bool ScheduleTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo,
+                                       const BufferToTextureCopyInfo&   CopyInfo,
+                                       Uint32                           OffsetAlignment);
 
             WritingStatus EndWriting();
 
@@ -155,6 +163,17 @@ public:
         // Returns true if the operation was successfully scheduled, and false otherwise.
         bool ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& UpdateInfo);
 
+        // Schedules a texture update operation on the page.
+        // Returns true if the operation was successfully scheduled, and false otherwise.
+        bool ScheduleTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo,
+                                   const BufferToTextureCopyInfo&   CopyInfo,
+                                   Uint32                           OffsetAlignment);
+
+        // Allocates a block of memory from the page for a new update operation.
+        // Returns the offset of the allocated block within the page.
+        // If there is not enough space in the page for the requested allocation, returns ~0u.
+        Uint32 Allocate(Uint32 NumBytes, Uint32 Alignment);
+
         WritingStatus EndWriting();
 
     private:
@@ -175,27 +194,55 @@ public:
 
         Uint64 m_FenceValue = 0;
 
-        struct PendingOp
+        static constexpr Uint32 kMinimumOffsetAlignment = 16;
+
+        struct PendingBufferOp
         {
             RefCntAutoPtr<IBuffer> pDstBuffer;
 
             CopyStagingBufferCallbackType CopyBuffer      = nullptr;
             void*                         pCopyBufferData = nullptr;
 
-            GPUUploadEnqueuedCallbackType UploadEnqueued      = nullptr;
-            void*                         pUploadEnqueuedData = nullptr;
+            GPUBufferUploadEnqueuedCallbackType UploadEnqueued      = nullptr;
+            void*                               pUploadEnqueuedData = nullptr;
 
             Uint32 SrcOffset = 0;
             Uint32 DstOffset = 0;
             Uint32 NumBytes  = 0;
 
-            PendingOp() noexcept = default;
+            PendingBufferOp() noexcept = default;
         };
 
+
+        struct PendingTextureOp
+        {
+            RefCntAutoPtr<ITexture> pDstTexture;
+
+            Uint32 SrcOffset      = 0;
+            Uint32 SrcStride      = 0;
+            Uint32 SrcDepthStride = 0;
+
+            Uint32 DstMipLevel = 0;
+            Uint32 DstSlice    = 0;
+            Box    DstBox;
+
+            CopyStagingTextureCallbackType CopyTexture      = nullptr;
+            void*                          pCopyTextureData = nullptr;
+
+            GPUTextureUploadEnqueuedCallbackType UploadEnqueued      = nullptr;
+            void*                                pUploadEnqueuedData = nullptr;
+        };
+
+        using PendingOp = std::variant<PendingBufferOp, PendingTextureOp>;
         MPSCQueue<PendingOp> m_PendingOps;
     };
 
 private:
+    void ScheduleUpdate(IDeviceContext* pContext,
+                        Uint32          UpdateSize,
+                        const void*     pUpdateInfo,
+                        bool            ScheduleUpdate(Page::Writer& Writer, const void* pUpdateInfo));
+
     void  ReclaimCompletedPages(IDeviceContext* pContext);
     bool  SealAndSwapCurrentPage(IDeviceContext* pContext);
     void  AddFreePages(IDeviceContext* pContext);
@@ -213,6 +260,9 @@ private:
 
     RefCntAutoPtr<IRenderDevice>  m_pDevice;
     RefCntAutoPtr<IDeviceContext> m_pContext;
+
+    const Uint32 m_TextureUpdateOffsetAlignment;
+    const Uint32 m_TextureUpdateStrideAlignment;
 
     // Pages that are pending for execution.
     MPSCQueue<Page*> m_PendingPages;

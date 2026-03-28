@@ -115,7 +115,7 @@ void VerifyBufferContents(IBuffer* pBuffer, const std::vector<Uint8>& ExpectedDa
     pContext->UnmapBuffer(pReadbackBuffer, MAP_READ);
 }
 
-TEST(GPUUploadManagerTest, ScheduleUpdates)
+TEST(GPUUploadManagerTest, ScheduleBufferUpdates)
 {
     GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
     IRenderDevice*         pDevice  = pEnv->GetDevice();
@@ -157,7 +157,7 @@ TEST(GPUUploadManagerTest, ScheduleUpdates)
 }
 
 
-TEST(GPUUploadManagerTest, ScheduleUpdatesWithCopyBufferCallback)
+TEST(GPUUploadManagerTest, ScheduleBufferUpdatesWithCopyBufferCallback)
 {
     GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
     IRenderDevice*         pDevice  = pEnv->GetDevice();
@@ -214,7 +214,7 @@ TEST(GPUUploadManagerTest, ScheduleUpdatesWithCopyBufferCallback)
 }
 
 
-TEST(GPUUploadManagerTest, ScheduleUpdatesWithWriteDataCallback)
+TEST(GPUUploadManagerTest, ScheduleBufferUpdatesWithWriteDataCallback)
 {
     GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
     IRenderDevice*         pDevice  = pEnv->GetDevice();
@@ -268,7 +268,7 @@ TEST(GPUUploadManagerTest, ScheduleUpdatesWithWriteDataCallback)
 }
 
 
-TEST(GPUUploadManagerTest, ReleaseCallbackResources)
+TEST(GPUUploadManagerTest, ReleaseBufferCallbackResources)
 {
     GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
     IRenderDevice*         pDevice  = pEnv->GetDevice();
@@ -323,7 +323,7 @@ TEST(GPUUploadManagerTest, ReleaseCallbackResources)
     EXPECT_TRUE(CopyBufferCallbackCalled) << "CopyBuffer callback should have been called before the upload manager is destroyed";
 }
 
-TEST(GPUUploadManagerTest, ParallelUpdates)
+TEST(GPUUploadManagerTest, ParallelBufferUpdates)
 {
     GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
     IRenderDevice*         pDevice  = pEnv->GetDevice();
@@ -430,7 +430,7 @@ TEST(GPUUploadManagerTest, ParallelUpdates)
 }
 
 
-TEST(GPUUploadManagerTest, DestroyWhileUpdatesAreRunning)
+TEST(GPUUploadManagerTest, DestroyWhileBufferUpdatesAreRunning)
 {
     GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
     IRenderDevice*         pDevice  = pEnv->GetDevice();
@@ -649,6 +649,578 @@ TEST(GPUUploadManagerTest, MaxPageCount)
     pUploadManager->GetStats(Stats);
     LOG_INFO_MESSAGE("Peak number of pages: ", Stats.PeakNumPages, "\nBucket info:\n", PrintBucketInfo(Stats));
     EXPECT_EQ(Stats.NumPages, CreateInfo.MaxPageCount) << "Page count should not exceed the specified maximum";
+}
+
+Uint32 GetSubresourceIndex(const TextureDesc& TexDesc, const Uint32 Mip, Uint32 Slice)
+{
+    return Mip * TexDesc.GetArraySize() + Slice;
+}
+
+std::vector<std::vector<Uint8>> GenerateTextureSubresData(const TextureDesc& TexDesc)
+{
+    std::vector<std::vector<Uint8>> SubresData(TexDesc.GetSubresourceCount());
+    for (Uint32 ArraySlice = 0; ArraySlice < TexDesc.GetArraySize(); ++ArraySlice)
+    {
+        for (Uint32 MipLevel = 0; MipLevel < TexDesc.MipLevels; ++MipLevel)
+        {
+            MipLevelProperties  Mip  = GetMipLevelProperties(TexDesc, MipLevel);
+            std::vector<Uint8>& Data = SubresData[GetSubresourceIndex(TexDesc, MipLevel, ArraySlice)];
+            Data.resize(static_cast<size_t>(Mip.MipSize));
+            for (size_t i = 0; i < Data.size(); ++i)
+            {
+                Data[i] = static_cast<Uint8>(i % 256);
+            }
+        }
+    }
+
+    return SubresData;
+}
+
+void VerifyTextureContents(ITexture* pTexture, const std::vector<std::vector<Uint8>>& ExpectedSubresData)
+{
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
+
+    TextureDesc StagingTexDesc    = pTexture->GetDesc();
+    StagingTexDesc.Name           = "GPUUploadManagerTest staging texture";
+    StagingTexDesc.Usage          = USAGE_STAGING;
+    StagingTexDesc.BindFlags      = BIND_NONE;
+    StagingTexDesc.CPUAccessFlags = CPU_ACCESS_READ;
+    RefCntAutoPtr<ITexture> pStagingTexture;
+    pDevice->CreateTexture(StagingTexDesc, nullptr, &pStagingTexture);
+    ASSERT_NE(pStagingTexture, nullptr);
+
+    StateTransitionDesc Barriers[2] =
+        {
+            {pTexture, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE},
+            {pStagingTexture, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_DEST, STATE_TRANSITION_FLAG_UPDATE_STATE},
+        };
+    pContext->TransitionResourceStates(_countof(Barriers), Barriers);
+    for (Uint32 MipLevel = 0; MipLevel < StagingTexDesc.MipLevels; ++MipLevel)
+    {
+        for (Uint32 ArraySlice = 0; ArraySlice < StagingTexDesc.GetArraySize(); ++ArraySlice)
+        {
+            CopyTextureAttribs CopyAttribs;
+            CopyAttribs.pSrcTexture = pTexture;
+            CopyAttribs.pDstTexture = pStagingTexture;
+            CopyAttribs.SrcMipLevel = MipLevel;
+            CopyAttribs.SrcSlice    = ArraySlice;
+            CopyAttribs.DstMipLevel = MipLevel;
+            CopyAttribs.DstSlice    = ArraySlice;
+            pContext->CopyTexture(CopyAttribs);
+        }
+    }
+
+    RENDER_DEVICE_TYPE DeviceType = pDevice->GetDeviceInfo().Type;
+
+    MAP_FLAGS MapFlags = (DeviceType == RENDER_DEVICE_TYPE_D3D12 ||
+                          DeviceType == RENDER_DEVICE_TYPE_VULKAN ||
+                          DeviceType == RENDER_DEVICE_TYPE_WEBGPU ||
+                          DeviceType == RENDER_DEVICE_TYPE_METAL) ?
+        MAP_FLAG_DO_NOT_WAIT :
+        MAP_FLAG_NONE;
+
+    const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(StagingTexDesc.Format);
+
+    pContext->WaitForIdle();
+    for (Uint32 MipLevel = 0; MipLevel < StagingTexDesc.MipLevels; ++MipLevel)
+    {
+        const MipLevelProperties Mip = GetMipLevelProperties(StagingTexDesc, MipLevel);
+        for (Uint32 ArraySlice = 0; ArraySlice < StagingTexDesc.GetArraySize(); ++ArraySlice)
+        {
+            MappedTextureSubresource MappedSubres;
+            pContext->MapTextureSubresource(pStagingTexture, MipLevel, ArraySlice, MAP_READ, MapFlags, nullptr, MappedSubres);
+
+            const std::vector<Uint8>& ExpectedData = ExpectedSubresData[GetSubresourceIndex(StagingTexDesc, MipLevel, ArraySlice)];
+            for (Uint32 DepthSlice = 0; DepthSlice < Mip.Depth; ++DepthSlice)
+            {
+                for (Uint32 row = 0; row < Mip.StorageHeight / FmtAttribs.BlockHeight; ++row)
+                {
+                    const void* pRowData = static_cast<Uint8*>(MappedSubres.pData) +
+                        static_cast<size_t>(DepthSlice * MappedSubres.DepthStride + row * MappedSubres.Stride);
+                    const void* pExpectedRowData = &ExpectedData[static_cast<size_t>(Mip.DepthSliceSize * DepthSlice + Mip.RowSize * row)];
+                    EXPECT_TRUE(std::memcmp(pRowData, pExpectedRowData, static_cast<size_t>(Mip.RowSize)) == 0)
+                        << "Texture subresource data does not match expected data for MipLevel "
+                        << MipLevel << ", ArraySlice " << ArraySlice << ", DepthSlice " << DepthSlice << ", Row " << row;
+                }
+            }
+
+            pContext->UnmapTextureSubresource(pStagingTexture, MipLevel, ArraySlice);
+        }
+    }
+}
+
+enum TEST_TEXTURE_UPDATES_FLAGS : Uint32
+{
+    TEST_TEXTURE_UPDATES_FLAGS_NONE                    = 0u,
+    TEST_TEXTURE_UPDATES_FLAGS_USE_COPY_CALLBACK       = 1u << 0u,
+    TEST_TEXTURE_UPDATES_FLAGS_USE_WRITE_DATA_CALLBACK = 1u << 1u,
+};
+
+void TestTextureUpdates(TEXTURE_FORMAT Format, RESOURCE_DIMENSION Type, Uint32 Flags = TEST_TEXTURE_UPDATES_FLAGS_NONE)
+{
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
+    if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D11)
+    {
+        GTEST_SKIP() << "Texture updates are not yet implemented in D3D11";
+    }
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    RefCntAutoPtr<IGPUUploadManager> pUploadManager;
+    GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext, 256 * 256 * 4};
+    CreateGPUUploadManager(CreateInfo, &pUploadManager);
+    ASSERT_TRUE(pUploadManager != nullptr);
+
+    TextureDesc TexDesc;
+    TexDesc.Name      = "GPUUploadManagerTest texture";
+    TexDesc.Type      = Type;
+    TexDesc.Format    = Format;
+    TexDesc.Usage     = USAGE_DEFAULT;
+    TexDesc.Width     = 256;
+    TexDesc.Height    = 256;
+    TexDesc.ArraySize = 4;
+    TexDesc.MipLevels = ComputeMipLevelsCount(TexDesc.Width, TexDesc.Height);
+    TexDesc.BindFlags = BIND_SHADER_RESOURCE;
+
+    RefCntAutoPtr<ITexture> pTexture;
+    pDevice->CreateTexture(TexDesc, nullptr, &pTexture);
+    ASSERT_TRUE(pTexture != nullptr);
+
+    const std::vector<std::vector<Uint8>> SubresData = GenerateTextureSubresData(TexDesc);
+
+    const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
+
+    const Uint32 ElementSize = FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED ?
+        FmtAttribs.ComponentSize :
+        FmtAttribs.ComponentSize * FmtAttribs.NumComponents;
+
+    for (Uint32 MipLevel = 0; MipLevel < TexDesc.MipLevels; ++MipLevel)
+    {
+        const MipLevelProperties Mip = GetMipLevelProperties(TexDesc, MipLevel);
+        for (Uint32 ArraySlice = 0; ArraySlice < TexDesc.GetArraySize(); ++ArraySlice)
+        {
+            const std::vector<Uint8>& Data = SubresData[GetSubresourceIndex(TexDesc, MipLevel, ArraySlice)];
+
+            Uint32 UpdateWidth  = std::min(32u, Mip.LogicalWidth);
+            Uint32 UpdateHeight = std::min(32u, Mip.LogicalHeight);
+            Uint32 UpdateDepth  = std::min(4u, Mip.Depth);
+
+            for (Uint32 z = 0; z < Mip.Depth; z += UpdateDepth)
+            {
+                for (Uint32 y = 0; y < Mip.LogicalHeight; y += UpdateHeight)
+                {
+                    for (Uint32 x = 0; x < Mip.LogicalWidth; x += UpdateWidth)
+                    {
+                        ScheduleTextureUpdateInfo UpdateInfo;
+                        UpdateInfo.pContext    = pContext;
+                        UpdateInfo.pDstTexture = pTexture;
+
+                        Box& DstBox{UpdateInfo.DstBox};
+                        DstBox.MinX = x;
+                        DstBox.MinY = y;
+                        DstBox.MinZ = z;
+                        DstBox.MaxX = std::min(x + UpdateWidth, Mip.LogicalWidth);
+                        DstBox.MaxY = std::min(y + UpdateHeight, Mip.LogicalHeight);
+                        DstBox.MaxZ = std::min(z + UpdateDepth, Mip.Depth);
+
+                        UpdateInfo.Stride      = Mip.RowSize;
+                        UpdateInfo.DepthStride = Mip.DepthSliceSize;
+                        UpdateInfo.DstMipLevel = MipLevel;
+                        UpdateInfo.DstSlice    = ArraySlice;
+
+                        const void* pSrcData = &Data[static_cast<size_t>(
+                            Mip.DepthSliceSize * z + Mip.RowSize * (y / FmtAttribs.BlockHeight) + (x / FmtAttribs.BlockWidth) * ElementSize)];
+                        if (Flags & TEST_TEXTURE_UPDATES_FLAGS_USE_WRITE_DATA_CALLBACK)
+                        {
+                            struct CallbackData
+                            {
+                                const void*  pSrcData;
+                                const Uint32 Stride;
+                                const Uint32 DepthStride;
+                                const Uint32 BytesToCopy;
+                                const Uint32 BlockHeight;
+                            };
+                            UpdateInfo.pWriteDataCallbackUserData = new CallbackData{
+                                pSrcData,
+                                static_cast<Uint32>(UpdateInfo.Stride),
+                                static_cast<Uint32>(UpdateInfo.DepthStride),
+                                AlignUp(DstBox.Width(), FmtAttribs.BlockWidth) / FmtAttribs.BlockWidth * ElementSize,
+                                FmtAttribs.BlockHeight,
+                            };
+                            UpdateInfo.WriteDataCallback = [](void* pDstData, Uint32 Stride, Uint32 DepthStride, const Box& DstBox, void* pUserData) {
+                                CallbackData* pData   = static_cast<CallbackData*>(pUserData);
+                                const Uint32  NumRows = AlignUp(DstBox.Height(), pData->BlockHeight) / pData->BlockHeight;
+                                for (Uint32 DepthSlice = 0; DepthSlice < DstBox.Depth(); ++DepthSlice)
+                                {
+                                    for (Uint32 row = 0; row < NumRows; ++row)
+                                    {
+                                        const size_t SrcRowOffset = static_cast<size_t>(DepthSlice * pData->DepthStride + row * pData->Stride);
+                                        const size_t DstRowOffset = static_cast<size_t>(DepthSlice * DepthStride + row * Stride);
+                                        const void*  pSrcRow      = static_cast<const Uint8*>(pData->pSrcData) + SrcRowOffset;
+                                        void*        pDstRow      = static_cast<Uint8*>(pDstData) + DstRowOffset;
+                                        std::memcpy(pDstRow, pSrcRow, pData->BytesToCopy);
+                                    }
+                                }
+                                delete pData;
+                            };
+                        }
+                        else
+                        {
+                            UpdateInfo.pSrcData = pSrcData;
+                        }
+
+                        if (Flags & TEST_TEXTURE_UPDATES_FLAGS_USE_COPY_CALLBACK)
+                        {
+                            UpdateInfo.pCopyTextureData = new ITexture* {pTexture};
+
+                            UpdateInfo.CopyTexture =
+                                [](IDeviceContext*          pContext,
+                                   Uint32                   DstMipLevel,
+                                   Uint32                   DstSlice,
+                                   const Box&               DstBox,
+                                   const TextureSubResData& SrcData,
+                                   void*                    pUserData) {
+                                    ITexture** ppTexture = static_cast<ITexture**>(pUserData);
+                                    pContext->UpdateTexture(*ppTexture, DstMipLevel, DstSlice, DstBox, SrcData,
+                                                            RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
+                                                            RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                                    delete ppTexture;
+                                };
+                        }
+
+                        pUploadManager->ScheduleTextureUpdate(UpdateInfo);
+                    }
+                }
+            }
+        }
+    }
+
+    pUploadManager->RenderThreadUpdate(pContext);
+    pUploadManager->RenderThreadUpdate(pContext);
+
+    // Reading back compressed textures is not supported on OpenGL.
+    if (!(pDevice->GetDeviceInfo().IsGLDevice() && FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED))
+    {
+        VerifyTextureContents(pTexture, SubresData);
+    }
+}
+
+TEST(GPUUploadManagerTest, ScheduleTextureUpdates_Tex2DArray_RGBA8)
+{
+    TestTextureUpdates(TEX_FORMAT_RGBA8_UNORM, RESOURCE_DIM_TEX_2D_ARRAY);
+}
+
+TEST(GPUUploadManagerTest, ScheduleTextureUpdates_Tex2DArray_BC1)
+{
+    TestTextureUpdates(TEX_FORMAT_BC1_UNORM, RESOURCE_DIM_TEX_2D_ARRAY);
+}
+
+TEST(GPUUploadManagerTest, ScheduleTextureUpdates_Tex3D_RGBA8)
+{
+    TestTextureUpdates(TEX_FORMAT_RGBA8_UNORM, RESOURCE_DIM_TEX_3D);
+}
+
+
+TEST(GPUUploadManagerTest, ScheduleTextureUpdates_Tex2DArray_RGBA8_WithCopyCallback)
+{
+    TestTextureUpdates(TEX_FORMAT_RGBA8_UNORM, RESOURCE_DIM_TEX_2D_ARRAY, TEST_TEXTURE_UPDATES_FLAGS_USE_COPY_CALLBACK);
+}
+
+TEST(GPUUploadManagerTest, ScheduleTextureUpdates_Tex2DArray_BC1_WithCopyCallback)
+{
+    TestTextureUpdates(TEX_FORMAT_BC1_UNORM, RESOURCE_DIM_TEX_2D_ARRAY, TEST_TEXTURE_UPDATES_FLAGS_USE_COPY_CALLBACK);
+}
+
+TEST(GPUUploadManagerTest, ScheduleTextureUpdates_Tex3D_RGBA8_WithCopyCallback)
+{
+    TestTextureUpdates(TEX_FORMAT_RGBA8_UNORM, RESOURCE_DIM_TEX_3D, TEST_TEXTURE_UPDATES_FLAGS_USE_COPY_CALLBACK);
+}
+
+
+TEST(GPUUploadManagerTest, ScheduleTextureUpdates_Tex2DArray_RGBA8_WithWriteCallback)
+{
+    TestTextureUpdates(TEX_FORMAT_RGBA8_UNORM, RESOURCE_DIM_TEX_2D_ARRAY, TEST_TEXTURE_UPDATES_FLAGS_USE_WRITE_DATA_CALLBACK);
+}
+
+TEST(GPUUploadManagerTest, ScheduleTextureUpdates_Tex2DArray_BC1_WithWriteCallback)
+{
+    TestTextureUpdates(TEX_FORMAT_BC1_UNORM, RESOURCE_DIM_TEX_2D_ARRAY, TEST_TEXTURE_UPDATES_FLAGS_USE_WRITE_DATA_CALLBACK);
+}
+
+TEST(GPUUploadManagerTest, ScheduleTextureUpdates_Tex3D_RGBA8_WithWriteCallback)
+{
+    TestTextureUpdates(TEX_FORMAT_RGBA8_UNORM, RESOURCE_DIM_TEX_3D, TEST_TEXTURE_UPDATES_FLAGS_USE_WRITE_DATA_CALLBACK);
+}
+
+
+TEST(GPUUploadManagerTest, ReleaseTextureCallbackResources)
+{
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
+    if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D11)
+    {
+        GTEST_SKIP() << "Texture updates are not yet implemented in D3D11";
+    }
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    RefCntAutoPtr<IGPUUploadManager> pUploadManager;
+    GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext, 65536};
+    CreateGPUUploadManager(CreateInfo, &pUploadManager);
+    ASSERT_TRUE(pUploadManager != nullptr);
+
+    bool UploadEnqueuedCallbackCalled = false;
+    bool CopyTextureCallbackCalled    = false;
+
+    auto UploadEnqueuedCallback = MakeCallback(
+        [&UploadEnqueuedCallbackCalled](ITexture*  pDstTexture,
+                                        Uint32     DstMipLevel,
+                                        Uint32     DstSlice,
+                                        const Box& DstBox) {
+            EXPECT_EQ(pDstTexture, nullptr);
+            EXPECT_EQ(DstMipLevel, 1u);
+            EXPECT_EQ(DstSlice, 2u);
+            UploadEnqueuedCallbackCalled = true;
+        });
+
+    auto CopyTextureCallback = MakeCallback(
+        [&CopyTextureCallbackCalled](IDeviceContext*          pContext,
+                                     Uint32                   DstMipLevel,
+                                     Uint32                   DstSlice,
+                                     const Box&               DstBox,
+                                     const TextureSubResData& SrcData) {
+            EXPECT_EQ(pContext, nullptr);
+            EXPECT_EQ(DstMipLevel, 3u);
+            EXPECT_EQ(DstSlice, 4u);
+            EXPECT_EQ(SrcData.pData, nullptr);
+            EXPECT_EQ(SrcData.pSrcBuffer, nullptr);
+            CopyTextureCallbackCalled = true;
+        });
+
+    TextureDesc TexDesc;
+    TexDesc.Name      = "GPUUploadManagerTest texture";
+    TexDesc.Type      = RESOURCE_DIM_TEX_2D_ARRAY;
+    TexDesc.Format    = TEX_FORMAT_RGBA8_UNORM;
+    TexDesc.Usage     = USAGE_DEFAULT;
+    TexDesc.Width     = 256;
+    TexDesc.Height    = 256;
+    TexDesc.ArraySize = 5;
+    TexDesc.MipLevels = 4;
+    TexDesc.BindFlags = BIND_SHADER_RESOURCE;
+    RefCntAutoPtr<ITexture> pTexture;
+    pDevice->CreateTexture(TexDesc, nullptr, &pTexture);
+    ASSERT_NE(pTexture, nullptr);
+
+    std::thread Worker{
+        [&]() {
+            {
+                ScheduleTextureUpdateInfo UpdateInfo;
+                UpdateInfo.pDstTexture         = pTexture;
+                UpdateInfo.DstMipLevel         = 1;
+                UpdateInfo.DstSlice            = 2;
+                UpdateInfo.UploadEnqueued      = UploadEnqueuedCallback;
+                UpdateInfo.pUploadEnqueuedData = UploadEnqueuedCallback;
+                UpdateInfo.DstBox              = {0, 16, 0, 16};
+                pUploadManager->ScheduleTextureUpdate(UpdateInfo);
+            }
+
+            {
+                ScheduleTextureUpdateInfo UpdateInfo;
+                UpdateInfo.pDstTexture      = pTexture;
+                UpdateInfo.DstMipLevel      = 3;
+                UpdateInfo.DstSlice         = 4;
+                UpdateInfo.CopyTexture      = CopyTextureCallback;
+                UpdateInfo.pCopyTextureData = CopyTextureCallback;
+                UpdateInfo.DstBox           = {0, 16, 0, 16};
+                pUploadManager->ScheduleTextureUpdate(UpdateInfo);
+            }
+        }};
+
+    Worker.join();
+
+    EXPECT_FALSE(UploadEnqueuedCallbackCalled) << "UploadEnqueued callback should not have been called before the upload manager is destroyed";
+    EXPECT_FALSE(CopyTextureCallbackCalled) << "CopyTexture callback should not have been called before the upload manager is destroyed";
+
+    pUploadManager.Release();
+
+    EXPECT_TRUE(UploadEnqueuedCallbackCalled) << "UploadEnqueued callback should have been called before the upload manager is destroyed";
+    EXPECT_TRUE(CopyTextureCallbackCalled) << "CopyTexture callback should have been called before the upload manager is destroyed";
+}
+
+
+TEST(GPUUploadManagerTest, ParallelBufferAndTextureUpdates)
+{
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
+    if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D11)
+    {
+        GTEST_SKIP() << "Texture updates are not yet implemented in D3D11";
+    }
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    RefCntAutoPtr<IGPUUploadManager> pUploadManager;
+    GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext, 16384};
+    CreateGPUUploadManager(CreateInfo, &pUploadManager);
+    ASSERT_TRUE(pUploadManager != nullptr);
+
+    TextureDesc TexDesc;
+    TexDesc.Name      = "GPUUploadManagerTest texture";
+    TexDesc.Type      = RESOURCE_DIM_TEX_2D_ARRAY;
+    TexDesc.Format    = TEX_FORMAT_RGBA8_UNORM;
+    TexDesc.Usage     = USAGE_DEFAULT;
+    TexDesc.Width     = 512;
+    TexDesc.Height    = 512;
+    TexDesc.ArraySize = 32;
+    TexDesc.MipLevels = 4;
+    TexDesc.BindFlags = BIND_SHADER_RESOURCE;
+    RefCntAutoPtr<ITexture> pTexture;
+    pDevice->CreateTexture(TexDesc, nullptr, &pTexture);
+    ASSERT_NE(pTexture, nullptr);
+
+    const std::vector<std::vector<Uint8>> SubresData = GenerateTextureSubresData(TexDesc);
+
+    std::vector<ScheduleTextureUpdateInfo> TextureUpdates;
+    for (Uint32 MipLevel = 0; MipLevel < TexDesc.MipLevels; ++MipLevel)
+    {
+        const MipLevelProperties Mip = GetMipLevelProperties(TexDesc, MipLevel);
+        for (Uint32 ArraySlice = 0; ArraySlice < TexDesc.ArraySize; ++ArraySlice)
+        {
+            const std::vector<Uint8>& MipData = SubresData[GetSubresourceIndex(TexDesc, MipLevel, ArraySlice)];
+
+            constexpr Uint32 UpdateWidth  = 32;
+            constexpr Uint32 UpdateHeight = 32;
+            for (Uint32 x = 0; x < Mip.LogicalWidth; x += UpdateWidth)
+            {
+                for (Uint32 y = 0; y < Mip.LogicalHeight; y += UpdateHeight)
+                {
+                    ScheduleTextureUpdateInfo UpdateInfo;
+                    UpdateInfo.pDstTexture = pTexture;
+                    UpdateInfo.DstBox.MinX = x;
+                    UpdateInfo.DstBox.MinY = y;
+                    UpdateInfo.DstBox.MaxX = x + UpdateWidth;
+                    UpdateInfo.DstBox.MaxY = y + UpdateHeight;
+                    UpdateInfo.DstMipLevel = MipLevel;
+                    UpdateInfo.DstSlice    = ArraySlice;
+                    UpdateInfo.pSrcData    = &MipData[static_cast<size_t>(Mip.RowSize * y + x * 4)];
+                    TextureUpdates.push_back(UpdateInfo);
+                }
+            }
+        }
+    }
+
+    constexpr Uint32 BufferUpdateSize = 128;
+
+    std::vector<Uint8> BufferData(BufferUpdateSize * TextureUpdates.size());
+    for (size_t i = 0; i < BufferData.size(); ++i)
+    {
+        BufferData[i] = static_cast<Uint8>(i % 256);
+    }
+
+    BufferDesc Desc;
+    Desc.Name      = "GPUUploadManagerTest buffer";
+    Desc.Size      = BufferData.size();
+    Desc.Usage     = USAGE_DEFAULT;
+    Desc.BindFlags = BIND_VERTEX_BUFFER;
+
+    RefCntAutoPtr<IBuffer> pBuffer;
+    pDevice->CreateBuffer(Desc, nullptr, &pBuffer);
+    ASSERT_TRUE(pBuffer);
+
+
+    const size_t kNumThreads = std::max(2u, std::thread::hardware_concurrency() - 1);
+    LOG_INFO_MESSAGE("Number of threads: ", kNumThreads);
+
+    std::atomic<Uint32> CurrOffset{0};
+    std::atomic<Uint32> NumUpdatesScheduled{0};
+    std::atomic<Uint32> NumThreadsCompleted{0};
+    std::atomic<Uint32> NextTextureUpdate{0};
+
+    std::vector<std::thread> Threads;
+    for (size_t t = 0; t < kNumThreads; ++t)
+    {
+        Threads.emplace_back(
+            [&]() {
+                while (true)
+                {
+                    Uint32 Offset = CurrOffset.fetch_add(BufferUpdateSize);
+                    if (Offset < BufferData.size())
+                    {
+                        pUploadManager->ScheduleBufferUpdate({pBuffer, Offset, BufferUpdateSize, &BufferData[Offset]});
+                    }
+
+                    Uint32 TexUpdateIndex = NextTextureUpdate.fetch_add(1);
+                    if (TexUpdateIndex < TextureUpdates.size())
+                    {
+                        pUploadManager->ScheduleTextureUpdate(TextureUpdates[TexUpdateIndex]);
+                    }
+
+                    if (Offset >= BufferData.size() && TexUpdateIndex >= TextureUpdates.size())
+                    {
+                        break;
+                    }
+
+                    NumUpdatesScheduled.fetch_add(1);
+                }
+                NumThreadsCompleted.fetch_add(1);
+            });
+    }
+
+    const Uint32 NumUpdatesToRenderThreadUpdate = 256;
+
+    Uint32 LastNumUpdatesScheduled    = 0;
+    Uint32 NumIterationsWithoutUpdate = 0;
+    Uint32 NumRenderThreadUpdates     = 0;
+    while (NumThreadsCompleted.load() < kNumThreads)
+    {
+        if (LastNumUpdatesScheduled == NumUpdatesScheduled.load())
+        {
+            ++NumIterationsWithoutUpdate;
+        }
+        else
+        {
+            LastNumUpdatesScheduled    = NumUpdatesScheduled.load();
+            NumIterationsWithoutUpdate = 0;
+        }
+
+        if (NumUpdatesScheduled.load() >= NumUpdatesToRenderThreadUpdate || NumIterationsWithoutUpdate >= 100)
+        {
+            pUploadManager->RenderThreadUpdate(pContext);
+            NumUpdatesScheduled.store(0);
+            pContext->Flush();
+            pContext->FinishFrame();
+            ++NumRenderThreadUpdates;
+        }
+    }
+
+    LOG_INFO_MESSAGE("Total render thread updates: ", NumRenderThreadUpdates);
+
+    pUploadManager->RenderThreadUpdate(pContext);
+
+    for (std::thread& thread : Threads)
+    {
+        thread.join();
+    }
+
+    GPUUploadManagerStats Stats;
+    pUploadManager->GetStats(Stats);
+    LOG_INFO_MESSAGE("GPU Upload Manager Stats:"
+                     "\n    NumPages                   ",
+                     Stats.NumPages,
+                     "\n    NumFreePages               ", Stats.NumFreePages,
+                     "\n    NumInFlightPages           ", Stats.NumInFlightPages,
+                     "\n    PeakTotalPendingUpdateSize ", Stats.PeakTotalPendingUpdateSize,
+                     "\n    PeakUpdateSize             ", Stats.PeakUpdateSize,
+                     "\n    Buckets:\n", PrintBucketInfo(Stats));
+
+    VerifyBufferContents(pBuffer, BufferData);
+    VerifyTextureContents(pTexture, SubresData);
 }
 
 } // namespace
