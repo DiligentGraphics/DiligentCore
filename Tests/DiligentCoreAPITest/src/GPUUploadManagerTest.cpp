@@ -45,23 +45,11 @@ using namespace std::chrono_literals;
 namespace
 {
 
-std::string PrintBucketInfo(const GPUUploadManagerStats& Stats)
+void LogUploadManagerStats(IGPUUploadManager* pUploadManager)
 {
-    std::string Result;
-    for (Uint32 i = 0; i < Stats.NumBuckets; ++i)
-    {
-        if (!Result.empty())
-            Result.push_back('\n');
-        Result += "      ";
-        const GPUUploadManagerBucketInfo& BucketInfo = Stats.pBucketInfo[i];
-        Result += GetMemorySizeString(BucketInfo.PageSize) + ": ";
-        for (Uint32 j = 0; j < BucketInfo.NumPages; ++j)
-        {
-            Result.push_back('#');
-        }
-        Result += " " + std::to_string(BucketInfo.NumPages);
-    }
-    return Result;
+    GPUUploadManagerStats Stats;
+    pUploadManager->GetStats(Stats);
+    LOG_INFO_MESSAGE("GPU Upload Manager Stats:\n", GetGPUUploadManagerStatsString(Stats));
 }
 
 TEST(GPUUploadManagerTest, Creation)
@@ -124,7 +112,7 @@ TEST(GPUUploadManagerTest, ScheduleBufferUpdates)
     GPUTestingEnvironment::ScopedReset AutoReset;
 
     RefCntAutoPtr<IGPUUploadManager> pUploadManager;
-    GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext, 1024};
+    GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext, 512, 1024};
     CreateGPUUploadManager(CreateInfo, &pUploadManager);
     ASSERT_TRUE(pUploadManager != nullptr);
 
@@ -154,6 +142,7 @@ TEST(GPUUploadManagerTest, ScheduleBufferUpdates)
     pUploadManager->RenderThreadUpdate(pContext);
 
     VerifyBufferContents(pBuffer, BufferData);
+    LogUploadManagerStats(pUploadManager);
 }
 
 
@@ -166,7 +155,7 @@ TEST(GPUUploadManagerTest, ScheduleBufferUpdatesWithCopyBufferCallback)
     GPUTestingEnvironment::ScopedReset AutoReset;
 
     RefCntAutoPtr<IGPUUploadManager> pUploadManager;
-    GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext, 1024};
+    GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext, 1024, 2048};
     CreateInfo.InitialPageCount = 2;
     CreateInfo.MaxPageCount     = 0;
     CreateGPUUploadManager(CreateInfo, &pUploadManager);
@@ -211,6 +200,7 @@ TEST(GPUUploadManagerTest, ScheduleBufferUpdatesWithCopyBufferCallback)
     pUploadManager->RenderThreadUpdate(pContext);
 
     VerifyBufferContents(pBuffer, BufferData);
+    LogUploadManagerStats(pUploadManager);
 }
 
 
@@ -223,7 +213,7 @@ TEST(GPUUploadManagerTest, ScheduleBufferUpdatesWithWriteDataCallback)
     GPUTestingEnvironment::ScopedReset AutoReset;
 
     RefCntAutoPtr<IGPUUploadManager> pUploadManager;
-    GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext, 1024};
+    GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext, 512, 1024};
     CreateInfo.InitialPageCount = 2;
     CreateInfo.MaxPageCount     = 0;
     CreateGPUUploadManager(CreateInfo, &pUploadManager);
@@ -265,6 +255,7 @@ TEST(GPUUploadManagerTest, ScheduleBufferUpdatesWithWriteDataCallback)
     pUploadManager->RenderThreadUpdate(pContext);
 
     VerifyBufferContents(pBuffer, BufferData);
+    LogUploadManagerStats(pUploadManager);
 }
 
 
@@ -277,7 +268,7 @@ TEST(GPUUploadManagerTest, ReleaseBufferCallbackResources)
     GPUTestingEnvironment::ScopedReset AutoReset;
 
     RefCntAutoPtr<IGPUUploadManager> pUploadManager;
-    GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext, 2048};
+    GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext, 2048, 4096};
     CreateGPUUploadManager(CreateInfo, &pUploadManager);
     ASSERT_TRUE(pUploadManager != nullptr);
 
@@ -317,6 +308,7 @@ TEST(GPUUploadManagerTest, ReleaseBufferCallbackResources)
     EXPECT_FALSE(UploadEnqueuedCallbackCalled) << "UploadEnqueued callback should not have been called before the upload manager is destroyed";
     EXPECT_FALSE(CopyBufferCallbackCalled) << "CopyBuffer callback should not have been called before the upload manager is destroyed";
 
+    LogUploadManagerStats(pUploadManager);
     pUploadManager.Release();
 
     EXPECT_TRUE(UploadEnqueuedCallbackCalled) << "UploadEnqueued callback should have been called before the upload manager is destroyed";
@@ -332,7 +324,7 @@ TEST(GPUUploadManagerTest, ParallelBufferUpdates)
     GPUTestingEnvironment::ScopedReset AutoReset;
 
     RefCntAutoPtr<IGPUUploadManager> pUploadManager;
-    GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext, 16384};
+    GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext, 8192, 16384};
     CreateGPUUploadManager(CreateInfo, &pUploadManager);
     ASSERT_TRUE(pUploadManager != nullptr);
 
@@ -415,17 +407,7 @@ TEST(GPUUploadManagerTest, ParallelBufferUpdates)
         thread.join();
     }
 
-    GPUUploadManagerStats Stats;
-    pUploadManager->GetStats(Stats);
-    LOG_INFO_MESSAGE("GPU Upload Manager Stats:"
-                     "\n    NumPages                   ",
-                     Stats.NumPages,
-                     "\n    NumFreePages               ", Stats.NumFreePages,
-                     "\n    NumInFlightPages           ", Stats.NumInFlightPages,
-                     "\n    PeakTotalPendingUpdateSize ", Stats.PeakTotalPendingUpdateSize,
-                     "\n    PeakUpdateSize             ", Stats.PeakUpdateSize,
-                     "\n    Buckets:\n", PrintBucketInfo(Stats));
-
+    LogUploadManagerStats(pUploadManager);
     VerifyBufferContents(pBuffer, BufferData);
 }
 
@@ -439,7 +421,7 @@ TEST(GPUUploadManagerTest, DestroyWhileBufferUpdatesAreRunning)
     GPUTestingEnvironment::ScopedReset AutoReset;
 
     RefCntAutoPtr<IGPUUploadManager> pUploadManager;
-    GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext, 1024};
+    GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext, 1024, 2048};
     CreateGPUUploadManager(CreateInfo, &pUploadManager);
     ASSERT_TRUE(pUploadManager != nullptr);
 
@@ -455,7 +437,7 @@ TEST(GPUUploadManagerTest, DestroyWhileBufferUpdatesAreRunning)
                 {
                     AllThreadsRunningSignal.Trigger();
                 }
-                pUploadManager->ScheduleBufferUpdate({nullptr, 0, 2048, nullptr});
+                pUploadManager->ScheduleBufferUpdate({nullptr, 0, 4096, nullptr});
                 NumUpdatesRunning.fetch_sub(1);
             });
     }
@@ -464,6 +446,8 @@ TEST(GPUUploadManagerTest, DestroyWhileBufferUpdatesAreRunning)
 
     std::this_thread::sleep_for(10ms);
     EXPECT_EQ(NumUpdatesRunning.load(), kNumThreads) << "All threads should be running updates because RenderThreadUpdate() was not called";
+
+    LogUploadManagerStats(pUploadManager);
 
     pUploadManager.Release();
 
@@ -485,8 +469,10 @@ TEST(GPUUploadManagerTest, CreateWithNullContext)
 
     RefCntAutoPtr<IGPUUploadManager> pUploadManager;
     GPUUploadManagerCreateInfo       CreateInfo{pDevice};
-    CreateInfo.PageSize         = 1024;
-    CreateInfo.InitialPageCount = 8;
+    CreateInfo.PageSize              = 512;
+    CreateInfo.InitialPageCount      = 8;
+    CreateInfo.LargePageSize         = 1024;
+    CreateInfo.InitialLargePageCount = 2;
     CreateGPUUploadManager(CreateInfo, &pUploadManager);
     ASSERT_TRUE(pUploadManager != nullptr);
 
@@ -556,16 +542,7 @@ TEST(GPUUploadManagerTest, CreateWithNullContext)
 
     VerifyBufferContents(pBuffer, BufferData);
 
-    GPUUploadManagerStats Stats;
-    pUploadManager->GetStats(Stats);
-    LOG_INFO_MESSAGE("GPU Upload Manager Stats:"
-                     "\n    NumPages                   ",
-                     Stats.NumPages,
-                     "\n    NumFreePages               ", Stats.NumFreePages,
-                     "\n    NumInFlightPages           ", Stats.NumInFlightPages,
-                     "\n    PeakTotalPendingUpdateSize ", Stats.PeakTotalPendingUpdateSize,
-                     "\n    PeakUpdateSize             ", Stats.PeakUpdateSize,
-                     "\n    Buckets:\n", PrintBucketInfo(Stats));
+    LogUploadManagerStats(pUploadManager);
 }
 
 
@@ -579,9 +556,12 @@ TEST(GPUUploadManagerTest, MaxPageCount)
 
     RefCntAutoPtr<IGPUUploadManager> pUploadManager;
     GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext};
-    CreateInfo.PageSize         = 1024;
-    CreateInfo.InitialPageCount = 8;
-    CreateInfo.MaxPageCount     = 2;
+    CreateInfo.PageSize              = 1024;
+    CreateInfo.LargePageSize         = 2048;
+    CreateInfo.InitialPageCount      = 8;
+    CreateInfo.InitialLargePageCount = 8;
+    CreateInfo.MaxPageCount          = 2;
+    CreateInfo.MaxLargePageCount     = 2;
     CreateGPUUploadManager(CreateInfo, &pUploadManager);
     ASSERT_TRUE(pUploadManager != nullptr);
 
@@ -637,6 +617,8 @@ TEST(GPUUploadManagerTest, MaxPageCount)
     }
 
     pUploadManager->RenderThreadUpdate(pContext);
+    pContext->WaitForIdle();
+    pUploadManager->RenderThreadUpdate(pContext);
 
     VerifyBufferContents(pBuffer, BufferData);
 
@@ -645,10 +627,12 @@ TEST(GPUUploadManagerTest, MaxPageCount)
         thread.join();
     }
 
+    LogUploadManagerStats(pUploadManager);
     GPUUploadManagerStats Stats;
     pUploadManager->GetStats(Stats);
-    LOG_INFO_MESSAGE("Peak number of pages: ", Stats.PeakNumPages, "\nBucket info:\n", PrintBucketInfo(Stats));
-    EXPECT_EQ(Stats.NumPages, CreateInfo.MaxPageCount) << "Page count should not exceed the specified maximum";
+    ASSERT_EQ(Stats.NumStreams, 2u);
+    EXPECT_EQ(Stats.pStreamStats[0].NumPages, CreateInfo.MaxPageCount) << "Normal page count should not exceed the specified maximum";
+    EXPECT_EQ(Stats.pStreamStats[1].NumPages, CreateInfo.MaxLargePageCount) << "Large page count should not exceed the specified maximum";
 }
 
 Uint32 GetSubresourceIndex(const TextureDesc& TexDesc, const Uint32 Mip, Uint32 Slice)
@@ -771,7 +755,7 @@ void TestTextureUpdates(TEXTURE_FORMAT Format, RESOURCE_DIMENSION Type, Uint32 F
     GPUTestingEnvironment::ScopedReset AutoReset;
 
     RefCntAutoPtr<IGPUUploadManager> pUploadManager;
-    GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext, 256 * 256 * 4};
+    GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext, 64 << 10, 256 << 10};
     CreateGPUUploadManager(CreateInfo, &pUploadManager);
     ASSERT_TRUE(pUploadManager != nullptr);
 
@@ -907,6 +891,8 @@ void TestTextureUpdates(TEXTURE_FORMAT Format, RESOURCE_DIMENSION Type, Uint32 F
     {
         VerifyTextureContents(pTexture, SubresData);
     }
+
+    LogUploadManagerStats(pUploadManager);
 }
 
 TEST(GPUUploadManagerTest, ScheduleTextureUpdates_Tex2DArray_RGBA8)
@@ -970,7 +956,7 @@ TEST(GPUUploadManagerTest, ReleaseTextureCallbackResources)
     GPUTestingEnvironment::ScopedReset AutoReset;
 
     RefCntAutoPtr<IGPUUploadManager> pUploadManager;
-    GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext, 65536};
+    GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext, 16384, 65536};
     CreateGPUUploadManager(CreateInfo, &pUploadManager);
     ASSERT_TRUE(pUploadManager != nullptr);
 
@@ -1046,6 +1032,8 @@ TEST(GPUUploadManagerTest, ReleaseTextureCallbackResources)
     EXPECT_FALSE(UploadEnqueuedCallbackCalled) << "UploadEnqueued callback should not have been called before the upload manager is destroyed";
     EXPECT_FALSE(CopyTextureCallbackCalled) << "CopyTexture callback should not have been called before the upload manager is destroyed";
 
+    LogUploadManagerStats(pUploadManager);
+
     pUploadManager.Release();
 
     EXPECT_TRUE(UploadEnqueuedCallbackCalled) << "UploadEnqueued callback should have been called before the upload manager is destroyed";
@@ -1066,7 +1054,7 @@ TEST(GPUUploadManagerTest, ParallelBufferAndTextureUpdates)
     GPUTestingEnvironment::ScopedReset AutoReset;
 
     RefCntAutoPtr<IGPUUploadManager> pUploadManager;
-    GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext, 16384};
+    GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext, 16384, 65536};
     CreateGPUUploadManager(CreateInfo, &pUploadManager);
     ASSERT_TRUE(pUploadManager != nullptr);
 
@@ -1208,17 +1196,7 @@ TEST(GPUUploadManagerTest, ParallelBufferAndTextureUpdates)
         thread.join();
     }
 
-    GPUUploadManagerStats Stats;
-    pUploadManager->GetStats(Stats);
-    LOG_INFO_MESSAGE("GPU Upload Manager Stats:"
-                     "\n    NumPages                   ",
-                     Stats.NumPages,
-                     "\n    NumFreePages               ", Stats.NumFreePages,
-                     "\n    NumInFlightPages           ", Stats.NumInFlightPages,
-                     "\n    PeakTotalPendingUpdateSize ", Stats.PeakTotalPendingUpdateSize,
-                     "\n    PeakUpdateSize             ", Stats.PeakUpdateSize,
-                     "\n    Buckets:\n", PrintBucketInfo(Stats));
-
+    LogUploadManagerStats(pUploadManager);
     VerifyBufferContents(pBuffer, BufferData);
     VerifyTextureContents(pTexture, SubresData);
 }

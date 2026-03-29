@@ -38,6 +38,7 @@
 
 #include <memory>
 #include <vector>
+#include <array>
 #include <mutex>
 #include <map>
 #include <unordered_map>
@@ -70,7 +71,7 @@ public:
     public:
         explicit Page(Uint32 Size, bool PersistentMapped = false) noexcept;
 
-        Page(IRenderDevice* pDevice, Uint32 Size);
+        Page(size_t StreamIndex, IRenderDevice* pDevice, Uint32 Size);
         ~Page();
 
         enum class WritingStatus
@@ -142,6 +143,8 @@ public:
         // Returns true if the page was not previously enqueued, false otherwise.
         bool TryEnqueue();
 
+        size_t GetStreamIndex() const { return m_StreamIdx; }
+
         Uint64 GetFenceValue() const { return m_FenceValue; }
         Uint32 GetSize() const { return m_Size; }
 
@@ -177,6 +180,7 @@ public:
         WritingStatus EndWriting();
 
     private:
+        const size_t m_StreamIdx        = 0;
         const Uint32 m_Size             = 0;
         const bool   m_PersistentMapped = false;
 
@@ -238,26 +242,14 @@ public:
     };
 
 private:
-    void ScheduleUpdate(IDeviceContext* pContext,
-                        Uint32          UpdateSize,
-                        const void*     pUpdateInfo,
-                        bool            ScheduleUpdate(Page::Writer& Writer, const void* pUpdateInfo));
+    class UploadStream;
 
-    void  ReclaimCompletedPages(IDeviceContext* pContext);
-    bool  SealAndSwapCurrentPage(IDeviceContext* pContext);
-    void  AddFreePages(IDeviceContext* pContext);
-    void  ProcessPendingPages(IDeviceContext* pContext);
-    bool  TryRotatePage(IDeviceContext* pContext, Page* ExpectedCurrent, Uint32 RequiredSize);
-    bool  TryEnqueuePage(Page* P);
-    Page* AcquireFreePage(IDeviceContext* pContext, Uint32 RequiredSize = 0);
-    Page* CreatePage(IDeviceContext* pContext, Uint32 RequiredSize = 0);
-    void  ProcessPagesToRelease(IDeviceContext* pContext);
-    void  UpdateBucketInfo();
+    void ReclaimCompletedPages(IDeviceContext* pContext);
+    void ProcessPendingPages(IDeviceContext* pContext);
+
+    UploadStream& GetStreamForUpdateSize(Uint32 UpdateSize);
 
 private:
-    const Uint32 m_PageSize;
-    const Uint32 m_MaxPageCount;
-
     RefCntAutoPtr<IRenderDevice>  m_pDevice;
     RefCntAutoPtr<IDeviceContext> m_pContext;
 
@@ -281,7 +273,6 @@ private:
         std::map<Uint32, std::vector<Page*>> m_PagesBySize;
         std::atomic<size_t>                  m_Size{0};
     };
-    FreePages m_FreePages;
 
     // Pages that have been submitted for execution and are being processed by the GPU.
     std::vector<Page*> m_InFlightPages;
@@ -290,24 +281,75 @@ private:
     RefCntAutoPtr<IFence> m_pFence;
     Uint64                m_NextFenceValue = 1;
 
-    std::atomic<Page*>    m_pCurrentPage{nullptr};
-    Threading::TickSignal m_PageRotatedSignal;
+    class UploadStream
+    {
+    public:
+        UploadStream(GPUUploadManagerImpl& Mgr,
+                     size_t                StreamIdx,
+                     Uint32                PageSize,
+                     Uint32                MaxPageCount,
+                     Uint32                InitialPageCount) noexcept;
 
-    std::unordered_map<Page*, std::unique_ptr<Page>> m_Pages;
-    std::map<Uint32, Uint32>                         m_PageSizeToCount;
-    std::vector<GPUUploadManagerBucketInfo>          m_BucketInfo;
+        Page* CreatePage(IDeviceContext* pContext, Uint32 RequiredSize = 0);
+        Page* AcquireFreePage(IDeviceContext* pContext, Uint32 RequiredSize = 0);
+        bool  SealAndSwapCurrentPage(IDeviceContext* pContext);
+        bool  TryRotatePage(IDeviceContext* pContext, Page* ExpectedCurrent, Uint32 RequiredSize);
+        bool  TryEnqueuePage(Page* P);
+        void  ProcessPagesToRelease(IDeviceContext* pContext);
+        void  AddFreePages(IDeviceContext* pContext);
+        void  AddFreePage(Page* pPage) { m_FreePages.Push(pPage); }
+
+        void ScheduleUpdate(IDeviceContext* pContext,
+                            Uint32          UpdateSize,
+                            const void*     pUpdateInfo,
+                            bool            ScheduleUpdate(Page::Writer& Writer, const void* pUpdateInfo));
+        void ReleaseStagingBuffers();
+        void SignalPageRotated() { m_PageRotatedSignal.Tick(); }
+        void SignalStop();
+
+        Uint32 GetPageSize() const { return m_PageSize; }
+
+        void GetStats(GPUUploadManagerStreamStats& Stats) const;
+
+    private:
+        GPUUploadManagerImpl& m_Mgr;
+        const size_t          m_StreamIdx;
+        const Uint32          m_PageSize;
+        const Uint32          m_MaxPageCount;
+
+        std::atomic<Page*> m_pCurrentPage{nullptr};
+
+        Threading::TickSignal m_PageRotatedSignal;
+
+        std::unordered_map<Page*, std::unique_ptr<Page>> m_Pages;
+        std::map<Uint32, Uint32>                         m_PageSizeToCount;
+        mutable std::vector<GPUUploadManagerBucketInfo>  m_BucketInfo;
+
+        std::atomic<Uint32> m_NumRunningUpdates{0};
+        std::atomic<Uint32> m_MaxPendingUpdateSize{0};
+        std::atomic<Uint32> m_TotalPendingUpdateSize{0};
+
+        FreePages m_FreePages;
+
+        std::atomic<Uint32> m_PeakUpdateSize{0};
+        Uint32              m_PeakTotalPendingUpdateSize = 0;
+        Uint32              m_PeakPageCount              = 0;
+    };
+
+    enum class UploadStreamType : Uint32
+    {
+        Normal = 0,
+        Large  = 1,
+        Count
+    };
+    std::array<UploadStream, static_cast<size_t>(UploadStreamType::Count)> m_Streams;
 
     // The number of running ScheduleBufferUpdate operations.
     std::atomic<Uint32> m_NumRunningUpdates{0};
     std::atomic<bool>   m_Stopping{false};
     Threading::Signal   m_LastRunningThreadFinishedSignal;
 
-    std::atomic<Uint32> m_MaxPendingUpdateSize{0};
-    std::atomic<Uint32> m_TotalPendingUpdateSize{0};
-
-    std::atomic<Uint32> m_PeakUpdateSize{0};
-    Uint32              m_PeakTotalPendingUpdateSize = 0;
-    Uint32              m_PeakPageCount              = 0;
+    mutable std::array<GPUUploadManagerStreamStats, static_cast<size_t>(UploadStreamType::Count)> m_StreamStats;
 };
 
 } // namespace Diligent

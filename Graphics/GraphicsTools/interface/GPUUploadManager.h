@@ -42,19 +42,30 @@ struct GPUUploadManagerCreateInfo
     /// Pointer to the device context. Must not be null.
     IDeviceContext* pContext DEFAULT_INITIALIZER(nullptr);
 
-    /// Size of the staging buffer page.
+    /// Size of the upload page.
     Uint32 PageSize DEFAULT_INITIALIZER(4 * 1024 * 1024);
+
+    /// Size of the large upload page.
+    Uint32 LargePageSize DEFAULT_INITIALIZER(16 * 1024 * 1024);
 
     /// Initial number of upload pages. If the manager runs out of pages to write to,
     /// it will create new ones as needed. This parameter controls how many pages are created at startup.
     Uint32 InitialPageCount DEFAULT_INITIALIZER(1);
 
-    /// Maximum number of pages that the manager should maintain.
+    /// Initial number of large upload pages.
+    Uint32 InitialLargePageCount DEFAULT_INITIALIZER(1);
+
+    /// Maximum number of pages that the manager should maintain. If 0, there is no limit to the number
+    /// of pages that can be created.
     ///
     /// Note the manager may temporarily exceed this limit in certain scenarios (for example, if large
     /// update is scheduled while the maximum is already reached), but it will reduce the number of
     /// pages to the maximum as soon as possible.
     Uint32 MaxPageCount DEFAULT_INITIALIZER(64);
+
+    /// Maximum number of large pages that the manager should maintain. If 0, there is no limit to the number
+    /// of large pages that can be created.
+    Uint32 MaxLargePageCount DEFAULT_INITIALIZER(16);
 };
 typedef struct GPUUploadManagerCreateInfo GPUUploadManagerCreateInfo;
 
@@ -408,17 +419,17 @@ struct GPUUploadManagerBucketInfo
 typedef struct GPUUploadManagerBucketInfo GPUUploadManagerBucketInfo;
 
 
-/// GPU upload manager statistics.
-struct GPUUploadManagerStats
+/// GPU upload manager stream statistics.
+struct GPUUploadManagerStreamStats
 {
+    /// Page size in bytes for this stream.
+    Uint32 PageSize DEFAULT_INITIALIZER(0);
+
     /// The number of pages in the manager.
     Uint32 NumPages DEFAULT_INITIALIZER(0);
 
     /// The number of free pages that are ready to be written to.
     Uint32 NumFreePages DEFAULT_INITIALIZER(0);
-
-    /// The number of pages that are currently being used by the GPU for copy operations.
-    Uint32 NumInFlightPages DEFAULT_INITIALIZER(0);
 
     /// The peak number of pages that were created by the manager. This value can exceed the maximum page count,
     /// but only temporarily when the manager needs to create new pages to accommodate large updates.
@@ -435,10 +446,22 @@ struct GPUUploadManagerStats
     Uint32 NumBuckets DEFAULT_INITIALIZER(0);
 
     /// Information about each bucket. The array contains NumBuckets valid entries.
-    /// The pointer is valid only until the next call to RenderThreadUpdate() or
-    /// ScheduleBufferUpdate() with a non-null device context, which may change the number
-    /// of buckets.
+    /// The pointer is valid only until the next call to GetStats().
     const GPUUploadManagerBucketInfo* pBucketInfo DEFAULT_INITIALIZER(nullptr);
+};
+typedef struct GPUUploadManagerStreamStats GPUUploadManagerStreamStats;
+
+/// GPU upload manager statistics.
+struct GPUUploadManagerStats
+{
+    /// An array of NumStreams stream statistics.
+    const GPUUploadManagerStreamStats* pStreamStats DEFAULT_INITIALIZER(nullptr);
+
+    /// The number of streams in the pStreamStats array.
+    Uint32 NumStreams DEFAULT_INITIALIZER(0);
+
+    /// The number of pages that are currently being used by the GPU for copy operations.
+    Uint32 NumInFlightPages DEFAULT_INITIALIZER(0);
 };
 typedef struct GPUUploadManagerStats GPUUploadManagerStats;
 
@@ -517,6 +540,10 @@ DILIGENT_END_INTERFACE
 #    define IGPUUploadManager_GetStats(This, ...)              CALL_IFACE_METHOD(GPUUploadManager, GetStats, This, __VA_ARGS__)
 
 // clang-format on
+
+#else
+
+std::string GetGPUUploadManagerStatsString(const GPUUploadManagerStats& Stats);
 
 #endif
 

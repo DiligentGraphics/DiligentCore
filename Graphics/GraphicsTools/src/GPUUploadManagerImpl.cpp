@@ -101,14 +101,13 @@ inline bool PersistentMapSupported(IRenderDevice* pDevice)
     return DeviceType == RENDER_DEVICE_TYPE_D3D12 || DeviceType == RENDER_DEVICE_TYPE_VULKAN;
 }
 
-GPUUploadManagerImpl::Page::Page(IRenderDevice* pDevice, Uint32 Size) :
-    Page{
-        Size,
-        PersistentMapSupported(pDevice),
-    }
+GPUUploadManagerImpl::Page::Page(size_t StreamIndex, IRenderDevice* pDevice, Uint32 Size) :
+    m_StreamIdx{StreamIndex},
+    m_Size{Size},
+    m_PersistentMapped{PersistentMapSupported(pDevice)}
 {
     static std::atomic<int> PageCounter{0};
-    const std::string       Name = "GPUUploadManagerImpl page " + std::to_string(PageCounter.fetch_add(1));
+    const std::string       Name = std::string{"GPUUploadManagerImpl "} + GetMemorySizeString(Size) + " page " + std::to_string(PageCounter.fetch_add(1));
 
     BufferDesc Desc;
     Desc.Name           = Name.c_str();
@@ -528,26 +527,21 @@ GPUUploadManagerImpl::Page* GPUUploadManagerImpl::FreePages::Pop(Uint32 Required
     return P;
 }
 
-GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, const GPUUploadManagerCreateInfo& CI) :
-    TBase{pRefCounters},
-    m_PageSize{AlignUpToPowerOfTwo(CI.PageSize)},
+GPUUploadManagerImpl::UploadStream::UploadStream(GPUUploadManagerImpl& Mgr,
+                                                 size_t                StreamIdx,
+                                                 Uint32                PageSize,
+                                                 Uint32                MaxPageCount,
+                                                 Uint32                InitialPageCount) noexcept :
+    m_Mgr{Mgr},
+    m_StreamIdx{StreamIdx},
+    m_PageSize{AlignUpToPowerOfTwo(PageSize)},
     // Ensure that the max page count is at least 2 to allow for double buffering, unless it's set to 0 which means no limit.
-    m_MaxPageCount{CI.MaxPageCount != 0 ? std::max(CI.MaxPageCount, 2u) : 0},
-    m_pDevice{CI.pDevice},
-    m_pContext{CI.pContext},
-    m_TextureUpdateOffsetAlignment{m_pDevice->GetAdapterInfo().Buffer.TextureUpdateOffsetAlignment},
-    m_TextureUpdateStrideAlignment{m_pDevice->GetAdapterInfo().Buffer.TextureUpdateStrideAlignment}
+    m_MaxPageCount{MaxPageCount != 0 ? std::max(MaxPageCount, 2u) : 0}
 {
-    FenceDesc Desc;
-    Desc.Name = "GPU upload manager fence";
-    Desc.Type = FENCE_TYPE_CPU_WAIT_ONLY;
-    m_pDevice->CreateFence(Desc, &m_pFence);
-    VERIFY_EXPR(m_pFence != nullptr);
-
-    if (CI.pContext != nullptr)
+    if (m_Mgr.m_pContext)
     {
         // Create at least one page.
-        if (Page* pPage = CreatePage(CI.pContext))
+        if (Page* pPage = CreatePage(m_Mgr.m_pContext))
         {
             pPage->Unseal();
             m_pCurrentPage.store(pPage, std::memory_order_release);
@@ -559,14 +553,13 @@ GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, con
     }
 
     // Create additional pages if requested.
-    const Uint32 InitialPageCount = CI.MaxPageCount > 0 ?
-        std::min(CI.InitialPageCount, CI.MaxPageCount) :
-        CI.InitialPageCount;
+    if (m_MaxPageCount > 0)
+        InitialPageCount = std::min(InitialPageCount, m_MaxPageCount);
     while (m_Pages.size() < InitialPageCount)
     {
-        if (Page* pPage = CreatePage(CI.pContext))
+        if (Page* pPage = CreatePage(m_Mgr.m_pContext))
         {
-            if (CI.pContext != nullptr)
+            if (m_Mgr.m_pContext != nullptr)
             {
                 // If a context is provided, we can immediately map the staging buffer and
                 // prepare the page for use, so we push it to the free list.
@@ -576,7 +569,7 @@ GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, con
             {
                 // If no context is provided, the page needs to be mapped in Reset(),
                 // so we add it to the list of in-flight pages.
-                m_InFlightPages.emplace_back(pPage);
+                m_Mgr.m_InFlightPages.emplace_back(pPage);
             }
         }
         else
@@ -587,19 +580,66 @@ GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, con
     }
 }
 
+GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, const GPUUploadManagerCreateInfo& CI) :
+    TBase{pRefCounters},
+    m_pDevice{CI.pDevice},
+    m_pContext{CI.pContext},
+    m_TextureUpdateOffsetAlignment{m_pDevice->GetAdapterInfo().Buffer.TextureUpdateOffsetAlignment},
+    m_TextureUpdateStrideAlignment{m_pDevice->GetAdapterInfo().Buffer.TextureUpdateStrideAlignment},
+    m_Streams{
+        UploadStream{
+            *this,
+            0,
+            CI.PageSize,
+            CI.MaxPageCount,
+            CI.InitialPageCount,
+        },
+        UploadStream{
+            *this,
+            1,
+            std::max(CI.LargePageSize, CI.PageSize * 2),
+            CI.MaxLargePageCount,
+            CI.InitialLargePageCount,
+        },
+    }
+{
+    FenceDesc Desc;
+    Desc.Name = "GPU upload manager fence";
+    Desc.Type = FENCE_TYPE_CPU_WAIT_ONLY;
+    m_pDevice->CreateFence(Desc, &m_pFence);
+    VERIFY_EXPR(m_pFence != nullptr);
+}
+
+void GPUUploadManagerImpl::UploadStream::ReleaseStagingBuffers()
+{
+    for (auto& it : m_Pages)
+    {
+        it.second->ReleaseStagingBuffer(m_Mgr.m_pContext);
+    }
+}
+
+void GPUUploadManagerImpl::UploadStream::SignalStop()
+{
+    m_PageRotatedSignal.RequestStop();
+}
+
 GPUUploadManagerImpl::~GPUUploadManagerImpl()
 {
     m_Stopping.store(true, std::memory_order_release);
-    m_PageRotatedSignal.RequestStop();
+    for (UploadStream& Stream : m_Streams)
+    {
+        Stream.SignalStop();
+    }
+
     // Wait for any running updates to finish.
     if (m_NumRunningUpdates.load(std::memory_order_acquire) > 0)
     {
         m_LastRunningThreadFinishedSignal.Wait();
     }
 
-    for (auto& it : m_Pages)
+    for (UploadStream& Stream : m_Streams)
     {
-        it.second->ReleaseStagingBuffer(m_pContext);
+        Stream.ReleaseStagingBuffers();
     }
 }
 
@@ -621,51 +661,74 @@ void GPUUploadManagerImpl::RenderThreadUpdate(IDeviceContext* pContext)
     ReclaimCompletedPages(pContext);
 
     // 2. Add free pages to accommodate pending updates.
-    AddFreePages(pContext);
+    for (UploadStream& Stream : m_Streams)
+    {
+        Stream.AddFreePages(pContext);
+    }
 
     // 3. Seal and swap the current page.
-    SealAndSwapCurrentPage(pContext);
+    for (UploadStream& Stream : m_Streams)
+    {
+        Stream.SealAndSwapCurrentPage(pContext);
+    }
 
     // 4. Process pending pages and move them to in-fligt list.
     ProcessPendingPages(pContext);
 
     // 5. Lastly, process pages to release. Do this at the very end so that newly available free pages
     //    first get a chance to be used for pending updates.
-    ProcessPagesToRelease(pContext);
+    for (UploadStream& Stream : m_Streams)
+    {
+        Stream.ProcessPagesToRelease(pContext);
+    }
 
     pContext->EnqueueSignal(m_pFence, m_NextFenceValue++);
-    m_PageRotatedSignal.Tick();
+
+    for (UploadStream& Stream : m_Streams)
+    {
+        Stream.SignalPageRotated();
+    }
 }
 
-void GPUUploadManagerImpl::ScheduleUpdate(IDeviceContext* pContext,
-                                          Uint32          UpdateSize,
-                                          const void*     pUpdateInfo,
-                                          bool            ScheduleUpdate(Page::Writer& Writer, const void* pUpdateInfo))
+GPUUploadManagerImpl::UploadStream& GPUUploadManagerImpl::GetStreamForUpdateSize(Uint32 UpdateSize)
 {
-    DEV_CHECK_ERR(pContext == nullptr || pContext == m_pContext,
+    const Uint32 LargeUpdateThreshold = m_Streams[static_cast<size_t>(UploadStreamType::Normal)].GetPageSize();
+    return m_Streams[static_cast<size_t>(UpdateSize > LargeUpdateThreshold ? UploadStreamType::Large : UploadStreamType::Normal)];
+}
+
+void GPUUploadManagerImpl::UploadStream::ScheduleUpdate(IDeviceContext* pContext,
+                                                        Uint32          UpdateSize,
+                                                        const void*     pUpdateInfo,
+                                                        bool            ScheduleUpdate(Page::Writer& Writer, const void* pUpdateInfo))
+{
+    DEV_CHECK_ERR(pContext == nullptr || pContext == m_Mgr.m_pContext,
                   "If a context is provided to ScheduleBufferUpdate/ScheduleTextureUpdate, it must be the same as the "
                   "one used to create the GPUUploadManagerImpl");
 
     class RunningUpdatesGuard
     {
     public:
-        explicit RunningUpdatesGuard(GPUUploadManagerImpl& Mgr) noexcept :
-            m_Mgr{Mgr}
+        explicit RunningUpdatesGuard(UploadStream& Stream) noexcept :
+            m_Stream{Stream}
         {
-            m_Mgr.m_NumRunningUpdates.fetch_add(1, std::memory_order_acq_rel);
+            m_Stream.m_Mgr.m_NumRunningUpdates.fetch_add(1, std::memory_order_acq_rel);
+            m_Stream.m_NumRunningUpdates.fetch_add(1, std::memory_order_acq_rel);
         }
 
         ~RunningUpdatesGuard()
         {
-            Uint32 NumRunningUpdates = m_Mgr.m_NumRunningUpdates.fetch_sub(1, std::memory_order_acq_rel);
-            if (m_Mgr.m_Stopping.load(std::memory_order_acquire) && NumRunningUpdates == 1)
+            // Decrement the stream's counter first because if the manager is stopping, the
+            // stream can be destroyed after m_LastRunningThreadFinishedSignal is triggered.
+            m_Stream.m_NumRunningUpdates.fetch_sub(1, std::memory_order_acq_rel);
+            Uint32 NumRunningUpdates = m_Stream.m_Mgr.m_NumRunningUpdates.fetch_sub(1, std::memory_order_acq_rel);
+            if (m_Stream.m_Mgr.m_Stopping.load(std::memory_order_acquire) && NumRunningUpdates == 1)
             {
-                m_Mgr.m_LastRunningThreadFinishedSignal.Trigger();
+                m_Stream.m_Mgr.m_LastRunningThreadFinishedSignal.Trigger();
             }
         }
 
     private:
-        GPUUploadManagerImpl& m_Mgr;
+        UploadStream& m_Stream;
     };
     RunningUpdatesGuard Guard{*this};
 
@@ -688,7 +751,7 @@ void GPUUploadManagerImpl::ScheduleUpdate(IDeviceContext* pContext,
         }
     };
 
-    while (!AbortUpdate && !m_Stopping.load(std::memory_order_acquire))
+    while (!AbortUpdate && !m_Mgr.m_Stopping.load(std::memory_order_acquire))
     {
         Page* P = m_pCurrentPage.load(std::memory_order_acquire);
         if (P == nullptr)
@@ -739,14 +802,14 @@ void GPUUploadManagerImpl::ScheduleUpdate(IDeviceContext* pContext,
     AtomicMax(m_PeakUpdateSize, UpdateSize, std::memory_order_relaxed);
 }
 
-
 void GPUUploadManagerImpl::ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& UpdateInfo)
 {
-    ScheduleUpdate(UpdateInfo.pContext, UpdateInfo.NumBytes, &UpdateInfo,
-                   [](Page::Writer& Writer, const void* pUpdateData) {
-                       const ScheduleBufferUpdateInfo* pBufferUpdateInfo = static_cast<const ScheduleBufferUpdateInfo*>(pUpdateData);
-                       return Writer.ScheduleBufferUpdate(*pBufferUpdateInfo);
-                   });
+    UploadStream& Stream = GetStreamForUpdateSize(UpdateInfo.NumBytes);
+    Stream.ScheduleUpdate(UpdateInfo.pContext, UpdateInfo.NumBytes, &UpdateInfo,
+                          [](Page::Writer& Writer, const void* pUpdateData) {
+                              const ScheduleBufferUpdateInfo* pBufferUpdateInfo = static_cast<const ScheduleBufferUpdateInfo*>(pUpdateData);
+                              return Writer.ScheduleBufferUpdate(*pBufferUpdateInfo);
+                          });
 }
 
 void GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo)
@@ -771,14 +834,15 @@ void GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo
         m_TextureUpdateOffsetAlignment,
     };
 
-    ScheduleUpdate(UpdateInfo.pContext, static_cast<Uint32>(UpdateData.CopyInfo.MemorySize), &UpdateData,
-                   [](Page::Writer& Writer, const void* pData) {
-                       const ScheduleUpdateData* pUpdateData = static_cast<const ScheduleUpdateData*>(pData);
-                       return Writer.ScheduleTextureUpdate(pUpdateData->UpdateInfo, pUpdateData->CopyInfo, pUpdateData->OffsetAlignment);
-                   });
+    UploadStream& Stream = GetStreamForUpdateSize(static_cast<Uint32>(UpdateData.CopyInfo.MemorySize));
+    Stream.ScheduleUpdate(UpdateInfo.pContext, static_cast<Uint32>(UpdateData.CopyInfo.MemorySize), &UpdateData,
+                          [](Page::Writer& Writer, const void* pData) {
+                              const ScheduleUpdateData* pUpdateData = static_cast<const ScheduleUpdateData*>(pData);
+                              return Writer.ScheduleTextureUpdate(pUpdateData->UpdateInfo, pUpdateData->CopyInfo, pUpdateData->OffsetAlignment);
+                          });
 }
 
-GPUUploadManagerImpl::Page* GPUUploadManagerImpl::CreatePage(IDeviceContext* pContext, Uint32 RequiredSize)
+GPUUploadManagerImpl::Page* GPUUploadManagerImpl::UploadStream::CreatePage(IDeviceContext* pContext, Uint32 RequiredSize)
 {
     const Uint32 MaxExistingPageSize = m_PageSizeToCount.empty() ? 0 : m_PageSizeToCount.rbegin()->first;
     if (m_MaxPageCount != 0 && m_Pages.size() >= m_MaxPageCount && RequiredSize <= MaxExistingPageSize)
@@ -790,7 +854,7 @@ GPUUploadManagerImpl::Page* GPUUploadManagerImpl::CreatePage(IDeviceContext* pCo
     while (PageSize < RequiredSize)
         PageSize *= 2;
 
-    std::unique_ptr<Page> NewPage = std::make_unique<Page>(m_pDevice, PageSize);
+    std::unique_ptr<Page> NewPage = std::make_unique<Page>(m_StreamIdx, m_Mgr.m_pDevice, PageSize);
 
     Page* P = NewPage.get();
     if (pContext != nullptr)
@@ -799,13 +863,13 @@ GPUUploadManagerImpl::Page* GPUUploadManagerImpl::CreatePage(IDeviceContext* pCo
     }
     m_Pages.emplace(P, std::move(NewPage));
     m_PageSizeToCount[PageSize]++;
-    UpdateBucketInfo();
     m_PeakPageCount = std::max(m_PeakPageCount, static_cast<Uint32>(m_Pages.size()));
 
     return P;
 }
 
-bool GPUUploadManagerImpl::SealAndSwapCurrentPage(IDeviceContext* pContext)
+
+bool GPUUploadManagerImpl::UploadStream::SealAndSwapCurrentPage(IDeviceContext* pContext)
 {
     VERIFY_EXPR(pContext != nullptr);
 
@@ -824,7 +888,8 @@ bool GPUUploadManagerImpl::SealAndSwapCurrentPage(IDeviceContext* pContext)
     return true;
 }
 
-bool GPUUploadManagerImpl::TryRotatePage(IDeviceContext* pContext, Page* ExpectedCurrent, Uint32 RequiredSize)
+
+bool GPUUploadManagerImpl::UploadStream::TryRotatePage(IDeviceContext* pContext, Page* ExpectedCurrent, Uint32 RequiredSize)
 {
     // Grab a free page (workers can't create, so pContext=null)
     Page* Fresh = AcquireFreePage(pContext, RequiredSize);
@@ -848,14 +913,15 @@ bool GPUUploadManagerImpl::TryRotatePage(IDeviceContext* pContext, Page* Expecte
     return true;
 }
 
-bool GPUUploadManagerImpl::TryEnqueuePage(Page* P)
+
+bool GPUUploadManagerImpl::UploadStream::TryEnqueuePage(Page* P)
 {
     VERIFY_EXPR(P->DbgIsSealed());
     if (P->TryEnqueue())
     {
         if (P->GetNumPendingOps() > 0)
         {
-            m_PendingPages.Enqueue(P);
+            m_Mgr.m_PendingPages.Enqueue(P);
         }
         else
         {
@@ -893,12 +959,16 @@ void GPUUploadManagerImpl::ReclaimCompletedPages(IDeviceContext* pContext)
 
     if (!m_TmpPages.empty())
     {
-        m_FreePages.Push(m_TmpPages.data(), m_TmpPages.size());
+        for (Page* P : m_TmpPages)
+        {
+            m_Streams[P->GetStreamIndex()].AddFreePage(P);
+        }
         m_TmpPages.clear();
     }
 }
 
-void GPUUploadManagerImpl::AddFreePages(IDeviceContext* pContext)
+
+void GPUUploadManagerImpl::UploadStream::AddFreePages(IDeviceContext* pContext)
 {
     VERIFY_EXPR(pContext != nullptr);
 
@@ -917,12 +987,12 @@ void GPUUploadManagerImpl::AddFreePages(IDeviceContext* pContext)
 
     if (NumPagesToCreate > 0)
     {
-        m_TmpPages.clear();
+        m_Mgr.m_TmpPages.clear();
         for (Uint32 i = 0; i < NumPagesToCreate; ++i)
         {
             if (Page* pPage = CreatePage(pContext))
             {
-                m_TmpPages.push_back(pPage);
+                m_Mgr.m_TmpPages.push_back(pPage);
             }
             else
             {
@@ -930,12 +1000,13 @@ void GPUUploadManagerImpl::AddFreePages(IDeviceContext* pContext)
                 break;
             }
         }
-        m_FreePages.Push(m_TmpPages.data(), m_TmpPages.size());
-        m_TmpPages.clear();
+        m_FreePages.Push(m_Mgr.m_TmpPages.data(), m_Mgr.m_TmpPages.size());
+        m_Mgr.m_TmpPages.clear();
     }
 }
 
-void GPUUploadManagerImpl::ProcessPagesToRelease(IDeviceContext* pContext)
+
+void GPUUploadManagerImpl::UploadStream::ProcessPagesToRelease(IDeviceContext* pContext)
 {
     if (m_MaxPageCount == 0)
         return;
@@ -970,7 +1041,6 @@ void GPUUploadManagerImpl::ProcessPagesToRelease(IDeviceContext* pContext)
                 UNEXPECTED("Page size not found in the map");
             }
             m_Pages.erase(pPage);
-            UpdateBucketInfo();
         }
         else
         {
@@ -991,7 +1061,7 @@ void GPUUploadManagerImpl::ProcessPendingPages(IDeviceContext* pContext)
     }
 }
 
-GPUUploadManagerImpl::Page* GPUUploadManagerImpl::AcquireFreePage(IDeviceContext* pContext, Uint32 RequiredSize)
+GPUUploadManagerImpl::Page* GPUUploadManagerImpl::UploadStream::AcquireFreePage(IDeviceContext* pContext, Uint32 RequiredSize)
 {
     Uint32 MaxPendingUpdateSize = std::max(m_MaxPendingUpdateSize.load(std::memory_order_acquire), RequiredSize);
 
@@ -1030,27 +1100,35 @@ GPUUploadManagerImpl::Page* GPUUploadManagerImpl::AcquireFreePage(IDeviceContext
     return P;
 }
 
-void GPUUploadManagerImpl::UpdateBucketInfo()
+void GPUUploadManagerImpl::UploadStream::GetStats(GPUUploadManagerStreamStats& Stats) const
 {
     m_BucketInfo.clear();
     for (const auto& it : m_PageSizeToCount)
     {
         m_BucketInfo.emplace_back(GPUUploadManagerBucketInfo{it.first, it.second});
     }
+
+    Stats.PageSize                   = m_PageSize;
+    Stats.NumPages                   = static_cast<Uint32>(m_Pages.size());
+    Stats.NumFreePages               = static_cast<Uint32>(m_FreePages.Size());
+    Stats.PeakNumPages               = m_PeakPageCount;
+    Stats.PeakTotalPendingUpdateSize = m_PeakTotalPendingUpdateSize;
+    Stats.PeakUpdateSize             = m_PeakUpdateSize.load(std::memory_order_relaxed);
+    Stats.NumBuckets                 = static_cast<Uint32>(m_BucketInfo.size());
+    Stats.pBucketInfo                = m_BucketInfo.data();
 }
 
 void GPUUploadManagerImpl::GetStats(GPUUploadManagerStats& Stats) const
 {
-    Stats.NumPages         = static_cast<Uint32>(m_Pages.size());
-    Stats.NumFreePages     = static_cast<Uint32>(m_FreePages.Size());
+    for (size_t i = 0; i < m_Streams.size(); ++i)
+    {
+        m_Streams[i].GetStats(m_StreamStats[i]);
+    }
+
+    Stats.pStreamStats = m_StreamStats.data();
+    Stats.NumStreams   = static_cast<Uint32>(m_Streams.size());
+
     Stats.NumInFlightPages = static_cast<Uint32>(m_InFlightPages.size());
-    Stats.PeakNumPages     = m_PeakPageCount;
-
-    Stats.PeakTotalPendingUpdateSize = m_PeakTotalPendingUpdateSize;
-    Stats.PeakUpdateSize             = m_PeakUpdateSize.load(std::memory_order_relaxed);
-
-    Stats.NumBuckets  = static_cast<Uint32>(m_PageSizeToCount.size());
-    Stats.pBucketInfo = m_BucketInfo.data();
 }
 
 void CreateGPUUploadManager(const GPUUploadManagerCreateInfo& CreateInfo,
@@ -1069,4 +1147,44 @@ void CreateGPUUploadManager(const GPUUploadManagerCreateInfo& CreateInfo,
     }
 }
 
+std::string GetGPUUploadManagerStatsString(const GPUUploadManagerStats& MgrStats)
+{
+    std::stringstream ss;
+    for (Uint32 stream = 0; stream < MgrStats.NumStreams; ++stream)
+    {
+        const GPUUploadManagerStreamStats& StreamStats = MgrStats.pStreamStats[stream];
+        ss << "Stream " << GetMemorySizeString(StreamStats.PageSize) << std::endl
+           << "  NumPages: " << StreamStats.NumPages << std::endl;
+
+        for (Uint32 i = 0; i < StreamStats.NumBuckets; ++i)
+        {
+            ss << "      ";
+            const GPUUploadManagerBucketInfo& BucketInfo = StreamStats.pBucketInfo[i];
+            ss << GetMemorySizeString(BucketInfo.PageSize) << ": ";
+            for (Uint32 j = 0; j < BucketInfo.NumPages; ++j)
+            {
+                ss << '#';
+            }
+            ss << " " << std::to_string(BucketInfo.NumPages) << std::endl;
+        }
+
+        ss << "  NumFreePages: " << StreamStats.NumFreePages << std::endl
+           << "  PeakNumPages: " << StreamStats.PeakNumPages << std::endl
+           << "  PeakTotalPendingUpdateSize: " << GetMemorySizeString(StreamStats.PeakTotalPendingUpdateSize) << std::endl
+           << "  PeakUpdateSize: " << GetMemorySizeString(StreamStats.PeakUpdateSize) << std::endl;
+    }
+
+    ss << "NumInFlightPages: " << MgrStats.NumInFlightPages << std::endl;
+
+    return ss.str();
+}
+
 } // namespace Diligent
+
+extern "C"
+{
+    void Diligent_CreateGPUUploadManager(const Diligent::GPUUploadManagerCreateInfo& CreateInfo, Diligent::IGPUUploadManager** ppManager)
+    {
+        Diligent::CreateGPUUploadManager(CreateInfo, ppManager);
+    }
+}
