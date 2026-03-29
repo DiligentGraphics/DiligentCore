@@ -39,7 +39,9 @@ struct GPUUploadManagerCreateInfo
     /// Pointer to the render device. Must not be null.
     IRenderDevice* pDevice DEFAULT_INITIALIZER(nullptr);
 
-    /// Pointer to the device context. Must not be null.
+    /// Pointer to the device context.
+    /// If null, initial pages will be created, but they will not become available until the first call to
+    /// RenderThreadUpdate() with a valid device context pointer.
     IDeviceContext* pContext DEFAULT_INITIALIZER(nullptr);
 
     /// Size of the upload page.
@@ -346,9 +348,8 @@ struct ScheduleTextureUpdateInfo
     IDeviceContext* pContext DEFAULT_INITIALIZER(nullptr);
 
     /// Pointer to the destination texture to update.
-    /// If CopyTexture callback is provided, this parameter will be ignored
-    /// (though the manager will still keep a reference to the texture until the copy operation is scheduled),
-    /// and the callback must perform the copy operation itself.
+    /// If CopyTexture callback is provided, the manager will keep a reference to the texture
+    /// until the copy operation is scheduled by the callback.
     /// Otherwise, this texture will be used as the destination for the copy operation
     ITexture* pDstTexture DEFAULT_INITIALIZER(nullptr);
 
@@ -522,7 +523,11 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
 
     /// Retrieves GPU upload manager statistics.
     ///
-    /// The method must not be called concurrently with RenderThreadUpdate().
+    /// The method must not be called concurrently with RenderThreadUpdate() and GetStats() calls,
+    /// but can be called concurrently with ScheduleBufferUpdate() and ScheduleTextureUpdate() calls.
+    /// 
+    /// Pointers returned in the Stats structure are valid only until the next call to GetStats()
+    /// and must not be used after that.
     VIRTUAL void METHOD(GetStats)(THIS_
                                   GPUUploadManagerStats REF Stats) CONST PURE;
 };
