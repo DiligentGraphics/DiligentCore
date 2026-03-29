@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -463,6 +463,19 @@ TEST(GraphicsAccessories_DynamicAtlasManager, AllocateRandom)
                 Mgr.Free(std::move(R));
         }
     }
+}
+
+TEST(GraphicsAccessories_DynamicAtlasManager, Reset)
+{
+    DynamicAtlasManager Mgr{256, 256};
+    EXPECT_TRUE(Mgr.Allocate(128, 128));
+    EXPECT_TRUE(Mgr.Allocate(64, 64));
+    EXPECT_TRUE(Mgr.Allocate(32, 32));
+    Mgr.Reset();
+    EXPECT_EQ(Mgr.GetFreeRegionCount(), 1U);
+    EXPECT_EQ(Mgr.GetTotalFreeArea(), 256u * 256u);
+    EXPECT_TRUE(Mgr.Allocate(256, 256));
+    Mgr.Reset();
 }
 
 } // namespace
