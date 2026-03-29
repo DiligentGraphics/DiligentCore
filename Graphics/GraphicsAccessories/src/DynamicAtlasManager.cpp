@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -369,6 +369,18 @@ void DynamicAtlasManager::Free(Region&& R)
     R = InvalidRegion;
 }
 
+void DynamicAtlasManager::Reset()
+{
+    m_AllocatedRegions.clear();
+    m_FreeRegionsByWidth.clear();
+    m_FreeRegionsByHeight.clear();
+
+    m_TotalFreeArea = Uint64{m_Width} * Uint64{m_Height};
+
+    m_Root    = std::make_unique<Node>();
+    m_Root->R = Region{0, 0, m_Width, m_Height};
+    RegisterNode(*m_Root);
+}
 
 #if DILIGENT_DEBUG
 
