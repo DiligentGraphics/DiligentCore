@@ -861,6 +861,10 @@ TEXTURE_FORMAT TypelessFormatToUnorm(TEXTURE_FORMAT Fmt);
 /// If the format is not typeless, or cannot be converted to SRGB, it is returned as is.
 TEXTURE_FORMAT TypelessFormatToSRGB(TEXTURE_FORMAT Fmt);
 
+/// Converts format to a corresponding typeless format.
+/// If the format cannot be converted to typeless, it is returned as is.
+TEXTURE_FORMAT FormatToTypeless(TEXTURE_FORMAT Fmt);
+
 /// Checks if the format is an SRGB format
 bool IsSRGBFormat(TEXTURE_FORMAT Fmt);
 
