@@ -2815,6 +2815,180 @@ TEXTURE_FORMAT TypelessFormatToSRGB(TEXTURE_FORMAT Fmt)
     }
 }
 
+TEXTURE_FORMAT FormatToTypeless(TEXTURE_FORMAT Fmt)
+{
+    switch (Fmt)
+    {
+        case TEX_FORMAT_RGBA32_TYPELESS:
+        case TEX_FORMAT_RGBA32_FLOAT:
+        case TEX_FORMAT_RGBA32_UINT:
+        case TEX_FORMAT_RGBA32_SINT:
+            return TEX_FORMAT_RGBA32_TYPELESS;
+
+        case TEX_FORMAT_RGB32_TYPELESS:
+        case TEX_FORMAT_RGB32_FLOAT:
+        case TEX_FORMAT_RGB32_UINT:
+        case TEX_FORMAT_RGB32_SINT:
+            return TEX_FORMAT_RGB32_TYPELESS;
+
+        case TEX_FORMAT_RGBA16_TYPELESS:
+        case TEX_FORMAT_RGBA16_FLOAT:
+        case TEX_FORMAT_RGBA16_UNORM:
+        case TEX_FORMAT_RGBA16_UINT:
+        case TEX_FORMAT_RGBA16_SNORM:
+        case TEX_FORMAT_RGBA16_SINT:
+            return TEX_FORMAT_RGBA16_TYPELESS;
+
+        case TEX_FORMAT_RG32_TYPELESS:
+        case TEX_FORMAT_RG32_FLOAT:
+        case TEX_FORMAT_RG32_UINT:
+        case TEX_FORMAT_RG32_SINT:
+            return TEX_FORMAT_RG32_TYPELESS;
+
+        case TEX_FORMAT_R32G8X24_TYPELESS:
+        case TEX_FORMAT_D32_FLOAT_S8X24_UINT:
+        case TEX_FORMAT_R32_FLOAT_X8X24_TYPELESS:
+        case TEX_FORMAT_X32_TYPELESS_G8X24_UINT:
+            return TEX_FORMAT_R32G8X24_TYPELESS;
+
+        case TEX_FORMAT_RGB10A2_TYPELESS:
+        case TEX_FORMAT_RGB10A2_UNORM:
+        case TEX_FORMAT_RGB10A2_UINT:
+            return TEX_FORMAT_RGB10A2_TYPELESS;
+
+        case TEX_FORMAT_R11G11B10_FLOAT:
+            return Fmt;
+
+        case TEX_FORMAT_RGBA8_TYPELESS:
+        case TEX_FORMAT_RGBA8_UNORM:
+        case TEX_FORMAT_RGBA8_UNORM_SRGB:
+        case TEX_FORMAT_RGBA8_UINT:
+        case TEX_FORMAT_RGBA8_SNORM:
+        case TEX_FORMAT_RGBA8_SINT:
+            return TEX_FORMAT_RGBA8_TYPELESS;
+
+        case TEX_FORMAT_RG16_TYPELESS:
+        case TEX_FORMAT_RG16_FLOAT:
+        case TEX_FORMAT_RG16_UNORM:
+        case TEX_FORMAT_RG16_UINT:
+        case TEX_FORMAT_RG16_SNORM:
+        case TEX_FORMAT_RG16_SINT:
+            return TEX_FORMAT_RG16_TYPELESS;
+
+        case TEX_FORMAT_R32_TYPELESS:
+        case TEX_FORMAT_D32_FLOAT:
+        case TEX_FORMAT_R32_FLOAT:
+        case TEX_FORMAT_R32_UINT:
+        case TEX_FORMAT_R32_SINT:
+            return TEX_FORMAT_R32_TYPELESS;
+
+        case TEX_FORMAT_R24G8_TYPELESS:
+        case TEX_FORMAT_D24_UNORM_S8_UINT:
+        case TEX_FORMAT_R24_UNORM_X8_TYPELESS:
+        case TEX_FORMAT_X24_TYPELESS_G8_UINT:
+            return TEX_FORMAT_R24G8_TYPELESS;
+
+        case TEX_FORMAT_RG8_TYPELESS:
+        case TEX_FORMAT_RG8_UNORM:
+        case TEX_FORMAT_RG8_UINT:
+        case TEX_FORMAT_RG8_SNORM:
+        case TEX_FORMAT_RG8_SINT:
+            return TEX_FORMAT_RG8_TYPELESS;
+
+        case TEX_FORMAT_R16_TYPELESS:
+        case TEX_FORMAT_R16_FLOAT:
+        case TEX_FORMAT_D16_UNORM:
+        case TEX_FORMAT_R16_UNORM:
+        case TEX_FORMAT_R16_UINT:
+        case TEX_FORMAT_R16_SNORM:
+        case TEX_FORMAT_R16_SINT:
+            return TEX_FORMAT_R16_TYPELESS;
+
+        case TEX_FORMAT_R8_TYPELESS:
+        case TEX_FORMAT_R8_UNORM:
+        case TEX_FORMAT_R8_UINT:
+        case TEX_FORMAT_R8_SNORM:
+        case TEX_FORMAT_R8_SINT:
+            return TEX_FORMAT_R8_TYPELESS;
+
+        case TEX_FORMAT_A8_UNORM:
+            return Fmt;
+
+        case TEX_FORMAT_R1_UNORM:
+            return Fmt;
+
+        case TEX_FORMAT_RGB9E5_SHAREDEXP:
+        case TEX_FORMAT_RG8_B8G8_UNORM:
+        case TEX_FORMAT_G8R8_G8B8_UNORM:
+            return Fmt;
+
+        case TEX_FORMAT_BC1_TYPELESS:
+        case TEX_FORMAT_BC1_UNORM:
+        case TEX_FORMAT_BC1_UNORM_SRGB:
+            return TEX_FORMAT_BC1_TYPELESS;
+
+        case TEX_FORMAT_BC2_TYPELESS:
+        case TEX_FORMAT_BC2_UNORM:
+        case TEX_FORMAT_BC2_UNORM_SRGB:
+            return TEX_FORMAT_BC2_TYPELESS;
+
+        case TEX_FORMAT_BC3_TYPELESS:
+        case TEX_FORMAT_BC3_UNORM:
+        case TEX_FORMAT_BC3_UNORM_SRGB:
+            return TEX_FORMAT_BC3_TYPELESS;
+
+        case TEX_FORMAT_BC4_TYPELESS:
+        case TEX_FORMAT_BC4_UNORM:
+        case TEX_FORMAT_BC4_SNORM:
+            return TEX_FORMAT_BC4_TYPELESS;
+
+        case TEX_FORMAT_BC5_TYPELESS:
+        case TEX_FORMAT_BC5_UNORM:
+        case TEX_FORMAT_BC5_SNORM:
+            return TEX_FORMAT_BC5_TYPELESS;
+
+        case TEX_FORMAT_B5G6R5_UNORM:
+        case TEX_FORMAT_B5G5R5A1_UNORM:
+            return Fmt;
+
+        case TEX_FORMAT_BGRA8_TYPELESS:
+        case TEX_FORMAT_BGRA8_UNORM:
+        case TEX_FORMAT_BGRA8_UNORM_SRGB:
+            return TEX_FORMAT_BGRA8_TYPELESS;
+
+        case TEX_FORMAT_R10G10B10_XR_BIAS_A2_UNORM:
+            return Fmt;
+
+        case TEX_FORMAT_BGRX8_TYPELESS:
+        case TEX_FORMAT_BGRX8_UNORM:
+        case TEX_FORMAT_BGRX8_UNORM_SRGB:
+            return TEX_FORMAT_BGRX8_TYPELESS;
+
+        case TEX_FORMAT_BC6H_TYPELESS:
+        case TEX_FORMAT_BC6H_UF16:
+        case TEX_FORMAT_BC6H_SF16:
+            return TEX_FORMAT_BC6H_TYPELESS;
+
+        case TEX_FORMAT_BC7_TYPELESS:
+        case TEX_FORMAT_BC7_UNORM:
+        case TEX_FORMAT_BC7_UNORM_SRGB:
+            return TEX_FORMAT_BC7_TYPELESS;
+
+        case TEX_FORMAT_ETC2_RGB8_UNORM:
+        case TEX_FORMAT_ETC2_RGB8_UNORM_SRGB:
+        case TEX_FORMAT_ETC2_RGB8A1_UNORM:
+        case TEX_FORMAT_ETC2_RGB8A1_UNORM_SRGB:
+        case TEX_FORMAT_ETC2_RGBA8_UNORM:
+        case TEX_FORMAT_ETC2_RGBA8_UNORM_SRGB:
+            return Fmt;
+
+        default:
+            UNEXPECTED("Unexpected texture format");
+            return TEX_FORMAT_UNKNOWN;
+    }
+    static_assert(TEX_FORMAT_NUM_FORMATS == 106, "Please update the switch above to handle the new texture format, if needed");
+}
+
 bool IsSRGBFormat(TEXTURE_FORMAT Fmt)
 {
     return (Fmt == TEX_FORMAT_RGBA8_UNORM_SRGB ||
