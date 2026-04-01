@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -183,8 +183,8 @@ bool DeviceObjectArchive::Deserialize(const CreateInfo& CI) noexcept
 
     Serializer<SerializerMode::Read> Reader{
         SerializedData{
-            const_cast<void*>(CI.pData->GetConstDataPtr()),
-            CI.pData->GetSize(),
+            const_cast<void*>(m_pArchiveData->GetConstDataPtr()),
+            m_pArchiveData->GetSize(),
         },
     };
     ArchiveSerializer<SerializerMode::Read> ArchiveReader{Reader};
