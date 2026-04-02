@@ -121,7 +121,7 @@ typedef void (*GPUBufferUploadEnqueuedCallbackType)(IBuffer* pDstBuffer,
 /// The callback is expected to perform the copy operation itself, using the provided parameters, and schedule it for execution on the GPU.
 ///
 /// \param [in] pContext   - Device context to use for scheduling the copy operation.
-/// \param [in] pSrcBuffer - Source buffer containing the data to copy. The buffer is guaranteed to be valid for the duration of the callback.
+/// \param [in] pSrcBuffer - Source buffer containing the data to copy.
 /// \param [in] SrcOffset  - Offset in the source buffer where the data to copy starts.
 /// \param [in] NumBytes   - Number of bytes to copy.
 /// \param [in] pUserData  - User-provided pointer passed to ScheduleBufferUpdate().
@@ -315,7 +315,7 @@ typedef void (*GPUTextureUploadEnqueuedCallbackType)(ITexture*     pDstTexture,
 /// \param [in] DstMipLevel - Destination mip level in the texture where the update will be applied.
 /// \param [in] DstSlice    - Destination array slice in the texture where the update will be applied.
 /// \param [in] DstBox      - Destination box in the texture where the update will be applied.
-/// \param [in] SrcData     - Source data description. The manager is guaranteed to keep the source data valid for the duration of the callback.
+/// \param [in] SrcData     - Source data description.
 /// \param [in] pUserData   - User-provided pointer passed to ScheduleTextureUpdate().
 ///
 /// If the copy operation was not scheduled by the time the manager is destroyed,
@@ -338,6 +338,28 @@ typedef void (*CopyStagingTextureCallbackType)(IDeviceContext*             pCont
                                                const Box REF               DstBox,
                                                const TextureSubResData REF SrcData,
                                                void*                       pUserData);
+
+
+/// Direct3D11-specific callback function type for copying texture data.
+/// This callback is invoked on the render thread when the manager needs to perform the copy operation for a texture update.
+/// The callback is expected to perform the copy operation itself, using the provided parameters, and schedule it for execution on the GPU.
+///
+/// \param [in] pContext    - Device context to use for scheduling the copy operation.
+/// \param [in] DstMipLevel - Destination mip level in the texture where the update will be applied.
+/// \param [in] DstSlice    - Destination array slice in the texture where the update will be applied.
+/// \param [in] DstBox      - Destination box in the texture where the update will be applied.
+/// \param [in] pSrcTexture - Pointer to the staging texture containing the source data.
+/// \param [in] SrcX        - X offset in the staging texture where the source data starts.
+/// \param [in] SrcY        - Y offset in the staging texture where the source data starts.
+/// \param [in] pUserData   - User-provided pointer passed to ScheduleTextureUpdate().
+typedef void (*CopyStagingD3D11TextureCallbackType)(IDeviceContext* pContext,
+                                                    Uint32          DstMipLevel,
+                                                    Uint32          DstSlice,
+                                                    const Box REF   DstBox,
+                                                    ITexture*       pSrcTexture,
+                                                    Uint32          SrcX,
+                                                    Uint32          SrcY,
+                                                    void*           pUserData);
 
 
 /// Structure describing a texture update operation to be scheduled by IGPUUploadManager::ScheduleTextureUpdate().
@@ -391,7 +413,15 @@ struct ScheduleTextureUpdateInfo
     /// from the source data to the destination texture using its internal staging buffer and copy command.
     /// If the callback is provided, it must perform the copy operation itself. The manager will pass the
     /// necessary parameters to the callback.
+    ///
+    /// \note   This callback is used on all graphics backends, except Direct3D11 because it does not support copying from a
+    ///         buffer to a texture. For Direct3D11, the CopyD3D11Texture callback is used instead, which provides a pointer
+    ///         to the staging texture
     CopyStagingTextureCallbackType CopyTexture DEFAULT_INITIALIZER(nullptr);
+
+    /// Optional Direct3D11-specific callback to perform the copy operation.
+    /// This callback is only called for Direct3D11 backend.
+    CopyStagingD3D11TextureCallbackType CopyD3D11Texture DEFAULT_INITIALIZER(nullptr);
 
     /// Optional pointer to user data that will be passed to the CopyTexture callback.
     void* pCopyTextureData DEFAULT_INITIALIZER(nullptr);
@@ -412,6 +442,8 @@ typedef struct ScheduleTextureUpdateInfo ScheduleTextureUpdateInfo;
 struct GPUUploadManagerBucketInfo
 {
     /// Page size in bytes.
+    /// For Direct3D11 texture upload stream, this is the upload texture size (width and height).
+    /// Otherwise, this is the size of the upload page in bytes.
     Uint32 PageSize DEFAULT_INITIALIZER(0);
 
     /// Number of pages currently in the manager.
@@ -423,7 +455,12 @@ typedef struct GPUUploadManagerBucketInfo GPUUploadManagerBucketInfo;
 /// GPU upload manager stream statistics.
 struct GPUUploadManagerStreamStats
 {
+    /// For Direct3D11 only: texture format for texture upload stream.
+    TEXTURE_FORMAT Format DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
+
     /// Page size in bytes for this stream.
+    /// If Format is not TEX_FORMAT_UNKNOWN, this is the upload texture size (width and height).
+    /// Otherwise, this is the size of the upload page in bytes.
     Uint32 PageSize DEFAULT_INITIALIZER(0);
 
     /// The number of pages in the manager.
@@ -529,7 +566,7 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     /// Pointers returned in the Stats structure are valid only until the next call to GetStats()
     /// and must not be used after that.
     VIRTUAL void METHOD(GetStats)(THIS_
-                                  GPUUploadManagerStats REF Stats) CONST PURE;
+                                  GPUUploadManagerStats REF Stats) PURE;
 };
 DILIGENT_END_INTERFACE
 
