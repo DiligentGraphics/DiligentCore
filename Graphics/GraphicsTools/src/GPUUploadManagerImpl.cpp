@@ -90,6 +90,56 @@ GPUUploadManagerImpl::Page::Writer::~Writer()
     }
 }
 
+
+GPUUploadManagerImpl::Page::StagingTextureAtlas::StagingTextureAtlas(IRenderDevice* pDevice, Uint32 Width, Uint32 Height, TEXTURE_FORMAT Format, const std::string& Name) :
+    Mgr{Width, Height}
+{
+    TextureDesc TexDesc;
+    TexDesc.Format         = Format;
+    TexDesc.Name           = Name.c_str();
+    TexDesc.Type           = RESOURCE_DIM_TEX_2D;
+    TexDesc.Width          = Width;
+    TexDesc.Height         = Height;
+    TexDesc.Usage          = USAGE_STAGING;
+    TexDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
+
+    pDevice->CreateTexture(TexDesc, nullptr, &pTex);
+    VERIFY_EXPR(pTex);
+}
+
+GPUUploadManagerImpl::Page::StagingTextureAtlas::~StagingTextureAtlas()
+{
+    Mgr.Reset();
+}
+
+void* GPUUploadManagerImpl::Page::StagingTextureAtlas::Map(IDeviceContext* pContext)
+{
+    MappedTextureSubresource MappedData;
+    pContext->MapTextureSubresource(pTex, 0, 0, MAP_WRITE, MAP_FLAG_NONE, nullptr, MappedData);
+    RowStride   = static_cast<Uint32>(MappedData.Stride);
+    DepthStride = static_cast<Uint32>(MappedData.DepthStride);
+    return MappedData.pData;
+}
+
+void GPUUploadManagerImpl::Page::StagingTextureAtlas::Unmap(IDeviceContext* pContext)
+{
+    pContext->UnmapTextureSubresource(pTex, 0, 0);
+    RowStride   = 0;
+    DepthStride = 0;
+}
+
+void GPUUploadManagerImpl::Page::StagingTextureAtlas::Reset()
+{
+    Mgr.Reset();
+}
+
+DynamicAtlasManager::Region GPUUploadManagerImpl::Page::StagingTextureAtlas::Allocate(Uint32 Width, Uint32 Height)
+{
+    std::lock_guard<std::mutex> Lock(MgrMtx);
+    return Mgr.Allocate(Width, Height);
+}
+
+
 GPUUploadManagerImpl::Page::Page(Uint32 Size, bool PersistentMapped) noexcept :
     m_Size{Size},
     m_PersistentMapped{PersistentMapped}
@@ -101,13 +151,16 @@ inline bool PersistentMapSupported(IRenderDevice* pDevice)
     return DeviceType == RENDER_DEVICE_TYPE_D3D12 || DeviceType == RENDER_DEVICE_TYPE_VULKAN;
 }
 
-GPUUploadManagerImpl::Page::Page(size_t StreamIndex, IRenderDevice* pDevice, Uint32 Size) :
-    m_StreamIdx{StreamIndex},
+std::atomic<int> GPUUploadManagerImpl::Page::sm_PageCounter{0};
+
+GPUUploadManagerImpl::Page::Page(UploadStream& Stream, IRenderDevice* pDevice, Uint32 Size) :
+    m_pStream{&Stream},
     m_Size{Size},
     m_PersistentMapped{PersistentMapSupported(pDevice)}
 {
-    static std::atomic<int> PageCounter{0};
-    const std::string       Name = std::string{"GPUUploadManagerImpl "} + GetMemorySizeString(Size) + " page " + std::to_string(PageCounter.fetch_add(1));
+    const std::string Name =
+        std::string{"GPUUploadManagerImpl page "} + std::to_string(sm_PageCounter.fetch_add(1)) +
+        " (" + GetMemorySizeString(Size) + ')';
 
     BufferDesc Desc;
     Desc.Name           = Name.c_str();
@@ -116,6 +169,22 @@ GPUUploadManagerImpl::Page::Page(size_t StreamIndex, IRenderDevice* pDevice, Uin
     Desc.CPUAccessFlags = CPU_ACCESS_WRITE;
     pDevice->CreateBuffer(Desc, nullptr, &m_pStagingBuffer);
     VERIFY_EXPR(m_pStagingBuffer != nullptr);
+}
+
+GPUUploadManagerImpl::Page::Page(UploadStream& Stream, IRenderDevice* pDevice, Uint32 Size, TEXTURE_FORMAT Format) :
+    m_pStream{&Stream},
+    m_Size{Size},
+    m_PersistentMapped{PersistentMapSupported(pDevice)},
+    m_pStagingAtlas{
+        std::make_unique<StagingTextureAtlas>(
+            pDevice,
+            Size,
+            Size,
+            Format,
+            std::string{"GPUUploadManagerImpl page "} + std::to_string(sm_PageCounter.fetch_add(1)) +
+                " (" + GetTextureFormatAttribs(Format).Name + ' ' + std::to_string(Size) + 'x' + std::to_string(Size) + ')'),
+    }
+{
 }
 
 GPUUploadManagerImpl::Page::~Page()
@@ -141,6 +210,10 @@ GPUUploadManagerImpl::Page::~Page()
             if (TexOp.CopyTexture != nullptr)
             {
                 TexOp.CopyTexture(nullptr, TexOp.DstMipLevel, TexOp.DstSlice, TexOp.DstBox, TextureSubResData{}, TexOp.pCopyTextureData);
+            }
+            if (TexOp.CopyD3D11Texture != nullptr)
+            {
+                TexOp.CopyD3D11Texture(nullptr, TexOp.DstMipLevel, TexOp.DstSlice, TexOp.DstBox, nullptr, 0, 0, TexOp.pCopyTextureData);
             }
 
             if (TexOp.UploadEnqueued != nullptr)
@@ -251,6 +324,7 @@ Uint32 GPUUploadManagerImpl::Page::Allocate(Uint32 NumBytes, Uint32 Alignment)
 bool GPUUploadManagerImpl::Page::ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& UpdateInfo)
 {
     VERIFY_EXPR(DbgGetWriterCount() > 0);
+    VERIFY(!m_pStagingAtlas, "Buffer updates must not be scheduled on texture-backed pages.");
 
     // Note that the page may be sealed for new writes at this point,
     // but we can still schedule the update since we have an active writer
@@ -308,20 +382,59 @@ bool GPUUploadManagerImpl::Page::ScheduleTextureUpdate(const ScheduleTextureUpda
     // that prevents the page from being submitted for execution.
 
     Uint32 Offset = 0;
-    if (CopyInfo.MemorySize > 0)
+    Uint32 SrcX   = 0;
+    Uint32 SrcY   = 0;
+    if (UpdateInfo.DstBox.IsValid())
     {
-        Offset = Allocate(static_cast<Uint32>(CopyInfo.MemorySize), std::max(kMinimumOffsetAlignment, OffsetAlignment));
-        if (Offset == ~0u)
+        Uint8* pDst           = nullptr;
+        Uint32 DstRowStride   = 0;
+        Uint32 DstDepthStride = 0;
+        size_t DstRowSize     = 0;
+        if (m_pStagingBuffer)
         {
-            return false;
+            Offset = Allocate(static_cast<Uint32>(CopyInfo.MemorySize), std::max(kMinimumOffsetAlignment, OffsetAlignment));
+            if (Offset == ~0u)
+            {
+                return false;
+            }
+            if (m_pData != nullptr)
+            {
+                pDst           = static_cast<Uint8*>(m_pData) + Offset;
+                DstRowStride   = static_cast<Uint32>(CopyInfo.RowStride);
+                DstDepthStride = static_cast<Uint32>(CopyInfo.DepthStride);
+                DstRowSize     = static_cast<size_t>(CopyInfo.RowSize);
+            }
+        }
+        else if (m_pStagingAtlas)
+        {
+            const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(UpdateInfo.pDstTexture->GetDesc().Format);
+
+            DynamicAtlasManager::Region Region = m_pStagingAtlas->Allocate(
+                AlignUp(UpdateInfo.DstBox.Width(), FmtAttribs.BlockWidth),
+                AlignUp(UpdateInfo.DstBox.Height(), FmtAttribs.BlockHeight));
+            if (!Region)
+            {
+                return false;
+            }
+            SrcX = Region.x;
+            SrcY = Region.y;
+
+            const Uint32 ElementSize = FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED ?
+                FmtAttribs.ComponentSize :
+                FmtAttribs.ComponentSize * FmtAttribs.NumComponents;
+
+            DstRowStride   = m_pStagingAtlas->RowStride;
+            DstDepthStride = m_pStagingAtlas->DepthStride;
+
+            pDst       = static_cast<Uint8*>(m_pData) + static_cast<size_t>((SrcY / FmtAttribs.BlockHeight) * DstRowStride + (SrcX / FmtAttribs.BlockWidth) * ElementSize);
+            DstRowSize = Region.width / FmtAttribs.BlockWidth * ElementSize;
         }
 
-        if (m_pData != nullptr)
+        if (pDst != nullptr)
         {
-            Uint8* pDst = static_cast<Uint8*>(m_pData) + Offset;
             if (UpdateInfo.WriteDataCallback != nullptr)
             {
-                UpdateInfo.WriteDataCallback(pDst, static_cast<Uint32>(CopyInfo.RowStride), static_cast<Uint32>(CopyInfo.DepthStride), UpdateInfo.DstBox, UpdateInfo.pWriteDataCallbackUserData);
+                UpdateInfo.WriteDataCallback(pDst, DstRowStride, DstDepthStride, UpdateInfo.DstBox, UpdateInfo.pWriteDataCallbackUserData);
             }
             else if (UpdateInfo.pSrcData != nullptr)
             {
@@ -332,10 +445,10 @@ bool GPUUploadManagerImpl::Page::ScheduleTextureUpdate(const ScheduleTextureUpda
                     for (Uint32 row = 0; row < NumRows; ++row)
                     {
                         const size_t SrcRowOffset = static_cast<size_t>(DepthSlice * UpdateInfo.DepthStride + row * UpdateInfo.Stride);
-                        const size_t DstRowOffset = static_cast<size_t>(DepthSlice * CopyInfo.DepthStride + row * CopyInfo.RowStride);
+                        const size_t DstRowOffset = static_cast<size_t>(DepthSlice * DstDepthStride + row * DstRowStride);
                         const void*  pSrcRow      = static_cast<const Uint8*>(UpdateInfo.pSrcData) + SrcRowOffset;
                         void*        pDstRow      = pDst + DstRowOffset;
-                        std::memcpy(pDstRow, pSrcRow, static_cast<size_t>(CopyInfo.RowSize));
+                        std::memcpy(pDstRow, pSrcRow, DstRowSize);
                     }
                 }
             }
@@ -343,16 +456,25 @@ bool GPUUploadManagerImpl::Page::ScheduleTextureUpdate(const ScheduleTextureUpda
     }
 
     PendingTextureOp Op;
-    Op.pDstTexture      = UpdateInfo.pDstTexture;
-    Op.CopyTexture      = UpdateInfo.CopyTexture;
+    Op.pDstTexture = UpdateInfo.pDstTexture;
+    if (m_pStagingBuffer)
+    {
+        Op.CopyTexture = UpdateInfo.CopyTexture;
+    }
+    else if (m_pStagingAtlas)
+    {
+        Op.CopyD3D11Texture = UpdateInfo.CopyD3D11Texture;
+    }
     Op.pCopyTextureData = UpdateInfo.pCopyTextureData;
+    Op.SrcX             = SrcX;
+    Op.SrcY             = SrcY;
     Op.SrcOffset        = Offset;
     Op.SrcStride        = static_cast<Uint32>(CopyInfo.RowStride);
     Op.SrcDepthStride   = static_cast<Uint32>(CopyInfo.DepthStride);
     Op.DstMipLevel      = UpdateInfo.DstMipLevel;
     Op.DstSlice         = UpdateInfo.DstSlice;
     Op.DstBox           = UpdateInfo.DstBox;
-    if (Op.CopyTexture == nullptr)
+    if (Op.CopyTexture == nullptr && Op.CopyD3D11Texture == nullptr)
     {
         Op.UploadEnqueued      = UpdateInfo.UploadEnqueued;
         Op.pUploadEnqueuedData = UpdateInfo.pUploadEnqueuedData;
@@ -362,6 +484,22 @@ bool GPUUploadManagerImpl::Page::ScheduleTextureUpdate(const ScheduleTextureUpda
     return true;
 }
 
+void GPUUploadManagerImpl::Page::UnmapStagingResource(IDeviceContext* pContext)
+{
+    VERIFY_EXPR(pContext != nullptr);
+    VERIFY_EXPR(m_pData != nullptr);
+    VERIFY_EXPR((m_pStagingBuffer != nullptr) ^ (m_pStagingAtlas != nullptr));
+    if (m_pStagingBuffer)
+    {
+        pContext->UnmapBuffer(m_pStagingBuffer, MAP_WRITE);
+    }
+    else if (m_pStagingAtlas)
+    {
+        m_pStagingAtlas->Unmap(pContext);
+    }
+    m_pData = nullptr;
+}
+
 void GPUUploadManagerImpl::Page::ExecutePendingOps(IDeviceContext* pContext, Uint64 FenceValue)
 {
     VERIFY(DbgIsSealed(), "Page must be sealed before executing pending operations");
@@ -369,9 +507,7 @@ void GPUUploadManagerImpl::Page::ExecutePendingOps(IDeviceContext* pContext, Uin
 
     if (m_pData != nullptr && !m_PersistentMapped)
     {
-        VERIFY_EXPR(pContext != nullptr);
-        pContext->UnmapBuffer(m_pStagingBuffer, MAP_WRITE);
-        m_pData = nullptr;
+        UnmapStagingResource(pContext);
     }
 
     for (PendingOp Op; m_PendingOps.Dequeue(Op);)
@@ -411,12 +547,46 @@ void GPUUploadManagerImpl::Page::ExecutePendingOps(IDeviceContext* pContext, Uin
             {
                 TexOp.CopyTexture(pContext, TexOp.DstMipLevel, TexOp.DstSlice, TexOp.DstBox, SrcData, TexOp.pCopyTextureData);
             }
+            else if (TexOp.CopyD3D11Texture)
+            {
+                TexOp.CopyD3D11Texture(pContext, TexOp.DstMipLevel, TexOp.DstSlice, TexOp.DstBox, m_pStagingAtlas->pTex, TexOp.SrcX, TexOp.SrcY, TexOp.pCopyTextureData);
+            }
             else
             {
                 if (pContext != nullptr && TexOp.pDstTexture != nullptr)
                 {
-                    pContext->UpdateTexture(TexOp.pDstTexture, TexOp.DstMipLevel, TexOp.DstSlice, TexOp.DstBox, SrcData,
-                                            RESOURCE_STATE_TRANSITION_MODE_TRANSITION, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                    if (m_pStagingBuffer)
+                    {
+                        pContext->UpdateTexture(TexOp.pDstTexture, TexOp.DstMipLevel, TexOp.DstSlice, TexOp.DstBox, SrcData,
+                                                RESOURCE_STATE_TRANSITION_MODE_TRANSITION, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                    }
+                    else if (m_pStagingAtlas)
+                    {
+                        CopyTextureAttribs CopyAttribs;
+
+                        CopyAttribs.pSrcTexture              = m_pStagingAtlas->pTex;
+                        CopyAttribs.pDstTexture              = TexOp.pDstTexture;
+                        CopyAttribs.DstTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+                        CopyAttribs.SrcTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_VERIFY;
+                        CopyAttribs.DstMipLevel              = TexOp.DstMipLevel;
+                        CopyAttribs.DstSlice                 = TexOp.DstSlice;
+
+                        const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(TexOp.pDstTexture->GetDesc().Format);
+
+                        Box SrcBox;
+                        SrcBox.MinX = TexOp.SrcX;
+                        SrcBox.MaxX = AlignUp(TexOp.SrcX + TexOp.DstBox.Width(), FmtAttribs.BlockWidth);
+                        SrcBox.MinY = TexOp.SrcY;
+                        SrcBox.MaxY = AlignUp(TexOp.SrcY + TexOp.DstBox.Height(), FmtAttribs.BlockHeight);
+
+                        CopyAttribs.pSrcBox = &SrcBox;
+
+                        CopyAttribs.DstX = TexOp.DstBox.MinX;
+                        CopyAttribs.DstY = TexOp.DstBox.MinY;
+                        CopyAttribs.DstZ = TexOp.DstBox.MinZ;
+
+                        pContext->CopyTexture(CopyAttribs);
+                    }
                 }
 
                 if (TexOp.UploadEnqueued != nullptr)
@@ -440,13 +610,25 @@ void GPUUploadManagerImpl::Page::Reset(IDeviceContext* pContext)
     m_State.store(SEALED_BIT);
     m_Enqueued.store(false);
     m_FenceValue = 0;
+    if (m_pStagingAtlas)
+    {
+        m_pStagingAtlas->Reset();
+    }
 
     if (pContext != nullptr && m_pData == nullptr)
     {
         const MAP_FLAGS MapFlags = m_PersistentMapped ?
             MAP_FLAG_DO_NOT_WAIT :
             MAP_FLAG_NONE;
-        pContext->MapBuffer(m_pStagingBuffer, MAP_WRITE, MapFlags, m_pData);
+        if (m_pStagingBuffer)
+        {
+            pContext->MapBuffer(m_pStagingBuffer, MAP_WRITE, MapFlags, m_pData);
+        }
+        else if (m_pStagingAtlas)
+        {
+            m_pData = m_pStagingAtlas->Map(pContext);
+        }
+
         VERIFY_EXPR(m_pData != nullptr);
     }
 }
@@ -464,11 +646,10 @@ void GPUUploadManagerImpl::Page::ReleaseStagingBuffer(IDeviceContext* pContext)
 {
     if (m_pData != nullptr)
     {
-        VERIFY_EXPR(pContext != nullptr);
-        pContext->UnmapBuffer(m_pStagingBuffer, MAP_WRITE);
-        m_pData = nullptr;
+        UnmapStagingResource(pContext);
     }
     m_pStagingBuffer.Release();
+    m_pStagingAtlas.reset();
 }
 
 void GPUUploadManagerImpl::FreePages::Push(Page** ppPages, size_t NumPages)
@@ -528,20 +709,21 @@ GPUUploadManagerImpl::Page* GPUUploadManagerImpl::FreePages::Pop(Uint32 Required
 }
 
 GPUUploadManagerImpl::UploadStream::UploadStream(GPUUploadManagerImpl& Mgr,
-                                                 size_t                StreamIdx,
+                                                 IDeviceContext*       pContext,
                                                  Uint32                PageSize,
                                                  Uint32                MaxPageCount,
-                                                 Uint32                InitialPageCount) noexcept :
+                                                 Uint32                InitialPageCount,
+                                                 TEXTURE_FORMAT        Format) noexcept :
     m_Mgr{Mgr},
-    m_StreamIdx{StreamIdx},
     m_PageSize{AlignUpToPowerOfTwo(PageSize)},
     // Ensure that the max page count is at least 2 to allow for double buffering, unless it's set to 0 which means no limit.
-    m_MaxPageCount{MaxPageCount != 0 ? std::max(MaxPageCount, 2u) : 0}
+    m_MaxPageCount{MaxPageCount != 0 ? std::max(MaxPageCount, 2u) : 0},
+    m_Format{Format}
 {
-    if (m_Mgr.m_pContext)
+    if (pContext != nullptr)
     {
         // Create at least one page.
-        if (Page* pPage = CreatePage(m_Mgr.m_pContext))
+        if (Page* pPage = CreatePage(pContext))
         {
             pPage->Unseal();
             m_pCurrentPage.store(pPage, std::memory_order_release);
@@ -557,9 +739,9 @@ GPUUploadManagerImpl::UploadStream::UploadStream(GPUUploadManagerImpl& Mgr,
         InitialPageCount = std::min(InitialPageCount, m_MaxPageCount);
     while (m_Pages.size() < InitialPageCount)
     {
-        if (Page* pPage = CreatePage(m_Mgr.m_pContext))
+        if (Page* pPage = CreatePage(pContext))
         {
-            if (m_Mgr.m_pContext != nullptr)
+            if (pContext != nullptr)
             {
                 // If a context is provided, we can immediately map the staging buffer and
                 // prepare the page for use, so we push it to the free list.
@@ -569,6 +751,8 @@ GPUUploadManagerImpl::UploadStream::UploadStream(GPUUploadManagerImpl& Mgr,
             {
                 // If no context is provided, the page needs to be mapped in Reset(),
                 // so we add it to the list of in-flight pages.
+                // Since initial fence value is 0, these pages will become available after first call
+                // to RenderThreadUpdate().
                 m_Mgr.m_InFlightPages.emplace_back(pPage);
             }
         }
@@ -580,34 +764,112 @@ GPUUploadManagerImpl::UploadStream::UploadStream(GPUUploadManagerImpl& Mgr,
     }
 }
 
+GPUUploadManagerImpl::UploadStream* GPUUploadManagerImpl::TextureUploadStreams::GetStreamForFormat(IDeviceContext* pContext, TEXTURE_FORMAT Format)
+{
+    Format = FormatToTypeless(Format);
+
+    {
+        std::shared_lock<std::shared_mutex> Lock{m_Mtx};
+
+        auto it = m_StreamsByFormat.find(Format);
+        if (it != m_StreamsByFormat.end())
+            return it->second;
+    }
+
+    std::unique_lock<std::shared_mutex> Lock{m_Mtx};
+    if (m_Stopping.load(std::memory_order_acquire))
+        return nullptr;
+
+    auto it = m_StreamsByFormat.find(Format);
+    if (it != m_StreamsByFormat.end())
+        return it->second;
+
+    const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(Format);
+
+    const float BPP =
+        static_cast<float>(FmtAttribs.ComponentSize * FmtAttribs.NumComponents) /
+        static_cast<float>(FmtAttribs.BlockWidth * FmtAttribs.BlockHeight);
+
+    const float  fPageSize = std::sqrt(static_cast<float>(m_PageSizeInBytes) / BPP);
+    const Uint32 PageSize  = std::min(std::max(64u, AlignUpToPowerOfTwo(static_cast<Uint32>(fPageSize))), 16384u);
+
+    // Don't create initial pages from worker threads because this requires access to
+    // m_InFlightPages, which is not protected by a mutex.
+    Uint32 InitialPageCount = pContext != nullptr ? 1 : 0;
+
+    UploadStreamUniquePtr NewStream = std::make_unique<UploadStream>(m_Mgr, pContext, PageSize, m_MaxPageCount, InitialPageCount, Format);
+
+    it = m_StreamsByFormat.emplace(Format, NewStream.get()).first;
+
+    {
+        std::lock_guard<std::mutex> NewStreamsLock{m_NewStreamsMtx};
+        m_NewStreams.push_back(std::move(NewStream));
+        m_HasNewStreams.store(true);
+    }
+
+    return it->second;
+}
+
+void GPUUploadManagerImpl::TextureUploadStreams::MoveNewStreamsToManager()
+{
+    if (!m_HasNewStreams.load())
+        return;
+
+    std::lock_guard<std::mutex> Lock{m_NewStreamsMtx};
+    m_Mgr.m_Streams.reserve(m_Mgr.m_Streams.size() + m_NewStreams.size());
+    for (UploadStreamUniquePtr& Stream : m_NewStreams)
+    {
+        m_Mgr.m_Streams.push_back(std::move(Stream));
+    }
+    m_NewStreams.clear();
+    m_HasNewStreams.store(false);
+}
+
+void GPUUploadManagerImpl::TextureUploadStreams::SetStopping()
+{
+    // Set the stop flag while holding the mutex to ensure that
+    // no new streams are added after we set the flag.
+    std::unique_lock<std::shared_mutex> Lock{m_Mtx};
+    m_Stopping.store(true, std::memory_order_release);
+}
+
 GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, const GPUUploadManagerCreateInfo& CI) :
     TBase{pRefCounters},
     m_pDevice{CI.pDevice},
     m_pContext{CI.pContext},
     m_TextureUpdateOffsetAlignment{m_pDevice->GetAdapterInfo().Buffer.TextureUpdateOffsetAlignment},
-    m_TextureUpdateStrideAlignment{m_pDevice->GetAdapterInfo().Buffer.TextureUpdateStrideAlignment},
-    m_Streams{
-        UploadStream{
-            *this,
-            0,
-            CI.PageSize,
-            CI.MaxPageCount,
-            CI.InitialPageCount,
-        },
-        UploadStream{
-            *this,
-            1,
-            std::max(CI.LargePageSize, CI.PageSize * 2),
-            CI.MaxLargePageCount,
-            CI.InitialLargePageCount,
-        },
-    }
+    m_TextureUpdateStrideAlignment{m_pDevice->GetAdapterInfo().Buffer.TextureUpdateStrideAlignment}
 {
+    m_Streams.reserve(2);
+    m_Streams.push_back(std::make_unique<UploadStream>(
+        *this,
+        CI.pContext,
+        CI.PageSize,
+        CI.MaxPageCount,
+        CI.InitialPageCount));
+    m_pNormalStream = m_Streams.back().get();
+
+    m_Streams.push_back(std::make_unique<UploadStream>(
+        *this,
+        CI.pContext,
+        std::max(CI.LargePageSize, CI.PageSize * 2),
+        CI.MaxLargePageCount,
+        CI.InitialLargePageCount));
+    m_pLargeStream = m_Streams.back().get();
+
     FenceDesc Desc;
     Desc.Name = "GPU upload manager fence";
     Desc.Type = FENCE_TYPE_CPU_WAIT_ONLY;
     m_pDevice->CreateFence(Desc, &m_pFence);
     VERIFY_EXPR(m_pFence != nullptr);
+
+    if (CI.pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D11)
+    {
+        m_pTextureStreams = std::make_unique<TextureUploadStreams>(
+            *this,
+            m_pLargeStream->GetPageSize(),
+            CI.MaxLargePageCount);
+    }
 }
 
 void GPUUploadManagerImpl::UploadStream::ReleaseStagingBuffers()
@@ -626,9 +888,16 @@ void GPUUploadManagerImpl::UploadStream::SignalStop()
 GPUUploadManagerImpl::~GPUUploadManagerImpl()
 {
     m_Stopping.store(true, std::memory_order_release);
-    for (UploadStream& Stream : m_Streams)
+
+    if (m_pTextureStreams)
     {
-        Stream.SignalStop();
+        m_pTextureStreams->SetStopping();
+        m_pTextureStreams->MoveNewStreamsToManager();
+    }
+
+    for (UploadStreamUniquePtr& Stream : m_Streams)
+    {
+        Stream->SignalStop();
     }
 
     // Wait for any running updates to finish.
@@ -637,9 +906,9 @@ GPUUploadManagerImpl::~GPUUploadManagerImpl()
         m_LastRunningThreadFinishedSignal.Wait();
     }
 
-    for (UploadStream& Stream : m_Streams)
+    for (UploadStreamUniquePtr& Stream : m_Streams)
     {
-        Stream.ReleaseStagingBuffers();
+        Stream->ReleaseStagingBuffers();
     }
 }
 
@@ -657,19 +926,24 @@ void GPUUploadManagerImpl::RenderThreadUpdate(IDeviceContext* pContext)
         DEV_CHECK_ERR(pContext == m_pContext, "The context provided to RenderThreadUpdate must be the same as the one used to create the GPUUploadManagerImpl");
     }
 
+    if (m_pTextureStreams)
+    {
+        m_pTextureStreams->MoveNewStreamsToManager();
+    }
+
     // 1. Reclaim completed pages to make them available.
     ReclaimCompletedPages(pContext);
 
     // 2. Add free pages to accommodate pending updates.
-    for (UploadStream& Stream : m_Streams)
+    for (UploadStreamUniquePtr& Stream : m_Streams)
     {
-        Stream.AddFreePages(pContext);
+        Stream->AddFreePages(pContext);
     }
 
     // 3. Seal and swap the current page.
-    for (UploadStream& Stream : m_Streams)
+    for (UploadStreamUniquePtr& Stream : m_Streams)
     {
-        Stream.SealAndSwapCurrentPage(pContext);
+        Stream->SealAndSwapCurrentPage(pContext);
     }
 
     // 4. Process pending pages and move them to in-fligt list.
@@ -677,23 +951,23 @@ void GPUUploadManagerImpl::RenderThreadUpdate(IDeviceContext* pContext)
 
     // 5. Lastly, process pages to release. Do this at the very end so that newly available free pages
     //    first get a chance to be used for pending updates.
-    for (UploadStream& Stream : m_Streams)
+    for (UploadStreamUniquePtr& Stream : m_Streams)
     {
-        Stream.ProcessPagesToRelease(pContext);
+        Stream->ProcessPagesToRelease(pContext);
     }
 
     pContext->EnqueueSignal(m_pFence, m_NextFenceValue++);
 
-    for (UploadStream& Stream : m_Streams)
+    for (UploadStreamUniquePtr& Stream : m_Streams)
     {
-        Stream.SignalPageRotated();
+        Stream->SignalPageRotated();
     }
 }
 
 GPUUploadManagerImpl::UploadStream& GPUUploadManagerImpl::GetStreamForUpdateSize(Uint32 UpdateSize)
 {
-    const Uint32 LargeUpdateThreshold = m_Streams[static_cast<size_t>(UploadStreamType::Normal)].GetPageSize();
-    return m_Streams[static_cast<size_t>(UpdateSize > LargeUpdateThreshold ? UploadStreamType::Large : UploadStreamType::Normal)];
+    const Uint32 LargeUpdateThreshold = m_pNormalStream->GetPageSize();
+    return UpdateSize > LargeUpdateThreshold ? *m_pLargeStream : *m_pNormalStream;
 }
 
 void GPUUploadManagerImpl::UploadStream::ScheduleUpdate(IDeviceContext* pContext,
@@ -738,6 +1012,7 @@ void GPUUploadManagerImpl::UploadStream::ScheduleUpdate(IDeviceContext* pContext
 
     auto UpdatePendingSizeAndTryRotate = [&](Page* P) {
         Uint64 PageEpoch = m_PageRotatedSignal.CurrentEpoch();
+        // Note that for texture pages, UpdateSize is the texture dimension.
         if (!TryRotatePage(pContext, P, UpdateSize))
         {
             // Atomically update the max pending update size to ensure the next page is large enough
@@ -830,16 +1105,36 @@ void GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo
     };
     ScheduleUpdateData UpdateData{
         UpdateInfo,
-        GetBufferToTextureCopyInfo(TexDesc.Format, UpdateInfo.DstBox, m_TextureUpdateStrideAlignment),
-        m_TextureUpdateOffsetAlignment,
+        !m_pTextureStreams ?
+            GetBufferToTextureCopyInfo(TexDesc.Format, UpdateInfo.DstBox, m_TextureUpdateStrideAlignment) :
+            BufferToTextureCopyInfo{},
+        !m_pTextureStreams ?
+            m_TextureUpdateOffsetAlignment :
+            0,
     };
 
-    UploadStream& Stream = GetStreamForUpdateSize(static_cast<Uint32>(UpdateData.CopyInfo.MemorySize));
-    Stream.ScheduleUpdate(UpdateInfo.pContext, static_cast<Uint32>(UpdateData.CopyInfo.MemorySize), &UpdateData,
-                          [](Page::Writer& Writer, const void* pData) {
-                              const ScheduleUpdateData* pUpdateData = static_cast<const ScheduleUpdateData*>(pData);
-                              return Writer.ScheduleTextureUpdate(pUpdateData->UpdateInfo, pUpdateData->CopyInfo, pUpdateData->OffsetAlignment);
-                          });
+    if (m_Stopping.load(std::memory_order_acquire))
+        return;
+
+    UploadStream* pStream = m_pTextureStreams ?
+        m_pTextureStreams->GetStreamForFormat(UpdateData.UpdateInfo.pContext, TexDesc.Format) :
+        &GetStreamForUpdateSize(static_cast<Uint32>(UpdateData.CopyInfo.MemorySize));
+    if (pStream == nullptr)
+    {
+        // GetStreamForFormat can return null if the manager is stopping.
+        return;
+    }
+
+    // For texture updates, use the maximum upload region size as the update size.
+    const Uint32 UpdateSize = m_pTextureStreams ?
+        std::max(UpdateInfo.DstBox.Width(), UpdateInfo.DstBox.Height()) :
+        static_cast<Uint32>(UpdateData.CopyInfo.MemorySize);
+
+    pStream->ScheduleUpdate(UpdateInfo.pContext, UpdateSize, &UpdateData,
+                            [](Page::Writer& Writer, const void* pData) {
+                                const ScheduleUpdateData* pUpdateData = static_cast<const ScheduleUpdateData*>(pData);
+                                return Writer.ScheduleTextureUpdate(pUpdateData->UpdateInfo, pUpdateData->CopyInfo, pUpdateData->OffsetAlignment);
+                            });
 }
 
 GPUUploadManagerImpl::Page* GPUUploadManagerImpl::UploadStream::CreatePage(IDeviceContext* pContext, Uint32 RequiredSize)
@@ -854,7 +1149,9 @@ GPUUploadManagerImpl::Page* GPUUploadManagerImpl::UploadStream::CreatePage(IDevi
     while (PageSize < RequiredSize)
         PageSize *= 2;
 
-    std::unique_ptr<Page> NewPage = std::make_unique<Page>(m_StreamIdx, m_Mgr.m_pDevice, PageSize);
+    std::unique_ptr<Page> NewPage = m_Format != TEX_FORMAT_UNKNOWN ?
+        std::make_unique<Page>(*this, m_Mgr.m_pDevice, PageSize, m_Format) :
+        std::make_unique<Page>(*this, m_Mgr.m_pDevice, PageSize);
 
     Page* P = NewPage.get();
     if (pContext != nullptr)
@@ -961,7 +1258,7 @@ void GPUUploadManagerImpl::ReclaimCompletedPages(IDeviceContext* pContext)
     {
         for (Page* P : m_TmpPages)
         {
-            m_Streams[P->GetStreamIndex()].AddFreePage(P);
+            P->GetStream()->AddFreePage(P);
         }
         m_TmpPages.clear();
     }
@@ -973,7 +1270,11 @@ void GPUUploadManagerImpl::UploadStream::AddFreePages(IDeviceContext* pContext)
     VERIFY_EXPR(pContext != nullptr);
 
     const Uint32 TotalPendingSize = m_TotalPendingUpdateSize.exchange(0, std::memory_order_acq_rel);
-    const Uint32 MinimalPageCount = std::max((TotalPendingSize + m_PageSize - 1) / m_PageSize, 1u);
+    const Uint32 MinimalPageCount = m_Format != TEX_FORMAT_UNKNOWN ?
+        (TotalPendingSize > 0 ? 1 : 0) : // For texture streams, TotalPendingSize is a sum of linear update region dimensions, which
+                                         // is not informative for determining the number of pages needed, so we just add 1 page
+                                         // if there are pending updates.
+        std::max((TotalPendingSize + m_PageSize - 1) / m_PageSize, 1u);
 
     m_PeakTotalPendingUpdateSize = std::max(m_PeakTotalPendingUpdateSize, TotalPendingSize);
 
@@ -1063,6 +1364,7 @@ void GPUUploadManagerImpl::ProcessPendingPages(IDeviceContext* pContext)
 
 GPUUploadManagerImpl::Page* GPUUploadManagerImpl::UploadStream::AcquireFreePage(IDeviceContext* pContext, Uint32 RequiredSize)
 {
+    // For texture pages, all sizes are texture dimensions.
     Uint32 MaxPendingUpdateSize = std::max(m_MaxPendingUpdateSize.load(std::memory_order_acquire), RequiredSize);
 
     Page* P = m_FreePages.Pop(MaxPendingUpdateSize);
@@ -1108,6 +1410,7 @@ void GPUUploadManagerImpl::UploadStream::GetStats(GPUUploadManagerStreamStats& S
         m_BucketInfo.emplace_back(GPUUploadManagerBucketInfo{it.first, it.second});
     }
 
+    Stats.Format                     = m_Format;
     Stats.PageSize                   = m_PageSize;
     Stats.NumPages                   = static_cast<Uint32>(m_Pages.size());
     Stats.NumFreePages               = static_cast<Uint32>(m_FreePages.Size());
@@ -1118,15 +1421,16 @@ void GPUUploadManagerImpl::UploadStream::GetStats(GPUUploadManagerStreamStats& S
     Stats.pBucketInfo                = m_BucketInfo.data();
 }
 
-void GPUUploadManagerImpl::GetStats(GPUUploadManagerStats& Stats) const
+void GPUUploadManagerImpl::GetStats(GPUUploadManagerStats& Stats)
 {
+    m_StreamStats.resize(m_Streams.size());
     for (size_t i = 0; i < m_Streams.size(); ++i)
     {
-        m_Streams[i].GetStats(m_StreamStats[i]);
+        m_Streams[i]->GetStats(m_StreamStats[i]);
     }
 
     Stats.pStreamStats = m_StreamStats.data();
-    Stats.NumStreams   = static_cast<Uint32>(m_Streams.size());
+    Stats.NumStreams   = static_cast<Uint32>(m_StreamStats.size());
 
     Stats.NumInFlightPages = static_cast<Uint32>(m_InFlightPages.size());
 }
@@ -1153,14 +1457,30 @@ std::string GetGPUUploadManagerStatsString(const GPUUploadManagerStats& MgrStats
     for (Uint32 stream = 0; stream < MgrStats.NumStreams; ++stream)
     {
         const GPUUploadManagerStreamStats& StreamStats = MgrStats.pStreamStats[stream];
-        ss << "Stream " << GetMemorySizeString(StreamStats.PageSize) << std::endl
-           << "  NumPages: " << StreamStats.NumPages << std::endl;
+        ss << "Stream ";
+        if (StreamStats.Format == TEX_FORMAT_UNKNOWN)
+        {
+            ss << GetMemorySizeString(StreamStats.PageSize) << std::endl;
+        }
+        else
+        {
+            ss << GetTextureFormatAttribs(StreamStats.Format).Name << ' ' << StreamStats.PageSize << 'x' << StreamStats.PageSize << std::endl;
+        }
+        ss << "  NumPages: " << StreamStats.NumPages << std::endl;
 
         for (Uint32 i = 0; i < StreamStats.NumBuckets; ++i)
         {
             ss << "      ";
             const GPUUploadManagerBucketInfo& BucketInfo = StreamStats.pBucketInfo[i];
-            ss << GetMemorySizeString(BucketInfo.PageSize) << ": ";
+            if (StreamStats.Format == TEX_FORMAT_UNKNOWN)
+            {
+                ss << GetMemorySizeString(BucketInfo.PageSize);
+            }
+            else
+            {
+                ss << BucketInfo.PageSize << 'x' << BucketInfo.PageSize;
+            }
+            ss << ": ";
             for (Uint32 j = 0; j < BucketInfo.NumPages; ++j)
             {
                 ss << '#';

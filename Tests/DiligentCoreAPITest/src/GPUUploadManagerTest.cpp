@@ -747,9 +747,10 @@ void TestTextureUpdates(TEXTURE_FORMAT Format, RESOURCE_DIMENSION Type, Uint32 F
     GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
     IRenderDevice*         pDevice  = pEnv->GetDevice();
     IDeviceContext*        pContext = pEnv->GetDeviceContext();
-    if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D11)
+
+    if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D11 && Type == RESOURCE_DIM_TEX_3D)
     {
-        GTEST_SKIP() << "Texture updates are not yet implemented in D3D11";
+        GTEST_SKIP() << "3D texture updates are not supported in D3D11";
     }
 
     GPUTestingEnvironment::ScopedReset AutoReset;
@@ -874,6 +875,43 @@ void TestTextureUpdates(TEXTURE_FORMAT Format, RESOURCE_DIMENSION Type, Uint32 F
                                                             RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
                                     delete ppTexture;
                                 };
+
+                            UpdateInfo.CopyD3D11Texture =
+                                [](IDeviceContext* pContext,
+                                   Uint32          DstMipLevel,
+                                   Uint32          DstSlice,
+                                   const Box&      DstBox,
+                                   ITexture*       pSrcTexture,
+                                   Uint32          SrcX,
+                                   Uint32          SrcY,
+                                   void*           pUserData) {
+                                    ITexture** ppTexture = static_cast<ITexture**>(pUserData);
+
+                                    CopyTextureAttribs CopyAttribs;
+                                    CopyAttribs.pSrcTexture = pSrcTexture;
+                                    CopyAttribs.pDstTexture = *ppTexture;
+                                    CopyAttribs.DstMipLevel = DstMipLevel;
+                                    CopyAttribs.DstSlice    = DstSlice;
+                                    CopyAttribs.DstX        = DstBox.MinX;
+                                    CopyAttribs.DstY        = DstBox.MinY;
+                                    CopyAttribs.DstZ        = DstBox.MinZ;
+
+                                    const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(CopyAttribs.pDstTexture->GetDesc().Format);
+
+                                    Box SrcBox;
+                                    SrcBox.MinX = SrcX;
+                                    SrcBox.MinY = SrcY;
+                                    SrcBox.MaxX = AlignUp(SrcX + DstBox.Width(), FmtAttribs.BlockWidth);
+                                    SrcBox.MaxY = AlignUp(SrcY + DstBox.Height(), FmtAttribs.BlockHeight);
+
+                                    CopyAttribs.pSrcBox = &SrcBox;
+
+                                    CopyAttribs.DstTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+
+                                    pContext->CopyTexture(CopyAttribs);
+
+                                    delete ppTexture;
+                                };
                         }
 
                         pUploadManager->ScheduleTextureUpdate(UpdateInfo);
@@ -948,10 +986,6 @@ TEST(GPUUploadManagerTest, ReleaseTextureCallbackResources)
     GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
     IRenderDevice*         pDevice  = pEnv->GetDevice();
     IDeviceContext*        pContext = pEnv->GetDeviceContext();
-    if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D11)
-    {
-        GTEST_SKIP() << "Texture updates are not yet implemented in D3D11";
-    }
 
     GPUTestingEnvironment::ScopedReset AutoReset;
 
@@ -960,8 +994,8 @@ TEST(GPUUploadManagerTest, ReleaseTextureCallbackResources)
     CreateGPUUploadManager(CreateInfo, &pUploadManager);
     ASSERT_TRUE(pUploadManager != nullptr);
 
-    bool UploadEnqueuedCallbackCalled = false;
-    bool CopyTextureCallbackCalled    = false;
+    int UploadEnqueuedCallbackCalled = 0;
+    int CopyTextureCallbackCalled    = 0;
 
     auto UploadEnqueuedCallback = MakeCallback(
         [&UploadEnqueuedCallbackCalled](ITexture*  pDstTexture,
@@ -971,22 +1005,41 @@ TEST(GPUUploadManagerTest, ReleaseTextureCallbackResources)
             EXPECT_EQ(pDstTexture, nullptr);
             EXPECT_EQ(DstMipLevel, 1u);
             EXPECT_EQ(DstSlice, 2u);
-            UploadEnqueuedCallbackCalled = true;
+            ++UploadEnqueuedCallbackCalled;
         });
 
-    auto CopyTextureCallback = MakeCallback(
-        [&CopyTextureCallbackCalled](IDeviceContext*          pContext,
-                                     Uint32                   DstMipLevel,
-                                     Uint32                   DstSlice,
-                                     const Box&               DstBox,
-                                     const TextureSubResData& SrcData) {
+    auto CopyTextureCallback =
+        [](IDeviceContext*          pContext,
+           Uint32                   DstMipLevel,
+           Uint32                   DstSlice,
+           const Box&               DstBox,
+           const TextureSubResData& SrcData,
+           void*                    pUserData) {
+            int& CopyTextureCallbackCalled = *static_cast<int*>(pUserData);
             EXPECT_EQ(pContext, nullptr);
             EXPECT_EQ(DstMipLevel, 3u);
             EXPECT_EQ(DstSlice, 4u);
             EXPECT_EQ(SrcData.pData, nullptr);
             EXPECT_EQ(SrcData.pSrcBuffer, nullptr);
-            CopyTextureCallbackCalled = true;
-        });
+            ++CopyTextureCallbackCalled;
+        };
+
+    auto CopyD3D11TextureCallback =
+        [](IDeviceContext* pContext,
+           Uint32          DstMipLevel,
+           Uint32          DstSlice,
+           const Box&      DstBox,
+           ITexture*       pSrcTexture,
+           Uint32          SrcX,
+           Uint32          SrcY,
+           void*           pUserData) {
+            int& CopyTextureCallbackCalled = *static_cast<int*>(pUserData);
+            EXPECT_EQ(pContext, nullptr);
+            EXPECT_EQ(DstMipLevel, 3u);
+            EXPECT_EQ(DstSlice, 4u);
+            EXPECT_EQ(pSrcTexture, nullptr);
+            ++CopyTextureCallbackCalled;
+        };
 
     TextureDesc TexDesc;
     TexDesc.Name      = "GPUUploadManagerTest texture";
@@ -1001,6 +1054,19 @@ TEST(GPUUploadManagerTest, ReleaseTextureCallbackResources)
     RefCntAutoPtr<ITexture> pTexture;
     pDevice->CreateTexture(TexDesc, nullptr, &pTexture);
     ASSERT_NE(pTexture, nullptr);
+
+    if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D11)
+    {
+        // Force creation of texture upload page, otherwise ScheduleTextureUpdate()
+        // will block in the worker thread waiting for the RenderThreadUpdate().
+        ScheduleTextureUpdateInfo UpdateInfo;
+        UpdateInfo.pContext    = pContext;
+        UpdateInfo.pDstTexture = pTexture;
+        UpdateInfo.DstMipLevel = 0;
+        UpdateInfo.DstSlice    = 0;
+        UpdateInfo.DstBox      = {0, 16, 0, 16};
+        pUploadManager->ScheduleTextureUpdate(UpdateInfo);
+    }
 
     std::thread Worker{
         [&]() {
@@ -1021,7 +1087,8 @@ TEST(GPUUploadManagerTest, ReleaseTextureCallbackResources)
                 UpdateInfo.DstMipLevel      = 3;
                 UpdateInfo.DstSlice         = 4;
                 UpdateInfo.CopyTexture      = CopyTextureCallback;
-                UpdateInfo.pCopyTextureData = CopyTextureCallback;
+                UpdateInfo.CopyD3D11Texture = CopyD3D11TextureCallback;
+                UpdateInfo.pCopyTextureData = &CopyTextureCallbackCalled;
                 UpdateInfo.DstBox           = {0, 16, 0, 16};
                 pUploadManager->ScheduleTextureUpdate(UpdateInfo);
             }
@@ -1029,15 +1096,15 @@ TEST(GPUUploadManagerTest, ReleaseTextureCallbackResources)
 
     Worker.join();
 
-    EXPECT_FALSE(UploadEnqueuedCallbackCalled) << "UploadEnqueued callback should not have been called before the upload manager is destroyed";
-    EXPECT_FALSE(CopyTextureCallbackCalled) << "CopyTexture callback should not have been called before the upload manager is destroyed";
+    EXPECT_EQ(UploadEnqueuedCallbackCalled, 0) << "UploadEnqueued callback should not have been called before the upload manager is destroyed";
+    EXPECT_EQ(CopyTextureCallbackCalled, 0) << "CopyTexture callback should not have been called before the upload manager is destroyed";
 
     LogUploadManagerStats(pUploadManager);
 
     pUploadManager.Release();
 
-    EXPECT_TRUE(UploadEnqueuedCallbackCalled) << "UploadEnqueued callback should have been called before the upload manager is destroyed";
-    EXPECT_TRUE(CopyTextureCallbackCalled) << "CopyTexture callback should have been called before the upload manager is destroyed";
+    EXPECT_EQ(UploadEnqueuedCallbackCalled, 1) << "UploadEnqueued callback should have been called before the upload manager is destroyed";
+    EXPECT_EQ(CopyTextureCallbackCalled, 1) << "CopyTexture callback should have been called before the upload manager is destroyed";
 }
 
 
@@ -1046,10 +1113,6 @@ TEST(GPUUploadManagerTest, ParallelBufferAndTextureUpdates)
     GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
     IRenderDevice*         pDevice  = pEnv->GetDevice();
     IDeviceContext*        pContext = pEnv->GetDeviceContext();
-    if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D11)
-    {
-        GTEST_SKIP() << "Texture updates are not yet implemented in D3D11";
-    }
 
     GPUTestingEnvironment::ScopedReset AutoReset;
 
