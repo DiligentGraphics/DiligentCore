@@ -1141,10 +1141,15 @@ void GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo
 
 GPUUploadManagerImpl::Page* GPUUploadManagerImpl::UploadStream::CreatePage(IDeviceContext* pContext, Uint32 RequiredSize)
 {
-    const Uint32 MaxExistingPageSize = m_PageSizeToCount.empty() ? 0 : m_PageSizeToCount.rbegin()->first;
-    if (m_MaxPageCount != 0 && m_Pages.size() >= m_MaxPageCount && RequiredSize <= MaxExistingPageSize)
+    // Always create a new page from the render thread (when pContext is not null) to avoid deadlock in
+    // UploadStream::ScheduleUpdate.
+    if (pContext == nullptr)
     {
-        return nullptr;
+        const Uint32 MaxExistingPageSize = m_PageSizeToCount.empty() ? 0 : m_PageSizeToCount.rbegin()->first;
+        if (m_MaxPageCount != 0 && m_Pages.size() >= m_MaxPageCount && RequiredSize <= MaxExistingPageSize)
+        {
+            return nullptr;
+        }
     }
 
     Uint32 PageSize = m_PageSize;
