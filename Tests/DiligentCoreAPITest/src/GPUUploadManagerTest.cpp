@@ -420,42 +420,56 @@ TEST(GPUUploadManagerTest, DestroyWhileBufferUpdatesAreRunning)
 
     GPUTestingEnvironment::ScopedReset AutoReset;
 
-    RefCntAutoPtr<IGPUUploadManager> pUploadManager;
-    GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext, 1024, 2048};
-    CreateGPUUploadManager(CreateInfo, &pUploadManager);
-    ASSERT_TRUE(pUploadManager != nullptr);
-
-    const size_t             kNumThreads = 4;
-    std::vector<std::thread> Threads;
-    std::atomic<Uint32>      NumUpdatesRunning{0};
-    Threading::Signal        AllThreadsRunningSignal;
-    for (size_t t = 0; t < kNumThreads; ++t)
+    constexpr size_t kNumIterations = 10;
+    for (size_t i = 0; i < kNumIterations; ++i)
     {
-        Threads.emplace_back(
-            [&]() {
-                if (NumUpdatesRunning.fetch_add(1) == kNumThreads - 1)
-                {
-                    AllThreadsRunningSignal.Trigger();
-                }
-                pUploadManager->ScheduleBufferUpdate({nullptr, 0, 4096, nullptr});
-                NumUpdatesRunning.fetch_sub(1);
-            });
+        RefCntAutoPtr<IGPUUploadManager> pUploadManager;
+        // Use small page size to make the uploaded attempt to create a new page and block in ScheduleBufferUpdate
+        GPUUploadManagerCreateInfo CreateInfo{pDevice, pContext, 1024, 2048};
+        CreateGPUUploadManager(CreateInfo, &pUploadManager);
+        ASSERT_TRUE(pUploadManager != nullptr);
+
+        const size_t             kNumThreads = 4;
+        std::vector<std::thread> Threads;
+        std::atomic<Uint32>      NumUpdatesRunning{0};
+        Threading::Signal        AllThreadsRunningSignal;
+        for (size_t t = 0; t < kNumThreads; ++t)
+        {
+            Threads.emplace_back(
+                [&]() {
+                    if (NumUpdatesRunning.fetch_add(1) == kNumThreads - 1)
+                    {
+                        AllThreadsRunningSignal.Trigger();
+                    }
+                    // Set update size to be larger than page size to make the manager create new large page and block in ScheduleBufferUpdate
+                    pUploadManager->ScheduleBufferUpdate({nullptr, 0, 4096, nullptr});
+                    NumUpdatesRunning.fetch_sub(1);
+                });
+        }
+
+        AllThreadsRunningSignal.Wait();
+
+        // Wait for some time to ensure that ScheduleTextureUpdate starts.
+        std::this_thread::sleep_for(10ms);
+        EXPECT_EQ(NumUpdatesRunning.load(), kNumThreads) << "All threads sh0ould be running updates because RenderThreadUpdate() was not called";
+
+        if (i == kNumIterations - 1)
+        {
+            LogUploadManagerStats(pUploadManager);
+        }
+
+        pUploadManager.Release();
+
+        for (std::thread& thread : Threads)
+        {
+            thread.join();
+        }
+        EXPECT_EQ(NumUpdatesRunning.load(), 0u);
+
+        pContext->Flush();
+        pContext->FinishFrame();
+        pDevice->ReleaseStaleResources();
     }
-
-    AllThreadsRunningSignal.Wait();
-
-    std::this_thread::sleep_for(10ms);
-    EXPECT_EQ(NumUpdatesRunning.load(), kNumThreads) << "All threads should be running updates because RenderThreadUpdate() was not called";
-
-    LogUploadManagerStats(pUploadManager);
-
-    pUploadManager.Release();
-
-    for (std::thread& thread : Threads)
-    {
-        thread.join();
-    }
-    EXPECT_EQ(NumUpdatesRunning.load(), 0u);
 }
 
 
@@ -1262,6 +1276,100 @@ TEST(GPUUploadManagerTest, ParallelBufferAndTextureUpdates)
     LogUploadManagerStats(pUploadManager);
     VerifyBufferContents(pBuffer, BufferData);
     VerifyTextureContents(pTexture, SubresData);
+}
+
+
+TEST(GPUUploadManagerTest, DestroyWhileTextureUpdatesAreRunning)
+{
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    TextureDesc TexDesc;
+    TexDesc.Type      = RESOURCE_DIM_TEX_2D_ARRAY;
+    TexDesc.Usage     = USAGE_DEFAULT;
+    TexDesc.Width     = 512;
+    TexDesc.Height    = 512;
+    TexDesc.ArraySize = 32;
+    TexDesc.MipLevels = 4;
+    TexDesc.BindFlags = BIND_SHADER_RESOURCE;
+
+    std::array<RefCntAutoPtr<ITexture>, 4> pTextures;
+    std::array<TEXTURE_FORMAT, 4>          Formats = {TEX_FORMAT_RGBA8_UNORM, TEX_FORMAT_BC1_UNORM, TEX_FORMAT_RG16_FLOAT, TEX_FORMAT_BC3_UNORM};
+    for (size_t i = 0; i < pTextures.size(); ++i)
+    {
+        TextureDesc Desc = TexDesc;
+        Desc.Format      = Formats[i];
+        std::string Name = "GPUUploadManagerTest texture " + std::to_string(i);
+        Desc.Name        = Name.c_str();
+        pDevice->CreateTexture(Desc, nullptr, &pTextures[i]);
+        ASSERT_NE(pTextures[i], nullptr);
+    }
+
+    constexpr size_t kNumIterations = 10;
+    for (size_t i = 0; i < kNumIterations; ++i)
+    {
+        RefCntAutoPtr<IGPUUploadManager> pUploadManager;
+        // Use small page size to make the uploaded attempt to create a new page and block in ScheduleTextureUpdate
+        GPUUploadManagerCreateInfo CreateInfo{pDevice, pContext, 1024, 2048};
+        CreateGPUUploadManager(CreateInfo, &pUploadManager);
+        ASSERT_TRUE(pUploadManager != nullptr);
+
+        const size_t             kNumThreads = pTextures.size();
+        std::vector<std::thread> Threads;
+        std::atomic<Uint32>      NumUpdatesRunning{0};
+        Threading::Signal        AllThreadsRunningSignal;
+        std::vector<Uint32>      Data(256 * 256 * 4);
+
+        for (size_t t = 0; t < kNumThreads; ++t)
+        {
+            Threads.emplace_back(
+                [&](ITexture* pTexture) {
+                    if (NumUpdatesRunning.fetch_add(1) == kNumThreads - 1)
+                    {
+                        AllThreadsRunningSignal.Trigger();
+                    }
+
+                    ScheduleTextureUpdateInfo UpdateInfo;
+                    UpdateInfo.pSrcData    = Data.data();
+                    UpdateInfo.Stride      = 256 * 4;
+                    UpdateInfo.pDstTexture = pTexture;
+                    UpdateInfo.DstMipLevel = 0;
+                    UpdateInfo.DstSlice    = 0;
+                    // Set a large box to make the manager request a new large page for update and block in ScheduleTextureUpdate.
+                    UpdateInfo.DstBox = {0, 256, 0, 256};
+                    pUploadManager->ScheduleTextureUpdate(UpdateInfo);
+
+                    NumUpdatesRunning.fetch_sub(1);
+                },
+                pTextures[t]);
+        }
+
+        AllThreadsRunningSignal.Wait();
+
+        // Wait for some time to ensure that ScheduleTextureUpdate starts.
+        std::this_thread::sleep_for(10ms);
+        EXPECT_EQ(NumUpdatesRunning.load(), kNumThreads) << "All threads should be running updates because RenderThreadUpdate() was not called";
+
+        if (i == kNumIterations - 1)
+        {
+            LogUploadManagerStats(pUploadManager);
+        }
+
+        pUploadManager.Release();
+
+        for (std::thread& thread : Threads)
+        {
+            thread.join();
+        }
+        EXPECT_EQ(NumUpdatesRunning.load(), 0u);
+
+        pContext->Flush();
+        pContext->FinishFrame();
+        pDevice->ReleaseStaleResources();
+    }
 }
 
 } // namespace

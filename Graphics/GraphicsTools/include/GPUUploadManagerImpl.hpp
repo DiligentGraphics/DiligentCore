@@ -153,7 +153,8 @@ public:
         // Returns true if the page was not previously enqueued, false otherwise.
         bool TryEnqueue();
 
-        UploadStream* GetStream() const { return m_pStream; }
+        // Return the page to the stream's pool of free pages.
+        void Recycle();
 
         Uint64 GetFenceValue() const { return m_FenceValue; }
         Uint32 GetSize() const { return m_Size; }
