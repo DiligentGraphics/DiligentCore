@@ -617,11 +617,11 @@ void GPUUploadManagerImpl::Page::Reset(IDeviceContext* pContext)
 
     if (pContext != nullptr && m_pData == nullptr)
     {
-        const MAP_FLAGS MapFlags = m_PersistentMapped ?
-            MAP_FLAG_DO_NOT_WAIT :
-            MAP_FLAG_NONE;
         if (m_pStagingBuffer)
         {
+            const MAP_FLAGS MapFlags = m_PersistentMapped ?
+                MAP_FLAG_DO_NOT_WAIT :
+                MAP_FLAG_NONE;
             pContext->MapBuffer(m_pStagingBuffer, MAP_WRITE, MapFlags, m_pData);
         }
         else if (m_pStagingAtlas)
@@ -640,6 +640,11 @@ bool GPUUploadManagerImpl::Page::TryEnqueue()
 
     bool Expected = false;
     return m_Enqueued.compare_exchange_strong(Expected, true, std::memory_order_acq_rel);
+}
+
+void GPUUploadManagerImpl::Page::Recycle()
+{
+    m_pStream->AddFreePage(this);
 }
 
 void GPUUploadManagerImpl::Page::ReleaseStagingBuffer(IDeviceContext* pContext)
@@ -1113,9 +1118,6 @@ void GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo
             0,
     };
 
-    if (m_Stopping.load(std::memory_order_acquire))
-        return;
-
     UploadStream* pStream = m_pTextureStreams ?
         m_pTextureStreams->GetStreamForFormat(UpdateData.UpdateInfo.pContext, TexDesc.Format) :
         &GetStreamForUpdateSize(static_cast<Uint32>(UpdateData.CopyInfo.MemorySize));
@@ -1258,7 +1260,7 @@ void GPUUploadManagerImpl::ReclaimCompletedPages(IDeviceContext* pContext)
     {
         for (Page* P : m_TmpPages)
         {
-            P->GetStream()->AddFreePage(P);
+            P->Recycle();
         }
         m_TmpPages.clear();
     }
