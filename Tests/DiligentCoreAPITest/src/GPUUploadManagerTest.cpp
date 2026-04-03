@@ -157,7 +157,10 @@ TEST(GPUUploadManagerTest, ScheduleBufferUpdatesWithCopyBufferCallback)
     RefCntAutoPtr<IGPUUploadManager> pUploadManager;
     GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext, 1024, 2048};
     CreateInfo.InitialPageCount = 2;
-    CreateInfo.MaxPageCount     = 0;
+    // Set small max page count to test that ScheduleBufferUpdate creates new pages even when the limit
+    // is reached when called from the render thread.
+    CreateInfo.MaxPageCount      = 2;
+    CreateInfo.MaxLargePageCount = 1;
     CreateGPUUploadManager(CreateInfo, &pUploadManager);
     ASSERT_TRUE(pUploadManager != nullptr);
 
