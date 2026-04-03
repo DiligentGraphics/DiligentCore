@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,6 +30,7 @@
 #include <Metal/Metal.h>
 
 #include "GPUTestingEnvironment.hpp"
+#include "DXCompiler.hpp"
 
 namespace Diligent
 {
@@ -49,12 +50,24 @@ public:
 
     virtual void Reset() override final;
 
+    virtual bool HasDXCompiler() const override final
+    {
+        return m_pDxCompiler != nullptr && m_pDxCompiler->IsLoaded();
+    }
+
+    virtual Version GetDXCompilerVersion() const override final
+    {
+        return m_pDxCompiler != nullptr ? m_pDxCompiler->GetVersion() : Version{};
+    }
+
     id<MTLDevice>       GetMtlDevice() const { return m_MtlDevice; }
     id<MTLCommandQueue> GetMtlCommandQueue() const { return m_MtlQueue; }
 
 private:
     id<MTLDevice>       m_MtlDevice = nullptr;
     id<MTLCommandQueue> m_MtlQueue  = nullptr;
+
+    std::unique_ptr<IDXCompiler> m_pDxCompiler;
 };
 
 } // namespace Testing

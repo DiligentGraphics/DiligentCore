@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -48,6 +48,9 @@ TestingEnvironmentMtl::TestingEnvironmentMtl(const CreateInfo&    CI,
     auto* Queue = ClassPtrCast<ICommandQueueMtl>(Ctx->LockCommandQueue());
     m_MtlQueue  = Queue->GetMtlCommandQueue();
     Ctx->UnlockCommandQueue();
+
+    static constexpr Uint32 VulkanAPIVersion_1_2 = (1u << 22) | (2u << 12);
+    m_pDxCompiler = CreateDXCompiler(DXCompilerTarget::Vulkan, VulkanAPIVersion_1_2, nullptr);
 
     if (m_pSwapChain == nullptr)
     {
