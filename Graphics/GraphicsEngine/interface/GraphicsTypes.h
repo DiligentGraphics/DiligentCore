@@ -4262,6 +4262,12 @@ struct EngineMtlCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     #endif
     ;
 
+    /// Path to DirectX Shader Compiler, which is required to use Shader Model 6.0+
+    /// features when compiling shaders from HLSL (e.g. mesh shaders).
+
+    /// By default, the engine will search for "libdxcompiler.dylib".
+    const Char* pDxCompilerPath DEFAULT_INITIALIZER(nullptr);
+
 #if DILIGENT_CPP_INTERFACE
     EngineMtlCreateInfo() noexcept :
         EngineMtlCreateInfo{EngineCreateInfo{}}

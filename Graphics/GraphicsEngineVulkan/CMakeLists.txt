@@ -227,7 +227,17 @@ elseif(PLATFORM_MACOS)
         endif()
 
         if(NOT VULKAN_LIB_PATH)
-            message(WARNING "Unable to find vulkan library at: " ${VULKAN_SDK})
+            message(WARNING "Unable to find Vulkan library at: " ${VULKAN_SDK})
+        endif()
+
+        if(EXISTS "${VULKAN_SDK}/lib/libdxcompiler.dylib")
+            set(DXC_SPIRV_PATH "${VULKAN_SDK}/lib/libdxcompiler.dylib")
+        elseif(EXISTS "${VULKAN_SDK}/macOS/lib/libdxcompiler.dylib")
+            set(DXC_SPIRV_PATH "${VULKAN_SDK}/macOS/lib/libdxcompiler.dylib")
+        endif()
+
+        if(NOT DXC_SPIRV_PATH)
+            message(WARNING "Unable to find DXC at: " ${VULKAN_SDK})
         endif()
     endif()
 

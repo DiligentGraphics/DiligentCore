@@ -19,7 +19,7 @@ set(SOURCE
 )
 
 set(DXC_SUPPORTED FALSE)
-if((PLATFORM_WIN32 AND NOT MINGW_BUILD) OR PLATFORM_UNIVERSAL_WINDOWS OR PLATFORM_LINUX)
+if((PLATFORM_WIN32 AND NOT MINGW_BUILD) OR PLATFORM_UNIVERSAL_WINDOWS OR PLATFORM_LINUX OR PLATFORM_MACOS)
     set(DXC_SUPPORTED TRUE)
 endif()
 
@@ -73,11 +73,13 @@ if (DXC_SUPPORTED)
         list(APPEND SOURCE src/DXCompilerLibraryUWP.cpp)
     elseif(PLATFORM_LINUX)
         list(APPEND SOURCE src/DXCompilerLibraryLinux.cpp)
+    elseif(PLATFORM_MACOS)
+        list(APPEND SOURCE src/DXCompilerLibraryMacOS.cpp)
     else()
         message(FATAL_ERROR "Unexpected platform")
     endif()
 
-    if(PLATFORM_LINUX)
+    if(PLATFORM_LINUX OR PLATFORM_MACOS)
         list(APPEND INCLUDE
             ../../ThirdParty/DirectXShaderCompiler/dxc/dxcapi.h
             ../../ThirdParty/DirectXShaderCompiler/dxc/WinAdapter.h
