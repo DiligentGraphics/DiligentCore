@@ -61,7 +61,7 @@ bool GPUUploadManagerImpl::Page::Writer::ScheduleTextureUpdate(const ScheduleTex
 {
     if (m_pPage == nullptr)
     {
-        UNEXPECTED("Attempting to schedule a buffer update with an invalid writer.");
+        UNEXPECTED("Attempting to schedule a texture update with an invalid writer.");
         return false;
     }
 
@@ -114,6 +114,7 @@ GPUUploadManagerImpl::Page::StagingTextureAtlas::~StagingTextureAtlas()
 
 void* GPUUploadManagerImpl::Page::StagingTextureAtlas::Map(IDeviceContext* pContext)
 {
+    pContext->TransitionResourceState({pTex, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE});
     MappedTextureSubresource MappedData;
     pContext->MapTextureSubresource(pTex, 0, 0, MAP_WRITE, MAP_FLAG_NONE, nullptr, MappedData);
     RowStride   = static_cast<Uint32>(MappedData.Stride);
@@ -135,7 +136,7 @@ void GPUUploadManagerImpl::Page::StagingTextureAtlas::Reset()
 
 DynamicAtlasManager::Region GPUUploadManagerImpl::Page::StagingTextureAtlas::Allocate(Uint32 Width, Uint32 Height)
 {
-    std::lock_guard<std::mutex> Lock(MgrMtx);
+    std::lock_guard<std::mutex> Lock{MgrMtx};
     return Mgr.Allocate(Width, Height);
 }
 
@@ -148,10 +149,12 @@ GPUUploadManagerImpl::Page::Page(Uint32 Size, bool PersistentMapped) noexcept :
 inline bool PersistentMapSupported(IRenderDevice* pDevice)
 {
     RENDER_DEVICE_TYPE DeviceType = pDevice->GetDeviceInfo().Type;
-    return DeviceType == RENDER_DEVICE_TYPE_D3D12 || DeviceType == RENDER_DEVICE_TYPE_VULKAN;
+    return (DeviceType == RENDER_DEVICE_TYPE_D3D12 ||
+            DeviceType == RENDER_DEVICE_TYPE_VULKAN ||
+            DeviceType == RENDER_DEVICE_TYPE_METAL);
 }
 
-std::atomic<int> GPUUploadManagerImpl::Page::sm_PageCounter{0};
+std::atomic<Uint32> GPUUploadManagerImpl::Page::sm_PageCounter{0};
 
 GPUUploadManagerImpl::Page::Page(UploadStream& Stream, IRenderDevice* pDevice, Uint32 Size) :
     m_pStream{&Stream},
@@ -354,9 +357,10 @@ bool GPUUploadManagerImpl::Page::ScheduleBufferUpdate(const ScheduleBufferUpdate
     }
 
     PendingBufferOp Op;
-    Op.pDstBuffer      = UpdateInfo.pDstBuffer;
-    Op.CopyBuffer      = UpdateInfo.CopyBuffer;
-    Op.pCopyBufferData = UpdateInfo.pCopyBufferData;
+    Op.pDstBuffer              = UpdateInfo.pDstBuffer;
+    Op.DstBufferTransitionMode = UpdateInfo.DstBufferTransitionMode;
+    Op.CopyBuffer              = UpdateInfo.CopyBuffer;
+    Op.pCopyBufferData         = UpdateInfo.pCopyBufferData;
     if (Op.CopyBuffer == nullptr)
     {
         Op.UploadEnqueued      = UpdateInfo.UploadEnqueued;
@@ -456,7 +460,8 @@ bool GPUUploadManagerImpl::Page::ScheduleTextureUpdate(const ScheduleTextureUpda
     }
 
     PendingTextureOp Op;
-    Op.pDstTexture = UpdateInfo.pDstTexture;
+    Op.pDstTexture              = UpdateInfo.pDstTexture;
+    Op.DstTextureTransitionMode = UpdateInfo.DstTextureTransitionMode;
     if (m_pStagingBuffer)
     {
         Op.CopyTexture = UpdateInfo.CopyTexture;
@@ -523,8 +528,8 @@ void GPUUploadManagerImpl::Page::ExecutePendingOps(IDeviceContext* pContext, Uin
             {
                 if (pContext != nullptr && BuffOp.pDstBuffer != nullptr && BuffOp.NumBytes > 0)
                 {
-                    pContext->CopyBuffer(m_pStagingBuffer, BuffOp.SrcOffset, RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
-                                         BuffOp.pDstBuffer, BuffOp.DstOffset, BuffOp.NumBytes, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                    pContext->CopyBuffer(m_pStagingBuffer, BuffOp.SrcOffset, RESOURCE_STATE_TRANSITION_MODE_VERIFY,
+                                         BuffOp.pDstBuffer, BuffOp.DstOffset, BuffOp.NumBytes, BuffOp.DstBufferTransitionMode);
                 }
 
                 if (BuffOp.UploadEnqueued != nullptr)
@@ -558,7 +563,7 @@ void GPUUploadManagerImpl::Page::ExecutePendingOps(IDeviceContext* pContext, Uin
                     if (m_pStagingBuffer)
                     {
                         pContext->UpdateTexture(TexOp.pDstTexture, TexOp.DstMipLevel, TexOp.DstSlice, TexOp.DstBox, SrcData,
-                                                RESOURCE_STATE_TRANSITION_MODE_TRANSITION, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                                                RESOURCE_STATE_TRANSITION_MODE_VERIFY, TexOp.DstTextureTransitionMode);
                     }
                     else if (m_pStagingAtlas)
                     {
@@ -566,8 +571,8 @@ void GPUUploadManagerImpl::Page::ExecutePendingOps(IDeviceContext* pContext, Uin
 
                         CopyAttribs.pSrcTexture              = m_pStagingAtlas->pTex;
                         CopyAttribs.pDstTexture              = TexOp.pDstTexture;
-                        CopyAttribs.DstTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
                         CopyAttribs.SrcTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_VERIFY;
+                        CopyAttribs.DstTextureTransitionMode = TexOp.DstTextureTransitionMode;
                         CopyAttribs.DstMipLevel              = TexOp.DstMipLevel;
                         CopyAttribs.DstSlice                 = TexOp.DstSlice;
 
@@ -619,6 +624,7 @@ void GPUUploadManagerImpl::Page::Reset(IDeviceContext* pContext)
     {
         if (m_pStagingBuffer)
         {
+            pContext->TransitionResourceState({m_pStagingBuffer, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE});
             const MAP_FLAGS MapFlags = m_PersistentMapped ?
                 MAP_FLAG_DO_NOT_WAIT :
                 MAP_FLAG_NONE;
@@ -721,8 +727,7 @@ GPUUploadManagerImpl::UploadStream::UploadStream(GPUUploadManagerImpl& Mgr,
                                                  TEXTURE_FORMAT        Format) noexcept :
     m_Mgr{Mgr},
     m_PageSize{AlignUpToPowerOfTwo(PageSize)},
-    // Ensure that the max page count is at least 2 to allow for double buffering, unless it's set to 0 which means no limit.
-    m_MaxPageCount{MaxPageCount != 0 ? std::max(MaxPageCount, 2u) : 0},
+    m_MaxPageCount{MaxPageCount},
     m_Format{Format}
 {
     if (pContext != nullptr)
@@ -897,6 +902,7 @@ GPUUploadManagerImpl::~GPUUploadManagerImpl()
     if (m_pTextureStreams)
     {
         m_pTextureStreams->SetStopping();
+        // After the stopping flag is set, no new streams can be added.
         m_pTextureStreams->MoveNewStreamsToManager();
     }
 

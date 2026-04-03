@@ -161,6 +161,10 @@ struct ScheduleBufferUpdateInfo
     /// Otherwise, this buffer will be used as the destination for the copy operation
     IBuffer* pDstBuffer DEFAULT_INITIALIZER(nullptr);
 
+    /// State transition mode for the destination buffer. This parameter is ignored if CopyBuffer callback is provided,
+    /// and the callback is expected to perform any necessary state transitions itself.
+    RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
     /// Offset in the destination buffer where the update will be applied.
     /// If CopyBuffer callback is provided, this parameter will be ignored, and the callback must
     /// perform the copy operation itself.
@@ -374,6 +378,10 @@ struct ScheduleTextureUpdateInfo
     /// until the copy operation is scheduled by the callback.
     /// Otherwise, this texture will be used as the destination for the copy operation
     ITexture* pDstTexture DEFAULT_INITIALIZER(nullptr);
+
+    /// State transition mode for the destination texture. This parameter is ignored if CopyTexture/CopyD3D11Texture callback is provided,
+    /// and the callback is expected to perform any necessary state transitions itself.
+    RESOURCE_STATE_TRANSITION_MODE DstTextureTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     /// Destination mip level in the texture where the update will be applied.
     /// This parameter is ignored if CopyTexture callback is provided.

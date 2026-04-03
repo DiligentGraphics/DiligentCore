@@ -248,6 +248,8 @@ public:
             GPUBufferUploadEnqueuedCallbackType UploadEnqueued      = nullptr;
             void*                               pUploadEnqueuedData = nullptr;
 
+            RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
+
             Uint32 SrcOffset = 0;
             Uint32 DstOffset = 0;
             Uint32 NumBytes  = 0;
@@ -258,6 +260,8 @@ public:
         struct PendingTextureOp
         {
             RefCntAutoPtr<ITexture> pDstTexture;
+
+            RESOURCE_STATE_TRANSITION_MODE DstTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
 
             // For Direct3D11, coordinates of the source region within the staging texture.
             Uint32 SrcX = 0;
@@ -282,7 +286,7 @@ public:
         using PendingOp = std::variant<PendingBufferOp, PendingTextureOp>;
         MPSCQueue<PendingOp> m_PendingOps;
 
-        static std::atomic<int> sm_PageCounter;
+        static std::atomic<Uint32> sm_PageCounter;
     };
 
 private:
