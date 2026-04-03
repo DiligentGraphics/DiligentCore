@@ -1135,46 +1135,71 @@ TEST(GPUUploadManagerTest, ParallelBufferAndTextureUpdates)
     CreateGPUUploadManager(CreateInfo, &pUploadManager);
     ASSERT_TRUE(pUploadManager != nullptr);
 
-    TextureDesc TexDesc;
-    TexDesc.Name      = "GPUUploadManagerTest texture";
-    TexDesc.Type      = RESOURCE_DIM_TEX_2D_ARRAY;
-    TexDesc.Format    = TEX_FORMAT_RGBA8_UNORM;
-    TexDesc.Usage     = USAGE_DEFAULT;
-    TexDesc.Width     = 512;
-    TexDesc.Height    = 512;
-    TexDesc.ArraySize = 32;
-    TexDesc.MipLevels = 4;
-    TexDesc.BindFlags = BIND_SHADER_RESOURCE;
-    RefCntAutoPtr<ITexture> pTexture;
-    pDevice->CreateTexture(TexDesc, nullptr, &pTexture);
-    ASSERT_NE(pTexture, nullptr);
+    struct TextureAndSubresData
+    {
+        RefCntAutoPtr<ITexture>         pTexture;
+        std::vector<std::vector<Uint8>> SubresData;
+    };
 
-    const std::vector<std::vector<Uint8>> SubresData = GenerateTextureSubresData(TexDesc);
+    constexpr TEXTURE_FORMAT Formats[] = {
+        TEX_FORMAT_R8_UNORM,
+        TEX_FORMAT_RG8_UNORM,
+        TEX_FORMAT_RGBA8_UNORM,
+        TEX_FORMAT_RG16_UINT,
+        TEX_FORMAT_RGBA32_UINT,
+    };
+    std::array<TextureAndSubresData, _countof(Formats)> TexAndData;
 
     std::vector<ScheduleTextureUpdateInfo> TextureUpdates;
-    for (Uint32 MipLevel = 0; MipLevel < TexDesc.MipLevels; ++MipLevel)
+    for (size_t i = 0; i < TexAndData.size(); ++i)
     {
-        const MipLevelProperties Mip = GetMipLevelProperties(TexDesc, MipLevel);
-        for (Uint32 ArraySlice = 0; ArraySlice < TexDesc.ArraySize; ++ArraySlice)
-        {
-            const std::vector<Uint8>& MipData = SubresData[GetSubresourceIndex(TexDesc, MipLevel, ArraySlice)];
+        const std::string Name = std::string{"GPUUploadManagerTest texture"} + GetTextureFormatAttribs(Formats[i]).Name;
 
-            constexpr Uint32 UpdateWidth  = 32;
-            constexpr Uint32 UpdateHeight = 32;
-            for (Uint32 x = 0; x < Mip.LogicalWidth; x += UpdateWidth)
+        TextureDesc TexDesc;
+        TexDesc.Name                      = Name.c_str();
+        TexDesc.Type                      = RESOURCE_DIM_TEX_2D_ARRAY;
+        TexDesc.Format                    = Formats[i];
+        TexDesc.Usage                     = USAGE_DEFAULT;
+        TexDesc.Width                     = 512;
+        TexDesc.Height                    = 512;
+        TexDesc.ArraySize                 = 32;
+        TexDesc.MipLevels                 = 7;
+        TexDesc.BindFlags                 = BIND_SHADER_RESOURCE;
+        RefCntAutoPtr<ITexture>& pTexture = TexAndData[i].pTexture;
+        pDevice->CreateTexture(TexDesc, nullptr, &pTexture);
+        ASSERT_NE(pTexture, nullptr);
+
+        std::vector<std::vector<Uint8>>& SubresData{TexAndData[i].SubresData};
+        SubresData = GenerateTextureSubresData(TexDesc);
+
+        for (Uint32 MipLevel = 0; MipLevel < TexDesc.MipLevels; ++MipLevel)
+        {
+            const MipLevelProperties Mip = GetMipLevelProperties(TexDesc, MipLevel);
+            for (Uint32 ArraySlice = 0; ArraySlice < TexDesc.ArraySize; ++ArraySlice)
             {
-                for (Uint32 y = 0; y < Mip.LogicalHeight; y += UpdateHeight)
+                const std::vector<Uint8>& MipData = SubresData[GetSubresourceIndex(TexDesc, MipLevel, ArraySlice)];
+
+                const TextureFormatAttribs& FmtAttribs  = GetTextureFormatAttribs(TexDesc.Format);
+                const Uint32                ElementSize = FmtAttribs.ComponentSize * FmtAttribs.NumComponents;
+
+                const Uint32 UpdateWidth  = std::min((ArraySlice % 4 == 0) ? Mip.LogicalWidth / 2 : 32, Mip.LogicalWidth);
+                const Uint32 UpdateHeight = std::min((ArraySlice % 4 == 0) ? Mip.LogicalHeight / 2 : 32, Mip.LogicalHeight);
+                for (Uint32 x = 0; x < Mip.LogicalWidth; x += UpdateWidth)
                 {
-                    ScheduleTextureUpdateInfo UpdateInfo;
-                    UpdateInfo.pDstTexture = pTexture;
-                    UpdateInfo.DstBox.MinX = x;
-                    UpdateInfo.DstBox.MinY = y;
-                    UpdateInfo.DstBox.MaxX = x + UpdateWidth;
-                    UpdateInfo.DstBox.MaxY = y + UpdateHeight;
-                    UpdateInfo.DstMipLevel = MipLevel;
-                    UpdateInfo.DstSlice    = ArraySlice;
-                    UpdateInfo.pSrcData    = &MipData[static_cast<size_t>(Mip.RowSize * y + x * 4)];
-                    TextureUpdates.push_back(UpdateInfo);
+                    for (Uint32 y = 0; y < Mip.LogicalHeight; y += UpdateHeight)
+                    {
+                        ScheduleTextureUpdateInfo UpdateInfo;
+                        UpdateInfo.pDstTexture = pTexture;
+                        UpdateInfo.DstBox.MinX = x;
+                        UpdateInfo.DstBox.MinY = y;
+                        UpdateInfo.DstBox.MaxX = x + UpdateWidth;
+                        UpdateInfo.DstBox.MaxY = y + UpdateHeight;
+                        UpdateInfo.DstMipLevel = MipLevel;
+                        UpdateInfo.DstSlice    = ArraySlice;
+                        UpdateInfo.pSrcData    = &MipData[static_cast<size_t>(Mip.RowSize * y + x * ElementSize)];
+                        UpdateInfo.Stride      = Mip.RowSize;
+                        TextureUpdates.push_back(UpdateInfo);
+                    }
                 }
             }
         }
@@ -1197,7 +1222,6 @@ TEST(GPUUploadManagerTest, ParallelBufferAndTextureUpdates)
     RefCntAutoPtr<IBuffer> pBuffer;
     pDevice->CreateBuffer(Desc, nullptr, &pBuffer);
     ASSERT_TRUE(pBuffer);
-
 
     const size_t kNumThreads = std::max(2u, std::thread::hardware_concurrency() - 1);
     LOG_INFO_MESSAGE("Number of threads: ", kNumThreads);
@@ -1273,9 +1297,13 @@ TEST(GPUUploadManagerTest, ParallelBufferAndTextureUpdates)
         thread.join();
     }
 
-    LogUploadManagerStats(pUploadManager);
     VerifyBufferContents(pBuffer, BufferData);
-    VerifyTextureContents(pTexture, SubresData);
+    for (const TextureAndSubresData& Data : TexAndData)
+    {
+        VerifyTextureContents(Data.pTexture, Data.SubresData);
+    }
+
+    LogUploadManagerStats(pUploadManager);
 }
 
 
