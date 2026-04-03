@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024-2025 Diligent Graphics LLC
+ *  Copyright 2024-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@
 #    include <Unknwn.h>
 #    include "WinHPostface.h"
 
-#elif PLATFORM_LINUX
+#elif PLATFORM_LINUX || PLATFORM_MACOS
 
 #else
 #    error Unsupported platform

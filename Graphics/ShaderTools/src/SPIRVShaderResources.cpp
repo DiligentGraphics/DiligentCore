@@ -902,7 +902,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
 
     VERIFY(ResourceNamesPool.GetRemainingSize() == 0, "Names pool must be empty");
 
-    if (m_ShaderType == SHADER_TYPE_COMPUTE)
+    if (m_ShaderType == SHADER_TYPE_COMPUTE || m_ShaderType == SHADER_TYPE_MESH || m_ShaderType == SHADER_TYPE_AMPLIFICATION)
     {
         for (uint32_t i = 0; i < m_ComputeGroupSize.size(); ++i)
             m_ComputeGroupSize[i] = Compiler.get_execution_mode_argument(spv::ExecutionModeLocalSize, i);
