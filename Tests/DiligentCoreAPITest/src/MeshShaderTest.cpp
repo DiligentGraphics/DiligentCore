@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -50,6 +50,12 @@ void MeshShaderIndirectDrawReferenceVk(ISwapChain* pSwapChain);
 void AmplificationShaderDrawReferenceVk(ISwapChain* pSwapChain);
 #endif
 
+#if METAL_SUPPORTED
+void MeshShaderDrawReferenceMtl(ISwapChain* pSwapChain);
+void MeshShaderIndirectDrawReferenceMtl(ISwapChain* pSwapChain);
+void AmplificationShaderDrawReferenceMtl(ISwapChain* pSwapChain);
+#endif
+
 } // namespace Testing
 
 } // namespace Diligent
@@ -92,6 +98,12 @@ TEST(MeshShaderTest, DrawTriangle)
 #if VULKAN_SUPPORTED
             case RENDER_DEVICE_TYPE_VULKAN:
                 MeshShaderDrawReferenceVk(pSwapChain);
+                break;
+#endif
+
+#if METAL_SUPPORTED
+            case RENDER_DEVICE_TYPE_METAL:
+                MeshShaderDrawReferenceMtl(pSwapChain);
                 break;
 #endif
 
@@ -202,10 +214,15 @@ TEST(MeshShaderTest, DrawTriangleIndirect)
                 break;
 #endif
 
+#if METAL_SUPPORTED
+            case RENDER_DEVICE_TYPE_METAL:
+                MeshShaderIndirectDrawReferenceMtl(pSwapChain);
+                break;
+#endif
+
             case RENDER_DEVICE_TYPE_D3D11:
             case RENDER_DEVICE_TYPE_GL:
             case RENDER_DEVICE_TYPE_GLES:
-            case RENDER_DEVICE_TYPE_METAL:
             default:
                 LOG_ERROR_AND_THROW("Unsupported device type");
         }
@@ -307,6 +324,10 @@ TEST(MeshShaderTest, DrawTriangleIndirectCount)
     {
         GTEST_SKIP() << "Mesh shader is not supported by this device";
     }
+    if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_METAL)
+    {
+        GTEST_SKIP() << "Indirect count for mesh shaders is not supported on Metal";
+    }
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -337,7 +358,6 @@ TEST(MeshShaderTest, DrawTriangleIndirectCount)
             case RENDER_DEVICE_TYPE_D3D11:
             case RENDER_DEVICE_TYPE_GL:
             case RENDER_DEVICE_TYPE_GLES:
-            case RENDER_DEVICE_TYPE_METAL:
             default:
                 LOG_ERROR_AND_THROW("Unsupported device type");
         }
@@ -467,6 +487,12 @@ TEST(MeshShaderTest, DrawTrisWithAmplificationShader)
 #if VULKAN_SUPPORTED
             case RENDER_DEVICE_TYPE_VULKAN:
                 AmplificationShaderDrawReferenceVk(pSwapChain);
+                break;
+#endif
+
+#if METAL_SUPPORTED
+            case RENDER_DEVICE_TYPE_METAL:
+                AmplificationShaderDrawReferenceMtl(pSwapChain);
                 break;
 #endif
 

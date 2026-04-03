@@ -824,7 +824,20 @@ void GPUTestingEnvironment::SetDefaultCompiler(SHADER_COMPILER compiler)
             switch (compiler)
             {
                 case SHADER_COMPILER_DEFAULT:
+                case SHADER_COMPILER_GLSLANG:
                     m_ShaderCompiler = compiler;
+                    break;
+
+                case SHADER_COMPILER_DXC:
+                    if (HasDXCompiler())
+                    {
+                        m_ShaderCompiler = compiler;
+                    }
+                    else
+                    {
+                        LOG_WARNING_MESSAGE("DXC is not available. Using default shader compiler");
+                        m_ShaderCompiler = SHADER_COMPILER_DEFAULT;
+                    }
                     break;
 
                 default:

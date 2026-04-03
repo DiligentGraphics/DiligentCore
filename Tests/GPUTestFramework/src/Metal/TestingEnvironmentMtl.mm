@@ -49,6 +49,9 @@ TestingEnvironmentMtl::TestingEnvironmentMtl(const CreateInfo&    CI,
     m_MtlQueue  = Queue->GetMtlCommandQueue();
     Ctx->UnlockCommandQueue();
 
+    static constexpr Uint32 VulkanAPIVersion_1_2 = (1u << 22) | (2u << 12);
+    m_pDxCompiler = CreateDXCompiler(DXCompilerTarget::Vulkan, VulkanAPIVersion_1_2, nullptr);
+
     if (m_pSwapChain == nullptr)
     {
         CreateTestingSwapChainMtl(this, SCDesc, &m_pSwapChain);

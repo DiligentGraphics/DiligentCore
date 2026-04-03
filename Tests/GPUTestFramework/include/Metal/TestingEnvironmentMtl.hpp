@@ -30,6 +30,7 @@
 #include <Metal/Metal.h>
 
 #include "GPUTestingEnvironment.hpp"
+#include "DXCompiler.hpp"
 
 namespace Diligent
 {
@@ -49,12 +50,24 @@ public:
 
     virtual void Reset() override final;
 
+    virtual bool HasDXCompiler() const override final
+    {
+        return m_pDxCompiler != nullptr && m_pDxCompiler->IsLoaded();
+    }
+
+    virtual Version GetDXCompilerVersion() const override final
+    {
+        return m_pDxCompiler != nullptr ? m_pDxCompiler->GetVersion() : Version{};
+    }
+
     id<MTLDevice>       GetMtlDevice() const { return m_MtlDevice; }
     id<MTLCommandQueue> GetMtlCommandQueue() const { return m_MtlQueue; }
 
 private:
     id<MTLDevice>       m_MtlDevice = nullptr;
     id<MTLCommandQueue> m_MtlQueue  = nullptr;
+
+    std::unique_ptr<IDXCompiler> m_pDxCompiler;
 };
 
 } // namespace Testing
