@@ -150,9 +150,7 @@ void RunCopyBufferToTextureTest(const TextureDesc& BaseTexDesc)
 
         const TextureFormatAttribs& FmtAttribs = pDevice->GetTextureFormatInfo(BaseTexDesc.Format);
 
-        const Uint32 ElementSize = FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED ?
-            FmtAttribs.ComponentSize :
-            FmtAttribs.ComponentSize * FmtAttribs.NumComponents;
+        const Uint32 ElementSize = FmtAttribs.GetElementSize();
 
         ForEachSubresource(BaseTexDesc, [&](Uint32 mip, Uint32 slice, const MipLevelProperties& Mip) {
             auto& Subres = RefSubresources[GetSubresourceIndex(mip, slice)];

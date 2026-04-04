@@ -796,9 +796,7 @@ void TestTextureUpdates(TEXTURE_FORMAT Format, RESOURCE_DIMENSION Type, Uint32 F
 
     const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
 
-    const Uint32 ElementSize = FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED ?
-        FmtAttribs.ComponentSize :
-        FmtAttribs.ComponentSize * FmtAttribs.NumComponents;
+    const Uint32 ElementSize = FmtAttribs.GetElementSize();
 
     for (Uint32 MipLevel = 0; MipLevel < TexDesc.MipLevels; ++MipLevel)
     {

@@ -423,9 +423,7 @@ bool GPUUploadManagerImpl::Page::ScheduleTextureUpdate(const ScheduleTextureUpda
             SrcX = Region.x;
             SrcY = Region.y;
 
-            const Uint32 ElementSize = FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED ?
-                FmtAttribs.ComponentSize :
-                FmtAttribs.ComponentSize * FmtAttribs.NumComponents;
+            const Uint32 ElementSize = FmtAttribs.GetElementSize();
 
             DstRowStride   = m_pStagingAtlas->RowStride;
             DstDepthStride = m_pStagingAtlas->DepthStride;
