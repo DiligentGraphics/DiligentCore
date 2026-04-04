@@ -1294,6 +1294,8 @@ TEST(GPUUploadManagerTest, ParallelBufferAndTextureUpdates)
     LOG_INFO_MESSAGE("Total render thread updates: ", NumRenderThreadUpdates);
 
     pUploadManager->RenderThreadUpdate(pContext);
+    pContext->WaitForIdle();
+    pUploadManager->RenderThreadUpdate(pContext);
 
     for (std::thread& thread : Threads)
     {
@@ -1305,6 +1307,12 @@ TEST(GPUUploadManagerTest, ParallelBufferAndTextureUpdates)
     {
         VerifyTextureContents(Data.pTexture, Data.SubresData);
     }
+
+    GPUUploadManagerStats Stats;
+    pUploadManager->GetStats(Stats);
+    ASSERT_GE(Stats.NumStreams, 2u);
+    EXPECT_LE(Stats.pStreamStats[0].NumPages, CreateInfo.MaxPageCount) << "Normal page count should not exceed the specified maximum";
+    EXPECT_LE(Stats.pStreamStats[1].NumPages, CreateInfo.MaxLargePageCount) << "Large page count should not exceed the specified maximum";
 
     LogUploadManagerStats(pUploadManager);
 }
