@@ -1145,11 +1145,9 @@ void GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo
                             });
 }
 
-GPUUploadManagerImpl::Page* GPUUploadManagerImpl::UploadStream::CreatePage(IDeviceContext* pContext, Uint32 RequiredSize)
+GPUUploadManagerImpl::Page* GPUUploadManagerImpl::UploadStream::CreatePage(IDeviceContext* pContext, Uint32 RequiredSize, bool AllowOverLimit)
 {
-    // Always create a new page from the render thread (when pContext is not null) to avoid deadlock in
-    // UploadStream::ScheduleUpdate.
-    if (pContext == nullptr)
+    if (!AllowOverLimit)
     {
         const Uint32 MaxExistingPageSize = m_PageSizeToCount.empty() ? 0 : m_PageSizeToCount.rbegin()->first;
         if (m_MaxPageCount != 0 && m_Pages.size() >= m_MaxPageCount && RequiredSize <= MaxExistingPageSize)
@@ -1201,8 +1199,11 @@ bool GPUUploadManagerImpl::UploadStream::SealAndSwapCurrentPage(IDeviceContext* 
 
 bool GPUUploadManagerImpl::UploadStream::TryRotatePage(IDeviceContext* pContext, Page* ExpectedCurrent, Uint32 RequiredSize)
 {
-    // Grab a free page (workers can't create, so pContext=null)
-    Page* Fresh = AcquireFreePage(pContext, RequiredSize);
+    // Allow going over the max page count when rotating the page from the render thread to
+    // prevent deadlock in ScheduleUpdate.
+    bool AllowOverLimit = pContext != nullptr;
+    // Grab a free page.
+    Page* Fresh = AcquireFreePage(pContext, RequiredSize, AllowOverLimit);
     if (!Fresh)
         return false;
 
@@ -1375,7 +1376,9 @@ void GPUUploadManagerImpl::ProcessPendingPages(IDeviceContext* pContext)
     }
 }
 
-GPUUploadManagerImpl::Page* GPUUploadManagerImpl::UploadStream::AcquireFreePage(IDeviceContext* pContext, Uint32 RequiredSize)
+GPUUploadManagerImpl::Page* GPUUploadManagerImpl::UploadStream::AcquireFreePage(IDeviceContext* pContext,
+                                                                                Uint32          RequiredSize,
+                                                                                bool            AllowOverLimit)
 {
     // For texture pages, all sizes are texture dimensions.
     Uint32 MaxPendingUpdateSize = std::max(m_MaxPendingUpdateSize.load(std::memory_order_acquire), RequiredSize);
@@ -1383,7 +1386,7 @@ GPUUploadManagerImpl::Page* GPUUploadManagerImpl::UploadStream::AcquireFreePage(
     Page* P = m_FreePages.Pop(MaxPendingUpdateSize);
     if (P == nullptr && pContext != nullptr)
     {
-        P = CreatePage(pContext, MaxPendingUpdateSize);
+        P = CreatePage(pContext, MaxPendingUpdateSize, AllowOverLimit);
     }
 
     if (P != nullptr)

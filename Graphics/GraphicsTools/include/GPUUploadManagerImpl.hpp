@@ -337,8 +337,8 @@ private:
                      Uint32                InitialPageCount,
                      TEXTURE_FORMAT        Format = TEX_FORMAT_UNKNOWN) noexcept;
 
-        Page* CreatePage(IDeviceContext* pContext, Uint32 RequiredSize = 0);
-        Page* AcquireFreePage(IDeviceContext* pContext, Uint32 RequiredSize = 0);
+        Page* CreatePage(IDeviceContext* pContext, Uint32 RequiredSize = 0, bool AllowOverLimit = false);
+        Page* AcquireFreePage(IDeviceContext* pContext, Uint32 RequiredSize = 0, bool AllowOverLimit = false);
         bool  SealAndSwapCurrentPage(IDeviceContext* pContext);
         bool  TryRotatePage(IDeviceContext* pContext, Page* ExpectedCurrent, Uint32 RequiredSize);
         bool  TryEnqueuePage(Page* P);

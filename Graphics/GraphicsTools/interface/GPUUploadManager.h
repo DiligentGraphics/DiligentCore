@@ -52,7 +52,7 @@ struct GPUUploadManagerCreateInfo
 
     /// Initial number of upload pages. If the manager runs out of pages to write to,
     /// it will create new ones as needed. This parameter controls how many pages are created at startup.
-    Uint32 InitialPageCount DEFAULT_INITIALIZER(1);
+    Uint32 InitialPageCount DEFAULT_INITIALIZER(4);
 
     /// Initial number of large upload pages.
     Uint32 InitialLargePageCount DEFAULT_INITIALIZER(1);
