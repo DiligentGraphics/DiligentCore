@@ -57,6 +57,16 @@ namespace Diligent
 {
 
 #if GL_KHR_debug
+
+template <int MessageId>
+bool IsFirstMessageOccurrence()
+{
+    static bool IsFirstTime = true;
+    const bool  Result      = IsFirstTime;
+    IsFirstTime             = false;
+    return Result;
+}
+
 static void GLAPIENTRY openglCallbackFunction(GLenum        source,
                                               GLenum        type,
                                               GLuint        id,
@@ -71,11 +81,28 @@ static void GLAPIENTRY openglCallbackFunction(GLenum        source,
 
     // Note: disabling flood of notifications through glDebugMessageControl() has no effect,
     // so we have to filter them out here
-    if (id == 131185 || // Buffer detailed info: Buffer object <X> (bound to GL_XXXX ... , usage hint is GL_DYNAMIC_DRAW)
-                        // will use VIDEO memory as the source for buffer object operations.
-        id == 131186    // Buffer object <X> (bound to GL_XXXX, usage hint is GL_DYNAMIC_DRAW) is being copied/moved from VIDEO memory to HOST memory.
-    )
-        return;
+    switch (id)
+    {
+        case 131185:
+            // Buffer detailed info: Buffer object <X> (bound to GL_XXXX ... , usage hint is GL_DYNAMIC_DRAW)
+            // will use VIDEO memory as the source for buffer object operations.
+            return;
+        case 131186:
+            // Buffer object <X> (bound to GL_XXXX, usage hint is GL_DYNAMIC_DRAW) is being copied/moved from VIDEO memory to HOST memory.
+            return;
+        case 131220:
+            // Program/shader state usage warning: A fragment program/shader is required to correctly render to an integer framebuffer.
+            if (IsFirstMessageOccurrence<131220>())
+                break;
+            else
+                return;
+        case 131140:
+            // Rasterization usage warning: Dithering is enabled, but is not supported for integer framebuffers.
+            if (IsFirstMessageOccurrence<131140>())
+                break;
+            else
+                return;
+    }
 
     std::stringstream MessageSS;
 
