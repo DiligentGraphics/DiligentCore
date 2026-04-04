@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -111,23 +111,39 @@ inline GLenum UsageToGLUsage(const BufferDesc& Desc)
     // https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glBufferData.xml
     switch (Desc.Usage)
     {
-        // STATIC: The data store contents will be modified once and used many times.
-        // STREAM: The data store contents will be modified once and used at MOST a few times.
-        // DYNAMIC: The data store contents will be modified repeatedly and used many times.
+            // STATIC: Data is set once and used many times.
+            // STREAM: Data is set once or only a few times, and used only a small number of times.
+            // DYNAMIC: Data is changed repeatedly and used many times.
 
-        // clang-format off
-        case USAGE_IMMUTABLE:   return GL_STATIC_DRAW;
-        case USAGE_DEFAULT:     return GL_STATIC_DRAW;
-        case USAGE_UNIFIED:     return GL_STATIC_DRAW;
-        case USAGE_DYNAMIC:     return GL_DYNAMIC_DRAW;
+            // DRAW: The application writes the data, and OpenGL uses it for drawing or similar GPU consumption.
+            // READ: OpenGL writes the data, and the application reads it back.
+            // COPY: OpenGL writes the data, and OpenGL reads it.
+
+        case USAGE_IMMUTABLE:
+            return GL_STATIC_DRAW;
+
+        case USAGE_DEFAULT:
+            return GL_STREAM_DRAW;
+
+        case USAGE_UNIFIED:
+            return GL_STREAM_DRAW;
+
+        case USAGE_DYNAMIC:
+            return GL_DYNAMIC_DRAW;
+
         case USAGE_STAGING:
-            if(Desc.CPUAccessFlags & CPU_ACCESS_READ)
-                return GL_STATIC_READ;
+            if (Desc.CPUAccessFlags & CPU_ACCESS_READ)
+                return GL_STREAM_READ;
             else
-                return GL_STATIC_COPY;
-        case USAGE_SPARSE: UNEXPECTED( "USAGE_SPARSE is not supported" ); return 0;
-        default:           UNEXPECTED( "Unknown usage" ); return 0;
-            // clang-format on
+                return GL_STREAM_DRAW;
+
+        case USAGE_SPARSE:
+            UNEXPECTED("USAGE_SPARSE is not supported");
+            return 0;
+
+        default:
+            UNEXPECTED("Unknown usage");
+            return 0;
     }
 }
 
