@@ -76,11 +76,11 @@ public:
     public:
         explicit Page(Uint32 Size, bool PersistentMapped = false) noexcept;
 
-        Page(UploadStream& Stream, IRenderDevice* pDevice, Uint32 Size);
+        Page(UploadStream* pStream, IRenderDevice* pDevice, Uint32 Size);
 
         // Special page for texture updates in Direct3D11, which require a staging texture.
         // The texture dimensions are Size x Size.
-        Page(UploadStream& Stream, IRenderDevice* pDevice, Uint32 Size, TEXTURE_FORMAT Format);
+        Page(UploadStream* pStream, IRenderDevice* pDevice, Uint32 Size, TEXTURE_FORMAT Format);
 
         ~Page();
 
