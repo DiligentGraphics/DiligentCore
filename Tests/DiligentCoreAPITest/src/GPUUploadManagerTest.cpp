@@ -25,6 +25,8 @@
  */
 
 #include "GPUUploadManager.h"
+#include "../include/GPUUploadManagerImpl.hpp"
+
 #include "GPUTestingEnvironment.hpp"
 #include "ThreadSignal.hpp"
 #include "CallbackWrapper.hpp"
@@ -758,6 +760,193 @@ enum TEST_TEXTURE_UPDATES_FLAGS : Uint32
     TEST_TEXTURE_UPDATES_FLAGS_USE_COPY_CALLBACK       = 1u << 0u,
     TEST_TEXTURE_UPDATES_FLAGS_USE_WRITE_DATA_CALLBACK = 1u << 1u,
 };
+
+
+void TestWriterScheduleTextureUpdates(Uint32 Flags = TEST_TEXTURE_UPDATES_FLAGS_NONE)
+{
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    TextureDesc TexDesc;
+    TexDesc.Name      = "GPUUploadManagerTest texture";
+    TexDesc.Type      = RESOURCE_DIM_TEX_2D;
+    TexDesc.Format    = TEX_FORMAT_RGBA8_UNORM;
+    TexDesc.Usage     = USAGE_DEFAULT;
+    TexDesc.Width     = 512;
+    TexDesc.Height    = 512;
+    TexDesc.MipLevels = 1;
+    TexDesc.BindFlags = BIND_SHADER_RESOURCE;
+
+    RefCntAutoPtr<ITexture> pTexture;
+    pDevice->CreateTexture(TexDesc, nullptr, &pTexture);
+    ASSERT_TRUE(pTexture != nullptr);
+
+    const std::vector<std::vector<Uint8>> SubresData = GenerateTextureSubresData(TexDesc);
+
+    const Uint32 ElementSize = GetTextureFormatAttribs(TexDesc.Format).GetElementSize();
+
+    std::unique_ptr<GPUUploadManagerImpl::Page> Page;
+    if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D11)
+    {
+        Page = std::make_unique<GPUUploadManagerImpl::Page>(nullptr, pDevice, TexDesc.Width, TexDesc.Format);
+    }
+    else
+    {
+        Page = std::make_unique<GPUUploadManagerImpl::Page>(nullptr, pDevice, TexDesc.Width * TexDesc.Height * ElementSize);
+    }
+
+    const std::vector<Uint8>& Mip0Data = SubresData[0];
+    Page->Reset(pContext);
+    Page->Unseal();
+
+    bool WriteDataCallbackCalled   = false;
+    bool CopyTextureCallbackCalled = false;
+
+    auto WriteDataCallback = MakeCallback([&](void* pDstData, Uint32 Stride, Uint32 DepthStride, const Box& DstBox) {
+        for (Uint32 row = 0; row < DstBox.Height(); ++row)
+        {
+            const void* pSrcRow = &Mip0Data[(DstBox.MinX + (DstBox.MinY + row) * TexDesc.Width) * ElementSize];
+            void*       pDstRow = static_cast<Uint8*>(pDstData) + row * Stride;
+            std::memcpy(pDstRow, pSrcRow, DstBox.Width() * ElementSize);
+        }
+        WriteDataCallbackCalled = true;
+    });
+
+    struct CopyTextureCallbackData
+    {
+        ITexture* const pDstTexture;
+        bool&           CopyTextureCallbackCalled;
+    };
+    CopyTextureCallbackData CopyCallbackData{pTexture, CopyTextureCallbackCalled};
+
+    auto CopyTextureCallback = [](IDeviceContext*          pContext,
+                                  Uint32                   DstMipLevel,
+                                  Uint32                   DstSlice,
+                                  const Box&               DstBox,
+                                  const TextureSubResData& SrcData,
+                                  void*                    pUserData) {
+        CopyTextureCallbackData* pCallbackData = static_cast<CopyTextureCallbackData*>(pUserData);
+        pContext->UpdateTexture(pCallbackData->pDstTexture, DstMipLevel, DstSlice, DstBox, SrcData,
+                                RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
+                                RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pCallbackData->CopyTextureCallbackCalled = true;
+    };
+
+    auto CopyD3D11TextureCallback = [](IDeviceContext* pContext,
+                                       Uint32          DstMipLevel,
+                                       Uint32          DstSlice,
+                                       const Box&      DstBox,
+                                       ITexture*       pSrcTexture,
+                                       Uint32          SrcX,
+                                       Uint32          SrcY,
+                                       void*           pUserData) {
+        CopyTextureCallbackData* pCallbackData = static_cast<CopyTextureCallbackData*>(pUserData);
+
+        CopyTextureAttribs CopyAttribs;
+        CopyAttribs.pSrcTexture = pSrcTexture;
+        CopyAttribs.pDstTexture = pCallbackData->pDstTexture;
+        CopyAttribs.DstMipLevel = DstMipLevel;
+        CopyAttribs.DstSlice    = DstSlice;
+        CopyAttribs.DstX        = DstBox.MinX;
+        CopyAttribs.DstY        = DstBox.MinY;
+        CopyAttribs.DstZ        = DstBox.MinZ;
+
+        Box SrcBox;
+        SrcBox.MinX = SrcX;
+        SrcBox.MinY = SrcY;
+        SrcBox.MaxX = SrcX + DstBox.Width();
+        SrcBox.MaxY = SrcY + DstBox.Height();
+
+        CopyAttribs.pSrcBox = &SrcBox;
+
+        CopyAttribs.DstTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+
+        pContext->CopyTexture(CopyAttribs);
+        pCallbackData->CopyTextureCallbackCalled = true;
+    };
+
+    {
+        GPUUploadManagerImpl::Page::Writer Writer = Page->TryBeginWriting();
+        EXPECT_TRUE(Writer) << "Should be able to begin writing to a new page";
+
+        auto ScheduleUpdate = [&](Uint32 col, Uint32 row, Uint32 Width, Uint32 Height) {
+            ScheduleTextureUpdateInfo UpdateInfo;
+            if (Flags & TEST_TEXTURE_UPDATES_FLAGS_USE_COPY_CALLBACK)
+            {
+                UpdateInfo.Format           = TEX_FORMAT_RGBA8_UNORM;
+                UpdateInfo.CopyTexture      = CopyTextureCallback;
+                UpdateInfo.CopyD3D11Texture = CopyD3D11TextureCallback;
+                UpdateInfo.pCopyTextureData = &CopyCallbackData;
+            }
+            else
+            {
+                UpdateInfo.pDstTexture = pTexture;
+            }
+            UpdateInfo.DstBox.MinX = col;
+            UpdateInfo.DstBox.MinY = row;
+            UpdateInfo.DstBox.MaxX = UpdateInfo.DstBox.MinX + Width;
+            UpdateInfo.DstBox.MaxY = UpdateInfo.DstBox.MinY + Height;
+            if (Flags & TEST_TEXTURE_UPDATES_FLAGS_USE_WRITE_DATA_CALLBACK)
+            {
+                UpdateInfo.WriteDataCallback          = WriteDataCallback;
+                UpdateInfo.pWriteDataCallbackUserData = WriteDataCallback;
+            }
+            else
+            {
+                UpdateInfo.pSrcData = &Mip0Data[(UpdateInfo.DstBox.MinX + UpdateInfo.DstBox.MinY * TexDesc.Width) * ElementSize];
+                UpdateInfo.Stride   = TexDesc.Width * ElementSize;
+            }
+            return Writer.ScheduleTextureUpdate(UpdateInfo, GetBufferToTextureCopyInfo(TexDesc.Format, UpdateInfo.DstBox, 1024), 1024);
+        };
+
+        for (Uint32 row = 0; row < 2; ++row)
+        {
+            for (Uint32 col = 0; col < 2; ++col)
+            {
+                EXPECT_TRUE(ScheduleUpdate(col * 256, row * 256, 256, 256)) << "Should be able to schedule update that fits in the page";
+            }
+        }
+
+        EXPECT_FALSE(ScheduleUpdate(0, 0, 256, 256)) << "Should not be able to schedule update when the page is full";
+
+        EXPECT_EQ(Page->GetNumPendingOps(), size_t{4});
+        EXPECT_TRUE(Writer.EndWriting() == GPUUploadManagerImpl::Page::WritingStatus::NotSealed) << "Page should not be sealed";
+    }
+
+    EXPECT_EQ(Page->TrySeal(), GPUUploadManagerImpl::Page::SealStatus::Ready) << "Page with no active writers should be ready immediately";
+    EXPECT_EQ(Page->GetNumPendingOps(), size_t{4});
+    Page->ExecutePendingOps(pContext, 1);
+    EXPECT_EQ(Page->GetNumPendingOps(), size_t{0});
+    Page->ReleaseStagingBuffer(pContext);
+
+    EXPECT_EQ((Flags & TEST_TEXTURE_UPDATES_FLAGS_USE_WRITE_DATA_CALLBACK) != 0, WriteDataCallbackCalled);
+    EXPECT_EQ((Flags & TEST_TEXTURE_UPDATES_FLAGS_USE_COPY_CALLBACK) != 0, CopyTextureCallbackCalled);
+
+    VerifyTextureContents(pTexture, SubresData);
+}
+
+TEST(GPUUploadManagerTest, Writer_ScheduleTextureUpdates)
+{
+    TestWriterScheduleTextureUpdates();
+}
+
+TEST(GPUUploadManagerTest, Writer_ScheduleTextureUpdates_WithWriteDataCallback)
+{
+    TestWriterScheduleTextureUpdates(TEST_TEXTURE_UPDATES_FLAGS_USE_WRITE_DATA_CALLBACK);
+}
+
+TEST(GPUUploadManagerTest, Writer_ScheduleTextureUpdates_WithCopyCallback)
+{
+    TestWriterScheduleTextureUpdates(TEST_TEXTURE_UPDATES_FLAGS_USE_COPY_CALLBACK);
+}
+
+TEST(GPUUploadManagerTest, Writer_ScheduleTextureUpdates_WithWriteAndCopyCallback)
+{
+    TestWriterScheduleTextureUpdates(TEST_TEXTURE_UPDATES_FLAGS_USE_WRITE_DATA_CALLBACK | TEST_TEXTURE_UPDATES_FLAGS_USE_COPY_CALLBACK);
+}
 
 void TestTextureUpdates(TEXTURE_FORMAT Format, RESOURCE_DIMENSION Type, Uint32 Flags = TEST_TEXTURE_UPDATES_FLAGS_NONE)
 {

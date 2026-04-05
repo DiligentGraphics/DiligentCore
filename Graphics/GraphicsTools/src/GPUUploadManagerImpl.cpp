@@ -156,8 +156,8 @@ inline bool PersistentMapSupported(IRenderDevice* pDevice)
 
 std::atomic<Uint32> GPUUploadManagerImpl::Page::sm_PageCounter{0};
 
-GPUUploadManagerImpl::Page::Page(UploadStream& Stream, IRenderDevice* pDevice, Uint32 Size) :
-    m_pStream{&Stream},
+GPUUploadManagerImpl::Page::Page(UploadStream* pStream, IRenderDevice* pDevice, Uint32 Size) :
+    m_pStream{pStream},
     m_Size{Size},
     m_PersistentMapped{PersistentMapSupported(pDevice)}
 {
@@ -174,8 +174,8 @@ GPUUploadManagerImpl::Page::Page(UploadStream& Stream, IRenderDevice* pDevice, U
     VERIFY_EXPR(m_pStagingBuffer != nullptr);
 }
 
-GPUUploadManagerImpl::Page::Page(UploadStream& Stream, IRenderDevice* pDevice, Uint32 Size, TEXTURE_FORMAT Format) :
-    m_pStream{&Stream},
+GPUUploadManagerImpl::Page::Page(UploadStream* pStream, IRenderDevice* pDevice, Uint32 Size, TEXTURE_FORMAT Format) :
+    m_pStream{pStream},
     m_Size{Size},
     m_PersistentMapped{PersistentMapSupported(pDevice)},
     m_pStagingAtlas{
@@ -1172,8 +1172,8 @@ GPUUploadManagerImpl::Page* GPUUploadManagerImpl::UploadStream::CreatePage(IDevi
         PageSize *= 2;
 
     std::unique_ptr<Page> NewPage = m_Format != TEX_FORMAT_UNKNOWN ?
-        std::make_unique<Page>(*this, m_Mgr.m_pDevice, PageSize, m_Format) :
-        std::make_unique<Page>(*this, m_Mgr.m_pDevice, PageSize);
+        std::make_unique<Page>(this, m_Mgr.m_pDevice, PageSize, m_Format) :
+        std::make_unique<Page>(this, m_Mgr.m_pDevice, PageSize);
 
     Page* P = NewPage.get();
     if (pContext != nullptr)
