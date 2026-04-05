@@ -105,6 +105,157 @@ void VerifyBufferContents(IBuffer* pBuffer, const std::vector<Uint8>& ExpectedDa
     pContext->UnmapBuffer(pReadbackBuffer, MAP_READ);
 }
 
+
+void TestWriterScheduleBufferUpdates(bool UseWriteCallback, bool UseCopyCallback)
+{
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    std::vector<Uint8> BufferData(8192);
+    for (size_t i = 0; i < BufferData.size(); ++i)
+    {
+        BufferData[i] = static_cast<Uint8>(i % 256);
+    }
+
+    static constexpr Uint32                   kNumUpdates = 10;
+    constexpr std::array<Uint32, kNumUpdates> UpdateSizes = {256, 512, 256, 1024, 2048, 1024, 2048, 512, 256, 256};
+
+    BufferDesc Desc;
+    Desc.Name      = "GPUUploadManagerTest buffer";
+    Desc.Size      = BufferData.size();
+    Desc.Usage     = USAGE_DEFAULT;
+    Desc.BindFlags = BIND_VERTEX_BUFFER;
+
+    RefCntAutoPtr<IBuffer> pBuffer;
+    pDevice->CreateBuffer(Desc, nullptr, &pBuffer);
+    ASSERT_TRUE(pBuffer);
+
+    Uint32 CurrOffset = 0;
+
+    GPUUploadManagerImpl::Page Page{nullptr, pDevice, static_cast<Uint32>(BufferData.size())};
+    Page.Reset(pContext);
+    Page.Unseal();
+
+    GPUUploadManagerImpl::Page::Writer Writer = Page.TryBeginWriting();
+    EXPECT_TRUE(Writer) << "Should be able to begin writing to a new page";
+
+    Uint32 NumWriteDataCallbackCalled = 0;
+
+    auto WriteDataCallback = MakeCallback([&](void* pDstData, Uint32 NumBytes) {
+        std::memcpy(pDstData, &BufferData[CurrOffset], NumBytes);
+        ++NumWriteDataCallbackCalled;
+    });
+
+    Uint32 NumCopyBufferCallbackCalled = 0;
+    Uint32 CopyBufferCallbackDstOffset = 0;
+
+    auto CopyBufferCallback = MakeCallback([&](IDeviceContext* pContext,
+                                               IBuffer*        pSrcBuffer,
+                                               Uint32          SrcOffset,
+                                               Uint32          NumBytes) {
+        EXPECT_EQ(NumBytes, UpdateSizes[NumCopyBufferCallbackCalled]);
+        pContext->CopyBuffer(pSrcBuffer, SrcOffset, RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
+                             pBuffer, CopyBufferCallbackDstOffset, NumBytes, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        CopyBufferCallbackDstOffset += NumBytes;
+        ++NumCopyBufferCallbackCalled;
+    });
+
+    Uint32 NumUploadEnqueuedCallbackCalled = 0;
+    Uint32 UploadEnqueuedCallbackDstOffset = 0;
+
+    auto UploadEnqueuedCallback = MakeCallback(
+        [&](IBuffer* pDstBuffer,
+            Uint32   DstOffset,
+            Uint32   NumBytes) {
+            EXPECT_EQ(NumBytes, UpdateSizes[NumUploadEnqueuedCallbackCalled]);
+            EXPECT_EQ(DstOffset, UploadEnqueuedCallbackDstOffset);
+            UploadEnqueuedCallbackDstOffset += NumBytes;
+            ++NumUploadEnqueuedCallbackCalled;
+        });
+
+    for (Uint32 NumBytes : UpdateSizes)
+    {
+        ScheduleBufferUpdateInfo UpdateInfo;
+        UpdateInfo.NumBytes = NumBytes;
+
+        if (UseCopyCallback)
+        {
+            UpdateInfo.CopyBuffer      = CopyBufferCallback;
+            UpdateInfo.pCopyBufferData = CopyBufferCallback;
+        }
+        else
+        {
+            UpdateInfo.pDstBuffer = pBuffer;
+            UpdateInfo.DstOffset  = CurrOffset;
+        }
+
+        if (UseWriteCallback)
+        {
+            UpdateInfo.WriteDataCallback          = WriteDataCallback;
+            UpdateInfo.pWriteDataCallbackUserData = WriteDataCallback;
+        }
+        else
+        {
+            UpdateInfo.pSrcData = &BufferData[CurrOffset];
+        }
+
+        UpdateInfo.UploadEnqueued      = UploadEnqueuedCallback;
+        UpdateInfo.pUploadEnqueuedData = UploadEnqueuedCallback;
+
+        EXPECT_TRUE(Writer.ScheduleBufferUpdate(UpdateInfo));
+
+        CurrOffset += NumBytes;
+    }
+    VERIFY_EXPR(CurrOffset == BufferData.size());
+
+    {
+        ScheduleBufferUpdateInfo UpdateInfo;
+        UpdateInfo.pDstBuffer = pBuffer;
+        UpdateInfo.NumBytes   = 16;
+        UpdateInfo.DstOffset  = 0;
+        UpdateInfo.pSrcData   = &BufferData[0];
+        EXPECT_FALSE(Writer.ScheduleBufferUpdate(UpdateInfo)) << "Should not be able to schedule updates when the page is full";
+    }
+
+    EXPECT_EQ(Page.GetNumPendingOps(), UpdateSizes.size());
+    EXPECT_TRUE(Writer.EndWriting() == GPUUploadManagerImpl::Page::WritingStatus::NotSealed) << "Page should not be sealed";
+
+    EXPECT_EQ(Page.TrySeal(), GPUUploadManagerImpl::Page::SealStatus::Ready) << "Page with no active writers should be ready immediately";
+    EXPECT_EQ(Page.GetNumPendingOps(), UpdateSizes.size());
+    Page.ExecutePendingOps(pContext, 1);
+    EXPECT_EQ(Page.GetNumPendingOps(), size_t{0});
+    EXPECT_EQ(NumUploadEnqueuedCallbackCalled, UseCopyCallback ? 0u : kNumUpdates);
+    Page.ReleaseStagingBuffer(pContext);
+
+    EXPECT_EQ(UseWriteCallback ? kNumUpdates : 0u, NumWriteDataCallbackCalled);
+    EXPECT_EQ(UseCopyCallback ? kNumUpdates : 0u, NumCopyBufferCallbackCalled);
+
+    VerifyBufferContents(pBuffer, BufferData);
+}
+
+TEST(GPUUploadManagerTest, Writer_ScheduleBufferUpdates)
+{
+    TestWriterScheduleBufferUpdates(/*UseWriteCallback = */ false, /*UseCopyCallback = */ false);
+}
+
+TEST(GPUUploadManagerTest, Writer_ScheduleBufferUpdatesWithWriteBufferCallback)
+{
+    TestWriterScheduleBufferUpdates(/*UseWriteCallback = */ true, /*UseCopyCallback = */ false);
+}
+
+TEST(GPUUploadManagerTest, Writer_ScheduleBufferUpdatesWithCopyBufferCallback)
+{
+    TestWriterScheduleBufferUpdates(/*UseWriteCallback = */ false, /*UseCopyCallback = */ true);
+}
+
+TEST(GPUUploadManagerTest, Writer_ScheduleBufferUpdatesWithWriteAndCopyCallbacks)
+{
+    TestWriterScheduleBufferUpdates(/*UseWriteCallback = */ true, /*UseCopyCallback = */ true);
+}
+
 TEST(GPUUploadManagerTest, ScheduleBufferUpdates)
 {
     GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
@@ -184,22 +335,22 @@ TEST(GPUUploadManagerTest, ScheduleBufferUpdatesWithCopyBufferCallback)
 
     Uint32 CurrOffset = 0;
 
-    auto GetDstBufferInfo = MakeCallback([&](IDeviceContext* pContext,
-                                             IBuffer*        pSrcBuffer,
-                                             Uint32          SrcOffset,
-                                             Uint32          NumBytes) {
+    auto CopyBufferCallback = MakeCallback([&](IDeviceContext* pContext,
+                                               IBuffer*        pSrcBuffer,
+                                               Uint32          SrcOffset,
+                                               Uint32          NumBytes) {
         pContext->CopyBuffer(pSrcBuffer, SrcOffset, RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
                              pBuffer, CurrOffset, NumBytes, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
         CurrOffset += NumBytes;
     });
 
-    pUploadManager->ScheduleBufferUpdate({pContext, 256, &BufferData[0], GetDstBufferInfo, GetDstBufferInfo});
-    pUploadManager->ScheduleBufferUpdate({pContext, 256, &BufferData[256], GetDstBufferInfo, GetDstBufferInfo});
-    pUploadManager->ScheduleBufferUpdate({pContext, 1024, &BufferData[512], GetDstBufferInfo, GetDstBufferInfo});
-    pUploadManager->ScheduleBufferUpdate({pContext, 512, &BufferData[1536], GetDstBufferInfo, GetDstBufferInfo});
-    pUploadManager->ScheduleBufferUpdate({pContext, 2048, &BufferData[2048], GetDstBufferInfo, GetDstBufferInfo});
-    pUploadManager->ScheduleBufferUpdate({pContext, 4096, &BufferData[4096], GetDstBufferInfo, GetDstBufferInfo});
-    pUploadManager->ScheduleBufferUpdate({pContext, 8192, &BufferData[8192], GetDstBufferInfo, GetDstBufferInfo});
+    pUploadManager->ScheduleBufferUpdate({pContext, 256, &BufferData[0], CopyBufferCallback, CopyBufferCallback});
+    pUploadManager->ScheduleBufferUpdate({pContext, 256, &BufferData[256], CopyBufferCallback, CopyBufferCallback});
+    pUploadManager->ScheduleBufferUpdate({pContext, 1024, &BufferData[512], CopyBufferCallback, CopyBufferCallback});
+    pUploadManager->ScheduleBufferUpdate({pContext, 512, &BufferData[1536], CopyBufferCallback, CopyBufferCallback});
+    pUploadManager->ScheduleBufferUpdate({pContext, 2048, &BufferData[2048], CopyBufferCallback, CopyBufferCallback});
+    pUploadManager->ScheduleBufferUpdate({pContext, 4096, &BufferData[4096], CopyBufferCallback, CopyBufferCallback});
+    pUploadManager->ScheduleBufferUpdate({pContext, 8192, &BufferData[8192], CopyBufferCallback, CopyBufferCallback});
 
     pUploadManager->RenderThreadUpdate(pContext);
     pUploadManager->RenderThreadUpdate(pContext);
@@ -802,8 +953,8 @@ void TestWriterScheduleTextureUpdates(Uint32 Flags = TEST_TEXTURE_UPDATES_FLAGS_
     Page->Reset(pContext);
     Page->Unseal();
 
-    bool WriteDataCallbackCalled   = false;
-    bool CopyTextureCallbackCalled = false;
+    Uint32 NumWriteDataCallbackCalled   = 0;
+    Uint32 NumCopyTextureCallbackCalled = 0;
 
     auto WriteDataCallback = MakeCallback([&](void* pDstData, Uint32 Stride, Uint32 DepthStride, const Box& DstBox) {
         for (Uint32 row = 0; row < DstBox.Height(); ++row)
@@ -812,15 +963,15 @@ void TestWriterScheduleTextureUpdates(Uint32 Flags = TEST_TEXTURE_UPDATES_FLAGS_
             void*       pDstRow = static_cast<Uint8*>(pDstData) + row * Stride;
             std::memcpy(pDstRow, pSrcRow, DstBox.Width() * ElementSize);
         }
-        WriteDataCallbackCalled = true;
+        ++NumWriteDataCallbackCalled;
     });
 
     struct CopyTextureCallbackData
     {
         ITexture* const pDstTexture;
-        bool&           CopyTextureCallbackCalled;
+        Uint32&         NumCopyTextureCallbackCalled;
     };
-    CopyTextureCallbackData CopyCallbackData{pTexture, CopyTextureCallbackCalled};
+    CopyTextureCallbackData CopyCallbackData{pTexture, NumCopyTextureCallbackCalled};
 
     auto CopyTextureCallback = [](IDeviceContext*          pContext,
                                   Uint32                   DstMipLevel,
@@ -832,7 +983,7 @@ void TestWriterScheduleTextureUpdates(Uint32 Flags = TEST_TEXTURE_UPDATES_FLAGS_
         pContext->UpdateTexture(pCallbackData->pDstTexture, DstMipLevel, DstSlice, DstBox, SrcData,
                                 RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
                                 RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-        pCallbackData->CopyTextureCallbackCalled = true;
+        ++pCallbackData->NumCopyTextureCallbackCalled;
     };
 
     auto CopyD3D11TextureCallback = [](IDeviceContext* pContext,
@@ -865,8 +1016,17 @@ void TestWriterScheduleTextureUpdates(Uint32 Flags = TEST_TEXTURE_UPDATES_FLAGS_
         CopyAttribs.DstTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
 
         pContext->CopyTexture(CopyAttribs);
-        pCallbackData->CopyTextureCallbackCalled = true;
+        ++pCallbackData->NumCopyTextureCallbackCalled;
     };
+
+    Uint32 NumUploadEnqueuedCallbackCalled = 0;
+
+    auto UploadEnqueuedCallback = MakeCallback([&](ITexture*  pDstTexture,
+                                                   Uint32     DstMipLevel,
+                                                   Uint32     DstSlice,
+                                                   const Box& DstBox) {
+        ++NumUploadEnqueuedCallbackCalled;
+    });
 
     {
         GPUUploadManagerImpl::Page::Writer Writer = Page->TryBeginWriting();
@@ -899,6 +1059,10 @@ void TestWriterScheduleTextureUpdates(Uint32 Flags = TEST_TEXTURE_UPDATES_FLAGS_
                 UpdateInfo.pSrcData = &Mip0Data[(UpdateInfo.DstBox.MinX + UpdateInfo.DstBox.MinY * TexDesc.Width) * ElementSize];
                 UpdateInfo.Stride   = TexDesc.Width * ElementSize;
             }
+
+            UpdateInfo.UploadEnqueued      = UploadEnqueuedCallback;
+            UpdateInfo.pUploadEnqueuedData = UploadEnqueuedCallback;
+
             return Writer.ScheduleTextureUpdate(UpdateInfo, GetBufferToTextureCopyInfo(TexDesc.Format, UpdateInfo.DstBox, 1024), 1024);
         };
 
@@ -920,10 +1084,11 @@ void TestWriterScheduleTextureUpdates(Uint32 Flags = TEST_TEXTURE_UPDATES_FLAGS_
     EXPECT_EQ(Page->GetNumPendingOps(), size_t{4});
     Page->ExecutePendingOps(pContext, 1);
     EXPECT_EQ(Page->GetNumPendingOps(), size_t{0});
+    EXPECT_EQ(NumUploadEnqueuedCallbackCalled, (Flags & TEST_TEXTURE_UPDATES_FLAGS_USE_COPY_CALLBACK) ? 0u : 4u);
     Page->ReleaseStagingBuffer(pContext);
 
-    EXPECT_EQ((Flags & TEST_TEXTURE_UPDATES_FLAGS_USE_WRITE_DATA_CALLBACK) != 0, WriteDataCallbackCalled);
-    EXPECT_EQ((Flags & TEST_TEXTURE_UPDATES_FLAGS_USE_COPY_CALLBACK) != 0, CopyTextureCallbackCalled);
+    EXPECT_EQ((Flags & TEST_TEXTURE_UPDATES_FLAGS_USE_WRITE_DATA_CALLBACK) ? 4u : 0u, NumWriteDataCallbackCalled);
+    EXPECT_EQ((Flags & TEST_TEXTURE_UPDATES_FLAGS_USE_COPY_CALLBACK) ? 4u : 0u, NumCopyTextureCallbackCalled);
 
     VerifyTextureContents(pTexture, SubresData);
 }
@@ -943,7 +1108,7 @@ TEST(GPUUploadManagerTest, Writer_ScheduleTextureUpdates_WithCopyCallback)
     TestWriterScheduleTextureUpdates(TEST_TEXTURE_UPDATES_FLAGS_USE_COPY_CALLBACK);
 }
 
-TEST(GPUUploadManagerTest, Writer_ScheduleTextureUpdates_WithWriteAndCopyCallback)
+TEST(GPUUploadManagerTest, Writer_ScheduleTextureUpdates_WithWriteAndCopyCallbacks)
 {
     TestWriterScheduleTextureUpdates(TEST_TEXTURE_UPDATES_FLAGS_USE_WRITE_DATA_CALLBACK | TEST_TEXTURE_UPDATES_FLAGS_USE_COPY_CALLBACK);
 }
