@@ -724,7 +724,7 @@ GPUUploadManagerImpl::UploadStream::UploadStream(GPUUploadManagerImpl& Mgr,
                                                  Uint32                InitialPageCount,
                                                  TEXTURE_FORMAT        Format) noexcept :
     m_Mgr{Mgr},
-    m_PageSize{AlignUpToPowerOfTwo(PageSize)},
+    m_PageSize{Format == TEX_FORMAT_UNKNOWN ? AlignUpToPowerOfTwo(PageSize) : AlignUp(PageSize, 32u)},
     m_MaxPageCount{MaxPageCount},
     m_Format{Format}
 {
@@ -795,11 +795,13 @@ GPUUploadManagerImpl::UploadStream* GPUUploadManagerImpl::TextureUploadStreams::
     const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(Format);
 
     const float BPP =
-        static_cast<float>(FmtAttribs.ComponentSize * FmtAttribs.NumComponents) /
+        static_cast<float>(FmtAttribs.GetElementSize()) /
         static_cast<float>(FmtAttribs.BlockWidth * FmtAttribs.BlockHeight);
 
-    const float  fPageSize = std::sqrt(static_cast<float>(m_PageSizeInBytes) / BPP);
-    const Uint32 PageSize  = std::min(std::max(64u, AlignUpToPowerOfTwo(static_cast<Uint32>(fPageSize))), 16384u);
+    float  fPageSize = std::sqrt(static_cast<float>(m_PageSizeInBytes) / BPP);
+    Uint32 PageSize  = std::max(static_cast<Uint32>(fPageSize), 64u);
+    PageSize         = PageSize < 1024 ? AlignUpToPowerOfTwo(PageSize) : AlignUp(PageSize, 2048u);
+    PageSize         = std::min(PageSize, 16384u);
 
     // Don't create initial pages from worker threads because this requires access to
     // m_InFlightPages, which is not protected by a mutex.
@@ -1478,7 +1480,10 @@ std::string GetGPUUploadManagerStatsString(const GPUUploadManagerStats& MgrStats
         }
         else
         {
-            ss << GetTextureFormatAttribs(StreamStats.Format).Name << ' ' << StreamStats.PageSize << 'x' << StreamStats.PageSize << std::endl;
+            const TextureFormatAttribs& FmtAttribs      = GetTextureFormatAttribs(StreamStats.Format);
+            const Uint32                PageSizeInBytes = StreamStats.PageSize * StreamStats.PageSize * FmtAttribs.GetElementSize() / (FmtAttribs.BlockWidth * FmtAttribs.BlockHeight);
+            ss << GetTextureFormatAttribs(StreamStats.Format).Name << ' ' << StreamStats.PageSize << 'x' << StreamStats.PageSize
+               << " (" << GetMemorySizeString(PageSizeInBytes) << ')' << std::endl;
         }
         ss << "  NumPages: " << StreamStats.NumPages << std::endl;
 
@@ -1503,9 +1508,17 @@ std::string GetGPUUploadManagerStatsString(const GPUUploadManagerStats& MgrStats
         }
 
         ss << "  NumFreePages: " << StreamStats.NumFreePages << std::endl
-           << "  PeakNumPages: " << StreamStats.PeakNumPages << std::endl
-           << "  PeakTotalPendingUpdateSize: " << GetMemorySizeString(StreamStats.PeakTotalPendingUpdateSize) << std::endl
-           << "  PeakUpdateSize: " << GetMemorySizeString(StreamStats.PeakUpdateSize) << std::endl;
+           << "  PeakNumPages: " << StreamStats.PeakNumPages << std::endl;
+
+        if (StreamStats.Format == TEX_FORMAT_UNKNOWN)
+        {
+            ss << "  PeakTotalPendingUpdateSize: " << GetMemorySizeString(StreamStats.PeakTotalPendingUpdateSize) << std::endl
+               << "  PeakUpdateSize: " << GetMemorySizeString(StreamStats.PeakUpdateSize) << std::endl;
+        }
+        else
+        {
+            ss << "  PeakUpdateDim: " << StreamStats.PeakUpdateSize << std::endl;
+        }
     }
 
     ss << "NumInFlightPages: " << MgrStats.NumInFlightPages << std::endl;
