@@ -291,8 +291,7 @@ TEST(GPUUploadManagerTest, Writer_ScheduleBufferUpdateParallel)
 
     std::vector<std::thread> threads;
 
-    const size_t kNumThreads    = std::max(4u, std::thread::hardware_concurrency());
-    const size_t kNumIterations = (kNumUpdates + kNumThreads - 1) / kNumThreads;
+    const size_t kNumThreads = std::max(4u, std::thread::hardware_concurrency());
 
     std::atomic<size_t> UpdatesScheduled{0};
     std::atomic<Uint32> DstOffset{0};
@@ -302,26 +301,27 @@ TEST(GPUUploadManagerTest, Writer_ScheduleBufferUpdateParallel)
             [&](size_t ThreadId) {
                 StartSignal.Wait(true, static_cast<int>(kNumThreads));
 
-                for (size_t i = 0; i < kNumIterations; ++i)
+                while (true)
                 {
+                    Uint32 Offset = DstOffset.fetch_add(kUpdateSize);
+                    if (Offset >= kPageSize)
+                        break;
+
                     GPUUploadManagerImpl::Page::Writer Writer = Page.TryBeginWriting();
                     EXPECT_TRUE(Writer) << "Writer should be valid because the page should not be sealed yet";
                     if (!Writer)
                         break;
 
-                    Uint32 Offset = DstOffset.fetch_add(kUpdateSize);
-                    if (Offset < kPageSize)
+                    ScheduleBufferUpdateInfo UpdateInfo;
+                    UpdateInfo.pDstBuffer = pBuffer;
+                    UpdateInfo.pSrcData   = &BufferData[Offset];
+                    UpdateInfo.DstOffset  = Offset;
+                    UpdateInfo.NumBytes   = kUpdateSize;
+                    if (Writer.ScheduleBufferUpdate(UpdateInfo))
                     {
-                        ScheduleBufferUpdateInfo UpdateInfo;
-                        UpdateInfo.pDstBuffer = pBuffer;
-                        UpdateInfo.pSrcData   = &BufferData[Offset];
-                        UpdateInfo.DstOffset  = Offset;
-                        UpdateInfo.NumBytes   = kUpdateSize;
-                        if (Writer.ScheduleBufferUpdate(UpdateInfo))
-                        {
-                            UpdatesScheduled.fetch_add(1);
-                        }
+                        UpdatesScheduled.fetch_add(1);
                     }
+
                     Writer.EndWriting();
                 }
             },
@@ -1022,6 +1022,7 @@ void TestWriterScheduleTextureUpdates(Uint32 Flags = TEST_TEXTURE_UPDATES_FLAGS_
     ASSERT_TRUE(pTexture != nullptr);
 
     const std::vector<std::vector<Uint8>> SubresData = GenerateTextureSubresData(TexDesc);
+    const std::vector<Uint8>&             Mip0Data   = SubresData[0];
 
     const Uint32 ElementSize = GetTextureFormatAttribs(TexDesc.Format).GetElementSize();
 
@@ -1035,7 +1036,6 @@ void TestWriterScheduleTextureUpdates(Uint32 Flags = TEST_TEXTURE_UPDATES_FLAGS_
         Page = std::make_unique<GPUUploadManagerImpl::Page>(nullptr, pDevice, TexDesc.Width * TexDesc.Height * ElementSize);
     }
 
-    const std::vector<Uint8>& Mip0Data = SubresData[0];
     Page->Reset(pContext);
     Page->Unseal();
 
@@ -1197,6 +1197,109 @@ TEST(GPUUploadManagerTest, Writer_ScheduleTextureUpdates_WithCopyCallback)
 TEST(GPUUploadManagerTest, Writer_ScheduleTextureUpdates_WithWriteAndCopyCallbacks)
 {
     TestWriterScheduleTextureUpdates(TEST_TEXTURE_UPDATES_FLAGS_USE_WRITE_DATA_CALLBACK | TEST_TEXTURE_UPDATES_FLAGS_USE_COPY_CALLBACK);
+}
+
+TEST(GPUUploadManagerTest, Writer_ScheduleTextureUpdateParallel)
+{
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    TextureDesc TexDesc;
+    TexDesc.Name      = "GPUUploadManagerTest texture";
+    TexDesc.Type      = RESOURCE_DIM_TEX_2D;
+    TexDesc.Format    = TEX_FORMAT_RGBA8_UNORM;
+    TexDesc.Usage     = USAGE_DEFAULT;
+    TexDesc.Width     = 2048;
+    TexDesc.Height    = 2048;
+    TexDesc.MipLevels = 1;
+    TexDesc.BindFlags = BIND_SHADER_RESOURCE;
+
+    RefCntAutoPtr<ITexture> pTexture;
+    pDevice->CreateTexture(TexDesc, nullptr, &pTexture);
+    ASSERT_TRUE(pTexture != nullptr);
+
+    const std::vector<std::vector<Uint8>> SubresData = GenerateTextureSubresData(TexDesc);
+    const std::vector<Uint8>&             Mip0Data   = SubresData[0];
+
+    const Uint32 ElementSize = GetTextureFormatAttribs(TexDesc.Format).GetElementSize();
+
+    std::unique_ptr<GPUUploadManagerImpl::Page> Page;
+    if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D11)
+    {
+        Page = std::make_unique<GPUUploadManagerImpl::Page>(nullptr, pDevice, TexDesc.Width, TexDesc.Format);
+    }
+    else
+    {
+        Page = std::make_unique<GPUUploadManagerImpl::Page>(nullptr, pDevice, TexDesc.Width * TexDesc.Height * ElementSize);
+    }
+
+    Page->Reset(pContext);
+    Page->Unseal();
+    Threading::Signal StartSignal;
+
+    std::vector<std::thread> threads;
+
+    const Uint32 kUpdateWidth     = 512;
+    const Uint32 kUpdateHeight    = 16;
+    const Uint32 NumUpdates       = (TexDesc.Width / kUpdateWidth) * (TexDesc.Height / kUpdateHeight);
+    const Uint32 NumUpdatesPerRow = TexDesc.Width / kUpdateWidth;
+
+    const size_t kNumThreads = std::max(4u, std::thread::hardware_concurrency());
+
+    std::atomic<Uint32> UpdateIndex{0};
+    std::atomic<size_t> UpdatesScheduled{0};
+    for (size_t t = 0; t < kNumThreads; ++t)
+    {
+        threads.emplace_back(
+            [&](size_t ThreadId) {
+                StartSignal.Wait(true, static_cast<int>(kNumThreads));
+
+                while (true)
+                {
+                    Uint32 UpdateId = UpdateIndex.fetch_add(1);
+                    if (UpdateId >= NumUpdates)
+                        break;
+
+                    GPUUploadManagerImpl::Page::Writer Writer = Page->TryBeginWriting();
+                    EXPECT_TRUE(Writer) << "Writer should be valid because the page should not be sealed yet";
+                    if (!Writer)
+                        break;
+
+                    ScheduleTextureUpdateInfo UpdateInfo;
+                    UpdateInfo.pDstTexture = pTexture;
+                    UpdateInfo.Stride      = TexDesc.Width * ElementSize;
+                    UpdateInfo.DstBox.MinX = (UpdateId % NumUpdatesPerRow) * kUpdateWidth;
+                    UpdateInfo.DstBox.MinY = (UpdateId / NumUpdatesPerRow) * kUpdateHeight;
+                    UpdateInfo.DstBox.MaxX = UpdateInfo.DstBox.MinX + kUpdateWidth;
+                    UpdateInfo.DstBox.MaxY = UpdateInfo.DstBox.MinY + kUpdateHeight;
+                    UpdateInfo.pSrcData    = &Mip0Data[(UpdateInfo.DstBox.MinX + UpdateInfo.DstBox.MinY * TexDesc.Width) * ElementSize];
+
+                    BufferToTextureCopyInfo CopyInfo = GetBufferToTextureCopyInfo(TexDesc.Format, UpdateInfo.DstBox, 1024);
+                    if (Writer.ScheduleTextureUpdate(UpdateInfo, CopyInfo, 1024))
+                    {
+                        UpdatesScheduled.fetch_add(1);
+                    }
+                    Writer.EndWriting();
+                }
+            },
+            t);
+    }
+
+    StartSignal.Trigger(true);
+
+    for (auto& thread : threads)
+        thread.join();
+
+    EXPECT_EQ(Page->GetNumPendingOps(), NumUpdates);
+    EXPECT_EQ(UpdatesScheduled.load(), NumUpdates) << "Should be able to schedule updates until the page size is reached";
+    EXPECT_EQ(Page->TrySeal(), GPUUploadManagerImpl::Page::SealStatus::Ready) << "Page should be ready for sealing after all updates are scheduled";
+    Page->ExecutePendingOps(pContext, 1);
+    Page->ReleaseStagingBuffer(pContext);
+
+    VerifyTextureContents(pTexture, SubresData);
 }
 
 void TestTextureUpdates(TEXTURE_FORMAT Format, RESOURCE_DIMENSION Type, Uint32 Flags = TEST_TEXTURE_UPDATES_FLAGS_NONE)
