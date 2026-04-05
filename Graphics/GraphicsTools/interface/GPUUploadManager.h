@@ -379,6 +379,9 @@ struct ScheduleTextureUpdateInfo
     /// Otherwise, this texture will be used as the destination for the copy operation
     ITexture* pDstTexture DEFAULT_INITIALIZER(nullptr);
 
+    /// Destination texture format, used when pDstTexture is null.
+    TEXTURE_FORMAT Format DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
+
     /// State transition mode for the destination texture. This parameter is ignored if CopyTexture/CopyD3D11Texture callback is provided,
     /// and the callback is expected to perform any necessary state transitions itself.
     RESOURCE_STATE_TRANSITION_MODE DstTextureTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_TRANSITION);

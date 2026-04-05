@@ -816,8 +816,15 @@ void TestTextureUpdates(TEXTURE_FORMAT Format, RESOURCE_DIMENSION Type, Uint32 F
                     for (Uint32 x = 0; x < Mip.LogicalWidth; x += UpdateWidth)
                     {
                         ScheduleTextureUpdateInfo UpdateInfo;
-                        UpdateInfo.pContext    = pContext;
-                        UpdateInfo.pDstTexture = pTexture;
+                        UpdateInfo.pContext = pContext;
+                        if (Flags & TEST_TEXTURE_UPDATES_FLAGS_USE_COPY_CALLBACK)
+                        {
+                            UpdateInfo.Format = Format;
+                        }
+                        else
+                        {
+                            UpdateInfo.pDstTexture = pTexture;
+                        }
 
                         Box& DstBox{UpdateInfo.DstBox};
                         DstBox.MinX = x;

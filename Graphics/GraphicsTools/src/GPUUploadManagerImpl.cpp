@@ -411,7 +411,12 @@ bool GPUUploadManagerImpl::Page::ScheduleTextureUpdate(const ScheduleTextureUpda
         }
         else if (m_pStagingAtlas)
         {
-            const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(UpdateInfo.pDstTexture->GetDesc().Format);
+            const TEXTURE_FORMAT Format = UpdateInfo.pDstTexture != nullptr ?
+                UpdateInfo.pDstTexture->GetDesc().Format :
+                UpdateInfo.Format;
+            VERIFY_EXPR(Format != TEX_FORMAT_UNKNOWN);
+
+            const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(Format);
 
             DynamicAtlasManager::Region Region = m_pStagingAtlas->Allocate(
                 AlignUp(UpdateInfo.DstBox.Width(), FmtAttribs.BlockWidth),
@@ -440,7 +445,12 @@ bool GPUUploadManagerImpl::Page::ScheduleTextureUpdate(const ScheduleTextureUpda
             }
             else if (UpdateInfo.pSrcData != nullptr)
             {
-                const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(UpdateInfo.pDstTexture->GetDesc().Format);
+                const TEXTURE_FORMAT Format = UpdateInfo.pDstTexture != nullptr ?
+                    UpdateInfo.pDstTexture->GetDesc().Format :
+                    UpdateInfo.Format;
+                VERIFY_EXPR(Format != TEX_FORMAT_UNKNOWN);
+
+                const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(Format);
                 const Uint32                NumRows    = AlignUp(UpdateInfo.DstBox.Height(), FmtAttribs.BlockHeight) / FmtAttribs.BlockHeight;
                 for (Uint32 DepthSlice = 0; DepthSlice < UpdateInfo.DstBox.Depth(); ++DepthSlice)
                 {
@@ -1100,13 +1110,14 @@ void GPUUploadManagerImpl::ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& 
 
 void GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo)
 {
-    if (UpdateInfo.pDstTexture == nullptr)
+    const TEXTURE_FORMAT Format = UpdateInfo.pDstTexture != nullptr ?
+        UpdateInfo.pDstTexture->GetDesc().Format :
+        UpdateInfo.Format;
+    if (Format == TEX_FORMAT_UNKNOWN)
     {
-        DEV_ERROR("Dst texture must not be null");
+        DEV_ERROR("If pDstTexture is null, a valid format must be specified in ScheduleTextureUpdateInfo.Format");
         return;
     }
-
-    const TextureDesc& TexDesc = UpdateInfo.pDstTexture->GetDesc();
 
     struct ScheduleUpdateData
     {
@@ -1117,7 +1128,7 @@ void GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo
     ScheduleUpdateData UpdateData{
         UpdateInfo,
         !m_pTextureStreams ?
-            GetBufferToTextureCopyInfo(TexDesc.Format, UpdateInfo.DstBox, m_TextureUpdateStrideAlignment) :
+            GetBufferToTextureCopyInfo(Format, UpdateInfo.DstBox, m_TextureUpdateStrideAlignment) :
             BufferToTextureCopyInfo{},
         !m_pTextureStreams ?
             m_TextureUpdateOffsetAlignment :
@@ -1125,7 +1136,7 @@ void GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo
     };
 
     UploadStream* pStream = m_pTextureStreams ?
-        m_pTextureStreams->GetStreamForFormat(UpdateData.UpdateInfo.pContext, TexDesc.Format) :
+        m_pTextureStreams->GetStreamForFormat(UpdateData.UpdateInfo.pContext, Format) :
         &GetStreamForUpdateSize(static_cast<Uint32>(UpdateData.CopyInfo.MemorySize));
     if (pStream == nullptr)
     {
