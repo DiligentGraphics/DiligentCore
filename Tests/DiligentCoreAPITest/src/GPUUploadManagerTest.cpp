@@ -256,6 +256,92 @@ TEST(GPUUploadManagerTest, Writer_ScheduleBufferUpdatesWithWriteAndCopyCallbacks
     TestWriterScheduleBufferUpdates(/*UseWriteCallback = */ true, /*UseCopyCallback = */ true);
 }
 
+TEST(GPUUploadManagerTest, Writer_ScheduleBufferUpdateParallel)
+{
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    constexpr Uint32 kPageSize   = 65536;
+    constexpr Uint32 kUpdateSize = 32;
+    constexpr Uint32 kNumUpdates = kPageSize / kUpdateSize;
+
+    std::vector<Uint8> BufferData(kPageSize);
+    for (size_t i = 0; i < BufferData.size(); ++i)
+    {
+        BufferData[i] = static_cast<Uint8>(i % 256);
+    }
+
+    BufferDesc Desc;
+    Desc.Name      = "GPUUploadManagerTest buffer";
+    Desc.Size      = BufferData.size();
+    Desc.Usage     = USAGE_DEFAULT;
+    Desc.BindFlags = BIND_VERTEX_BUFFER;
+    RefCntAutoPtr<IBuffer> pBuffer;
+    pDevice->CreateBuffer(Desc, nullptr, &pBuffer);
+    ASSERT_TRUE(pBuffer);
+
+    GPUUploadManagerImpl::Page Page{nullptr, pDevice, kPageSize};
+    Page.Reset(pContext);
+    Page.Unseal();
+
+    Threading::Signal StartSignal;
+
+    std::vector<std::thread> threads;
+
+    const size_t kNumThreads    = std::max(4u, std::thread::hardware_concurrency());
+    const size_t kNumIterations = (kNumUpdates + kNumThreads - 1) / kNumThreads;
+
+    std::atomic<size_t> UpdatesScheduled{0};
+    std::atomic<Uint32> DstOffset{0};
+    for (size_t t = 0; t < kNumThreads; ++t)
+    {
+        threads.emplace_back(
+            [&](size_t ThreadId) {
+                StartSignal.Wait(true, static_cast<int>(kNumThreads));
+
+                for (size_t i = 0; i < kNumIterations; ++i)
+                {
+                    GPUUploadManagerImpl::Page::Writer Writer = Page.TryBeginWriting();
+                    EXPECT_TRUE(Writer) << "Writer should be valid because the page should not be sealed yet";
+                    if (!Writer)
+                        break;
+
+                    Uint32 Offset = DstOffset.fetch_add(kUpdateSize);
+                    if (Offset < kPageSize)
+                    {
+                        ScheduleBufferUpdateInfo UpdateInfo;
+                        UpdateInfo.pDstBuffer = pBuffer;
+                        UpdateInfo.pSrcData   = &BufferData[Offset];
+                        UpdateInfo.DstOffset  = Offset;
+                        UpdateInfo.NumBytes   = kUpdateSize;
+                        if (Writer.ScheduleBufferUpdate(UpdateInfo))
+                        {
+                            UpdatesScheduled.fetch_add(1);
+                        }
+                    }
+                    Writer.EndWriting();
+                }
+            },
+            t);
+    }
+
+    StartSignal.Trigger(true);
+
+    for (auto& thread : threads)
+        thread.join();
+
+    EXPECT_EQ(Page.GetNumPendingOps(), kNumUpdates);
+    EXPECT_EQ(UpdatesScheduled.load(), kNumUpdates) << "Should be able to schedule updates until the page size is reached";
+    EXPECT_EQ(Page.TrySeal(), GPUUploadManagerImpl::Page::SealStatus::Ready) << "Page should be ready for sealing after all updates are scheduled";
+    Page.ExecutePendingOps(pContext, 1);
+    Page.ReleaseStagingBuffer(pContext);
+
+    VerifyBufferContents(pBuffer, BufferData);
+}
+
 TEST(GPUUploadManagerTest, ScheduleBufferUpdates)
 {
     GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();

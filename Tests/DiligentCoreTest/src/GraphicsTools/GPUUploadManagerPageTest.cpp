@@ -256,15 +256,16 @@ TEST(GPUUploadManagerPageTest, ScheduleBufferUpdateParallel)
             [&](size_t ThreadId) {
                 StartSignal.Wait(true, static_cast<int>(kNumThreads));
 
-                GPUUploadManagerImpl::Page::Writer Writer = Page.TryBeginWriting();
-                if (Writer)
+                for (size_t i = 0; i < kNumIterations; ++i)
                 {
-                    for (size_t i = 0; i < kNumIterations; ++i)
+                    GPUUploadManagerImpl::Page::Writer Writer = Page.TryBeginWriting();
+                    EXPECT_TRUE(Writer) << "Writer should be valid because the page should not be sealed yet";
+                    if (!Writer)
+                        break;
+
+                    if (Writer.ScheduleBufferUpdate({nullptr, nullptr, 0, kUpdateSize, nullptr, Callback, Callback}))
                     {
-                        if (Writer.ScheduleBufferUpdate({nullptr, nullptr, 0, kUpdateSize, nullptr, Callback, Callback}))
-                        {
-                            UpdatesScheduled.fetch_add(1);
-                        }
+                        UpdatesScheduled.fetch_add(1);
                     }
                     Writer.EndWriting();
                 }
@@ -279,7 +280,7 @@ TEST(GPUUploadManagerPageTest, ScheduleBufferUpdateParallel)
 
     EXPECT_EQ(Page.GetNumPendingOps(), kNumUpdates);
     EXPECT_EQ(UpdatesScheduled.load(), kNumUpdates) << "Should be able to schedule updates until the page size is reached";
-    EXPECT_EQ(Page.TrySeal() == GPUUploadManagerImpl::Page::SealStatus::Ready, true) << "Page should be ready for sealing after all updates are scheduled";
+    EXPECT_EQ(Page.TrySeal(), GPUUploadManagerImpl::Page::SealStatus::Ready) << "Page should be ready for sealing after all updates are scheduled";
     Page.ExecutePendingOps(nullptr, 0);
     EXPECT_EQ(NumUpdatesScheduled, kNumUpdates) << "All scheduled updates should have been executed";
 }
