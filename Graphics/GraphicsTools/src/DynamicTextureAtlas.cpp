@@ -42,6 +42,7 @@
 #include "DefaultRawMemoryAllocator.hpp"
 #include "GraphicsAccessories.hpp"
 #include "Align.hpp"
+#include "Atomics.hpp"
 
 namespace Diligent
 {
@@ -458,7 +459,10 @@ public:
             if (m_DynamicTexArray->GetDesc().ArraySize != ArraySize)
             {
                 m_DynamicTexArray->Resize(pDevice, pContext, ArraySize);
-                m_TexArraySize.store(m_DynamicTexArray->GetDesc().ArraySize);
+                // Get the actual array size after the resize.
+                ArraySize = m_DynamicTexArray->GetDesc().ArraySize;
+                // Atomically update the array size to the actual value after resizing.
+                AtomicMax(m_TexArraySize, ArraySize);
             }
 
             return m_DynamicTexArray->Update(pDevice, pContext);
@@ -686,13 +690,17 @@ private:
         VERIFY_EXPR(FirstFreeSlice < m_MaxSliceCount);
         m_AvailableSlices.erase(m_AvailableSlices.begin());
 
-        while (m_TexArraySize <= FirstFreeSlice)
+        Uint32 CurrSize = m_TexArraySize.load();
+        while (CurrSize <= FirstFreeSlice)
         {
             const Uint32 ExtraSliceCount = m_ExtraSliceCount != 0 ?
                 m_ExtraSliceCount :
-                std::max(static_cast<Uint32>(static_cast<float>(m_TexArraySize.load()) * m_ExtraSliceFactor), 1u);
+                std::max(static_cast<Uint32>(static_cast<float>(CurrSize) * m_ExtraSliceFactor), 1u);
 
-            m_TexArraySize.store(std::min(m_TexArraySize + ExtraSliceCount, m_MaxSliceCount));
+            const Uint32 RequiredSize = std::min(CurrSize + ExtraSliceCount, m_MaxSliceCount);
+            AtomicMax(m_TexArraySize, RequiredSize);
+
+            CurrSize = m_TexArraySize.load();
         }
 
         return FirstFreeSlice;
