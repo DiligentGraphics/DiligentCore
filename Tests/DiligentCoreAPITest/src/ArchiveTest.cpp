@@ -1260,7 +1260,9 @@ void ArchiveGraphicsShaders(bool CompileAsync)
     ASSERT_NE(pArchive, nullptr);
     EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pArchive));
 
-    pDearchiver->LoadArchive(pArchive, ContentVersion);
+    pDearchiver->LoadArchive(pArchive, ContentVersion, /*MakeCopy = */ true);
+    // Clear the archive data to ensure that it is properly copied
+    memset(pArchive->GetDataPtr(), 0, pArchive->GetSize());
 
     auto UnpackShader = [](IRenderDevice* pDevice, IDearchiver* pDearchiver, const ShaderCreateInfo& CI) {
         RefCntAutoPtr<IShader> pUnpackedShader;

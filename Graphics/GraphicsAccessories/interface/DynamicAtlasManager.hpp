@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -86,7 +86,7 @@ public:
         {}
 
         /// Checks if the region is empty (width or height is zero).
-        bool IsEmpty() const
+        constexpr bool IsEmpty() const
         {
             return width == 0 || height == 0;
         }
@@ -103,6 +103,11 @@ public:
         constexpr bool operator!=(const Region& rhs) const
         {
             return !(*this == rhs);
+        }
+
+        constexpr operator bool() const
+        {
+            return !IsEmpty();
         }
 
         struct Hasher
@@ -159,6 +164,9 @@ public:
     /// The total free area is the sum of the areas of all free regions in the atlas,
     /// and thus may be fragmented.
     Uint64 GetTotalFreeArea() const { return m_TotalFreeArea; }
+
+    /// Resets the atlas to the initial state, where the entire atlas is free and there are no allocated regions.
+    void Reset();
 
     /// Checks if the atlas is empty, i.e. if there are no allocated regions.
     bool IsEmpty() const

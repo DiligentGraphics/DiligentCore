@@ -191,18 +191,18 @@ DILIGENT_TYPED_ENUM(USAGE, Uint8)
 
     /// A resource that requires read and write access by the GPU and can also be occasionally
     /// written by the CPU.  \n
-    /// D3D11 Counterpart: D3D11_USAGE_DEFAULT. OpenGL counterpart: GL_DYNAMIC_DRAW.
+    /// D3D11 Counterpart: D3D11_USAGE_DEFAULT. OpenGL counterpart: GL_STREAM_DRAW.
     /// \remarks Default buffers do not allow CPU access and must use CPU_ACCESS_NONE flag.
     USAGE_DEFAULT,
 
     /// A resource that can be read by the GPU and written at least once per frame by the CPU.  \n
-    /// D3D11 Counterpart: D3D11_USAGE_DYNAMIC. OpenGL counterpart: GL_STREAM_DRAW
+    /// D3D11 Counterpart: D3D11_USAGE_DYNAMIC. OpenGL counterpart: GL_DYNAMIC_DRAW
     /// \remarks Dynamic buffers must use CPU_ACCESS_WRITE flag.
     USAGE_DYNAMIC,
 
     /// A resource that facilitates transferring data between GPU and CPU. \n
-    /// D3D11 Counterpart: D3D11_USAGE_STAGING. OpenGL counterpart: GL_STATIC_READ or
-    /// GL_STATIC_COPY depending on the CPU access flags.
+    /// D3D11 Counterpart: D3D11_USAGE_STAGING. OpenGL counterpart: GL_STREAM_READ or
+    /// GL_STREAM_DRAW depending on the CPU access flags.
     /// \remarks Staging buffers must use exactly one of CPU_ACCESS_WRITE or CPU_ACCESS_READ flags.
     USAGE_STAGING,
 

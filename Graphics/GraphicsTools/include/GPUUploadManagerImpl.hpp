@@ -35,15 +35,20 @@
 #include "RefCntAutoPtr.hpp"
 #include "MPSCQueue.hpp"
 #include "ThreadSignal.hpp"
+#include "DynamicAtlasManager.hpp"
 
 #include <memory>
 #include <vector>
 #include <mutex>
+#include <shared_mutex>
 #include <map>
 #include <unordered_map>
+#include <variant>
 
 namespace Diligent
 {
+
+struct BufferToTextureCopyInfo;
 
 /// Implementation of the asynchronous GPU upload manager.
 class GPUUploadManagerImpl final : public ObjectBase<IGPUUploadManager>
@@ -58,14 +63,25 @@ public:
 
     virtual void DILIGENT_CALL_TYPE ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& UpdateInfo) override final;
 
-    virtual void DILIGENT_CALL_TYPE GetStats(GPUUploadManagerStats& Stats) const override final;
+    virtual void DILIGENT_CALL_TYPE ScheduleTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo) override final;
 
+    virtual void DILIGENT_CALL_TYPE GetStats(GPUUploadManagerStats& Stats) override final;
+
+private:
+    class UploadStream;
+
+public:
     class Page
     {
     public:
         explicit Page(Uint32 Size, bool PersistentMapped = false) noexcept;
 
-        Page(IRenderDevice* pDevice, Uint32 Size);
+        Page(UploadStream* pStream, IRenderDevice* pDevice, Uint32 Size);
+
+        // Special page for texture updates in Direct3D11, which require a staging texture.
+        // The texture dimensions are Size x Size.
+        Page(UploadStream* pStream, IRenderDevice* pDevice, Uint32 Size, TEXTURE_FORMAT Format);
+
         ~Page();
 
         enum class WritingStatus
@@ -88,6 +104,9 @@ public:
             // clang-format on
 
             bool ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& UpdateInfo);
+            bool ScheduleTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo,
+                                       const BufferToTextureCopyInfo&   CopyInfo,
+                                       Uint32                           OffsetAlignment);
 
             WritingStatus EndWriting();
 
@@ -134,6 +153,9 @@ public:
         // Returns true if the page was not previously enqueued, false otherwise.
         bool TryEnqueue();
 
+        // Return the page to the stream's pool of free pages.
+        void Recycle();
+
         Uint64 GetFenceValue() const { return m_FenceValue; }
         Uint32 GetSize() const { return m_Size; }
 
@@ -155,13 +177,52 @@ public:
         // Returns true if the operation was successfully scheduled, and false otherwise.
         bool ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& UpdateInfo);
 
+        // Schedules a texture update operation on the page.
+        // Returns true if the operation was successfully scheduled, and false otherwise.
+        bool ScheduleTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo,
+                                   const BufferToTextureCopyInfo&   CopyInfo,
+                                   Uint32                           OffsetAlignment);
+
+        // Allocates a block of memory from the page for a new update operation.
+        // Returns the offset of the allocated block within the page.
+        // If there is not enough space in the page for the requested allocation, returns ~0u.
+        Uint32 Allocate(Uint32 NumBytes, Uint32 Alignment);
+
         WritingStatus EndWriting();
 
+        void UnmapStagingResource(IDeviceContext* pContext);
+
     private:
+        UploadStream* const m_pStream = nullptr;
+
         const Uint32 m_Size             = 0;
         const bool   m_PersistentMapped = false;
 
         RefCntAutoPtr<IBuffer> m_pStagingBuffer;
+
+        // Direct3D11 does not support buffer to texture copies, so we need a
+        // staging texture to perform texture updates.
+        struct StagingTextureAtlas
+        {
+            StagingTextureAtlas(IRenderDevice* pDevice, Uint32 Width, Uint32 Height, TEXTURE_FORMAT Format, const std::string& Name);
+            ~StagingTextureAtlas();
+
+            void* Map(IDeviceContext* pContext);
+            void  Unmap(IDeviceContext* pContext);
+            void  Reset();
+
+            DynamicAtlasManager::Region Allocate(Uint32 Width, Uint32 Height);
+
+            RefCntAutoPtr<ITexture> pTex;
+
+            Uint32 RowStride   = 0;
+            Uint32 DepthStride = 0;
+
+        private:
+            std::mutex          MgrMtx;
+            DynamicAtlasManager Mgr;
+        };
+        std::unique_ptr<StagingTextureAtlas> m_pStagingAtlas;
 
         void* m_pData = nullptr;
 
@@ -175,44 +236,71 @@ public:
 
         Uint64 m_FenceValue = 0;
 
-        struct PendingOp
+        static constexpr Uint32 kMinimumOffsetAlignment = 16;
+
+        struct PendingBufferOp
         {
             RefCntAutoPtr<IBuffer> pDstBuffer;
 
             CopyStagingBufferCallbackType CopyBuffer      = nullptr;
             void*                         pCopyBufferData = nullptr;
 
-            GPUUploadEnqueuedCallbackType UploadEnqueued      = nullptr;
-            void*                         pUploadEnqueuedData = nullptr;
+            GPUBufferUploadEnqueuedCallbackType UploadEnqueued      = nullptr;
+            void*                               pUploadEnqueuedData = nullptr;
+
+            RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
 
             Uint32 SrcOffset = 0;
             Uint32 DstOffset = 0;
             Uint32 NumBytes  = 0;
 
-            PendingOp() noexcept = default;
+            PendingBufferOp() noexcept = default;
         };
 
+        struct PendingTextureOp
+        {
+            RefCntAutoPtr<ITexture> pDstTexture;
+
+            RESOURCE_STATE_TRANSITION_MODE DstTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
+
+            // For Direct3D11, coordinates of the source region within the staging texture.
+            Uint32 SrcX = 0;
+            Uint32 SrcY = 0;
+
+            Uint32 SrcOffset      = 0;
+            Uint32 SrcStride      = 0;
+            Uint32 SrcDepthStride = 0;
+
+            Uint32 DstMipLevel = 0;
+            Uint32 DstSlice    = 0;
+            Box    DstBox;
+
+            CopyStagingTextureCallbackType      CopyTexture      = nullptr;
+            CopyStagingD3D11TextureCallbackType CopyD3D11Texture = nullptr;
+            void*                               pCopyTextureData = nullptr;
+
+            GPUTextureUploadEnqueuedCallbackType UploadEnqueued      = nullptr;
+            void*                                pUploadEnqueuedData = nullptr;
+        };
+
+        using PendingOp = std::variant<PendingBufferOp, PendingTextureOp>;
         MPSCQueue<PendingOp> m_PendingOps;
+
+        static std::atomic<Uint32> sm_PageCounter;
     };
 
 private:
-    void  ReclaimCompletedPages(IDeviceContext* pContext);
-    bool  SealAndSwapCurrentPage(IDeviceContext* pContext);
-    void  AddFreePages(IDeviceContext* pContext);
-    void  ProcessPendingPages(IDeviceContext* pContext);
-    bool  TryRotatePage(IDeviceContext* pContext, Page* ExpectedCurrent, Uint32 RequiredSize);
-    bool  TryEnqueuePage(Page* P);
-    Page* AcquireFreePage(IDeviceContext* pContext, Uint32 RequiredSize = 0);
-    Page* CreatePage(IDeviceContext* pContext, Uint32 RequiredSize = 0);
-    void  ProcessPagesToRelease(IDeviceContext* pContext);
-    void  UpdateBucketInfo();
+    void ReclaimCompletedPages(IDeviceContext* pContext);
+    void ProcessPendingPages(IDeviceContext* pContext);
+
+    UploadStream& GetStreamForUpdateSize(Uint32 UpdateSize);
 
 private:
-    const Uint32 m_PageSize;
-    const Uint32 m_MaxPageCount;
-
     RefCntAutoPtr<IRenderDevice>  m_pDevice;
     RefCntAutoPtr<IDeviceContext> m_pContext;
+
+    const Uint32 m_TextureUpdateOffsetAlignment;
+    const Uint32 m_TextureUpdateStrideAlignment;
 
     // Pages that are pending for execution.
     MPSCQueue<Page*> m_PendingPages;
@@ -231,7 +319,6 @@ private:
         std::map<Uint32, std::vector<Page*>> m_PagesBySize;
         std::atomic<size_t>                  m_Size{0};
     };
-    FreePages m_FreePages;
 
     // Pages that have been submitted for execution and are being processed by the GPU.
     std::vector<Page*> m_InFlightPages;
@@ -240,24 +327,104 @@ private:
     RefCntAutoPtr<IFence> m_pFence;
     Uint64                m_NextFenceValue = 1;
 
-    std::atomic<Page*>    m_pCurrentPage{nullptr};
-    Threading::TickSignal m_PageRotatedSignal;
+    class UploadStream
+    {
+    public:
+        UploadStream(GPUUploadManagerImpl& Mgr,
+                     IDeviceContext*       pContext,
+                     Uint32                PageSize,
+                     Uint32                MaxPageCount,
+                     Uint32                InitialPageCount,
+                     TEXTURE_FORMAT        Format = TEX_FORMAT_UNKNOWN) noexcept;
 
-    std::unordered_map<Page*, std::unique_ptr<Page>> m_Pages;
-    std::map<Uint32, Uint32>                         m_PageSizeToCount;
-    std::vector<GPUUploadManagerBucketInfo>          m_BucketInfo;
+        Page* CreatePage(IDeviceContext* pContext, Uint32 RequiredSize = 0, bool AllowOverLimit = false);
+        Page* AcquireFreePage(IDeviceContext* pContext, Uint32 RequiredSize = 0, bool AllowOverLimit = false);
+        bool  SealAndSwapCurrentPage(IDeviceContext* pContext);
+        bool  TryRotatePage(IDeviceContext* pContext, Page* ExpectedCurrent, Uint32 RequiredSize);
+        bool  TryEnqueuePage(Page* P);
+        void  ProcessPagesToRelease(IDeviceContext* pContext);
+        void  AddFreePages(IDeviceContext* pContext);
+        void  AddFreePage(Page* pPage) { m_FreePages.Push(pPage); }
+
+        void ScheduleUpdate(IDeviceContext* pContext,
+                            Uint32          UpdateSize,
+                            const void*     pUpdateInfo,
+                            bool            ScheduleUpdate(Page::Writer& Writer, const void* pUpdateInfo));
+        void ReleaseStagingBuffers();
+        void SignalPageRotated() { m_PageRotatedSignal.Tick(); }
+        void SignalStop();
+
+        Uint32 GetPageSize() const { return m_PageSize; }
+
+        void GetStats(GPUUploadManagerStreamStats& Stats) const;
+
+    private:
+        GPUUploadManagerImpl& m_Mgr;
+        const Uint32          m_PageSize;
+        const Uint32          m_MaxPageCount;
+        const TEXTURE_FORMAT  m_Format;
+
+        std::atomic<Page*> m_pCurrentPage{nullptr};
+
+        Threading::TickSignal m_PageRotatedSignal;
+
+        std::unordered_map<Page*, std::unique_ptr<Page>> m_Pages;
+        std::map<Uint32, Uint32>                         m_PageSizeToCount;
+        mutable std::vector<GPUUploadManagerBucketInfo>  m_BucketInfo;
+
+        std::atomic<Uint32> m_NumRunningUpdates{0};
+        std::atomic<Uint32> m_MaxPendingUpdateSize{0};
+        std::atomic<Uint32> m_TotalPendingUpdateSize{0};
+
+        FreePages m_FreePages;
+
+        std::atomic<Uint32> m_PeakUpdateSize{0};
+        Uint32              m_PeakTotalPendingUpdateSize = 0;
+        Uint32              m_PeakPageCount              = 0;
+    };
+
+    using UploadStreamUniquePtr = std::unique_ptr<UploadStream>;
+    std::vector<UploadStreamUniquePtr> m_Streams;
+
+    UploadStream* m_pNormalStream = nullptr;
+    UploadStream* m_pLargeStream  = nullptr;
+
+    class TextureUploadStreams
+    {
+    public:
+        TextureUploadStreams(GPUUploadManagerImpl& Mgr, Uint32 PageSizeInBytes, Uint32 MaxPageCount) :
+            m_Mgr{Mgr},
+            m_PageSizeInBytes{PageSizeInBytes},
+            m_MaxPageCount{MaxPageCount}
+        {}
+
+        UploadStream* GetStreamForFormat(IDeviceContext* pContext, TEXTURE_FORMAT Format);
+
+        void MoveNewStreamsToManager();
+        void SetStopping();
+
+    private:
+        GPUUploadManagerImpl& m_Mgr;
+        const Uint32          m_PageSizeInBytes;
+        const Uint32          m_MaxPageCount;
+
+        std::shared_mutex                                 m_Mtx;
+        std::unordered_map<TEXTURE_FORMAT, UploadStream*> m_StreamsByFormat;
+
+        // New streams created by worker threads that are not yet added to parent m_Streams vector.
+        std::mutex                                 m_NewStreamsMtx;
+        std::vector<std::unique_ptr<UploadStream>> m_NewStreams;
+        std::atomic<bool>                          m_HasNewStreams{false};
+        std::atomic<bool>                          m_Stopping{false};
+    };
+    std::unique_ptr<TextureUploadStreams> m_pTextureStreams;
 
     // The number of running ScheduleBufferUpdate operations.
     std::atomic<Uint32> m_NumRunningUpdates{0};
     std::atomic<bool>   m_Stopping{false};
     Threading::Signal   m_LastRunningThreadFinishedSignal;
 
-    std::atomic<Uint32> m_MaxPendingUpdateSize{0};
-    std::atomic<Uint32> m_TotalPendingUpdateSize{0};
-
-    std::atomic<Uint32> m_PeakUpdateSize{0};
-    Uint32              m_PeakTotalPendingUpdateSize = 0;
-    Uint32              m_PeakPageCount              = 0;
+    std::vector<GPUUploadManagerStreamStats> m_StreamStats;
 };
 
 } // namespace Diligent

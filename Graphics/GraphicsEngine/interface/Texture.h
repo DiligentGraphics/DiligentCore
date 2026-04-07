@@ -266,6 +266,11 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     {
         return Is3D() ? Depth : 1u;
     }
+
+    constexpr Uint32 GetSubresourceCount() const
+    {
+        return GetArraySize() * MipLevels;
+    }
 #endif
 };
 typedef struct TextureDesc TextureDesc;
