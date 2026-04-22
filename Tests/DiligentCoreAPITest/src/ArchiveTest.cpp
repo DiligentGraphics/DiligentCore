@@ -1298,15 +1298,25 @@ const std::string ComputePSOTest_CS{R"(
 
 VK_IMAGE_FORMAT("rgba8") RWTexture2D</*format=rgba8*/ float4> g_tex2DUAV : register(u0);
 
+cbuffer cbConstants
+{
+    uint2 g_TexDim;
+    uint2 g_TileDim;
+}
+
+StructuredBuffer<float> g_CoordinateScaleBuffer;
+
+// Use output buffer to test https://github.com/KhronosGroup/SPIRV-Cross/issues/2613
+RWStructuredBuffer<float> g_OutputBuffer;
+
 [numthreads(16, 16, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-    uint2 ui2Dim;
-    g_tex2DUAV.GetDimensions(ui2Dim.x, ui2Dim.y);
-    if (DTid.x >= ui2Dim.x || DTid.y >= ui2Dim.y)
+    if (DTid.x >= g_TexDim.x || DTid.y >= g_TexDim.y)
         return;
 
-    g_tex2DUAV[DTid.xy] = float4(float2(DTid.xy % 256u) / 256.0, 0.0, 1.0);
+    g_tex2DUAV[DTid.xy] = float4(float2(DTid.xy % g_TileDim.xy) / float2(g_CoordinateScaleBuffer[DTid.x], g_CoordinateScaleBuffer[DTid.y]), 0.0, 1.0);
+    g_OutputBuffer[DTid.x] = g_CoordinateScaleBuffer[DTid.x];
 }
 
 )"};
@@ -1391,6 +1401,9 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = fal
     {
         constexpr PipelineResourceDesc Resources[] = {
             {SHADER_TYPE_COMPUTE, "g_tex2DUAV", 1, SHADER_RESOURCE_TYPE_TEXTURE_UAV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC, PIPELINE_RESOURCE_FLAG_NONE, {WEB_GPU_BINDING_TYPE_WRITE_ONLY_TEXTURE_UAV, RESOURCE_DIM_TEX_2D, TEX_FORMAT_RGBA8_UNORM}},
+            {SHADER_TYPE_COMPUTE, "cbConstants", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
+            {SHADER_TYPE_COMPUTE, "g_CoordinateScaleBuffer", 1, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
+            {SHADER_TYPE_COMPUTE, "g_OutputBuffer", 1, SHADER_RESOURCE_TYPE_BUFFER_UAV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
         };
 
         PipelineResourceSignatureDesc PRSDesc;
@@ -1403,6 +1416,47 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = fal
 
         pDevice->CreatePipelineResourceSignature(PRSDesc, &pRefPRS);
         ASSERT_NE(pRefPRS, nullptr);
+    }
+
+    RefCntAutoPtr<IBuffer> pConstantsCB;
+    {
+        BufferDesc BuffDesc;
+        BuffDesc.Name = "TestComputePipeline - Constants CB";
+        uint4 Data{SCDesc.Width, SCDesc.Height, 256u, 256u};
+        BuffDesc.Size      = sizeof(Data);
+        BuffDesc.BindFlags = BIND_UNIFORM_BUFFER;
+        BuffDesc.Usage     = USAGE_IMMUTABLE;
+        BufferData InitialData{&Data, sizeof(Data)};
+        pDevice->CreateBuffer(BuffDesc, &InitialData, &pConstantsCB);
+        ASSERT_NE(pConstantsCB, nullptr);
+    }
+
+    RefCntAutoPtr<IBuffer> pCoordinateScaleBuffer;
+    {
+        BufferDesc BuffDesc;
+        BuffDesc.Name = "TestComputePipeline - Coordinate Scale Buffer";
+        std::vector<float> Data(std::max(SCDesc.Width, SCDesc.Height), 256.f);
+        BuffDesc.Size              = static_cast<Uint32>(Data.size() * sizeof(float));
+        BuffDesc.BindFlags         = BIND_SHADER_RESOURCE;
+        BuffDesc.Usage             = USAGE_IMMUTABLE;
+        BuffDesc.Mode              = BUFFER_MODE_STRUCTURED;
+        BuffDesc.ElementByteStride = sizeof(float);
+        BufferData InitialData{Data.data(), BuffDesc.Size};
+        pDevice->CreateBuffer(BuffDesc, &InitialData, &pCoordinateScaleBuffer);
+        ASSERT_NE(pCoordinateScaleBuffer, nullptr);
+    }
+
+    RefCntAutoPtr<IBuffer> pOutputBuffer;
+    {
+        BufferDesc BuffDesc;
+        BuffDesc.Name              = "TestComputePipeline - Output Buffer";
+        BuffDesc.Size              = SCDesc.Width * sizeof(float);
+        BuffDesc.BindFlags         = BIND_UNORDERED_ACCESS;
+        BuffDesc.Usage             = USAGE_DEFAULT;
+        BuffDesc.Mode              = BUFFER_MODE_STRUCTURED;
+        BuffDesc.ElementByteStride = sizeof(float);
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pOutputBuffer);
+        ASSERT_NE(pOutputBuffer, nullptr);
     }
 
     RefCntAutoPtr<IPipelineState> pRefPSO;
@@ -1502,6 +1556,9 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = fal
     const auto Dispatch = [&](IPipelineState* pPSO, ITextureView* pTextureUAV) //
     {
         pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_tex2DUAV")->Set(pTextureUAV);
+        pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "cbConstants")->Set(pConstantsCB);
+        pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_CoordinateScaleBuffer")->Set(pCoordinateScaleBuffer->GetDefaultView(BUFFER_VIEW_SHADER_RESOURCE));
+        pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_OutputBuffer")->Set(pOutputBuffer->GetDefaultView(BUFFER_VIEW_UNORDERED_ACCESS));
 
         pContext->SetPipelineState(pPSO);
         pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
