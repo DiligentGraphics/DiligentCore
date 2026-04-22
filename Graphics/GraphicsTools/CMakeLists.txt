@@ -22,8 +22,6 @@ set(INTERFACE
     interface/StreamingBuffer.hpp
     interface/ShaderSourceFactoryUtils.h
     interface/ShaderSourceFactoryUtils.hpp
-    interface/TextureUploader.hpp
-    interface/TextureUploaderBase.hpp
     interface/GPUUploadManager.h
     interface/XXH128Hasher.hpp
     interface/VertexPool.h
@@ -42,7 +40,6 @@ set(SOURCE
     src/ScopedQueryHelper.cpp
     src/ScreenCapture.cpp
     src/ShaderSourceFactoryUtils.cpp
-    src/TextureUploader.cpp
     src/GPUUploadManagerImpl.cpp
     src/XXH128Hasher.cpp
     src/VertexPool.cpp
@@ -83,8 +80,7 @@ endif()
 set(DEPENDENCIES)
 
 if(D3D11_SUPPORTED)
-    list(APPEND SOURCE src/TextureUploaderD3D11.cpp src/GraphicsUtilitiesD3D11.cpp)
-    list(APPEND INTERFACE interface/TextureUploaderD3D11.hpp)
+    list(APPEND SOURCE src/GraphicsUtilitiesD3D11.cpp)
     list(APPEND DEPENDENCIES Diligent-GraphicsEngineD3D11Interface)
     if(DILIGENT_USE_OPENXR)
         list(APPEND SOURCE src/OpenXRUtilitiesD3D11.cpp)
@@ -107,14 +103,8 @@ if(VULKAN_SUPPORTED)
     endif()
 endif()
 
-if(D3D12_SUPPORTED OR VULKAN_SUPPORTED)
-    list(APPEND SOURCE src/TextureUploaderD3D12_Vk.cpp)
-    list(APPEND INTERFACE interface/TextureUploaderD3D12_Vk.hpp)
-endif()
-
 if(GL_SUPPORTED OR GLES_SUPPORTED)
-    list(APPEND SOURCE src/TextureUploaderGL.cpp src/GraphicsUtilitiesGL.cpp)
-    list(APPEND INTERFACE interface/TextureUploaderGL.hpp)
+    list(APPEND SOURCE src/GraphicsUtilitiesGL.cpp)
     list(APPEND DEPENDENCIES Diligent-GraphicsEngineOpenGL-static)
     if(DILIGENT_USE_OPENXR)
         list(APPEND SOURCE src/OpenXRUtilitiesGL.cpp)
@@ -122,8 +112,7 @@ if(GL_SUPPORTED OR GLES_SUPPORTED)
 endif()
 
 if(WEBGPU_SUPPORTED)
-    list(APPEND SOURCE src/TextureUploaderWebGPU.cpp src/GraphicsUtilitiesWebGPU.cpp)
-    list(APPEND INTERFACE interface/TextureUploaderWebGPU.hpp)
+    list(APPEND SOURCE src/GraphicsUtilitiesWebGPU.cpp)
     list(APPEND DEPENDENCIES Diligent-GraphicsEngineWebGPU-static)
     if (NOT PLATFORM_WEB)
         list(APPEND DEPENDENCIES dawn_proc)
