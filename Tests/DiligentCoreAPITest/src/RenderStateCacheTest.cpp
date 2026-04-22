@@ -255,9 +255,10 @@ void VerifyGraphicsPSO(IPipelineState* pPSO, IShaderResourceBinding* pSRB, IText
 
 void VerifyComputePSO(IPipelineState* pPSO, bool UseSignature = false)
 {
-    auto* pEnv       = GPUTestingEnvironment::GetInstance();
-    auto* pCtx       = pEnv->GetDeviceContext();
-    auto* pSwapChain = pEnv->GetSwapChain();
+    GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice    = pEnv->GetDevice();
+    IDeviceContext*        pCtx       = pEnv->GetDeviceContext();
+    ISwapChain*            pSwapChain = pEnv->GetSwapChain();
 
     pCtx->Flush();
     pCtx->InvalidateState();
@@ -276,14 +277,58 @@ void VerifyComputePSO(IPipelineState* pPSO, bool UseSignature = false)
     }
     ASSERT_TRUE(pSRB);
 
+    const SwapChainDesc& SCDesc = pSwapChain->GetDesc();
+
+    RefCntAutoPtr<IBuffer> pConstantsCB;
+    {
+        BufferDesc BuffDesc;
+        BuffDesc.Name = "TestComputePipeline - Constants CB";
+        uint4 Data{SCDesc.Width, SCDesc.Height, 256u, 256u};
+        BuffDesc.Size      = sizeof(Data);
+        BuffDesc.BindFlags = BIND_UNIFORM_BUFFER;
+        BuffDesc.Usage     = USAGE_IMMUTABLE;
+        BufferData InitialData{&Data, sizeof(Data)};
+        pDevice->CreateBuffer(BuffDesc, &InitialData, &pConstantsCB);
+        ASSERT_NE(pConstantsCB, nullptr);
+    }
+
+    RefCntAutoPtr<IBuffer> pCoordinateScaleBuffer;
+    {
+        BufferDesc BuffDesc;
+        BuffDesc.Name = "TestComputePipeline - Coordinate Scale Buffer";
+        std::vector<float> Data(std::max(SCDesc.Width, SCDesc.Height), 256.f);
+        BuffDesc.Size              = static_cast<Uint32>(Data.size() * sizeof(float));
+        BuffDesc.BindFlags         = BIND_SHADER_RESOURCE;
+        BuffDesc.Usage             = USAGE_IMMUTABLE;
+        BuffDesc.Mode              = BUFFER_MODE_STRUCTURED;
+        BuffDesc.ElementByteStride = sizeof(float);
+        BufferData InitialData{Data.data(), BuffDesc.Size};
+        pDevice->CreateBuffer(BuffDesc, &InitialData, &pCoordinateScaleBuffer);
+        ASSERT_NE(pCoordinateScaleBuffer, nullptr);
+    }
+
+    RefCntAutoPtr<IBuffer> pOutputBuffer;
+    {
+        BufferDesc BuffDesc;
+        BuffDesc.Name              = "TestComputePipeline - Output Buffer";
+        BuffDesc.Size              = SCDesc.Width * sizeof(float);
+        BuffDesc.BindFlags         = BIND_UNORDERED_ACCESS;
+        BuffDesc.Usage             = USAGE_DEFAULT;
+        BuffDesc.Mode              = BUFFER_MODE_STRUCTURED;
+        BuffDesc.ElementByteStride = sizeof(float);
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pOutputBuffer);
+        ASSERT_NE(pOutputBuffer, nullptr);
+    }
+
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
     ASSERT_NE(pTestingSwapChain, nullptr);
     pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_tex2DUAV")->Set(pTestingSwapChain->GetCurrentBackBufferUAV());
+    pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "cbConstants")->Set(pConstantsCB);
+    pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_CoordinateScaleBuffer")->Set(pCoordinateScaleBuffer->GetDefaultView(BUFFER_VIEW_SHADER_RESOURCE));
+    pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_OutputBuffer")->Set(pOutputBuffer->GetDefaultView(BUFFER_VIEW_UNORDERED_ACCESS));
 
     pCtx->SetPipelineState(pPSO);
     pCtx->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-
-    const auto& SCDesc = pSwapChain->GetDesc();
 
     DispatchComputeAttribs DispatchAttribs;
     DispatchAttribs.ThreadGroupCountX = (SCDesc.Width + 15) / 16;
@@ -741,12 +786,15 @@ void CreateComputePSO(IRenderStateCache* pCache, bool PresentInCache, IShader* p
 
     constexpr ShaderResourceVariableDesc Variables[] //
         {
-            ShaderResourceVariableDesc{SHADER_TYPE_COMPUTE, "g_tex2DUAV", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE} //
+            {SHADER_TYPE_COMPUTE, "g_tex2DUAV", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+            {SHADER_TYPE_COMPUTE, "cbConstants", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+            {SHADER_TYPE_COMPUTE, "g_CoordinateScaleBuffer", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+            {SHADER_TYPE_COMPUTE, "g_OutputBuffer", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
         };
 
     constexpr PipelineResourceDesc Resources[] //
         {
-            PipelineResourceDesc{
+            {
                 SHADER_TYPE_COMPUTE,
                 "g_tex2DUAV",
                 1,
@@ -755,6 +803,9 @@ void CreateComputePSO(IRenderStateCache* pCache, bool PresentInCache, IShader* p
                 PIPELINE_RESOURCE_FLAG_NONE,
                 {WEB_GPU_BINDING_TYPE_WRITE_ONLY_TEXTURE_UAV, RESOURCE_DIM_TEX_2D, TEX_FORMAT_RGBA8_UNORM},
             },
+            {SHADER_TYPE_COMPUTE, "cbConstants", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
+            {SHADER_TYPE_COMPUTE, "g_CoordinateScaleBuffer", 1, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
+            {SHADER_TYPE_COMPUTE, "g_OutputBuffer", 1, SHADER_RESOURCE_TYPE_BUFFER_UAV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
         };
 
     RefCntAutoPtr<IPipelineResourceSignature> pSign;
