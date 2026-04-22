@@ -95,7 +95,7 @@ void ArchivePRS(RefCntAutoPtr<IDataBlob>&                  pArchive,
     if (!pDearchiver || !pArchiverFactory)
         GTEST_SKIP() << "Archiver library is not loaded";
 
-    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
     SerializationDeviceCreateInfo       DeviceCI;
@@ -768,7 +768,7 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = fa
     IArchiverFactory*      pArchiverFactory = pEnv->GetArchiverFactory();
     ISwapChain*            pSwapChain       = pEnv->GetSwapChain();
 
-    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     RefCntAutoPtr<IDearchiver> pDearchiver;
     DearchiverCreateInfo       DearchiverCI{};
@@ -1213,7 +1213,7 @@ void ArchiveGraphicsShaders(bool CompileAsync)
     IRenderDevice*         pDevice          = pEnv->GetDevice();
     IArchiverFactory*      pArchiverFactory = pEnv->GetArchiverFactory();
 
-    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     RefCntAutoPtr<IDearchiver> pDearchiver;
     DearchiverCreateInfo       DearchiverCI{};
@@ -1350,6 +1350,7 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = fal
 {
     GPUTestingEnvironment* pEnv             = GPUTestingEnvironment::GetInstance();
     IRenderDevice*         pDevice          = pEnv->GetDevice();
+    IDeviceContext*        pContext         = pEnv->GetDeviceContext();
     IArchiverFactory*      pArchiverFactory = pEnv->GetArchiverFactory();
 
     RefCntAutoPtr<IDearchiver> pDearchiver;
@@ -1363,10 +1364,14 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = fal
 
     constexpr char PSO1Name[] = "ArchiveTest.ComputePipeline - PSO";
 
-    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     ISwapChain*          pSwapChain = pEnv->GetSwapChain();
     const SwapChainDesc& SCDesc     = pSwapChain->GetDesc();
+
+    ComputeShaderReference(pSwapChain);
+    pContext->Flush();
+    pContext->InvalidateState(); // because TakeSnapshot() clears state in D3D11
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
     if (!pTestingSwapChain)
@@ -1494,8 +1499,7 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = fal
     pRefPRS->CreateShaderResourceBinding(&pSRB);
     ASSERT_NE(pSRB, nullptr);
 
-    IDeviceContext* pContext = pEnv->GetDeviceContext();
-    const auto      Dispatch = [&](IPipelineState* pPSO, ITextureView* pTextureUAV) //
+    const auto Dispatch = [&](IPipelineState* pPSO, ITextureView* pTextureUAV) //
     {
         pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_tex2DUAV")->Set(pTextureUAV);
 
@@ -1510,22 +1514,14 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = fal
 
     ASSERT_EQ(pRefPSO->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
 
-    // Dispatch reference
+    // Dispatch using reference PSO
     Dispatch(pRefPSO, pTestingSwapChain->GetCurrentBackBufferUAV());
-
-    ITexture* pTexUAV = pTestingSwapChain->GetCurrentBackBufferUAV()->GetTexture();
-    pContext->TransitionResourceState({pTexUAV, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE});
-
-    pContext->Flush();
-    pContext->InvalidateState(); // because TakeSnapshot() will clear state in D3D11
-
-    pTestingSwapChain->TakeSnapshot(pTexUAV);
+    pSwapChain->Present();
 
     ASSERT_EQ(pUnpackedPSO->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
 
-    // Dispatch
+    // Dispatch using unpacked PSO
     Dispatch(pUnpackedPSO, pTestingSwapChain->GetCurrentBackBufferUAV());
-
     pSwapChain->Present();
 }
 
@@ -1576,7 +1572,7 @@ void TestRayTracingPipeline(bool CompileAsync = false)
 
     constexpr char PSO1Name[] = "ArchiveTest.RayTracingPipeline - PSO";
 
-    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     ISwapChain* pSwapChain = pEnv->GetSwapChain();
 
@@ -2606,7 +2602,7 @@ TEST(ArchiveTest, MergeArchives)
     IArchiverFactory*      pArchiverFactory = pEnv->GetArchiverFactory();
     ISwapChain*            pSwapChain       = pEnv->GetSwapChain();
 
-    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     RefCntAutoPtr<IDearchiver> pDearchiver;
     DearchiverCreateInfo       DearchiverCI{};
