@@ -1186,15 +1186,8 @@ TEST_F(InlineConstants, RenderStateCache)
         ASSERT_NE(pPS1, nullptr);
 
         RefCntAutoPtr<IPipelineState> pPSO;
-        {
-            bool PresentInCache = pData != nullptr;
-            if (pass == 1 && pDevice->GetDeviceInfo().IsMetalDevice())
-            {
-                // TODO: why?
-                PresentInCache = false;
-            }
-            CreatePSOFromCache(pCache, PresentInCache, pVS1, pPS1, &pPSO);
-        }
+        CreatePSOFromCache(pCache, pData != nullptr, pVS1, pPS1, &pPSO);
+
         ASSERT_NE(pPSO, nullptr);
         ASSERT_EQ(pPSO->GetStatus(), PIPELINE_STATE_STATUS_READY);
         EXPECT_TRUE(pRefPSO->IsCompatibleWith(pPSO));
