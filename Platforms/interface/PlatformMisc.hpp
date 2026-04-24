@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,7 +41,7 @@
 
 #    include "../Linux/interface/LinuxPlatformMisc.hpp"
 
-#elif PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS
+#elif PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_VISIONOS
 
 #    include "../Apple/interface/ApplePlatformMisc.hpp"
 
@@ -50,7 +50,7 @@
 #    include "../Emscripten/interface/EmscriptenPlatformMisc.hpp"
 
 #else
-#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_TVOS, PLATFORM_WEB.
+#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_TVOS, PLATFORM_VISIONOS, PLATFORM_WEB.
 #endif
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
@@ -67,7 +67,7 @@ using PlatformMisc = AndroidMisc;
 
 using PlatformMisc = LinuxMisc;
 
-#elif PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS
+#elif PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_VISIONOS
 
 using PlatformMisc = AppleMisc;
 
@@ -76,7 +76,7 @@ using PlatformMisc = AppleMisc;
 using PlatformMisc = EmscriptenMisc;
 
 #else
-#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_TVOS, PLATFORM_WEB.
+#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_TVOS, PLATFORM_VISIONOS, PLATFORM_WEB.
 #endif
 
 DILIGENT_END_NAMESPACE // namespace Diligent

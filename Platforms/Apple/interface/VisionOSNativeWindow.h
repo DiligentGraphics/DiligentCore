@@ -1,6 +1,5 @@
 /*
- *  Copyright 2019-2026 Diligent Graphics LLC
- *  Copyright 2015-2019 Egor Yusov
+ *  Copyright 2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,39 +26,27 @@
 
 #pragma once
 
-#include <memory>
-#include <vector>
-#include <string>
+#include "../../../Primitives/interface/CommonDefinitions.h"
 
-#include "../../Basic/interface/BasicFileSystem.hpp"
-#include "../../Basic/interface/StandardFile.hpp"
-#include "../../Linux/interface/LinuxFileSystem.hpp"
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-#if PLATFORM_MACOS
-#    define FILE_DIALOG_SUPPORTED 1
-#endif
-
-namespace Diligent
+struct VisionOSNativeWindow
 {
+    void* pCALayer DEFAULT_INITIALIZER(nullptr);
 
-using AppleFile = StandardFile;
+#if DILIGENT_CPP_INTERFACE
+    VisionOSNativeWindow() noexcept
+    {}
 
-struct AppleFileSystem : public LinuxFileSystem
-{
-public:
-    static AppleFile* OpenFile(const FileOpenAttribs& OpenAttribs);
+    explicit VisionOSNativeWindow(void* _pCALayer) noexcept :
+        pCALayer{_pCALayer}
+    {}
 
-    static bool FileExists(const Char* strFilePath);
-
-    static std::string FindResource(const std::string& FilePath);
-
-#if FILE_DIALOG_SUPPORTED
-    static std::string FileDialog(const FileDialogAttribs& DialogAttribs);
-#endif
-
-#if PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_VISIONOS
-    static std::string GetLocalAppDataDirectory(const char* AppName = nullptr, bool Create = true);
+    void* GetLayer() const
+    {
+        return pCALayer;
+    }
 #endif
 };
 
-} // namespace Diligent
+DILIGENT_END_NAMESPACE // namespace Diligent

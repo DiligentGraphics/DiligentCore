@@ -77,6 +77,11 @@ if(DILIGENT_USE_OPENXR)
     list(APPEND INTERFACE interface/OpenXRUtilities.h)
 endif()
 
+if(PLATFORM_VISIONOS)
+    list(APPEND SOURCE src/CompositorServicesSession.mm)
+    list(APPEND INTERFACE interface/CompositorServicesSession.hpp)
+endif()
+
 set(DEPENDENCIES)
 
 if(D3D11_SUPPORTED)
@@ -162,6 +167,26 @@ endif()
 if(DILIGENT_USE_OPENXR)
     target_link_libraries(Diligent-GraphicsTools PRIVATE OpenXR::headers)
     target_compile_definitions(Diligent-GraphicsTools PUBLIC DILIGENT_USE_OPENXR=1)
+endif()
+
+if(PLATFORM_VISIONOS)
+    find_library(COMPOSITOR_SERVICES_FRAMEWORK CompositorServices)
+    find_library(SPATIAL_FRAMEWORK Spatial)
+    find_library(ARKIT_FRAMEWORK ARKit)
+    if(COMPOSITOR_SERVICES_FRAMEWORK AND SPATIAL_FRAMEWORK AND ARKIT_FRAMEWORK)
+        target_link_libraries(Diligent-GraphicsTools PUBLIC
+            ${COMPOSITOR_SERVICES_FRAMEWORK}
+            ${SPATIAL_FRAMEWORK}
+            ${ARKIT_FRAMEWORK}
+        )
+    endif()
+
+    # CompositorServicesSession.mm reuses ObjCWrapper.hpp from DiligentCorePro.
+    # Metal is the only backend on visionOS, so the Pro Metal headers are
+    # always available in this configuration.
+    target_include_directories(Diligent-GraphicsTools PRIVATE
+        ../../../DiligentCorePro/Graphics/GraphicsEngineMetal/include
+    )
 endif()
 
 if(D3D11_SUPPORTED OR D3D12_SUPPORTED)

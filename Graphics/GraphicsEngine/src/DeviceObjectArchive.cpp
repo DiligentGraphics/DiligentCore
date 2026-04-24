@@ -50,7 +50,7 @@ DeviceObjectArchive::DeviceType RenderDeviceTypeToArchiveDeviceType(RENDER_DEVIC
         case RENDER_DEVICE_TYPE_VULKAN: return DeviceObjectArchive::DeviceType::Vulkan;
 #if PLATFORM_MACOS
         case RENDER_DEVICE_TYPE_METAL:  return DeviceObjectArchive::DeviceType::Metal_MacOS;
-#elif PLATFORM_IOS || PLATFORM_TVOS
+#elif PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_VISIONOS
         case RENDER_DEVICE_TYPE_METAL:  return DeviceObjectArchive::DeviceType::Metal_iOS;
 #endif
         case RENDER_DEVICE_TYPE_WEBGPU:

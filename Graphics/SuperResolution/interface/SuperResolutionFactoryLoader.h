@@ -28,7 +28,7 @@
 
 #include "SuperResolutionFactory.h"
 
-#if PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_WEB || (PLATFORM_WIN32 && !defined(_MSC_VER))
+#if PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_VISIONOS || PLATFORM_WEB || (PLATFORM_WIN32 && !defined(_MSC_VER))
 // https://gcc.gnu.org/wiki/Visibility
 #    define API_QUALIFIER __attribute__((visibility("default")))
 #elif PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS

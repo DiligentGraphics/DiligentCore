@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -128,6 +128,8 @@ void AppendPlatformDefinition(std::string& Source)
     Source.append("#define PLATFORM_IOS 1\n");
 #elif PLATFORM_TVOS
     Source.append("#define PLATFORM_TVOS 1\n");
+#elif PLATFORM_VISIONOS
+    Source.append("#define PLATFORM_VISIONOS 1\n");
 #elif PLATFORM_ANDROID
     Source.append("#define PLATFORM_ANDROID 1\n");
 #elif PLATFORM_WEB
