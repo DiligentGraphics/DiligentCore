@@ -69,8 +69,8 @@ namespace
 
 TEST(MeshShaderTest, DrawTriangle)
 {
-    auto* pEnv    = GPUTestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
+    GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceInfo().Features.MeshShaders)
     {
         GTEST_SKIP() << "Mesh shader is not supported by this device";
@@ -78,8 +78,8 @@ TEST(MeshShaderTest, DrawTriangle)
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* pSwapChain = pEnv->GetSwapChain();
-    auto* pContext   = pEnv->GetDeviceContext();
+    ISwapChain*     pSwapChain = pEnv->GetSwapChain();
+    IDeviceContext* pContext   = pEnv->GetDeviceContext();
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
     if (pTestingSwapChain)
@@ -87,7 +87,7 @@ TEST(MeshShaderTest, DrawTriangle)
         pContext->Flush();
         pContext->InvalidateState();
 
-        auto deviceType = pDevice->GetDeviceInfo().Type;
+        const RENDER_DEVICE_TYPE deviceType = pDevice->GetDeviceInfo().Type;
         switch (deviceType)
         {
 #if D3D12_SUPPORTED
@@ -124,8 +124,8 @@ TEST(MeshShaderTest, DrawTriangle)
 
     GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-    auto& PSODesc          = PSOCreateInfo.PSODesc;
-    auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+    PipelineStateDesc&    PSODesc          = PSOCreateInfo.PSODesc;
+    GraphicsPipelineDesc& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
     PSODesc.Name = "Mesh shader test";
 
@@ -182,8 +182,8 @@ TEST(MeshShaderTest, DrawTriangle)
 
 TEST(MeshShaderTest, DrawTriangleIndirect)
 {
-    auto* pEnv    = GPUTestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
+    GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceInfo().Features.MeshShaders)
     {
         GTEST_SKIP() << "Mesh shader is not supported by this device";
@@ -191,8 +191,8 @@ TEST(MeshShaderTest, DrawTriangleIndirect)
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* pSwapChain = pEnv->GetSwapChain();
-    auto* pContext   = pEnv->GetDeviceContext();
+    ISwapChain*     pSwapChain = pEnv->GetSwapChain();
+    IDeviceContext* pContext   = pEnv->GetDeviceContext();
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
     if (pTestingSwapChain)
@@ -200,7 +200,7 @@ TEST(MeshShaderTest, DrawTriangleIndirect)
         pContext->Flush();
         pContext->InvalidateState();
 
-        auto deviceType = pDevice->GetDeviceInfo().Type;
+        const RENDER_DEVICE_TYPE deviceType = pDevice->GetDeviceInfo().Type;
         switch (deviceType)
         {
 #if D3D12_SUPPORTED
@@ -239,8 +239,8 @@ TEST(MeshShaderTest, DrawTriangleIndirect)
 
     GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-    auto& PSODesc          = PSOCreateInfo.PSODesc;
-    auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+    PipelineStateDesc&    PSODesc          = PSOCreateInfo.PSODesc;
+    GraphicsPipelineDesc& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
     PSODesc.Name = "Mesh shader test";
 
@@ -319,8 +319,8 @@ TEST(MeshShaderTest, DrawTriangleIndirect)
 
 TEST(MeshShaderTest, DrawTriangleIndirectCount)
 {
-    auto* pEnv    = GPUTestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
+    GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceInfo().Features.MeshShaders)
     {
         GTEST_SKIP() << "Mesh shader is not supported by this device";
@@ -332,8 +332,8 @@ TEST(MeshShaderTest, DrawTriangleIndirectCount)
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* pSwapChain = pEnv->GetSwapChain();
-    auto* pContext   = pEnv->GetDeviceContext();
+    ISwapChain*     pSwapChain = pEnv->GetSwapChain();
+    IDeviceContext* pContext   = pEnv->GetDeviceContext();
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
     if (pTestingSwapChain)
@@ -341,7 +341,7 @@ TEST(MeshShaderTest, DrawTriangleIndirectCount)
         pContext->Flush();
         pContext->InvalidateState();
 
-        auto deviceType = pDevice->GetDeviceInfo().Type;
+        const RENDER_DEVICE_TYPE deviceType = pDevice->GetDeviceInfo().Type;
         switch (deviceType)
         {
 #if D3D12_SUPPORTED
@@ -374,8 +374,8 @@ TEST(MeshShaderTest, DrawTriangleIndirectCount)
 
     GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-    auto& PSODesc          = PSOCreateInfo.PSODesc;
-    auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+    PipelineStateDesc&    PSODesc          = PSOCreateInfo.PSODesc;
+    GraphicsPipelineDesc& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
     PSODesc.Name = "Mesh shader test";
 
@@ -458,8 +458,8 @@ TEST(MeshShaderTest, DrawTriangleIndirectCount)
 
 TEST(MeshShaderTest, DrawTrisWithAmplificationShader)
 {
-    auto* pEnv    = GPUTestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
+    GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceInfo().Features.MeshShaders)
     {
         GTEST_SKIP() << "Mesh shader is not supported by this device";
@@ -467,8 +467,8 @@ TEST(MeshShaderTest, DrawTrisWithAmplificationShader)
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* pSwapChain = pEnv->GetSwapChain();
-    auto* pContext   = pEnv->GetDeviceContext();
+    ISwapChain*     pSwapChain = pEnv->GetSwapChain();
+    IDeviceContext* pContext   = pEnv->GetDeviceContext();
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
     if (pTestingSwapChain)
@@ -476,7 +476,7 @@ TEST(MeshShaderTest, DrawTrisWithAmplificationShader)
         pContext->Flush();
         pContext->InvalidateState();
 
-        auto deviceType = pDevice->GetDeviceInfo().Type;
+        const RENDER_DEVICE_TYPE deviceType = pDevice->GetDeviceInfo().Type;
         switch (deviceType)
         {
 #if D3D12_SUPPORTED
@@ -513,8 +513,8 @@ TEST(MeshShaderTest, DrawTrisWithAmplificationShader)
 
     GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-    auto& PSODesc          = PSOCreateInfo.PSODesc;
-    auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+    PipelineStateDesc&    PSODesc          = PSOCreateInfo.PSODesc;
+    GraphicsPipelineDesc& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
     PSODesc.Name = "Amplification shader test";
 
@@ -580,9 +580,9 @@ TEST(MeshShaderTest, DrawTrisWithAmplificationShader)
 
 TEST(MeshShaderTest, DrawTriangle_MSL)
 {
-    auto*       pEnv       = GPUTestingEnvironment::GetInstance();
-    auto*       pDevice    = pEnv->GetDevice();
-    const auto& deviceInfo = pDevice->GetDeviceInfo();
+    GPUTestingEnvironment*  pEnv       = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*          pDevice    = pEnv->GetDevice();
+    const RenderDeviceInfo& deviceInfo = pDevice->GetDeviceInfo();
     if (!deviceInfo.IsMetalDevice())
     {
         GTEST_SKIP() << "MSL is only supported in Metal";
@@ -594,8 +594,8 @@ TEST(MeshShaderTest, DrawTriangle_MSL)
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* pSwapChain = pEnv->GetSwapChain();
-    auto* pContext   = pEnv->GetDeviceContext();
+    ISwapChain*     pSwapChain = pEnv->GetSwapChain();
+    IDeviceContext* pContext   = pEnv->GetDeviceContext();
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
     if (pTestingSwapChain)
@@ -606,7 +606,7 @@ TEST(MeshShaderTest, DrawTriangle_MSL)
 #if METAL_SUPPORTED
         MeshShaderDrawReferenceMtl(pSwapChain);
 #else
-        LOG_ERROR_AND_THROW("Metal is not supported");
+        UNEXPECTED("Metal is not supported. This test should've been skipped");
 #endif
 
         pTestingSwapChain->TakeSnapshot();
@@ -620,8 +620,8 @@ TEST(MeshShaderTest, DrawTriangle_MSL)
 
     GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-    auto& PSODesc          = PSOCreateInfo.PSODesc;
-    auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+    PipelineStateDesc&    PSODesc          = PSOCreateInfo.PSODesc;
+    GraphicsPipelineDesc& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
     PSODesc.Name = "MSL mesh shader test";
 
@@ -676,9 +676,9 @@ TEST(MeshShaderTest, DrawTriangle_MSL)
 
 TEST(MeshShaderTest, DrawTriangleIndirect_MSL)
 {
-    auto*       pEnv       = GPUTestingEnvironment::GetInstance();
-    auto*       pDevice    = pEnv->GetDevice();
-    const auto& deviceInfo = pDevice->GetDeviceInfo();
+    GPUTestingEnvironment*  pEnv       = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*          pDevice    = pEnv->GetDevice();
+    const RenderDeviceInfo& deviceInfo = pDevice->GetDeviceInfo();
     if (!deviceInfo.IsMetalDevice())
     {
         GTEST_SKIP() << "MSL is only supported in Metal";
@@ -690,8 +690,8 @@ TEST(MeshShaderTest, DrawTriangleIndirect_MSL)
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* pSwapChain = pEnv->GetSwapChain();
-    auto* pContext   = pEnv->GetDeviceContext();
+    ISwapChain*     pSwapChain = pEnv->GetSwapChain();
+    IDeviceContext* pContext   = pEnv->GetDeviceContext();
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
     if (pTestingSwapChain)
@@ -702,7 +702,7 @@ TEST(MeshShaderTest, DrawTriangleIndirect_MSL)
 #if METAL_SUPPORTED
         MeshShaderIndirectDrawReferenceMtl(pSwapChain);
 #else
-        LOG_ERROR_AND_THROW("Metal is not supported");
+        UNEXPECTED("Metal is not supported. This test should've been skipped");
 #endif
 
         pTestingSwapChain->TakeSnapshot();
@@ -716,8 +716,8 @@ TEST(MeshShaderTest, DrawTriangleIndirect_MSL)
 
     GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-    auto& PSODesc          = PSOCreateInfo.PSODesc;
-    auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+    PipelineStateDesc&    PSODesc          = PSOCreateInfo.PSODesc;
+    GraphicsPipelineDesc& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
     PSODesc.Name = "MSL mesh shader indirect test";
 
@@ -795,9 +795,9 @@ TEST(MeshShaderTest, DrawTriangleIndirect_MSL)
 
 TEST(MeshShaderTest, DrawTrisWithAmplificationShader_MSL)
 {
-    auto*       pEnv       = GPUTestingEnvironment::GetInstance();
-    auto*       pDevice    = pEnv->GetDevice();
-    const auto& deviceInfo = pDevice->GetDeviceInfo();
+    GPUTestingEnvironment*  pEnv       = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*          pDevice    = pEnv->GetDevice();
+    const RenderDeviceInfo& deviceInfo = pDevice->GetDeviceInfo();
     if (!deviceInfo.IsMetalDevice())
     {
         GTEST_SKIP() << "MSL is only supported in Metal";
@@ -809,8 +809,8 @@ TEST(MeshShaderTest, DrawTrisWithAmplificationShader_MSL)
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* pSwapChain = pEnv->GetSwapChain();
-    auto* pContext   = pEnv->GetDeviceContext();
+    ISwapChain*     pSwapChain = pEnv->GetSwapChain();
+    IDeviceContext* pContext   = pEnv->GetDeviceContext();
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
     if (pTestingSwapChain)
@@ -821,7 +821,7 @@ TEST(MeshShaderTest, DrawTrisWithAmplificationShader_MSL)
 #if METAL_SUPPORTED
         AmplificationShaderDrawReferenceMtl(pSwapChain);
 #else
-        LOG_ERROR_AND_THROW("Metal is not supported");
+        UNEXPECTED("Metal is not supported. This test should've been skipped");
 #endif
 
         pTestingSwapChain->TakeSnapshot();
@@ -835,8 +835,8 @@ TEST(MeshShaderTest, DrawTrisWithAmplificationShader_MSL)
 
     GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-    auto& PSODesc          = PSOCreateInfo.PSODesc;
-    auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+    PipelineStateDesc&    PSODesc          = PSOCreateInfo.PSODesc;
+    GraphicsPipelineDesc& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
     PSODesc.Name = "MSL amplification shader test";
 
