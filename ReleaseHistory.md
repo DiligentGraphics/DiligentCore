@@ -2,6 +2,8 @@
 
 ## Current progress
 
+* Added `DrawMeshAttribsMtl` struct and `DrawMeshAttribs::pMtlAttribs` member (API256016)
+  * `DrawMeshAttribsMtl` allows specifying Metal object and mesh thread group sizes for `IDeviceContext::DrawMesh()`
 * Added `TextureUpdateOffsetAlignment` and `TextureUpdateStrideAlignment` members to `BufferProperties` struct (API256015)
 * Added pipeline specialization constants (API256014)
   * Added `SpecializationConstants` device feature

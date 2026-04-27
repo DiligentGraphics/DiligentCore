@@ -557,6 +557,56 @@ struct DrawIndexedIndirectAttribs
 typedef struct DrawIndexedIndirectAttribs DrawIndexedIndirectAttribs;
 
 
+/// Metal-specific mesh draw command attributes.
+struct DrawMeshAttribsMtl
+{
+    /// Object thread group X size.
+    Uint32 ObjectThreadGroupSizeX DEFAULT_INITIALIZER(0);
+
+    /// Object thread group Y size.
+    Uint32 ObjectThreadGroupSizeY DEFAULT_INITIALIZER(0);
+
+    /// Object thread group Z size.
+    Uint32 ObjectThreadGroupSizeZ DEFAULT_INITIALIZER(0);
+
+    /// Mesh thread group X size.
+    Uint32 MeshThreadGroupSizeX DEFAULT_INITIALIZER(0);
+
+    /// Mesh thread group Y size.
+    Uint32 MeshThreadGroupSizeY DEFAULT_INITIALIZER(0);
+
+    /// Mesh thread group Z size.
+    Uint32 MeshThreadGroupSizeZ DEFAULT_INITIALIZER(0);
+
+#if DILIGENT_CPP_INTERFACE
+    constexpr DrawMeshAttribsMtl() noexcept {}
+
+    constexpr DrawMeshAttribsMtl(Uint32 _MeshThreadGroupSizeX,
+                                 Uint32 _MeshThreadGroupSizeY,
+                                 Uint32 _MeshThreadGroupSizeZ) noexcept :
+        MeshThreadGroupSizeX{_MeshThreadGroupSizeX},
+        MeshThreadGroupSizeY{_MeshThreadGroupSizeY},
+        MeshThreadGroupSizeZ{_MeshThreadGroupSizeZ}
+    {}
+
+    constexpr DrawMeshAttribsMtl(Uint32 _ObjectThreadGroupSizeX,
+                                 Uint32 _ObjectThreadGroupSizeY,
+                                 Uint32 _ObjectThreadGroupSizeZ,
+                                 Uint32 _MeshThreadGroupSizeX,
+                                 Uint32 _MeshThreadGroupSizeY,
+                                 Uint32 _MeshThreadGroupSizeZ) noexcept :
+        ObjectThreadGroupSizeX{_ObjectThreadGroupSizeX},
+        ObjectThreadGroupSizeY{_ObjectThreadGroupSizeY},
+        ObjectThreadGroupSizeZ{_ObjectThreadGroupSizeZ},
+        MeshThreadGroupSizeX  {_MeshThreadGroupSizeX  },
+        MeshThreadGroupSizeY  {_MeshThreadGroupSizeY  },
+        MeshThreadGroupSizeZ  {_MeshThreadGroupSizeZ  }
+    {}
+#endif
+};
+typedef struct DrawMeshAttribsMtl DrawMeshAttribsMtl;
+
+
 /// Defines the mesh draw command attributes.
 
 /// This structure is used by IDeviceContext::DrawMesh().
@@ -574,32 +624,44 @@ struct DrawMeshAttribs
     /// Additional flags, see Diligent::DRAW_FLAGS.
     DRAW_FLAGS Flags         DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
 
+    /// Metal-specific mesh draw command attributes.
+    ///
+    /// \remarks
+    ///     This member is only used by Metal backend and is ignored by others.
+    const DrawMeshAttribsMtl* pMtlAttribs DEFAULT_INITIALIZER(nullptr);
+
 #if DILIGENT_CPP_INTERFACE
     /// Initializes the structure members with default values.
     constexpr DrawMeshAttribs() noexcept {}
 
-    explicit constexpr DrawMeshAttribs(Uint32     _ThreadGroupCountX,
-                                       DRAW_FLAGS _Flags = DRAW_FLAG_NONE) noexcept :
+    explicit constexpr DrawMeshAttribs(Uint32                    _ThreadGroupCountX,
+                                       DRAW_FLAGS                _Flags       = DRAW_FLAG_NONE,
+                                       const DrawMeshAttribsMtl* _pMtlAttribs = nullptr) noexcept :
         ThreadGroupCountX{_ThreadGroupCountX},
-        Flags            {_Flags}
+        Flags            {_Flags},
+        pMtlAttribs      {_pMtlAttribs}
     {}
 
-    constexpr DrawMeshAttribs(Uint32     _ThreadGroupCountX,
-                              Uint32     _ThreadGroupCountY,
-                              DRAW_FLAGS _Flags = DRAW_FLAG_NONE) noexcept :
+    constexpr DrawMeshAttribs(Uint32                    _ThreadGroupCountX,
+                              Uint32                    _ThreadGroupCountY,
+                              DRAW_FLAGS                _Flags       = DRAW_FLAG_NONE,
+                              const DrawMeshAttribsMtl* _pMtlAttribs = nullptr) noexcept :
         ThreadGroupCountX{_ThreadGroupCountX},
         ThreadGroupCountY{_ThreadGroupCountY},
-        Flags            {_Flags}
+        Flags            {_Flags},
+        pMtlAttribs      {_pMtlAttribs}
     {}
 
-    constexpr DrawMeshAttribs(Uint32     _ThreadGroupCountX,
-                              Uint32     _ThreadGroupCountY,
-                              Uint32     _ThreadGroupCountZ,
-                              DRAW_FLAGS _Flags = DRAW_FLAG_NONE) noexcept :
+    constexpr DrawMeshAttribs(Uint32                    _ThreadGroupCountX,
+                              Uint32                    _ThreadGroupCountY,
+                              Uint32                    _ThreadGroupCountZ,
+                              DRAW_FLAGS                _Flags       = DRAW_FLAG_NONE,
+                              const DrawMeshAttribsMtl* _pMtlAttribs = nullptr) noexcept :
         ThreadGroupCountX{_ThreadGroupCountX},
         ThreadGroupCountY{_ThreadGroupCountY},
         ThreadGroupCountZ{_ThreadGroupCountZ},
-        Flags            {_Flags}
+        Flags            {_Flags},
+        pMtlAttribs      {_pMtlAttribs}
     {}
 #endif
 };
