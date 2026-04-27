@@ -2,6 +2,8 @@
 
 ## Current progress
 
+* Added `DrawMeshIndirectAttribs::pMtlAttribs` member (API256017)
+  * `DrawMeshIndirectAttribs::pMtlAttribs` allows specifying Metal object and mesh thread group sizes for `IDeviceContext::DrawMeshIndirect()`
 * Added `DrawMeshAttribsMtl` struct and `DrawMeshAttribs::pMtlAttribs` member (API256016)
   * `DrawMeshAttribsMtl` allows specifying Metal object and mesh thread group sizes for `IDeviceContext::DrawMesh()`
 * Added `TextureUpdateOffsetAlignment` and `TextureUpdateStrideAlignment` members to `BufferProperties` struct (API256015)

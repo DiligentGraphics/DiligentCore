@@ -714,6 +714,12 @@ struct DrawMeshIndirectAttribs
     /// When pCounterBuffer is not null, state transition mode for the count buffer.
     RESOURCE_STATE_TRANSITION_MODE CounterBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
+    /// Metal-specific mesh draw command attributes.
+    ///
+    /// \remarks
+    ///     This member is only used by Metal backend and is ignored by others.
+    const DrawMeshAttribsMtl* pMtlAttribs DEFAULT_INITIALIZER(nullptr);
+
 #if DILIGENT_CPP_INTERFACE
     /// Initializes the structure members with default values
     constexpr DrawMeshIndirectAttribs() noexcept {}
@@ -726,7 +732,8 @@ struct DrawMeshIndirectAttribs
                                       RESOURCE_STATE_TRANSITION_MODE _AttribsBufferStateTransitionMode = DrawMeshIndirectAttribs{}.AttribsBufferStateTransitionMode,
                                       IBuffer*                       _pCounterBuffer                   = DrawMeshIndirectAttribs{}.pCounterBuffer,
                                       Uint64                         _CounterOffset                    = DrawMeshIndirectAttribs{}.CounterOffset,
-                                      RESOURCE_STATE_TRANSITION_MODE _CounterBufferStateTransitionMode = DrawMeshIndirectAttribs{}.CounterBufferStateTransitionMode) noexcept :
+                                      RESOURCE_STATE_TRANSITION_MODE _CounterBufferStateTransitionMode = DrawMeshIndirectAttribs{}.CounterBufferStateTransitionMode,
+                                      const DrawMeshAttribsMtl*      _pMtlAttribs                      = DrawMeshIndirectAttribs{}.pMtlAttribs) noexcept :
         pAttribsBuffer                  {_pAttribsBuffer                  },
         DrawArgsOffset                  {_DrawArgsOffset                  },
         Flags                           {_Flags                           },
@@ -734,7 +741,8 @@ struct DrawMeshIndirectAttribs
         AttribsBufferStateTransitionMode{_AttribsBufferStateTransitionMode},
         pCounterBuffer                  {_pCounterBuffer                  },
         CounterOffset                   {_CounterOffset                   },
-        CounterBufferStateTransitionMode{_CounterBufferStateTransitionMode}
+        CounterBufferStateTransitionMode{_CounterBufferStateTransitionMode},
+        pMtlAttribs                     {_pMtlAttribs                     }
     {}
 #endif
 };
