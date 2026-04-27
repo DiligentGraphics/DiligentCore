@@ -31,6 +31,7 @@
 #include "gtest/gtest.h"
 
 #include "InlineShaders/MeshShaderTestHLSL.h"
+#include "InlineShaders/MeshShaderTestMSL.h"
 
 namespace Diligent
 {
@@ -571,6 +572,328 @@ TEST(MeshShaderTest, DrawTrisWithAmplificationShader)
     pContext->SetPipelineState(pPSO);
 
     DrawMeshAttribs drawAttrs(8, DRAW_FLAG_VERIFY_ALL);
+    pContext->DrawMesh(drawAttrs);
+
+    pSwapChain->Present();
+}
+
+
+TEST(MeshShaderTest, DrawTriangle_MSL)
+{
+    auto*       pEnv       = GPUTestingEnvironment::GetInstance();
+    auto*       pDevice    = pEnv->GetDevice();
+    const auto& deviceInfo = pDevice->GetDeviceInfo();
+    if (!deviceInfo.IsMetalDevice())
+    {
+        GTEST_SKIP() << "MSL is only supported in Metal";
+    }
+    if (!deviceInfo.Features.MeshShaders)
+    {
+        GTEST_SKIP() << "Mesh shader is not supported by this device";
+    }
+
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    auto* pSwapChain = pEnv->GetSwapChain();
+    auto* pContext   = pEnv->GetDeviceContext();
+
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    if (pTestingSwapChain)
+    {
+        pContext->Flush();
+        pContext->InvalidateState();
+
+#if METAL_SUPPORTED
+        MeshShaderDrawReferenceMtl(pSwapChain);
+#else
+        LOG_ERROR_AND_THROW("Metal is not supported");
+#endif
+
+        pTestingSwapChain->TakeSnapshot();
+    }
+
+    ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+    pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    float ClearColor[] = {0.f, 0.f, 0.f, 0.f};
+    pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    GraphicsPipelineStateCreateInfo PSOCreateInfo;
+
+    auto& PSODesc          = PSOCreateInfo.PSODesc;
+    auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+
+    PSODesc.Name = "MSL mesh shader test";
+
+    PSODesc.PipelineType                                  = PIPELINE_TYPE_MESH;
+    GraphicsPipeline.NumRenderTargets                     = 1;
+    GraphicsPipeline.RTVFormats[0]                        = pSwapChain->GetDesc().ColorBufferFormat;
+    GraphicsPipeline.PrimitiveTopology                    = PRIMITIVE_TOPOLOGY_UNDEFINED;
+    GraphicsPipeline.RasterizerDesc.CullMode              = CULL_MODE_BACK;
+    GraphicsPipeline.RasterizerDesc.FillMode              = FILL_MODE_SOLID;
+    GraphicsPipeline.RasterizerDesc.FrontCounterClockwise = False;
+
+    GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_MSL;
+
+    RefCntAutoPtr<IShader> pMS;
+    {
+        ShaderCI.Desc       = {"MSL mesh shader test - MS", SHADER_TYPE_MESH, true};
+        ShaderCI.EntryPoint = "MSmain";
+        ShaderCI.Source     = MSL::MeshShaderTest.c_str();
+
+        pDevice->CreateShader(ShaderCI, &pMS);
+        ASSERT_NE(pMS, nullptr);
+    }
+
+    RefCntAutoPtr<IShader> pPS;
+    {
+        ShaderCI.Desc       = {"MSL mesh shader test - PS", SHADER_TYPE_PIXEL, true};
+        ShaderCI.EntryPoint = "PSmain";
+        ShaderCI.Source     = MSL::MeshShaderTest.c_str();
+
+        pDevice->CreateShader(ShaderCI, &pPS);
+        ASSERT_NE(pPS, nullptr);
+    }
+
+    PSOCreateInfo.pMS = pMS;
+    PSOCreateInfo.pPS = pPS;
+    RefCntAutoPtr<IPipelineState> pPSO;
+    pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
+    ASSERT_NE(pPSO, nullptr);
+
+    pContext->SetPipelineState(pPSO);
+
+    DrawMeshAttribsMtl mtlDrawAttrs{4, 1, 1};
+    DrawMeshAttribs    drawAttrs(1, DRAW_FLAG_VERIFY_ALL, &mtlDrawAttrs);
+    pContext->DrawMesh(drawAttrs);
+
+    pSwapChain->Present();
+}
+
+
+TEST(MeshShaderTest, DrawTriangleIndirect_MSL)
+{
+    auto*       pEnv       = GPUTestingEnvironment::GetInstance();
+    auto*       pDevice    = pEnv->GetDevice();
+    const auto& deviceInfo = pDevice->GetDeviceInfo();
+    if (!deviceInfo.IsMetalDevice())
+    {
+        GTEST_SKIP() << "MSL is only supported in Metal";
+    }
+    if (!deviceInfo.Features.MeshShaders)
+    {
+        GTEST_SKIP() << "Mesh shader is not supported by this device";
+    }
+
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    auto* pSwapChain = pEnv->GetSwapChain();
+    auto* pContext   = pEnv->GetDeviceContext();
+
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    if (pTestingSwapChain)
+    {
+        pContext->Flush();
+        pContext->InvalidateState();
+
+#if METAL_SUPPORTED
+        MeshShaderIndirectDrawReferenceMtl(pSwapChain);
+#else
+        LOG_ERROR_AND_THROW("Metal is not supported");
+#endif
+
+        pTestingSwapChain->TakeSnapshot();
+    }
+
+    ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+    pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    float ClearColor[] = {0.f, 0.f, 0.f, 0.f};
+    pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    GraphicsPipelineStateCreateInfo PSOCreateInfo;
+
+    auto& PSODesc          = PSOCreateInfo.PSODesc;
+    auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+
+    PSODesc.Name = "MSL mesh shader indirect test";
+
+    PSODesc.PipelineType                                  = PIPELINE_TYPE_MESH;
+    GraphicsPipeline.NumRenderTargets                     = 1;
+    GraphicsPipeline.RTVFormats[0]                        = pSwapChain->GetDesc().ColorBufferFormat;
+    GraphicsPipeline.PrimitiveTopology                    = PRIMITIVE_TOPOLOGY_UNDEFINED;
+    GraphicsPipeline.RasterizerDesc.CullMode              = CULL_MODE_BACK;
+    GraphicsPipeline.RasterizerDesc.FillMode              = FILL_MODE_SOLID;
+    GraphicsPipeline.RasterizerDesc.FrontCounterClockwise = False;
+
+    GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_MSL;
+
+    RefCntAutoPtr<IShader> pMS;
+    {
+        ShaderCI.Desc       = {"MSL mesh shader indirect test - MS", SHADER_TYPE_MESH, true};
+        ShaderCI.EntryPoint = "MSmain";
+        ShaderCI.Source     = MSL::MeshShaderTest.c_str();
+
+        pDevice->CreateShader(ShaderCI, &pMS);
+        ASSERT_NE(pMS, nullptr);
+    }
+
+    RefCntAutoPtr<IShader> pPS;
+    {
+        ShaderCI.Desc       = {"MSL mesh shader indirect test - PS", SHADER_TYPE_PIXEL, true};
+        ShaderCI.EntryPoint = "PSmain";
+        ShaderCI.Source     = MSL::MeshShaderTest.c_str();
+
+        pDevice->CreateShader(ShaderCI, &pPS);
+        ASSERT_NE(pPS, nullptr);
+    }
+
+    PSOCreateInfo.pMS = pMS;
+    PSOCreateInfo.pPS = pPS;
+    RefCntAutoPtr<IPipelineState> pPSO;
+    pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
+    ASSERT_NE(pPSO, nullptr);
+
+    struct IndirectBuffData
+    {
+        Uint32 IndirectData[3] = {1, 1, 1};
+    };
+    IndirectBuffData Data;
+
+    BufferDesc IndirectBufferDesc;
+    IndirectBufferDesc.Name      = "MSL indirect mesh buffer";
+    IndirectBufferDesc.Usage     = USAGE_IMMUTABLE;
+    IndirectBufferDesc.Size      = sizeof(Data);
+    IndirectBufferDesc.BindFlags = BIND_INDIRECT_DRAW_ARGS;
+
+    BufferData InitData{&Data, sizeof(Data)};
+
+    RefCntAutoPtr<IBuffer> pBuffer;
+    pDevice->CreateBuffer(IndirectBufferDesc, &InitData, &pBuffer);
+    ASSERT_NE(pBuffer, nullptr);
+
+    pContext->SetPipelineState(pPSO);
+
+    DrawMeshAttribsMtl      mtlDrawAttrs{4, 1, 1};
+    DrawMeshIndirectAttribs drawAttrs;
+    drawAttrs.pAttribsBuffer                   = pBuffer;
+    drawAttrs.Flags                            = DRAW_FLAG_VERIFY_ALL;
+    drawAttrs.AttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    drawAttrs.pMtlAttribs                      = &mtlDrawAttrs;
+
+    pContext->DrawMeshIndirect(drawAttrs);
+
+    pSwapChain->Present();
+}
+
+
+TEST(MeshShaderTest, DrawTrisWithAmplificationShader_MSL)
+{
+    auto*       pEnv       = GPUTestingEnvironment::GetInstance();
+    auto*       pDevice    = pEnv->GetDevice();
+    const auto& deviceInfo = pDevice->GetDeviceInfo();
+    if (!deviceInfo.IsMetalDevice())
+    {
+        GTEST_SKIP() << "MSL is only supported in Metal";
+    }
+    if (!deviceInfo.Features.MeshShaders)
+    {
+        GTEST_SKIP() << "Mesh shader is not supported by this device";
+    }
+
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    auto* pSwapChain = pEnv->GetSwapChain();
+    auto* pContext   = pEnv->GetDeviceContext();
+
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    if (pTestingSwapChain)
+    {
+        pContext->Flush();
+        pContext->InvalidateState();
+
+#if METAL_SUPPORTED
+        AmplificationShaderDrawReferenceMtl(pSwapChain);
+#else
+        LOG_ERROR_AND_THROW("Metal is not supported");
+#endif
+
+        pTestingSwapChain->TakeSnapshot();
+    }
+
+    ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+    pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    float ClearColor[] = {0.f, 0.f, 0.f, 0.f};
+    pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    GraphicsPipelineStateCreateInfo PSOCreateInfo;
+
+    auto& PSODesc          = PSOCreateInfo.PSODesc;
+    auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+
+    PSODesc.Name = "MSL amplification shader test";
+
+    PSODesc.PipelineType                                  = PIPELINE_TYPE_MESH;
+    GraphicsPipeline.NumRenderTargets                     = 1;
+    GraphicsPipeline.RTVFormats[0]                        = pSwapChain->GetDesc().ColorBufferFormat;
+    GraphicsPipeline.PrimitiveTopology                    = PRIMITIVE_TOPOLOGY_UNDEFINED;
+    GraphicsPipeline.RasterizerDesc.CullMode              = CULL_MODE_BACK;
+    GraphicsPipeline.RasterizerDesc.FillMode              = FILL_MODE_SOLID;
+    GraphicsPipeline.RasterizerDesc.FrontCounterClockwise = False;
+
+    GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_MSL;
+
+    RefCntAutoPtr<IShader> pAS;
+    {
+        ShaderCI.Desc       = {"MSL amplification shader test - AS", SHADER_TYPE_AMPLIFICATION, true};
+        ShaderCI.EntryPoint = "OBJmain";
+        ShaderCI.Source     = MSL::AmplificationShaderTest.c_str();
+
+        pDevice->CreateShader(ShaderCI, &pAS);
+        ASSERT_NE(pAS, nullptr);
+    }
+
+    RefCntAutoPtr<IShader> pMS;
+    {
+        ShaderCI.Desc       = {"MSL amplification shader test - MS", SHADER_TYPE_MESH, true};
+        ShaderCI.EntryPoint = "AmpMSmain";
+        ShaderCI.Source     = MSL::AmplificationShaderTest.c_str();
+
+        pDevice->CreateShader(ShaderCI, &pMS);
+        ASSERT_NE(pMS, nullptr);
+    }
+
+    RefCntAutoPtr<IShader> pPS;
+    {
+        ShaderCI.Desc       = {"MSL amplification shader test - PS", SHADER_TYPE_PIXEL, true};
+        ShaderCI.EntryPoint = "AmpPSmain";
+        ShaderCI.Source     = MSL::AmplificationShaderTest.c_str();
+
+        pDevice->CreateShader(ShaderCI, &pPS);
+        ASSERT_NE(pPS, nullptr);
+    }
+
+    PSOCreateInfo.pAS = pAS;
+    PSOCreateInfo.pMS = pMS;
+    PSOCreateInfo.pPS = pPS;
+    RefCntAutoPtr<IPipelineState> pPSO;
+    pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
+    ASSERT_NE(pPSO, nullptr);
+
+    pContext->SetPipelineState(pPSO);
+
+    DrawMeshAttribsMtl mtlDrawAttrs{8, 1, 1, 1, 1, 1};
+    DrawMeshAttribs    drawAttrs(8, DRAW_FLAG_VERIFY_ALL, &mtlDrawAttrs);
     pContext->DrawMesh(drawAttrs);
 
     pSwapChain->Present();
