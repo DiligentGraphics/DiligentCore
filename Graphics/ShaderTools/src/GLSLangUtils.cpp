@@ -83,7 +83,7 @@ EShLanguage ShaderTypeToShLanguage(SHADER_TYPE ShaderType)
     static_assert(SHADER_TYPE_LAST == 0x4000, "Please handle the new shader type in the switch below");
     switch (ShaderType)
     {
-        // clang-format off
+            // clang-format off
         case SHADER_TYPE_VERTEX:           return EShLangVertex;
         case SHADER_TYPE_HULL:             return EShLangTessControl;
         case SHADER_TYPE_DOMAIN:           return EShLangTessEvaluation;
@@ -267,6 +267,9 @@ std::vector<unsigned int> CompileShaderInternal(::glslang::TShader&           Sh
     Shader.setAutoMapBindings(true);
     Shader.setAutoMapLocations(true);
     TBuiltInResource Resources = InitResources();
+#ifdef DILIGENT_DEBUG
+    messages = static_cast<EShMessages>(static_cast<unsigned>(messages) | static_cast<unsigned>(EShMessages::EShMsgDebugInfo));
+#endif
 
     bool ParseResult = pIncluder != nullptr ?
         Shader.parse(&Resources, 100, shProfile, false, false, messages, *pIncluder) :
@@ -289,8 +292,17 @@ std::vector<unsigned int> CompileShaderInternal(::glslang::TShader&           Sh
     if (AssignBindings)
         Program.mapIO();
 
+    ::glslang::SpvOptions spvOptions;
+#ifdef DILIGENT_DEBUG
+    spvOptions.generateDebugInfo = true;
+#    if DILIGENT_NO_HLSL
+    // will be stripped anyway with HLSL support anyway
+    spvOptions.emitNonSemanticShaderDebugInfo   = true;
+    spvOptions.emitNonSemanticShaderDebugSource = true;
+#    endif
+#endif
     std::vector<unsigned int> spirv;
-    ::glslang::GlslangToSpv(*Program.getIntermediate(Shader.getStage()), spirv);
+    ::glslang::GlslangToSpv(*Program.getIntermediate(Shader.getStage()), spirv, &spvOptions);
 
     return spirv;
 }
@@ -410,7 +422,7 @@ spv_target_env SpirvVersionToSpvTargetEnv(SpirvVersion Version)
     static_assert(static_cast<int>(SpirvVersion::Count) == 6, "Did you add a new member to SpirvVersion? You may need to handle it here.");
     switch (Version)
     {
-        // clang-format off
+            // clang-format off
         case SpirvVersion::Vk100:         return SPV_ENV_VULKAN_1_0;
         case SpirvVersion::Vk110:         return SPV_ENV_VULKAN_1_1;
         case SpirvVersion::Vk110_Spirv14: return SPV_ENV_VULKAN_1_1_SPIRV_1_4;
