@@ -2776,7 +2776,7 @@ void InitVariable(const String& Name, const String& InitValue, std::stringstream
     OutSS << "    " << Name << " = " << InitValue << ";\n";
 }
 
-void DefineInterfaceVar(int location, const char* interpolation, const char* inout, const String& ParamType, const String& ParamName, std::stringstream& OutSS)
+void DefineInterfaceVar(int location, const char* interpolation, const char* inout, const String& ParamType, const String& ParamName, const String& ArraySize, std::stringstream& OutSS)
 {
     if (location >= 0)
     {
@@ -2786,7 +2786,12 @@ void DefineInterfaceVar(int location, const char* interpolation, const char* ino
     {
         OutSS << interpolation << ' ';
     }
-    OutSS << inout << ' ' << ParamType << ' ' << ParamName << ";\n";
+    OutSS << inout << ' ' << ParamType << ' ' << ParamName;
+    if (!ArraySize.empty())
+    {
+        OutSS << '[' << ArraySize << ']';
+    }
+    OutSS << ";\n";
 }
 
 String HLSL2GLSLConverterImpl::ConversionStream::BuildParameterName(
@@ -2944,7 +2949,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessFragmentShaderArguments(To
                         auto InputVarName = BuildParameterName(MemberStack, '_', m_bUseInOutLocationQualifiers ? "_psin_" : "_");
                         DefineInterfaceVar(m_bUseInOutLocationQualifiers ? InLocation++ : -1,
                                            GetInterpolationQualifier(Param), "in",
-                                           Param.Type, InputVarName, InterfaceVarsSS);
+                                           Param.Type, InputVarName, MemberStack.back()->ArraySize, InterfaceVarsSS);
                         InitVariable(FullParamName, InputVarName, PrologueSS);
                     }
                 } //
@@ -2986,7 +2991,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessFragmentShaderArguments(To
                             String OutVarName = BuildParameterName(MemberStack, '_', "_psout_");
                             // Fragment shader outputs can't have interpolation qualifiers
                             const char* Interpolation = nullptr;
-                            DefineInterfaceVar(RTIndex, Interpolation, "out", Param.Type, OutVarName, GlobalVarsSS);
+                            DefineInterfaceVar(RTIndex, Interpolation, "out", Param.Type, OutVarName, MemberStack.back()->ArraySize, GlobalVarsSS);
                             ReturnHandlerSS << OutVarName << " = " << FullParamName << ";\\\n";
                         }
                         else
@@ -3051,7 +3056,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessVertexShaderArguments(std:
                         // Interpolation qualifiers are not allowed on VS inputs.
                         const char* Interpolation = nullptr;
                         // Layout location qualifiers are allowed on VS inputs even in GLES3.0.
-                        DefineInterfaceVar(InputLocation, Interpolation, "in", Param.Type, InputVarName, GlobalVarsSS);
+                        DefineInterfaceVar(InputLocation, Interpolation, "in", Param.Type, InputVarName, MemberStack.back()->ArraySize, GlobalVarsSS);
                         InitVariable(FullParamName, InputVarName, PrologueSS);
                         AutoInputLocation++;
                     }
@@ -3073,7 +3078,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessVertexShaderArguments(std:
                         auto OutputVarName = BuildParameterName(MemberStack, '_', m_bUseInOutLocationQualifiers ? "_vsout_" : "_");
                         DefineInterfaceVar(m_bUseInOutLocationQualifiers ? OutLocation++ : -1,
                                            GetInterpolationQualifier(Param), "out",
-                                           Param.Type, OutputVarName, InterfaceVarsSS);
+                                           Param.Type, OutputVarName, MemberStack.back()->ArraySize, InterfaceVarsSS);
                         ReturnHandlerSS << OutputVarName << " = " << FullParamName << ";\\\n";
                     }
                 } //
@@ -3167,7 +3172,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessGeometryShaderArguments(To
                             auto InputVarName = VarName + "[i]";
                             DefineInterfaceVar(m_bUseInOutLocationQualifiers ? inLocation++ : -1,
                                                GetInterpolationQualifier(Param), "in",
-                                               Param.Type, VarName + "[]", InterfaceVarsInSS);
+                                               Param.Type, VarName + "[]", "", InterfaceVarsInSS);
                             InitVariable(FullIndexedParamName, InputVarName, PrologueSS);
                         }
                     } //
@@ -3211,7 +3216,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessGeometryShaderArguments(To
                         auto OutputVarName = BuildParameterName(MemberStack, '_', m_bUseInOutLocationQualifiers ? "_gsout_" : "_");
                         DefineInterfaceVar(m_bUseInOutLocationQualifiers ? outLocation++ : -1,
                                            GetInterpolationQualifier(Param), "out",
-                                           Param.Type, OutputVarName, InterfaceVarsOutSS);
+                                           Param.Type, OutputVarName, MemberStack.back()->ArraySize, InterfaceVarsOutSS);
                         EmitVertexDefineSS << OutputVarName << " = " << MacroArgumentName << ";\\\n";
                     }
                 } //
@@ -3724,7 +3729,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessHullShaderArguments(TokenL
                         // User-defined inputs can be declared as unbounded arrays
                         DefineInterfaceVar(m_bUseInOutLocationQualifiers ? inLocation++ : -1,
                                            GetInterpolationQualifier(Param), "in",
-                                           Param.Type, VarName + (IsPatch ? "[]" : ""), InterfaceVarsInSS);
+                                           Param.Type, VarName + (IsPatch ? "[]" : ""), "", InterfaceVarsInSS);
                         InitVariable(FullIndexedParamName, InputVarName, PrologueSS);
                     }
                 } //
@@ -3757,7 +3762,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessHullShaderArguments(TokenL
                         // https://www.khronos.org/opengl/wiki/Tessellation_Control_Shader#Outputs
                         DefineInterfaceVar(m_bUseInOutLocationQualifiers ? outLocation++ : -1,
                                            GetInterpolationQualifier(Param), "out",
-                                           Param.Type, OutputVarName + "[]", InterfaceVarsOutSS);
+                                           Param.Type, OutputVarName + "[]", "", InterfaceVarsOutSS);
                         // A TCS can only ever write to the per-vertex output variable that corresponds to their invocation,
                         // so writes to per-vertex outputs must be of the form vertexTexCoord[gl_InvocationID]
                         ReturnHandlerSS << OutputVarName << "[gl_InvocationID] = " << SrcParamName << ";\\\n";
@@ -3941,7 +3946,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessDomainShaderArguments(Toke
                         // User-defined inputs can be declared as unbounded arrays
                         DefineInterfaceVar(m_bUseInOutLocationQualifiers ? inLocation++ : -1,
                                            GetInterpolationQualifier(Param), "in",
-                                           Param.Type, VarName + (IsPatch ? "[]" : ""), InterfaceVarsInSS);
+                                           Param.Type, VarName + (IsPatch ? "[]" : ""), "", InterfaceVarsInSS);
                         InitVariable(FullIndexedParamName, InputVarName, PrologueSS);
                     }
                     else
@@ -3969,7 +3974,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessDomainShaderArguments(Toke
                         // https://www.khronos.org/opengl/wiki/Tessellation_Control_Shader#Outputs
                         DefineInterfaceVar(m_bUseInOutLocationQualifiers ? outLocation++ : -1,
                                            GetInterpolationQualifier(Param), "out",
-                                           Param.Type, OutputVarName, InterfaceVarsOutSS);
+                                           Param.Type, OutputVarName, MemberStack.back()->ArraySize, InterfaceVarsOutSS);
                         // A TCS can only ever write to the per-vertex output variable that corresponds to their invocation,
                         // so writes to per-vertex outputs must be of the form vertexTexCoord[gl_InvocationID]
                         ReturnHandlerSS << OutputVarName << " = " << SrcParamName << ";\\\n";
