@@ -138,7 +138,6 @@ WGPUTextureDescriptor TextureDescToWGPUTextureDescriptor(const TextureDesc&     
     return wgpuTextureDesc;
 }
 
-#if !PLATFORM_EMSCRIPTEN
 static WGPUTextureUsage TextureViewTypeToWGPUTextureUsage(TEXTURE_VIEW_TYPE ViewType)
 {
     static_assert(TEXTURE_VIEW_NUM_VIEWS == 7, "Please update the switch below to handle the new view type");
@@ -166,7 +165,6 @@ static WGPUTextureUsage TextureViewTypeToWGPUTextureUsage(TEXTURE_VIEW_TYPE View
             return WGPUTextureUsage_None;
     }
 }
-#endif
 
 WGPUTextureViewDescriptor TextureViewDescToWGPUTextureViewDescriptor(const TextureDesc&            TexDesc,
                                                                      TextureViewDesc&              ViewDesc,
@@ -229,14 +227,10 @@ WGPUTextureViewDescriptor TextureViewDescToWGPUTextureViewDescriptor(const Textu
             wgpuTextureViewDesc.aspect = WGPUTextureAspect_All;
     }
 
-    // TODO: enable this as soon as Emscripten adds the usage member to WGPUTextureViewDescriptor
-    // https://github.com/emscripten-core/emscripten/issues/23945
-#if !PLATFORM_EMSCRIPTEN
-    if (ViewDesc.Format != TexDesc.Format)
+    if (ViewDesc.Format != TexDesc.Format || (TexDesc.MiscFlags & TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION))
     {
         wgpuTextureViewDesc.usage = TextureViewTypeToWGPUTextureUsage(ViewDesc.ViewType);
     }
-#endif
 
     return wgpuTextureViewDesc;
 }
@@ -385,13 +379,14 @@ TextureWebGPUImpl::TextureWebGPUImpl(IReferenceCounters*        pRefCounters,
                                            DstDepthStride // DstDepthStride
                     );
 
-                    WGPUImageCopyBuffer wgpuSourceCopyInfo{};
+
+                    WGPUTexelCopyBufferInfo wgpuSourceCopyInfo{};
                     wgpuSourceCopyInfo.layout.offset       = DstSubResOffset;
                     wgpuSourceCopyInfo.layout.bytesPerRow  = static_cast<Uint32>(DstRawStride);
                     wgpuSourceCopyInfo.layout.rowsPerImage = static_cast<Uint32>(DstDepthStride / DstRawStride);
                     wgpuSourceCopyInfo.buffer              = wgpuUploadBuffer.Get();
 
-                    WGPUImageCopyTexture wgpuDestinationCopyInfo{};
+                    WGPUTexelCopyTextureInfo wgpuDestinationCopyInfo{};
                     wgpuDestinationCopyInfo.texture  = m_wgpuTexture.Get();
                     wgpuDestinationCopyInfo.mipLevel = MipIdx;
                     wgpuDestinationCopyInfo.origin   = {0, 0, LayerIdx};
