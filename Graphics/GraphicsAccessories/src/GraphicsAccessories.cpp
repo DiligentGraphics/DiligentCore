@@ -1957,7 +1957,7 @@ ARCHIVE_DEVICE_DATA_FLAGS RenderDeviceTypeToArchiveDataFlag(RENDER_DEVICE_TYPE D
         case RENDER_DEVICE_TYPE_METAL:
 #if PLATFORM_MACOS
             return ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS;
-#elif PLATFORM_IOS
+#elif PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_VISIONOS
             return ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS;
 #else
             UNEXPECTED("Metal is not supported on this platform");
