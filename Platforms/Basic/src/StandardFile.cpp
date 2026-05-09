@@ -36,7 +36,7 @@ StandardFile::StandardFile(const FileOpenAttribs& OpenAttribs) :
     BasicFile{OpenAttribs},
     m_pFile{nullptr}
 {
-#if PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_VISIONOS || PLATFORM_WEB
+#if PLATFORM_LINUX || PLATFORM_APPLE || PLATFORM_WEB
     String OpenModeStr = GetOpenModeStr();
     m_pFile            = fopen(m_OpenAttribs.strFilePath, OpenModeStr.c_str());
     if (m_pFile == nullptr)

@@ -125,7 +125,7 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc, IRenderDevice* pDevice
                 LOG_FRAMEBUFFER_ERROR_AND_THROW("memoryless attachment ", i, " is not compatible with ATTACHMENT_STORE_OP_STORE");
             }
 
-#if PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_VISIONOS
+#if PLATFORM_APPLE
             {
                 Uint32 NumSubpasses = 0;
                 for (Uint32 s = 0; s < RPDesc.SubpassCount; ++s)
