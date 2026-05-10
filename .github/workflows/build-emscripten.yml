@@ -6,12 +6,12 @@ jobs:
   build:
     strategy:
       matrix:
-        os:         ["windows-latest", "ubuntu-24.04", "macos-15"]
+        os:         ["windows-latest", "ubuntu-24.04", "macos-26"]
         build_type: ["Debug", "Release"]
 
         exclude:
           # Exclude MacOS-Release
-          - os:         "macos-15"
+          - os:         "macos-26"
             build_type: "Release"
 
         include:
@@ -23,7 +23,7 @@ jobs:
             host_name: "Linux"
             cmake_args: "-DDILIGENT_BUILD_CORE_TESTS=ON -DDILIGENT_EMSCRIPTEN_STRIP_DEBUG_INFO=ON"
 
-          - os:        "macos-15"
+          - os:        "macos-26"
             host_name: "MacOS"
             cmake_args: "-DDILIGENT_BUILD_CORE_TESTS=ON -DDILIGENT_BUILD_CORE_INCLUDE_TEST=ON"
 
@@ -38,17 +38,17 @@ jobs:
 
     - name: Set up build environment
       if:   success()
-      uses: DiligentGraphics/github-action/setup-build-env@v11
+      uses: DiligentGraphics/github-action/setup-build-env@v12
       with:
         platform: Web
 
     - name: Configure CMake
       if:   success()
-      uses: DiligentGraphics/github-action/configure-cmake@v11
+      uses: DiligentGraphics/github-action/configure-cmake@v12
       with:
         build-type: ${{ matrix.build_type }}
         cmake-args: ${{ matrix.cmake_args }}
 
     - name: Build
       if:   success()
-      uses: DiligentGraphics/github-action/build@v11
+      uses: DiligentGraphics/github-action/build@v12
