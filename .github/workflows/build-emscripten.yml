@@ -32,23 +32,23 @@ jobs:
 
     steps:
     - name: Clone repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         submodules: recursive
 
     - name: Set up build environment
       if:   success()
-      uses: DiligentGraphics/github-action/setup-build-env@v12
+      uses: DiligentGraphics/github-action/setup-build-env@v13
       with:
         platform: Web
 
     - name: Configure CMake
       if:   success()
-      uses: DiligentGraphics/github-action/configure-cmake@v12
+      uses: DiligentGraphics/github-action/configure-cmake@v13
       with:
         build-type: ${{ matrix.build_type }}
         cmake-args: ${{ matrix.cmake_args }}
 
     - name: Build
       if:   success()
-      uses: DiligentGraphics/github-action/build@v12
+      uses: DiligentGraphics/github-action/build@v13
