@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -111,7 +111,7 @@ SerializationDeviceImpl::SerializationDeviceImpl(IReferenceCounters* pRefCounter
         }
         else
         {
-            LOG_WARNING_MESSAGE("CreateInfo.Metal.CompileOptionsMacOS is null or empty. Compilation for MacOS will be disabled.");
+            LOG_WARNING_MESSAGE("CreateInfo.Metal.CompileOptionsMacOS is null or empty. Compilation for macOS will be disabled.");
             m_ValidDeviceFlags &= ~ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS;
         }
     }

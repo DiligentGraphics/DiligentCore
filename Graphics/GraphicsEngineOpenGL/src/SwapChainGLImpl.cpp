@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -118,7 +118,7 @@ void SwapChainGLImpl::Present(Uint32 SyncInterval)
     auto&               GLContext = pDeviceGL->m_GLContext;
     GLContext.SwapBuffers(static_cast<int>(SyncInterval));
 #elif PLATFORM_MACOS
-    LOG_ERROR("Swap buffers operation must be performed by the app on MacOS");
+    LOG_ERROR("Swap buffers operation must be performed by the app on macOS");
 #elif PLATFORM_WEB
     LOG_INFO_MESSAGE_ONCE("Swap buffers operation should be performed by the app on the Web");
 #else

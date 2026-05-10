@@ -13,7 +13,7 @@ For details on supported platforms, features, and build instructions, please ref
 |<img src="media/uwindows-logo.png" width=24 valign="middle"> Universal Windows  | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/build-windows.yml/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/build-windows.yml?query=branch%3Amaster) |
 |<img src="media/linux-logo.png" width=24 valign="middle"> Linux                 | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/build-linux.yml/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/build-linux.yml?query=branch%3Amaster) |
 |<img src="media/android-logo.png" width=24 valign="middle"> Android             | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/build-android.yml/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/build-android.yml?query=branch%3Amaster) |
-|<img src="media/macos-logo.png" width=24 valign="middle"> MacOS                 | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/build-apple.yml/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/build-apple.yml?query=branch%3Amaster) |
+|<img src="media/macos-logo.png" width=24 valign="middle"> macOS                 | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/build-apple.yml/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/build-apple.yml?query=branch%3Amaster) |
 |<img src="media/apple-logo.png" width=24 valign="middle"> iOS                   | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/build-apple.yml/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/build-apple.yml?query=branch%3Amaster) |
 |<img src="media/tvos-logo.png" width=24 valign="middle"> tvOS                   | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/build-apple.yml/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/build-apple.yml?query=branch%3Amaster) |
 |<img src="media/emscripten-logo.png" width=24 valign="middle"> Web              | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/build-emscripten.yml/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/build-emscripten.yml?query=branch%3Amaster) | 
@@ -36,7 +36,7 @@ For details on supported platforms, features, and build instructions, please ref
     - [Win32](#initialization_win32)
     - [Universal Windows Platform](#initialization_uwp)
     - [Linux](#initialization_linux)
-    - [MacOS](#initialization_macos)
+    - [macOS](#initialization_macos)
     - [Android](#initialization_android)
     - [iOS](#initialization_ios)
     - [Web](#initialization_web)
@@ -202,9 +202,9 @@ attaches to the one initialized by the app. An example of the engine initializat
 [Tutorial00_HelloLinux.cpp](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Tutorials/Tutorial00_HelloLinux/src/Tutorial00_HelloLinux.cpp).
 
 <a name="initialization_macos"></a>
-### MacOS
+### macOS
 
-On MacOS, Diligent Engine supports OpenGL, Vulkan and Metal backends. Initialization of GL context on MacOS is
+On macOS, Diligent Engine supports OpenGL, Vulkan and Metal backends. Initialization of GL context on macOS is
 performed by the application, and the engine attaches to the context created by the app; see
 [GLView.mm](https://github.com/DiligentGraphics/DiligentTools/blob/master/NativeApp/Apple/Source/Classes/OSX/GLView.mm)
 for details. Vulkan backend is initialized similar to other platforms. See 

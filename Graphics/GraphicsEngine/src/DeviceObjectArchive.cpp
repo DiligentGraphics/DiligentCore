@@ -305,7 +305,7 @@ const char* ArchiveDeviceTypeToString(Uint32 dev)
         case DeviceType::Direct3D11:  return "Direct3D11";
         case DeviceType::Direct3D12:  return "Direct3D12";
         case DeviceType::Vulkan:      return "Vulkan";
-        case DeviceType::Metal_MacOS: return "Metal for MacOS";
+        case DeviceType::Metal_MacOS: return "Metal for macOS";
         case DeviceType::Metal_iOS:   return "Metal for iOS";
         case DeviceType::WebGPU:      return "WebGPU";
         // clang-format on

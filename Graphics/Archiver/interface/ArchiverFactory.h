@@ -167,7 +167,7 @@ typedef struct SerializationDeviceVkInfo SerializationDeviceVkInfo;
 /// Serialization device attributes for Metal backend
 struct SerializationDeviceMtlInfo
 {
-    /// Additional compilation options for Metal command-line compiler for MacOS.
+    /// Additional compilation options for Metal command-line compiler for macOS.
     const Char* CompileOptionsMacOS DEFAULT_INITIALIZER("-sdk macosx metal");
 
     /// Additional compilation options for Metal command-line compiler for iOS.

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,17 +35,17 @@
 
 static void glDrawArraysInstancedBaseInstance_stub(GLenum mode, GLint first, GLsizei count, GLsizei primcount, GLuint baseinstance)
 {
-    LOG_ERROR_MESSAGE("glDrawArraysInstancedBaseInstance is not supported on MacOS");
+    LOG_ERROR_MESSAGE("glDrawArraysInstancedBaseInstance is not supported on macOS");
 }
 
 static void glDrawElementsInstancedBaseInstance_stub(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei primcount, GLuint baseinstance)
 {
-    LOG_ERROR_MESSAGE("glDrawElementsInstancedBaseInstance is not supported on MacOS");
+    LOG_ERROR_MESSAGE("glDrawElementsInstancedBaseInstance is not supported on macOS");
 }
 
 static void  glDrawElementsInstancedBaseVertexBaseInstance_stub(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei primcount, GLint basevertex, GLuint baseinstance)
 {
-    LOG_ERROR_MESSAGE("glDrawElementsInstancedBaseVertexBaseInstance is not supported on MacOS");
+    LOG_ERROR_MESSAGE("glDrawElementsInstancedBaseVertexBaseInstance is not supported on macOS");
 }
 
 
@@ -59,7 +59,7 @@ namespace Diligent
         }
 
         // Initialize GLEW
-        glewExperimental = true; // This is required on MacOS
+        glewExperimental = true; // This is required on macOS
         GLenum err = glewInit();
         if( GLEW_OK != err )
             LOG_ERROR_AND_THROW( "Failed to initialize GLEW" );

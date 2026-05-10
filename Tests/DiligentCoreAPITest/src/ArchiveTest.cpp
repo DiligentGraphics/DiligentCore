@@ -1349,7 +1349,7 @@ void CreateComputeShader(IRenderDevice*        pDevice,
     {
         ARCHIVE_DEVICE_DATA_FLAGS DeviceBits = GetDeviceBits();
 #if PLATFORM_MACOS
-        // Compute shaders are not supported in OpenGL on MacOS
+        // Compute shaders are not supported in OpenGL on macOS
         DeviceBits &= ~(ARCHIVE_DEVICE_DATA_FLAG_GL | ARCHIVE_DEVICE_DATA_FLAG_GLES);
 #endif
         pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{DeviceBits}, ppSerializedCS);
@@ -1504,7 +1504,7 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = fal
             PipelineStateArchiveInfo ArchiveInfo;
             ArchiveInfo.DeviceFlags = GetDeviceBits();
 #if PLATFORM_MACOS
-            // Compute shaders are not supported in OpenGL on MacOS
+            // Compute shaders are not supported in OpenGL on macOS
             ArchiveInfo.DeviceFlags &= ~(ARCHIVE_DEVICE_DATA_FLAG_GL | ARCHIVE_DEVICE_DATA_FLAG_GLES);
 #endif
             ArchiveInfo.PSOFlags = ArchiveFlags;

@@ -69,7 +69,7 @@ DILIGENT_TYPED_ENUM(ARCHIVE_DEVICE_DATA_FLAGS, Uint32)
     /// Vulkan device data will be serialized.
     ARCHIVE_DEVICE_DATA_FLAG_VULKAN      = 1u << 4u,
 
-    /// Metal device data for MacOS will be serialized.
+    /// Metal device data for macOS will be serialized.
     ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS = 1u << 5u,
 
     /// Metal device data for iOS will be serialized.

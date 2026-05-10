@@ -154,7 +154,7 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc, IRenderDevice* pDevice
                 if (NumSubpasses > 1)
                 {
                     LOG_FRAMEBUFFER_ERROR_AND_THROW("memoryless attachment ", i,
-                                                    " is used in more than one subpass, which is not supported on MacOS/iOS "
+                                                    " is used in more than one subpass, which is not supported on macOS/iOS "
                                                     "as the contents of the attachment can't be preserved between subpasses without "
                                                     "storing it in global memory.");
                 }

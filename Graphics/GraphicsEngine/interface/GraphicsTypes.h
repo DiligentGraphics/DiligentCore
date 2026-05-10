@@ -1812,8 +1812,8 @@ struct DeviceFeatures
 
     /// Vulkan: this feature is always supported through input attachments.
     ///
-    /// Metal: this feature is always supported on iOS; on MacOS it
-    /// requires Apple GPU and MSL 2.3 (available in MacOS 11.0+).
+    /// Metal: this feature is always supported on iOS; on macOS it
+    /// requires Apple GPU and MSL 2.3 (available in macOS 11.0+).
     /// When the feature is disabled, every new subpass
     /// of a render pass starts a new render command encoder.
     /// With this feature enabled, input attachment loads
