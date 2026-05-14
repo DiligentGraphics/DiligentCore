@@ -41,8 +41,8 @@ void TestEngineFactortCInterface(struct IEngineFactory* pFactory)
     struct Version MinVersion = {0, 0};
     IEngineFactory_EnumerateAdapters(pFactory, MinVersion, (Uint32*)NULL, (struct GraphicsAdapterInfo*)NULL);
 
-    struct IDearchiver*  pDearchiver = NULL;
-    DearchiverCreateInfo DearchiverCI;
+    struct IDearchiver*  pDearchiver  = NULL;
+    DearchiverCreateInfo DearchiverCI = {};
     IEngineFactory_CreateDearchiver(pFactory, &DearchiverCI, &pDearchiver);
     (void)pDearchiver;
 
