@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -68,7 +68,7 @@
         {                             \
             struct TypeName _##TypeName;
 
-#    define DEFAULT_INITIALIZER(x)
+#    define DEFAULT_INITIALIZER(...)
 
 #    define DILIGENT_GLOBAL_FUNCTION(FuncName) Diligent_##FuncName
 
@@ -79,7 +79,7 @@
         } Iface;                                  \
         struct Iface##Methods
 
-#    define DEFAULT_VALUE(x)
+#    define DEFAULT_VALUE(...)
 
 #    define CALL_IFACE_METHOD(Iface, Method, This, ...) (This)->pVtbl->Iface.Method((I##Iface*)(This), ##__VA_ARGS__)
 
@@ -102,13 +102,13 @@
 #    define DILIGENT_DERIVE(TypeName) : public TypeName \
         {
 
-#    define DEFAULT_INITIALIZER(x) = x
+#    define DEFAULT_INITIALIZER(...) = __VA_ARGS__
 
 #    define DILIGENT_GLOBAL_FUNCTION(FuncName) FuncName
 
 #    define DILIGENT_BEGIN_INTERFACE(Name, Base) struct Name : public Base
 
-#    define DEFAULT_VALUE(x) = x
+#    define DEFAULT_VALUE(...) = __VA_ARGS__
 
 #    define DILIGENT_CONSTEXPR constexpr
 
