@@ -164,6 +164,8 @@ QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl* pRenderDeviceVk,
     const bool                      IsTransferQueue        = (QueueFlags & (VK_QUEUE_COMPUTE_BIT | VK_QUEUE_GRAPHICS_BIT)) == 0;
     const bool                      QueueSupportsTimestamp = PhysicalDevice.GetQueueProperties()[QueueFamilyIndex].timestampValidBits > 0;
 
+    m_TimestampValidBits = PhysicalDevice.GetQueueProperties()[QueueFamilyIndex].timestampValidBits;
+
     for (Uint32 query_type = QUERY_TYPE_UNDEFINED + 1; query_type < QUERY_TYPE_NUM_TYPES; ++query_type)
     {
         const QUERY_TYPE QueryType = static_cast<QUERY_TYPE>(query_type);
