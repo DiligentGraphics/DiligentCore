@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,6 +37,34 @@ using namespace Diligent;
 
 namespace
 {
+
+void ExpectFloat3Near(const float3& Value, const float3& Reference, float Epsilon = 1e-5f)
+{
+    EXPECT_NEAR(Value.x, Reference.x, Epsilon);
+    EXPECT_NEAR(Value.y, Reference.y, Epsilon);
+    EXPECT_NEAR(Value.z, Reference.z, Epsilon);
+}
+
+void ExpectQuaternionNear(const QuaternionF& Value, const QuaternionF& Reference, float Epsilon = 1e-5f)
+{
+    const float Sign = dot(Value.q, Reference.q) < 0.f ? -1.f : 1.f;
+    EXPECT_NEAR(Value.q.x * Sign, Reference.q.x, Epsilon);
+    EXPECT_NEAR(Value.q.y * Sign, Reference.q.y, Epsilon);
+    EXPECT_NEAR(Value.q.z * Sign, Reference.q.z, Epsilon);
+    EXPECT_NEAR(Value.q.w * Sign, Reference.q.w, Epsilon);
+}
+
+void ExpectIdentityNear(const float4x4& Value, float Epsilon = 1e-5f)
+{
+    for (int j = 0; j < 4; ++j)
+    {
+        for (int i = 0; i < 4; ++i)
+        {
+            const float Reference = i == j ? 1.f : 0.f;
+            EXPECT_NEAR(Value[i][j], Reference, Epsilon);
+        }
+    }
+}
 
 // Constructors
 TEST(Common_BasicMath, VectorConstructors)
@@ -1028,6 +1056,66 @@ TEST(Common_BasicMath, MatrixInverse)
             }
         }
     }
+}
+
+TEST(Common_BasicMath, MatrixTryInverse)
+{
+    const float4x4 Matrix =
+        float4x4::Scale(2.f, 3.f, 4.f) *
+        QuaternionF::RotationFromAxisAngle(float3{0.f, 1.f, 0.f}, PI_F / 4.f).ToMatrix() *
+        float4x4::Translation(5.f, 6.f, 7.f);
+
+    float4x4 Inverse;
+    EXPECT_TRUE(Matrix.TryInverse(Inverse));
+    ExpectIdentityNear(Matrix * Inverse);
+
+    const float4x4 Singular = float4x4::Scale(0.f, 1.f, 1.f);
+    EXPECT_FALSE(Singular.TryInverse(Inverse));
+}
+
+TEST(Common_BasicMath, QuaternionFromRotationMatrix)
+{
+    {
+        const QuaternionF Rotation = QuaternionF::RotationFromAxisAngle(float3{1.f, 2.f, 3.f}, 0.7f);
+        ExpectQuaternionNear(QuaternionF::FromRotationMatrix(Rotation.ToMatrix()), Rotation);
+    }
+
+    {
+        const QuaternionF Rotation = QuaternionF::RotationFromAxisAngle(float3{1.f, 0.f, 0.f}, PI_F);
+        ExpectQuaternionNear(QuaternionF::FromRotationMatrix(Rotation.ToMatrix()), Rotation);
+    }
+
+    {
+        const QuaternionF Rotation = QuaternionF::RotationFromAxisAngle(float3{0.f, 1.f, 0.f}, PI_F);
+        ExpectQuaternionNear(QuaternionF::FromRotationMatrix(Rotation.ToMatrix()), Rotation);
+    }
+
+    {
+        const QuaternionF Rotation = QuaternionF::RotationFromAxisAngle(float3{0.f, 0.f, 1.f}, PI_F);
+        ExpectQuaternionNear(QuaternionF::FromRotationMatrix(Rotation.ToMatrix()), Rotation);
+    }
+}
+
+TEST(Common_BasicMath, MatrixDecompose)
+{
+    const float3      Translation{5.f, 6.f, 7.f};
+    const float3      Scale{2.f, 3.f, 4.f};
+    const QuaternionF Rotation = QuaternionF::RotationFromAxisAngle(float3{1.f, 2.f, 3.f}, 0.7f);
+    const float4x4    Matrix =
+        float4x4::Scale(Scale) *
+        Rotation.ToMatrix() *
+        float4x4::Translation(Translation);
+
+    float3      DecomposedTranslation;
+    float3      DecomposedScale;
+    QuaternionF DecomposedRotation;
+    EXPECT_TRUE(Matrix.Decompose(DecomposedTranslation, DecomposedRotation, DecomposedScale));
+    ExpectFloat3Near(DecomposedTranslation, Translation);
+    ExpectFloat3Near(DecomposedScale, Scale);
+    ExpectQuaternionNear(DecomposedRotation, Rotation);
+
+    const float4x4 Singular = float4x4::Scale(0.f, 1.f, 1.f);
+    EXPECT_FALSE(Singular.Decompose(DecomposedTranslation, DecomposedRotation, DecomposedScale));
 }
 
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -69,6 +69,7 @@ static constexpr float  PI_F = 3.1415927f;
 template <class T> struct Matrix2x2;
 template <class T> struct Matrix3x3;
 template <class T> struct Matrix4x4;
+template <class T> struct Quaternion;
 template <class T> struct Vector4;
 
 template <class T> struct Vector2
@@ -1988,6 +1989,21 @@ template <class T> struct Matrix4x4
         return inv;
     }
 
+    bool TryInverse(Matrix4x4& Inv, T Epsilon = static_cast<T>(1e-8)) const
+    {
+        const T Det = Determinant();
+        if (std::abs(Det) <= Epsilon)
+            return false;
+
+        Inv = Inverse();
+        return true;
+    }
+
+    bool Decompose(Vector3<T>&    Translation,
+                   Quaternion<T>& Rotation,
+                   Vector3<T>&    Scale,
+                   T              Epsilon = static_cast<T>(1e-8)) const;
+
     constexpr Matrix4x4 RemoveTranslation() const
     {
         return Matrix4x4 // clang-format off
@@ -2366,6 +2382,48 @@ struct Quaternion
         return out;
     }
 
+    static Quaternion FromRotationMatrix(const Matrix4x4<T>& Matrix)
+    {
+        Quaternion Result;
+
+        const T Trace = Matrix._11 + Matrix._22 + Matrix._33;
+        if (Trace > T{0})
+        {
+            const T S  = std::sqrt(Trace + T{1}) * T{2};
+            Result.q.w = T{0.25} * S;
+            Result.q.x = (Matrix._23 - Matrix._32) / S;
+            Result.q.y = (Matrix._31 - Matrix._13) / S;
+            Result.q.z = (Matrix._12 - Matrix._21) / S;
+        }
+        else if (Matrix._11 > Matrix._22 && Matrix._11 > Matrix._33)
+        {
+            const T S  = std::sqrt(T{1} + Matrix._11 - Matrix._22 - Matrix._33) * T{2};
+            Result.q.w = (Matrix._23 - Matrix._32) / S;
+            Result.q.x = T{0.25} * S;
+            Result.q.y = (Matrix._12 + Matrix._21) / S;
+            Result.q.z = (Matrix._31 + Matrix._13) / S;
+        }
+        else if (Matrix._22 > Matrix._33)
+        {
+            const T S  = std::sqrt(T{1} + Matrix._22 - Matrix._11 - Matrix._33) * T{2};
+            Result.q.w = (Matrix._31 - Matrix._13) / S;
+            Result.q.x = (Matrix._12 + Matrix._21) / S;
+            Result.q.y = T{0.25} * S;
+            Result.q.z = (Matrix._23 + Matrix._32) / S;
+        }
+        else
+        {
+            const T S  = std::sqrt(T{1} + Matrix._33 - Matrix._11 - Matrix._22) * T{2};
+            Result.q.w = (Matrix._12 - Matrix._21) / S;
+            Result.q.x = (Matrix._31 + Matrix._13) / S;
+            Result.q.y = (Matrix._23 + Matrix._32) / S;
+            Result.q.z = T{0.25} * S;
+        }
+
+        const T Len = length(Result.q);
+        return Len > T{0} ? Quaternion{Result.q / Len} : Quaternion{};
+    }
+
     void GetAxisAngle(Vector3<T>& outAxis, T& outAngle) const
     {
         T sina2    = std::sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2]);
@@ -2448,6 +2506,48 @@ template <typename T>
 constexpr inline Quaternion<T> normalize(const Quaternion<T>& q)
 {
     return Quaternion<T>{normalize(q.q)};
+}
+
+template <class T>
+bool Matrix4x4<T>::Decompose(Vector3<T>&    Translation,
+                             Quaternion<T>& Rotation,
+                             Vector3<T>&    Scale,
+                             T              Epsilon) const
+{
+    Translation = Vector3<T>{_41, _42, _43};
+
+    Vector3<T> Row0{_11, _12, _13};
+    Vector3<T> Row1{_21, _22, _23};
+    Vector3<T> Row2{_31, _32, _33};
+
+    Scale = Vector3<T>{length(Row0), length(Row1), length(Row2)};
+    if (Scale.x <= Epsilon || Scale.y <= Epsilon || Scale.z <= Epsilon)
+    {
+        Rotation = Quaternion<T>{};
+        return false;
+    }
+
+    Row0 /= Scale.x;
+    Row1 /= Scale.y;
+    Row2 /= Scale.z;
+
+    if (dot(cross(Row0, Row1), Row2) < T{0})
+    {
+        Scale.z = -Scale.z;
+        Row2    = -Row2;
+    }
+
+    const Matrix4x4<T> RotationMatrix // clang-format off
+    {
+        Row0.x, Row0.y, Row0.z, T{0},
+        Row1.x, Row1.y, Row1.z, T{0},
+        Row2.x, Row2.y, Row2.z, T{0},
+          T{0},   T{0},   T{0}, T{1}
+    };
+    // clang-format on
+
+    Rotation = Quaternion<T>::FromRotationMatrix(RotationMatrix);
+    return true;
 }
 
 // https://en.wikipedia.org/wiki/Slerp
