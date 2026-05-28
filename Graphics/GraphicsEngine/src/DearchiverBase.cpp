@@ -889,6 +889,7 @@ bool DearchiverBase::Store(IDataBlob** ppArchive) const
 void DearchiverBase::Reset()
 {
     m_Archives.clear();
+    m_ResNameToArchiveIdx.clear();
 }
 
 Uint32 DearchiverBase::GetContentVersion() const
