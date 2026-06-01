@@ -72,6 +72,11 @@ public:
         return m_CounterFrequency;
     }
 
+    Uint32 GetTimestampValidBits() const
+    {
+        return m_TimestampValidBits;
+    }
+
     Uint32 ResetStaleQueries(const VulkanUtilities::LogicalDevice& LogicalDevice,
                              VulkanUtilities::CommandBuffer&       CmdBuff);
 
@@ -139,7 +144,8 @@ private:
 
     std::array<QueryPoolInfo, QUERY_TYPE_NUM_TYPES> m_Pools;
 
-    Uint64 m_CounterFrequency = 0;
+    Uint64 m_CounterFrequency   = 0;
+    Uint32 m_TimestampValidBits = 36;
 };
 
 } // namespace Diligent

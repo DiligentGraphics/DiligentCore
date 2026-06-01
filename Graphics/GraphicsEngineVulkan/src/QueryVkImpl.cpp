@@ -243,6 +243,7 @@ inline bool GetDurationQueryData(const VulkanUtilities::LogicalDevice& LogicalDe
                                  VkQueryPool                           vkQueryPool,
                                  const std::array<Uint32, 2>&          QueryIdx,
                                  Uint64                                CounterFrequency,
+                                 Uint32                                TimestampValidBits,
                                  void*                                 pData,
                                  Uint32                                DataSize)
 {
@@ -263,8 +264,8 @@ inline bool GetDurationQueryData(const VulkanUtilities::LogicalDevice& LogicalDe
     {
         QueryDataDuration& QueryData = *reinterpret_cast<QueryDataDuration*>(pData);
         VERIFY_EXPR(DataSize == sizeof(QueryData));
-        VERIFY_EXPR(EndCounter >= StartCounter);
-        QueryData.Duration  = EndCounter - StartCounter;
+        DEV_CHECK_WARN(EndCounter >= StartCounter, "GPU time overflowed");
+        QueryData.Duration  = (EndCounter - StartCounter) & (~0ull >> (64 - TimestampValidBits));
         QueryData.Frequency = CounterFrequency;
     }
 
@@ -355,7 +356,7 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
                 break;
 
             case QUERY_TYPE_DURATION:
-                DataAvailable = GetDurationQueryData(LogicalDevice, vkQueryPool, m_QueryPoolIndex, m_pQueryMgr->GetCounterFrequency(), pData, DataSize);
+                DataAvailable = GetDurationQueryData(LogicalDevice, vkQueryPool, m_QueryPoolIndex, m_pQueryMgr->GetCounterFrequency(), m_pQueryMgr->GetTimestampValidBits(), pData, DataSize);
                 break;
 
             default:
