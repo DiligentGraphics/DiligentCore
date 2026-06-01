@@ -265,7 +265,7 @@ inline bool GetDurationQueryData(const VulkanUtilities::LogicalDevice& LogicalDe
         QueryDataDuration& QueryData = *reinterpret_cast<QueryDataDuration*>(pData);
         VERIFY_EXPR(DataSize == sizeof(QueryData));
         DEV_CHECK_WARN(EndCounter >= StartCounter, "GPU time overflowed");
-        QueryData.Duration  = (EndCounter - StartCounter) & ((1ull << TimestampValidBits) - 1ull);
+        QueryData.Duration  = (EndCounter - StartCounter) & (~0ull >> (64 - TimestampValidBits));
         QueryData.Frequency = CounterFrequency;
     }
 

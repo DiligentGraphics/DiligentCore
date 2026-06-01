@@ -145,7 +145,7 @@ private:
     std::array<QueryPoolInfo, QUERY_TYPE_NUM_TYPES> m_Pools;
 
     Uint64 m_CounterFrequency   = 0;
-    Uint32 m_TimestampValidBits = 0;
+    Uint32 m_TimestampValidBits = 36;
 };
 
 } // namespace Diligent
