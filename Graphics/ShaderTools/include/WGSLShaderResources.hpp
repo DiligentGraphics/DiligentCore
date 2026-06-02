@@ -37,6 +37,7 @@
 
 #include <memory>
 #include <string>
+#include <cstdint>
 
 #include "Shader.h"
 #include "PipelineState.h"
