@@ -62,10 +62,17 @@ elseif(PLATFORM_MACOS)
 elseif(PLATFORM_WIN32)
     set(DAWN_ENABLE_D3D12 ON  CACHE BOOL "" FORCE)
     set(TINT_BUILD_HLSL_WRITER ON CACHE BOOL "" FORCE)
+elseif(PLATFORM_LINUX)
+    # Null device (serialization-only). dawn_native still references tint::Bindings, which Tint defines
+    # only when a backend writer is built — enable the HLSL writer (pure Tint, same as Windows).
+    set(DAWN_ENABLE_NULL ON CACHE BOOL "" FORCE)
+    set(TINT_BUILD_HLSL_WRITER ON CACHE BOOL "" FORCE)
 endif()
 
 set(DAWN_USE_GLFW                 OFF CACHE BOOL "" FORCE)
-set(DAWN_ENABLE_NULL              OFF CACHE BOOL "" FORCE)
+if(NOT PLATFORM_LINUX)
+    set(DAWN_ENABLE_NULL          OFF CACHE BOOL "" FORCE)
+endif()
 set(DAWN_USE_WINDOWS_UI           OFF CACHE BOOL "" FORCE)
 set(DAWN_ENABLE_SPIRV_VALIDATION  OFF CACHE BOOL "" FORCE)
 set(DAWN_BUILD_MONOLITHIC_LIBRARY OFF CACHE STRING "" FORCE)

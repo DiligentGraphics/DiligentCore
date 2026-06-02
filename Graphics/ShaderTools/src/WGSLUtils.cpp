@@ -25,6 +25,10 @@
  */
 
 #include "WGSLUtils.hpp"
+
+#include <algorithm>
+#include <cstring>
+
 #include "DebugUtilities.hpp"
 #include "ParsingTools.hpp"
 #include "ShaderToolsCommon.hpp"

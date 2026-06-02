@@ -25,6 +25,10 @@
  */
 
 #include "WGSLShaderResources.hpp"
+
+#include <algorithm>
+#include <cstring>
+
 #include "Align.hpp"
 #include "StringPool.hpp"
 #include "WGSLUtils.hpp"
