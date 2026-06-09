@@ -128,7 +128,7 @@ public:
     };
 
     static constexpr Uint32 HeaderMagicNumber = 0xDE00000A;
-    static constexpr Uint32 ArchiveVersion    = 9;
+    static constexpr Uint32 ArchiveVersion    = 10;
 
     struct ArchiveHeader
     {

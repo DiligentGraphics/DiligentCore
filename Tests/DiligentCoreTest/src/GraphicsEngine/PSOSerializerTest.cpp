@@ -789,6 +789,7 @@ void SerializeShaderCreateInfo(bool UseBytecode)
     RefCI.GLESSLVersion                  = {5, 6};
     RefCI.MSLVersion                     = {7, 8};
     RefCI.CompileFlags                   = SHADER_COMPILE_FLAG_SKIP_REFLECTION;
+    RefCI.ShaderOptimizationLevel        = SHADER_OPTIMIZATION_LEVEL_3;
     RefCI.LoadConstantBufferReflection   = true;
     RefCI.GLSLExtensions                 = "My extension";
     RefCI.WebGPUEmulatedArrayIndexSuffix = "My suffix";
@@ -839,6 +840,7 @@ void SerializeShaderCreateInfo(bool UseBytecode)
     EXPECT_EQ   (CI.GLESSLVersion,  RefCI.GLESSLVersion);
     EXPECT_EQ   (CI.MSLVersion,     RefCI.MSLVersion);
     EXPECT_EQ   (CI.CompileFlags,   RefCI.CompileFlags);
+    EXPECT_EQ   (CI.ShaderOptimizationLevel, RefCI.ShaderOptimizationLevel);
     EXPECT_EQ   (CI.LoadConstantBufferReflection, RefCI.LoadConstantBufferReflection);
     EXPECT_STREQ(CI.GLSLExtensions, RefCI.GLSLExtensions);
     EXPECT_STREQ(CI.WebGPUEmulatedArrayIndexSuffix, RefCI.WebGPUEmulatedArrayIndexSuffix);

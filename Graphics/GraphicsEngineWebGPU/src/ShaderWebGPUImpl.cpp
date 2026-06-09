@@ -147,6 +147,7 @@ std::vector<uint32_t> CompileShaderToSPIRV(const ShaderCreateInfo&             S
         Attribs.UseRowMajorMatrices        = (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_PACK_MATRIX_ROW_MAJOR) != 0;
         Attribs.pShaderSourceStreamFactory = ShaderCI.pShaderSourceStreamFactory;
         Attribs.ppCompilerOutput           = WebGPUShaderCI.ppCompilerOutput;
+        Attribs.OptimizationLevel          = ShaderCI.ShaderOptimizationLevel;
 
         SPIRV = GLSLangUtils::GLSLtoSPIRV(Attribs);
     }
