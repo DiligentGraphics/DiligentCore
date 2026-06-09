@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -1185,6 +1185,7 @@ TEST(XXH128HasherTest, ShaderCreateInfo)
     TEST_RANGE(MSLVersion.Major, 1u, 10u);
 
     TEST_FLAGS(CompileFlags, static_cast<SHADER_COMPILE_FLAGS>(1), SHADER_COMPILE_FLAG_LAST);
+    TEST_RANGE(ShaderOptimizationLevel, static_cast<SHADER_OPTIMIZATION_LEVEL>(1), SHADER_OPTIMIZATION_LEVEL_COUNT);
     TEST_BOOL(LoadConstantBufferReflection);
 
     TEST_STRINGS(GLSLExtensions, "Extension 1", "Extension 2", "Extension 3");
