@@ -425,8 +425,7 @@ DILIGENT_TYPED_ENUM(SHADER_OPTIMIZATION_LEVEL, Uint8)
 {
     /// Default optimization level.
 
-    /// In `DILIGENT_DEBUG` builds, optimization is disabled; otherwise maximum optimization is used.
-    /// This value reproduces the engine's historical per-backend behavior.
+    /// Each backend uses its historical default optimization behavior.
     SHADER_OPTIMIZATION_LEVEL_DEFAULT = 0,
 
     /// Optimization is explicitly disabled regardless of build configuration
