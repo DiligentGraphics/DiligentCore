@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -64,6 +64,7 @@ struct GLSLtoSPIRVAttribs
     IDataBlob**                      ppCompilerOutput           = nullptr;
     bool                             AssignBindings             = true;
     bool                             UseRowMajorMatrices        = false;
+    SHADER_OPTIMIZATION_LEVEL        OptimizationLevel          = SHADER_OPTIMIZATION_LEVEL_DEFAULT;
 };
 
 std::vector<unsigned int> GLSLtoSPIRV(const GLSLtoSPIRVAttribs& Attribs);

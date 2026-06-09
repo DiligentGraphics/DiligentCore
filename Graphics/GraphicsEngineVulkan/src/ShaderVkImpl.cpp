@@ -146,6 +146,7 @@ std::vector<uint32_t> CompileShaderGLSLang(const ShaderCreateInfo&         Shade
         Attribs.UseRowMajorMatrices        = (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_PACK_MATRIX_ROW_MAJOR) != 0;
         Attribs.pShaderSourceStreamFactory = ShaderCI.pShaderSourceStreamFactory;
         Attribs.ppCompilerOutput           = VkShaderCI.ppCompilerOutput;
+        Attribs.OptimizationLevel          = ShaderCI.ShaderOptimizationLevel;
 
         if (VkShaderCI.VkVersion >= VK_API_VERSION_1_2)
             Attribs.Version = GLSLangUtils::SpirvVersion::Vk120;
