@@ -124,11 +124,11 @@ HRESULT CompileShader(const char*             Source,
 
     switch (ShaderCI.ShaderOptimizationLevel)
     {
-        case SHADER_OPTIMIZATION_LEVEL_DISABLED: dwShaderFlags |= D3DCOMPILE_SKIP_OPTIMIZATION;   break;
-        case SHADER_OPTIMIZATION_LEVEL_0:        dwShaderFlags |= D3DCOMPILE_OPTIMIZATION_LEVEL0; break;
-        case SHADER_OPTIMIZATION_LEVEL_1:        dwShaderFlags |= D3DCOMPILE_OPTIMIZATION_LEVEL1; break;
-        case SHADER_OPTIMIZATION_LEVEL_2:        dwShaderFlags |= D3DCOMPILE_OPTIMIZATION_LEVEL2; break;
-        case SHADER_OPTIMIZATION_LEVEL_3:        dwShaderFlags |= D3DCOMPILE_OPTIMIZATION_LEVEL3; break;
+        case SHADER_OPTIMIZATION_LEVEL_DISABLED: dwShaderFlags |= D3DCOMPILE_SKIP_OPTIMIZATION; break;
+        case SHADER_OPTIMIZATION_LEVEL_0: dwShaderFlags |= D3DCOMPILE_OPTIMIZATION_LEVEL0; break;
+        case SHADER_OPTIMIZATION_LEVEL_1: dwShaderFlags |= D3DCOMPILE_OPTIMIZATION_LEVEL1; break;
+        case SHADER_OPTIMIZATION_LEVEL_2: dwShaderFlags |= D3DCOMPILE_OPTIMIZATION_LEVEL2; break;
+        case SHADER_OPTIMIZATION_LEVEL_3: dwShaderFlags |= D3DCOMPILE_OPTIMIZATION_LEVEL3; break;
         case SHADER_OPTIMIZATION_LEVEL_DEFAULT:
         default:
             // DEFAULT: no explicit optimization flag (FXC uses its own default level), preserving historical behavior.
