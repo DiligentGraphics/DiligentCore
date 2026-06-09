@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -121,6 +121,19 @@ HRESULT CompileShader(const char*             Source,
 
     if (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_PACK_MATRIX_ROW_MAJOR)
         dwShaderFlags |= D3DCOMPILE_PACK_MATRIX_ROW_MAJOR;
+
+    switch (ShaderCI.ShaderOptimizationLevel)
+    {
+        case SHADER_OPTIMIZATION_LEVEL_DISABLED: dwShaderFlags |= D3DCOMPILE_SKIP_OPTIMIZATION;   break;
+        case SHADER_OPTIMIZATION_LEVEL_0:        dwShaderFlags |= D3DCOMPILE_OPTIMIZATION_LEVEL0; break;
+        case SHADER_OPTIMIZATION_LEVEL_1:        dwShaderFlags |= D3DCOMPILE_OPTIMIZATION_LEVEL1; break;
+        case SHADER_OPTIMIZATION_LEVEL_2:        dwShaderFlags |= D3DCOMPILE_OPTIMIZATION_LEVEL2; break;
+        case SHADER_OPTIMIZATION_LEVEL_3:        dwShaderFlags |= D3DCOMPILE_OPTIMIZATION_LEVEL3; break;
+        case SHADER_OPTIMIZATION_LEVEL_DEFAULT:
+        default:
+            // DEFAULT: no explicit optimization flag (FXC uses its own default level), preserving historical behavior.
+            break;
+    }
 
     D3D_SHADER_MACRO Macros[] = {{"D3DCOMPILER", ""}, {}};
 
