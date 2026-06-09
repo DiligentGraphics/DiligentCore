@@ -327,7 +327,7 @@ bool Serializer<SerializerMode::Read>::Copy(T* pData, size_t Size)
 {
     static_assert(IsAlignedBaseClass<T>::Value, "There is unused space at the end of the structure that may be filled with garbage. Use padding to zero-initialize this space and avoid nasty issues.");
     CHECK_REMAINING_SIZE(Size, "Note enough data to read ", Size, " bytes");
-    std::memcpy(pData, m_Ptr, Size);
+    std::memcpy(static_cast<void*>(pData), m_Ptr, Size);
     m_Ptr += Size;
     return true;
 }

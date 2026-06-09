@@ -111,12 +111,12 @@ WArgV::WArgV(int argc, const char **argv)
   for (int i = 0; i < argc; ++i) {
     std::string S(argv[i]);
     const int wideLength = ::MultiByteToWideChar(
-        CP_UTF8, MB_ERR_INVALID_CHARS, S.data(), S.size(), nullptr, 0);
+        CP_UTF8, MB_ERR_INVALID_CHARS, S.data(), static_cast<int>(S.size()), nullptr, 0);
     assert(wideLength > 0 &&
            "else it should have failed during size calculation");
     WStringVector[i].resize(wideLength);
-    ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, S.data(), S.size(),
-                          &(WStringVector[i])[0], WStringVector[i].size());
+    ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, S.data(), static_cast<int>(S.size()),
+                          &(WStringVector[i])[0], static_cast<int>(WStringVector[i].size()));
     WCharPtrVector[i] = WStringVector[i].data();
   }
 }

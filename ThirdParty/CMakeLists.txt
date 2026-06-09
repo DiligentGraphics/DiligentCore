@@ -157,10 +157,10 @@ if (VULKAN_SUPPORTED AND (PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS OR 
     list(APPEND THIRD_PARTY_LIBS volk)
 endif()
 
-if (WEBGPU_SUPPORTED)
-    add_subdirectory(abseil-cpp EXCLUDE_FROM_ALL)
-    set_directory_root_folder("abseil-cpp" "DiligentCore/ThirdParty")
+add_subdirectory(abseil-cpp EXCLUDE_FROM_ALL)
+set_directory_root_folder("abseil-cpp" "DiligentCore/ThirdParty")
 
+if (WEBGPU_SUPPORTED)
     add_subdirectory(dawn EXCLUDE_FROM_ALL)
     set_directory_root_folder("dawn" "DiligentCore/ThirdParty/dawn")
 endif()
