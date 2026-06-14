@@ -24,7 +24,9 @@
  *  of the possibility of such damages.
  */
 
+#define DILIGENT_WEAK_OBJECT_CACHE_TEST_HOOKS 1
 #include "WeakObjectCache.hpp"
+#undef DILIGENT_WEAK_OBJECT_CACHE_TEST_HOOKS
 
 #include "ObjectBase.hpp"
 #include "TestingEnvironment.hpp"
@@ -91,6 +93,235 @@ private:
     std::atomic<int>  m_ReadyCount{0};
     Threading::Signal m_StartSignal;
 };
+
+constexpr size_t ConcurrentShardCounts[] = {1, 2};
+
+bool WaitUntilEquals(const std::atomic<Uint32>& Value, Uint32 Expected)
+{
+    const auto Deadline = std::chrono::steady_clock::now() + std::chrono::seconds{5};
+    while (Value.load(std::memory_order_acquire) != Expected)
+    {
+        if (std::chrono::steady_clock::now() >= Deadline)
+            return false;
+
+        std::this_thread::yield();
+    }
+
+    return true;
+}
+
+void TestConcurrentRequestsCreateSingleObjectForSameKey(size_t ShardCount)
+{
+    static constexpr Uint32 ThreadCount = 16;
+
+    WeakObjectCache<TestObject> Cache{ShardCount};
+    ThreadStartGate             StartGate{ThreadCount};
+    std::atomic<Uint32>         CreateCount{0};
+    std::vector<std::thread>    Threads;
+    std::vector<TestObjectPtr>  Objects(ThreadCount);
+    std::vector<Uint8>          Created(ThreadCount, 0);
+
+    Threads.reserve(ThreadCount);
+    for (Uint32 ThreadIndex = 0; ThreadIndex < ThreadCount; ++ThreadIndex)
+    {
+        Threads.emplace_back([&, ThreadIndex]() {
+            StartGate.Wait();
+
+            auto [Object, WasCreated] =
+                Cache.GetOrCreate(
+                    "object-key",
+                    [&]() {
+                        CreateCount.fetch_add(1, std::memory_order_acq_rel);
+                        std::this_thread::sleep_for(std::chrono::milliseconds{1});
+                        return CreateTestObject("object://threaded", 42);
+                    });
+
+            Objects[ThreadIndex] = std::move(Object);
+            Created[ThreadIndex] = WasCreated ? 1 : 0;
+        });
+    }
+
+    for (std::thread& Thread : Threads)
+        Thread.join();
+
+    ASSERT_NE(Objects[0], nullptr);
+    EXPECT_EQ(CreateCount.load(std::memory_order_acquire), 1u);
+    EXPECT_EQ(std::count(Created.begin(), Created.end(), Uint8{1}), 1);
+
+    for (const TestObjectPtr& Object : Objects)
+    {
+        ASSERT_NE(Object, nullptr);
+        EXPECT_EQ(Object.RawPtr(), Objects[0].RawPtr());
+        EXPECT_EQ(Object->Value, 42u);
+    }
+}
+
+void TestConcurrentRequestsReplaceExpiredEntryOnce(size_t ShardCount)
+{
+    static constexpr Uint32 ThreadCount = 16;
+
+    WeakObjectCache<TestObject> Cache{ShardCount};
+    std::atomic<Uint32>         InitialCreateCount{0};
+    {
+        auto [InitialObject, InitialCreated] =
+            Cache.GetOrCreate(
+                "object-key",
+                [&]() {
+                    InitialCreateCount.fetch_add(1, std::memory_order_acq_rel);
+                    return CreateTestObject("object://expired", 31);
+                });
+
+        ASSERT_NE(InitialObject, nullptr);
+        EXPECT_TRUE(InitialCreated);
+        EXPECT_EQ(InitialObject->Value, 31u);
+    }
+
+    EXPECT_EQ(InitialCreateCount.load(std::memory_order_acquire), 1u);
+
+    ThreadStartGate            StartGate{ThreadCount};
+    std::atomic<Uint32>        ReplacementCreateCount{0};
+    std::vector<std::thread>   Threads;
+    std::vector<TestObjectPtr> Objects(ThreadCount);
+    std::vector<Uint8>         Created(ThreadCount, 0);
+
+    Threads.reserve(ThreadCount);
+    for (Uint32 ThreadIndex = 0; ThreadIndex < ThreadCount; ++ThreadIndex)
+    {
+        Threads.emplace_back([&, ThreadIndex]() {
+            StartGate.Wait();
+
+            auto [Object, WasCreated] =
+                Cache.GetOrCreate(
+                    "object-key",
+                    [&]() {
+                        ReplacementCreateCount.fetch_add(1, std::memory_order_acq_rel);
+                        std::this_thread::sleep_for(std::chrono::milliseconds{1});
+                        return CreateTestObject("object://replacement", 32);
+                    });
+
+            Objects[ThreadIndex] = std::move(Object);
+            Created[ThreadIndex] = WasCreated ? 1 : 0;
+        });
+    }
+
+    for (std::thread& Thread : Threads)
+        Thread.join();
+
+    ASSERT_NE(Objects[0], nullptr);
+    EXPECT_EQ(ReplacementCreateCount.load(std::memory_order_acquire), 1u);
+    EXPECT_EQ(std::count(Created.begin(), Created.end(), Uint8{1}), 1);
+
+    for (const TestObjectPtr& Object : Objects)
+    {
+        ASSERT_NE(Object, nullptr);
+        EXPECT_EQ(Object.RawPtr(), Objects[0].RawPtr());
+        EXPECT_EQ(Object->URI, "object://replacement");
+        EXPECT_EQ(Object->Value, 32u);
+    }
+}
+
+void TestConcurrentLiveCacheHitsDoNotCallFactory(size_t ShardCount)
+{
+    static constexpr Uint32 ThreadCount = 16;
+
+    WeakObjectCache<TestObject> Cache{ShardCount};
+    std::atomic<Uint32>         CreateCount{0};
+
+    auto [InitialObject, InitialCreated] =
+        Cache.GetOrCreate(
+            "object-key",
+            [&]() {
+                CreateCount.fetch_add(1, std::memory_order_acq_rel);
+                return CreateTestObject("object://cached", 11);
+            });
+
+    ASSERT_NE(InitialObject, nullptr);
+    EXPECT_TRUE(InitialCreated);
+
+    ThreadStartGate            StartGate{ThreadCount};
+    std::vector<std::thread>   Threads;
+    std::vector<TestObjectPtr> Objects(ThreadCount);
+    std::vector<Uint8>         Created(ThreadCount, 0);
+
+    Threads.reserve(ThreadCount);
+    for (Uint32 ThreadIndex = 0; ThreadIndex < ThreadCount; ++ThreadIndex)
+    {
+        Threads.emplace_back([&, ThreadIndex]() {
+            StartGate.Wait();
+
+            auto [Object, WasCreated] =
+                Cache.GetOrCreate(
+                    "object-key",
+                    [&]() {
+                        CreateCount.fetch_add(1, std::memory_order_acq_rel);
+                        return CreateTestObject("object://unexpected", 99);
+                    });
+
+            Objects[ThreadIndex] = std::move(Object);
+            Created[ThreadIndex] = WasCreated ? 1 : 0;
+        });
+    }
+
+    for (std::thread& Thread : Threads)
+        Thread.join();
+
+    EXPECT_EQ(CreateCount.load(std::memory_order_acquire), 1u);
+    EXPECT_EQ(std::count(Created.begin(), Created.end(), Uint8{1}), 0);
+
+    for (const TestObjectPtr& Object : Objects)
+    {
+        ASSERT_NE(Object, nullptr);
+        EXPECT_EQ(Object.RawPtr(), InitialObject.RawPtr());
+        EXPECT_EQ(Object->Value, 11u);
+    }
+}
+
+void TestConcurrentRequestsForDifferentKeysCreateIndependentObjects(size_t ShardCount)
+{
+    static constexpr Uint32 ThreadCount = 16;
+
+    WeakObjectCache<TestObject> Cache{ShardCount};
+    ThreadStartGate             StartGate{ThreadCount};
+    std::atomic<Uint32>         CreateCount{0};
+    std::vector<std::thread>    Threads;
+    std::vector<TestObjectPtr>  Objects(ThreadCount);
+    std::vector<Uint8>          Created(ThreadCount, 0);
+
+    Threads.reserve(ThreadCount);
+    for (Uint32 ThreadIndex = 0; ThreadIndex < ThreadCount; ++ThreadIndex)
+    {
+        Threads.emplace_back([&, ThreadIndex]() {
+            StartGate.Wait();
+
+            const std::string CacheKey = "object-key-" + std::to_string(ThreadIndex);
+            const std::string URI      = "object://threaded-" + std::to_string(ThreadIndex);
+            auto [Object, WasCreated] =
+                Cache.GetOrCreate(
+                    CacheKey.c_str(),
+                    [&, URI, ThreadIndex]() {
+                        CreateCount.fetch_add(1, std::memory_order_acq_rel);
+                        return CreateTestObject(URI.c_str(), ThreadIndex);
+                    });
+
+            Objects[ThreadIndex] = std::move(Object);
+            Created[ThreadIndex] = WasCreated ? 1 : 0;
+        });
+    }
+
+    for (std::thread& Thread : Threads)
+        Thread.join();
+
+    EXPECT_EQ(CreateCount.load(std::memory_order_acquire), ThreadCount);
+    EXPECT_EQ(std::count(Created.begin(), Created.end(), Uint8{1}), ThreadCount);
+
+    for (Uint32 ThreadIndex = 0; ThreadIndex < ThreadCount; ++ThreadIndex)
+    {
+        ASSERT_NE(Objects[ThreadIndex], nullptr);
+        EXPECT_EQ(Objects[ThreadIndex]->Value, ThreadIndex);
+        for (Uint32 OtherIndex = ThreadIndex + 1; OtherIndex < ThreadCount; ++OtherIndex)
+            EXPECT_NE(Objects[ThreadIndex].RawPtr(), Objects[OtherIndex].RawPtr());
+    }
+}
 
 } // namespace
 
@@ -352,10 +583,17 @@ TEST(Common_WeakObjectCache, ConcurrentFactoryFailureWakesAllWaiters)
     Threading::Signal           StartWaiters;
     Threading::Signal           FinishFactory;
     std::atomic<Uint32>         WaitersReady{0};
-    std::atomic<Uint32>         WaitersEntered{0};
+    std::atomic<Uint32>         WaitersWaiting{0};
     std::atomic<Uint32>         CreateCount{0};
     TestObjectPtr               CreatorObject;
     bool                        CreatorCreated = false;
+
+    Cache.SetWaitCreateCallback(
+        [](const Char*, void* pUserData) {
+            auto& Waiting = *static_cast<std::atomic<Uint32>*>(pUserData);
+            Waiting.fetch_add(1, std::memory_order_acq_rel);
+        },
+        &WaitersWaiting);
 
     std::thread Creator{[&]() {
         auto [Object, Created] =
@@ -384,7 +622,6 @@ TEST(Common_WeakObjectCache, ConcurrentFactoryFailureWakesAllWaiters)
         Waiters.emplace_back([&, WaiterIndex]() {
             WaitersReady.fetch_add(1, std::memory_order_acq_rel);
             StartWaiters.Wait(true, WaiterCount);
-            WaitersEntered.fetch_add(1, std::memory_order_acq_rel);
 
             auto [Object, WasCreated] =
                 Cache.GetOrCreate(
@@ -405,10 +642,8 @@ TEST(Common_WeakObjectCache, ConcurrentFactoryFailureWakesAllWaiters)
 
     StartWaiters.Trigger(true, WaiterCount);
 
-    while (WaitersEntered.load(std::memory_order_acquire) != WaiterCount)
+    while (WaitersWaiting.load(std::memory_order_acquire) != WaiterCount)
         std::this_thread::yield();
-
-    std::this_thread::sleep_for(std::chrono::milliseconds{1});
 
     {
         TestingEnvironment::ErrorScope ExpectedErrors{"Failed to create object for cache key 'object-key'"};
@@ -477,9 +712,16 @@ TEST(Common_WeakObjectCache, ConcurrentFactoryExceptionWakesAllWaiters)
     Threading::Signal           StartWaiters;
     Threading::Signal           FinishFactory;
     std::atomic<Uint32>         WaitersReady{0};
-    std::atomic<Uint32>         WaitersEntered{0};
+    std::atomic<Uint32>         WaitersWaiting{0};
     std::atomic<Uint32>         CreateCount{0};
     bool                        CaughtException = false;
+
+    Cache.SetWaitCreateCallback(
+        [](const Char*, void* pUserData) {
+            auto& Waiting = *static_cast<std::atomic<Uint32>*>(pUserData);
+            Waiting.fetch_add(1, std::memory_order_acq_rel);
+        },
+        &WaitersWaiting);
 
     std::thread Creator{[&]() {
         try
@@ -516,7 +758,6 @@ TEST(Common_WeakObjectCache, ConcurrentFactoryExceptionWakesAllWaiters)
         Waiters.emplace_back([&, WaiterIndex]() {
             WaitersReady.fetch_add(1, std::memory_order_acq_rel);
             StartWaiters.Wait(true, WaiterCount);
-            WaitersEntered.fetch_add(1, std::memory_order_acq_rel);
 
             auto [Object, WasCreated] =
                 Cache.GetOrCreate(
@@ -537,10 +778,8 @@ TEST(Common_WeakObjectCache, ConcurrentFactoryExceptionWakesAllWaiters)
 
     StartWaiters.Trigger(true, WaiterCount);
 
-    while (WaitersEntered.load(std::memory_order_acquire) != WaiterCount)
+    while (WaitersWaiting.load(std::memory_order_acquire) != WaiterCount)
         std::this_thread::yield();
-
-    std::this_thread::sleep_for(std::chrono::milliseconds{1});
 
     FinishFactory.Trigger(true);
     Creator.join();
@@ -637,6 +876,59 @@ TEST(Common_WeakObjectCache, FactoryCanCreateDifferentKeyInSameShard)
     EXPECT_EQ(Object->Value, 22u);
 }
 
+TEST(Common_WeakObjectCache, DifferentKeyFactoriesInSameShardRunConcurrently)
+{
+    static constexpr Uint32 ThreadCount = 2;
+
+    WeakObjectCache<TestObject> Cache{1};
+    ThreadStartGate             StartGate{ThreadCount};
+    Threading::Signal           ReleaseFactories;
+    std::atomic<Uint32>         FactoriesEntered{0};
+    std::atomic<Uint32>         CreateCount{0};
+    std::vector<std::thread>    Threads;
+    std::vector<TestObjectPtr>  Objects(ThreadCount);
+    std::vector<Uint8>          Created(ThreadCount, 0);
+
+    Threads.reserve(ThreadCount);
+    for (Uint32 ThreadIndex = 0; ThreadIndex < ThreadCount; ++ThreadIndex)
+    {
+        Threads.emplace_back([&, ThreadIndex]() {
+            StartGate.Wait();
+
+            const std::string CacheKey = "object-key-" + std::to_string(ThreadIndex);
+            const std::string URI      = "object://same-shard-" + std::to_string(ThreadIndex);
+            auto [Object, WasCreated] =
+                Cache.GetOrCreate(
+                    CacheKey.c_str(),
+                    [&, URI, ThreadIndex]() {
+                        FactoriesEntered.fetch_add(1, std::memory_order_acq_rel);
+                        ReleaseFactories.Wait(true, ThreadCount);
+                        CreateCount.fetch_add(1, std::memory_order_acq_rel);
+                        return CreateTestObject(URI.c_str(), ThreadIndex);
+                    });
+
+            Objects[ThreadIndex] = std::move(Object);
+            Created[ThreadIndex] = WasCreated ? 1 : 0;
+        });
+    }
+
+    const bool FactoriesRanConcurrently = WaitUntilEquals(FactoriesEntered, ThreadCount);
+    ReleaseFactories.Trigger(true, ThreadCount);
+
+    for (std::thread& Thread : Threads)
+        Thread.join();
+
+    EXPECT_TRUE(FactoriesRanConcurrently) << "Different-key factories in the same shard did not overlap";
+    EXPECT_EQ(CreateCount.load(std::memory_order_acquire), ThreadCount);
+    EXPECT_EQ(std::count(Created.begin(), Created.end(), Uint8{1}), ThreadCount);
+
+    for (Uint32 ThreadIndex = 0; ThreadIndex < ThreadCount; ++ThreadIndex)
+    {
+        ASSERT_NE(Objects[ThreadIndex], nullptr);
+        EXPECT_EQ(Objects[ThreadIndex]->Value, ThreadIndex);
+    }
+}
+
 TEST(Common_WeakObjectCache, RecursiveFactoryForSameKeyReturnsEmpty)
 {
     WeakObjectCache<TestObject> Cache{1};
@@ -675,213 +967,36 @@ TEST(Common_WeakObjectCache, RecursiveFactoryForSameKeyReturnsEmpty)
 
 TEST(Common_WeakObjectCache, ConcurrentRequestsCreateSingleObjectForSameKey)
 {
-    static constexpr Uint32 ThreadCount = 16;
-
-    WeakObjectCache<TestObject> Cache{2};
-    ThreadStartGate             StartGate{ThreadCount};
-    std::atomic<Uint32>         CreateCount{0};
-    std::vector<std::thread>    Threads;
-    std::vector<TestObjectPtr>  Objects(ThreadCount);
-    std::vector<Uint8>          Created(ThreadCount, 0);
-
-    Threads.reserve(ThreadCount);
-    for (Uint32 ThreadIndex = 0; ThreadIndex < ThreadCount; ++ThreadIndex)
+    for (const size_t ShardCount : ConcurrentShardCounts)
     {
-        Threads.emplace_back([&, ThreadIndex]() {
-            StartGate.Wait();
-
-            auto [Object, WasCreated] =
-                Cache.GetOrCreate(
-                    "object-key",
-                    [&]() {
-                        CreateCount.fetch_add(1, std::memory_order_acq_rel);
-                        std::this_thread::sleep_for(std::chrono::milliseconds{1});
-                        return CreateTestObject("object://threaded", 42);
-                    });
-
-            Objects[ThreadIndex] = std::move(Object);
-            Created[ThreadIndex] = WasCreated ? 1 : 0;
-        });
-    }
-
-    for (std::thread& Thread : Threads)
-        Thread.join();
-
-    ASSERT_NE(Objects[0], nullptr);
-    EXPECT_EQ(CreateCount.load(std::memory_order_acquire), 1u);
-    EXPECT_EQ(std::count(Created.begin(), Created.end(), Uint8{1}), 1);
-
-    for (const TestObjectPtr& Object : Objects)
-    {
-        ASSERT_NE(Object, nullptr);
-        EXPECT_EQ(Object.RawPtr(), Objects[0].RawPtr());
-        EXPECT_EQ(Object->Value, 42u);
+        SCOPED_TRACE(::testing::Message{} << "ShardCount: " << ShardCount);
+        TestConcurrentRequestsCreateSingleObjectForSameKey(ShardCount);
     }
 }
 
 TEST(Common_WeakObjectCache, ConcurrentRequestsReplaceExpiredEntryOnce)
 {
-    static constexpr Uint32 ThreadCount = 16;
-
-    WeakObjectCache<TestObject> Cache{2};
-    std::atomic<Uint32>         InitialCreateCount{0};
+    for (const size_t ShardCount : ConcurrentShardCounts)
     {
-        auto [InitialObject, InitialCreated] =
-            Cache.GetOrCreate(
-                "object-key",
-                [&]() {
-                    InitialCreateCount.fetch_add(1, std::memory_order_acq_rel);
-                    return CreateTestObject("object://expired", 31);
-                });
-
-        ASSERT_NE(InitialObject, nullptr);
-        EXPECT_TRUE(InitialCreated);
-        EXPECT_EQ(InitialObject->Value, 31u);
-    }
-
-    EXPECT_EQ(InitialCreateCount.load(std::memory_order_acquire), 1u);
-
-    ThreadStartGate            StartGate{ThreadCount};
-    std::atomic<Uint32>        ReplacementCreateCount{0};
-    std::vector<std::thread>   Threads;
-    std::vector<TestObjectPtr> Objects(ThreadCount);
-    std::vector<Uint8>         Created(ThreadCount, 0);
-
-    Threads.reserve(ThreadCount);
-    for (Uint32 ThreadIndex = 0; ThreadIndex < ThreadCount; ++ThreadIndex)
-    {
-        Threads.emplace_back([&, ThreadIndex]() {
-            StartGate.Wait();
-
-            auto [Object, WasCreated] =
-                Cache.GetOrCreate(
-                    "object-key",
-                    [&]() {
-                        ReplacementCreateCount.fetch_add(1, std::memory_order_acq_rel);
-                        std::this_thread::sleep_for(std::chrono::milliseconds{1});
-                        return CreateTestObject("object://replacement", 32);
-                    });
-
-            Objects[ThreadIndex] = std::move(Object);
-            Created[ThreadIndex] = WasCreated ? 1 : 0;
-        });
-    }
-
-    for (std::thread& Thread : Threads)
-        Thread.join();
-
-    ASSERT_NE(Objects[0], nullptr);
-    EXPECT_EQ(ReplacementCreateCount.load(std::memory_order_acquire), 1u);
-    EXPECT_EQ(std::count(Created.begin(), Created.end(), Uint8{1}), 1);
-
-    for (const TestObjectPtr& Object : Objects)
-    {
-        ASSERT_NE(Object, nullptr);
-        EXPECT_EQ(Object.RawPtr(), Objects[0].RawPtr());
-        EXPECT_EQ(Object->URI, "object://replacement");
-        EXPECT_EQ(Object->Value, 32u);
+        SCOPED_TRACE(::testing::Message{} << "ShardCount: " << ShardCount);
+        TestConcurrentRequestsReplaceExpiredEntryOnce(ShardCount);
     }
 }
 
 TEST(Common_WeakObjectCache, ConcurrentLiveCacheHitsDoNotCallFactory)
 {
-    static constexpr Uint32 ThreadCount = 16;
-
-    WeakObjectCache<TestObject> Cache{2};
-    std::atomic<Uint32>         CreateCount{0};
-
-    auto [InitialObject, InitialCreated] =
-        Cache.GetOrCreate(
-            "object-key",
-            [&]() {
-                CreateCount.fetch_add(1, std::memory_order_acq_rel);
-                return CreateTestObject("object://cached", 11);
-            });
-
-    ASSERT_NE(InitialObject, nullptr);
-    EXPECT_TRUE(InitialCreated);
-
-    ThreadStartGate            StartGate{ThreadCount};
-    std::vector<std::thread>   Threads;
-    std::vector<TestObjectPtr> Objects(ThreadCount);
-    std::vector<Uint8>         Created(ThreadCount, 0);
-
-    Threads.reserve(ThreadCount);
-    for (Uint32 ThreadIndex = 0; ThreadIndex < ThreadCount; ++ThreadIndex)
+    for (const size_t ShardCount : ConcurrentShardCounts)
     {
-        Threads.emplace_back([&, ThreadIndex]() {
-            StartGate.Wait();
-
-            auto [Object, WasCreated] =
-                Cache.GetOrCreate(
-                    "object-key",
-                    [&]() {
-                        CreateCount.fetch_add(1, std::memory_order_acq_rel);
-                        return CreateTestObject("object://unexpected", 99);
-                    });
-
-            Objects[ThreadIndex] = std::move(Object);
-            Created[ThreadIndex] = WasCreated ? 1 : 0;
-        });
-    }
-
-    for (std::thread& Thread : Threads)
-        Thread.join();
-
-    EXPECT_EQ(CreateCount.load(std::memory_order_acquire), 1u);
-    EXPECT_EQ(std::count(Created.begin(), Created.end(), Uint8{1}), 0);
-
-    for (const TestObjectPtr& Object : Objects)
-    {
-        ASSERT_NE(Object, nullptr);
-        EXPECT_EQ(Object.RawPtr(), InitialObject.RawPtr());
-        EXPECT_EQ(Object->Value, 11u);
+        SCOPED_TRACE(::testing::Message{} << "ShardCount: " << ShardCount);
+        TestConcurrentLiveCacheHitsDoNotCallFactory(ShardCount);
     }
 }
 
 TEST(Common_WeakObjectCache, ConcurrentRequestsForDifferentKeysCreateIndependentObjects)
 {
-    static constexpr Uint32 ThreadCount = 16;
-
-    WeakObjectCache<TestObject> Cache{2};
-    ThreadStartGate             StartGate{ThreadCount};
-    std::atomic<Uint32>         CreateCount{0};
-    std::vector<std::thread>    Threads;
-    std::vector<TestObjectPtr>  Objects(ThreadCount);
-    std::vector<Uint8>          Created(ThreadCount, 0);
-
-    Threads.reserve(ThreadCount);
-    for (Uint32 ThreadIndex = 0; ThreadIndex < ThreadCount; ++ThreadIndex)
+    for (const size_t ShardCount : ConcurrentShardCounts)
     {
-        Threads.emplace_back([&, ThreadIndex]() {
-            StartGate.Wait();
-
-            const std::string CacheKey = "object-key-" + std::to_string(ThreadIndex);
-            const std::string URI      = "object://threaded-" + std::to_string(ThreadIndex);
-            auto [Object, WasCreated] =
-                Cache.GetOrCreate(
-                    CacheKey.c_str(),
-                    [&, URI, ThreadIndex]() {
-                        CreateCount.fetch_add(1, std::memory_order_acq_rel);
-                        return CreateTestObject(URI.c_str(), ThreadIndex);
-                    });
-
-            Objects[ThreadIndex] = std::move(Object);
-            Created[ThreadIndex] = WasCreated ? 1 : 0;
-        });
-    }
-
-    for (std::thread& Thread : Threads)
-        Thread.join();
-
-    EXPECT_EQ(CreateCount.load(std::memory_order_acquire), ThreadCount);
-    EXPECT_EQ(std::count(Created.begin(), Created.end(), Uint8{1}), ThreadCount);
-
-    for (Uint32 ThreadIndex = 0; ThreadIndex < ThreadCount; ++ThreadIndex)
-    {
-        ASSERT_NE(Objects[ThreadIndex], nullptr);
-        EXPECT_EQ(Objects[ThreadIndex]->Value, ThreadIndex);
-        for (Uint32 OtherIndex = ThreadIndex + 1; OtherIndex < ThreadCount; ++OtherIndex)
-            EXPECT_NE(Objects[ThreadIndex].RawPtr(), Objects[OtherIndex].RawPtr());
+        SCOPED_TRACE(::testing::Message{} << "ShardCount: " << ShardCount);
+        TestConcurrentRequestsForDifferentKeysCreateIndependentObjects(ShardCount);
     }
 }

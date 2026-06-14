@@ -215,6 +215,16 @@ private:
 #endif
 
 public:
+#ifdef DILIGENT_WEAK_OBJECT_CACHE_TEST_HOOKS
+    using WaitCreateCallbackType = void (*)(const Char* CacheKey, void* pUserData);
+
+    void SetWaitCreateCallback(WaitCreateCallbackType Callback, void* pUserData = nullptr)
+    {
+        m_WaitCreateCallback     = Callback;
+        m_pWaitCreateCallbackCtx = pUserData;
+    }
+#endif
+
     explicit WeakObjectCache(size_t ShardCount = 0) :
         m_ShardCount{GetActualShardCount(ShardCount)},
         m_Shards{std::make_unique<Shard[]>(m_ShardCount)}
@@ -312,11 +322,16 @@ public:
         for (;;)
         {
             if (RefCntAutoPtr<InterfaceType> pExisting = pEntry->Lock())
-                return {pExisting, false};
+                return {std::move(pExisting), false};
 
             const typename ObjectEntry::CreateState State = pEntry->BeginCreate();
             if (State.Action == ObjectEntry::CreateAction::Wait)
             {
+#ifdef DILIGENT_WEAK_OBJECT_CACHE_TEST_HOOKS
+                if (m_WaitCreateCallback != nullptr)
+                    m_WaitCreateCallback(CacheKey, m_pWaitCreateCallbackCtx);
+#endif
+
                 if (pEntry->WaitCreate(State.Generation))
                     continue;
 
@@ -332,7 +347,7 @@ public:
             if (RefCntAutoPtr<InterfaceType> pExisting = pEntry->Lock())
             {
                 pEntry->EndCreate(true);
-                return {pExisting, false};
+                return {std::move(pExisting), false};
             }
 
             RefCntAutoPtr<InterfaceType> pObject;
@@ -356,7 +371,7 @@ public:
             pEntry->Set(pObject.RawPtr());
             pEntry->EndCreate(true);
 
-            return {pObject, true};
+            return {std::move(pObject), true};
         }
     }
 
@@ -413,6 +428,10 @@ private:
     const size_t             m_ShardCount;
     std::unique_ptr<Shard[]> m_Shards;
     std::atomic<size_t>      m_Size{0};
+#ifdef DILIGENT_WEAK_OBJECT_CACHE_TEST_HOOKS
+    WaitCreateCallbackType m_WaitCreateCallback     = nullptr;
+    void*                  m_pWaitCreateCallbackCtx = nullptr;
+#endif
 };
 
 } // namespace Diligent
