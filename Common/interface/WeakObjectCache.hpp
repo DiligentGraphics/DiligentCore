@@ -250,6 +250,12 @@ public:
                 return {};
             }
 
+            if (RefCntAutoPtr<InterfaceType> pExisting = pEntry->Lock())
+            {
+                pEntry->EndCreate(true);
+                return {pExisting, false};
+            }
+
             RefCntAutoPtr<InterfaceType> pObject;
             try
             {
