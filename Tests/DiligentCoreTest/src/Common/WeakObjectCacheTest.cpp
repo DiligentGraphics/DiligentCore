@@ -95,13 +95,12 @@ private:
 
 TEST(Common_WeakObjectCache, CreatesAndReusesCachedObject)
 {
-    WeakObjectCache<IObject> Cache;
+    WeakObjectCache<TestObject> Cache;
 
     Uint32 CreateCount = 0;
     auto [FirstObject, FirstCreated] =
-        Cache.GetOrCreate<TestObject>(
+        Cache.GetOrCreate(
             "object-key",
-            IID_TestObject,
             [&]() {
                 ++CreateCount;
                 return CreateTestObject("object://first", 17);
@@ -114,9 +113,8 @@ TEST(Common_WeakObjectCache, CreatesAndReusesCachedObject)
     EXPECT_EQ(FirstObject->Value, 17u);
 
     auto [SecondObject, SecondCreated] =
-        Cache.GetOrCreate<TestObject>(
+        Cache.GetOrCreate(
             "object-key",
-            IID_TestObject,
             [&]() {
                 ADD_FAILURE() << "Factory must not be called when a live cache entry exists";
                 ++CreateCount;
@@ -132,7 +130,7 @@ TEST(Common_WeakObjectCache, CreatesAndReusesCachedObject)
 
 TEST(Common_WeakObjectCache, CreatesIndependentObjectsForDifferentKeys)
 {
-    WeakObjectCache<IObject> Cache;
+    WeakObjectCache<TestObject> Cache;
 
     Uint32 CreateCount  = 0;
     auto   CreateObject = [&](const char* URI, Uint32 Value) {
@@ -143,9 +141,9 @@ TEST(Common_WeakObjectCache, CreatesIndependentObjectsForDifferentKeys)
     };
 
     auto [FirstObject, FirstCreated] =
-        Cache.GetOrCreate<TestObject>("object-key-0", IID_TestObject, CreateObject("object://first", 1));
+        Cache.GetOrCreate("object-key-0", CreateObject("object://first", 1));
     auto [SecondObject, SecondCreated] =
-        Cache.GetOrCreate<TestObject>("object-key-1", IID_TestObject, CreateObject("object://second", 2));
+        Cache.GetOrCreate("object-key-1", CreateObject("object://second", 2));
 
     ASSERT_NE(FirstObject, nullptr);
     ASSERT_NE(SecondObject, nullptr);
@@ -159,14 +157,13 @@ TEST(Common_WeakObjectCache, CreatesIndependentObjectsForDifferentKeys)
 
 TEST(Common_WeakObjectCache, ReplacesExpiredWeakEntry)
 {
-    WeakObjectCache<IObject> Cache;
+    WeakObjectCache<TestObject> Cache;
 
     Uint32 CreateCount = 0;
     {
         auto [Object, Created] =
-            Cache.GetOrCreate<TestObject>(
+            Cache.GetOrCreate(
                 "object-key",
-                IID_TestObject,
                 [&]() {
                     ++CreateCount;
                     return CreateTestObject("object://expired", 3);
@@ -178,9 +175,8 @@ TEST(Common_WeakObjectCache, ReplacesExpiredWeakEntry)
     }
 
     auto [Object, Created] =
-        Cache.GetOrCreate<TestObject>(
+        Cache.GetOrCreate(
             "object-key",
-            IID_TestObject,
             [&]() {
                 ++CreateCount;
                 return CreateTestObject("object://replacement", 4);
@@ -195,15 +191,14 @@ TEST(Common_WeakObjectCache, ReplacesExpiredWeakEntry)
 
 TEST(Common_WeakObjectCache, ReturnsEmptyWhenFactoryFails)
 {
-    WeakObjectCache<IObject> Cache;
+    WeakObjectCache<TestObject> Cache;
 
     Uint32 CreateCount = 0;
     {
         TestingEnvironment::ErrorScope ExpectedErrors{"Failed to create object for cache key 'object-key'"};
         auto [Object, Created] =
-            Cache.GetOrCreate<TestObject>(
+            Cache.GetOrCreate(
                 "object-key",
-                IID_TestObject,
                 [&]() -> RefCntAutoPtr<TestObject> {
                     ++CreateCount;
                     return {};
@@ -214,9 +209,8 @@ TEST(Common_WeakObjectCache, ReturnsEmptyWhenFactoryFails)
     }
 
     auto [Object, Created] =
-        Cache.GetOrCreate<TestObject>(
+        Cache.GetOrCreate(
             "object-key",
-            IID_TestObject,
             [&]() {
                 ++CreateCount;
                 return CreateTestObject("object://created-after-failure", 5);
@@ -230,15 +224,14 @@ TEST(Common_WeakObjectCache, ReturnsEmptyWhenFactoryFails)
 
 TEST(Common_WeakObjectCache, ReturnsEmptyForNullOrEmptyKey)
 {
-    WeakObjectCache<IObject> Cache;
+    WeakObjectCache<TestObject> Cache;
 
     Uint32 CreateCount = 0;
     {
         TestingEnvironment::ErrorScope ExpectedErrors{"WeakObjectCache key must not be null or empty"};
         auto [Object, Created] =
-            Cache.GetOrCreate<TestObject>(
+            Cache.GetOrCreate(
                 nullptr,
-                IID_TestObject,
                 [&]() {
                     ++CreateCount;
                     return CreateTestObject("object://unexpected", 6);
@@ -251,9 +244,8 @@ TEST(Common_WeakObjectCache, ReturnsEmptyForNullOrEmptyKey)
     {
         TestingEnvironment::ErrorScope ExpectedErrors{"WeakObjectCache key must not be null or empty"};
         auto [Object, Created] =
-            Cache.GetOrCreate<TestObject>(
+            Cache.GetOrCreate(
                 "",
-                IID_TestObject,
                 [&]() {
                     ++CreateCount;
                     return CreateTestObject("object://unexpected", 7);
@@ -268,20 +260,18 @@ TEST(Common_WeakObjectCache, ReturnsEmptyForNullOrEmptyKey)
 
 TEST(Common_WeakObjectCache, FactoryCanCreateDifferentKeyInSameShard)
 {
-    WeakObjectCache<IObject> Cache{1};
+    WeakObjectCache<TestObject> Cache{1};
 
     Uint32 CreateCount = 0;
     auto [Object, Created] =
-        Cache.GetOrCreate<TestObject>(
+        Cache.GetOrCreate(
             "material-key",
-            IID_TestObject,
             [&]() {
                 ++CreateCount;
 
                 auto [DependencyObject, DependencyCreated] =
-                    Cache.GetOrCreate<TestObject>(
+                    Cache.GetOrCreate(
                         "texture-key",
-                        IID_TestObject,
                         [&]() {
                             ++CreateCount;
                             return CreateTestObject("object://dependency", 21);
@@ -303,23 +293,21 @@ TEST(Common_WeakObjectCache, FactoryCanCreateDifferentKeyInSameShard)
 
 TEST(Common_WeakObjectCache, RecursiveFactoryForSameKeyReturnsEmpty)
 {
-    WeakObjectCache<IObject> Cache{1};
+    WeakObjectCache<TestObject> Cache{1};
 
     Uint32 CreateCount = 0;
     {
         TestingEnvironment::ErrorScope ExpectedErrors{"Recursive object creation detected for cache key 'object-key'"};
 
         auto [Object, Created] =
-            Cache.GetOrCreate<TestObject>(
+            Cache.GetOrCreate(
                 "object-key",
-                IID_TestObject,
                 [&]() {
                     ++CreateCount;
 
                     auto [RecursiveObject, RecursiveCreated] =
-                        Cache.GetOrCreate<TestObject>(
+                        Cache.GetOrCreate(
                             "object-key",
-                            IID_TestObject,
                             [&]() {
                                 ADD_FAILURE() << "Recursive factory must not be called";
                                 return CreateTestObject("object://recursive", 23);
@@ -343,12 +331,12 @@ TEST(Common_WeakObjectCache, ConcurrentRequestsCreateSingleObjectForSameKey)
 {
     static constexpr Uint32 ThreadCount = 16;
 
-    WeakObjectCache<IObject>   Cache{2};
-    ThreadStartGate            StartGate{ThreadCount};
-    std::atomic<Uint32>        CreateCount{0};
-    std::vector<std::thread>   Threads;
-    std::vector<TestObjectPtr> Objects(ThreadCount);
-    std::vector<Uint8>         Created(ThreadCount, 0);
+    WeakObjectCache<TestObject> Cache{2};
+    ThreadStartGate             StartGate{ThreadCount};
+    std::atomic<Uint32>         CreateCount{0};
+    std::vector<std::thread>    Threads;
+    std::vector<TestObjectPtr>  Objects(ThreadCount);
+    std::vector<Uint8>          Created(ThreadCount, 0);
 
     Threads.reserve(ThreadCount);
     for (Uint32 ThreadIndex = 0; ThreadIndex < ThreadCount; ++ThreadIndex)
@@ -357,9 +345,8 @@ TEST(Common_WeakObjectCache, ConcurrentRequestsCreateSingleObjectForSameKey)
             StartGate.Wait();
 
             auto [Object, WasCreated] =
-                Cache.GetOrCreate<TestObject>(
+                Cache.GetOrCreate(
                     "object-key",
-                    IID_TestObject,
                     [&]() {
                         CreateCount.fetch_add(1, std::memory_order_acq_rel);
                         std::this_thread::sleep_for(std::chrono::milliseconds{1});
@@ -390,13 +377,12 @@ TEST(Common_WeakObjectCache, ConcurrentRequestsReplaceExpiredEntryOnce)
 {
     static constexpr Uint32 ThreadCount = 16;
 
-    WeakObjectCache<IObject> Cache{2};
-    std::atomic<Uint32>      InitialCreateCount{0};
+    WeakObjectCache<TestObject> Cache{2};
+    std::atomic<Uint32>         InitialCreateCount{0};
     {
         auto [InitialObject, InitialCreated] =
-            Cache.GetOrCreate<TestObject>(
+            Cache.GetOrCreate(
                 "object-key",
-                IID_TestObject,
                 [&]() {
                     InitialCreateCount.fetch_add(1, std::memory_order_acq_rel);
                     return CreateTestObject("object://expired", 31);
@@ -422,9 +408,8 @@ TEST(Common_WeakObjectCache, ConcurrentRequestsReplaceExpiredEntryOnce)
             StartGate.Wait();
 
             auto [Object, WasCreated] =
-                Cache.GetOrCreate<TestObject>(
+                Cache.GetOrCreate(
                     "object-key",
-                    IID_TestObject,
                     [&]() {
                         ReplacementCreateCount.fetch_add(1, std::memory_order_acq_rel);
                         std::this_thread::sleep_for(std::chrono::milliseconds{1});
@@ -456,13 +441,12 @@ TEST(Common_WeakObjectCache, ConcurrentLiveCacheHitsDoNotCallFactory)
 {
     static constexpr Uint32 ThreadCount = 16;
 
-    WeakObjectCache<IObject> Cache{2};
-    std::atomic<Uint32>      CreateCount{0};
+    WeakObjectCache<TestObject> Cache{2};
+    std::atomic<Uint32>         CreateCount{0};
 
     auto [InitialObject, InitialCreated] =
-        Cache.GetOrCreate<TestObject>(
+        Cache.GetOrCreate(
             "object-key",
-            IID_TestObject,
             [&]() {
                 CreateCount.fetch_add(1, std::memory_order_acq_rel);
                 return CreateTestObject("object://cached", 11);
@@ -483,9 +467,8 @@ TEST(Common_WeakObjectCache, ConcurrentLiveCacheHitsDoNotCallFactory)
             StartGate.Wait();
 
             auto [Object, WasCreated] =
-                Cache.GetOrCreate<TestObject>(
+                Cache.GetOrCreate(
                     "object-key",
-                    IID_TestObject,
                     [&]() {
                         CreateCount.fetch_add(1, std::memory_order_acq_rel);
                         return CreateTestObject("object://unexpected", 99);
@@ -514,12 +497,12 @@ TEST(Common_WeakObjectCache, ConcurrentRequestsForDifferentKeysCreateIndependent
 {
     static constexpr Uint32 ThreadCount = 16;
 
-    WeakObjectCache<IObject>   Cache{2};
-    ThreadStartGate            StartGate{ThreadCount};
-    std::atomic<Uint32>        CreateCount{0};
-    std::vector<std::thread>   Threads;
-    std::vector<TestObjectPtr> Objects(ThreadCount);
-    std::vector<Uint8>         Created(ThreadCount, 0);
+    WeakObjectCache<TestObject> Cache{2};
+    ThreadStartGate             StartGate{ThreadCount};
+    std::atomic<Uint32>         CreateCount{0};
+    std::vector<std::thread>    Threads;
+    std::vector<TestObjectPtr>  Objects(ThreadCount);
+    std::vector<Uint8>          Created(ThreadCount, 0);
 
     Threads.reserve(ThreadCount);
     for (Uint32 ThreadIndex = 0; ThreadIndex < ThreadCount; ++ThreadIndex)
@@ -530,9 +513,8 @@ TEST(Common_WeakObjectCache, ConcurrentRequestsForDifferentKeysCreateIndependent
             const std::string CacheKey = "object-key-" + std::to_string(ThreadIndex);
             const std::string URI      = "object://threaded-" + std::to_string(ThreadIndex);
             auto [Object, WasCreated] =
-                Cache.GetOrCreate<TestObject>(
+                Cache.GetOrCreate(
                     CacheKey.c_str(),
-                    IID_TestObject,
                     [&, URI, ThreadIndex]() {
                         CreateCount.fetch_add(1, std::memory_order_acq_rel);
                         return CreateTestObject(URI.c_str(), ThreadIndex);

@@ -183,10 +183,9 @@ public:
     WeakObjectCache& operator=(WeakObjectCache&&)      = delete;
     // clang-format on
 
-    template <typename ImplType, typename CreateObjectFuncType>
-    std::pair<RefCntAutoPtr<ImplType>, bool> GetOrCreate(const Char*            CacheKey,
-                                                         const INTERFACE_ID&    ImplID,
-                                                         CreateObjectFuncType&& CreateObjectFunc)
+    template <typename CreateObjectFuncType>
+    std::pair<RefCntAutoPtr<InterfaceType>, bool> GetOrCreate(const Char*            CacheKey,
+                                                              CreateObjectFuncType&& CreateObjectFunc)
     {
         if (CacheKey == nullptr || CacheKey[0] == '\0')
         {
@@ -226,7 +225,7 @@ public:
         for (;;)
         {
             if (RefCntAutoPtr<InterfaceType> pExisting = pEntry->Lock())
-                return {RefCntAutoPtr<ImplType>{pExisting, ImplID}, false};
+                return {pExisting, false};
 
             const typename ObjectEntry::CreateState State = pEntry->BeginCreate();
             if (State.Action == ObjectEntry::CreateAction::Wait)
@@ -243,7 +242,7 @@ public:
                 return {};
             }
 
-            RefCntAutoPtr<ImplType> pObject;
+            RefCntAutoPtr<InterfaceType> pObject;
             try
             {
                 pObject = std::forward<CreateObjectFuncType>(CreateObjectFunc)();
