@@ -267,6 +267,31 @@ public:
         }
     }
 
+    bool EraseIfExpired(const Char* CacheKey)
+    {
+        if (CacheKey == nullptr || CacheKey[0] == '\0')
+        {
+            LOG_ERROR_MESSAGE("WeakObjectCache key must not be null or empty");
+            return false;
+        }
+
+        const HashMapStringKey Key{CacheKey};
+        Shard&                 CacheShard = GetShard(Key.GetHash());
+
+        std::unique_lock<std::shared_mutex> Lock{CacheShard.Mutex};
+
+        const auto It = CacheShard.Objects.find(Key);
+        if (It == CacheShard.Objects.end())
+            return false;
+
+        const std::shared_ptr<ObjectEntry>& pEntry = It->second;
+        if (pEntry.use_count() != 1 || pEntry->Lock())
+            return false;
+
+        CacheShard.Objects.erase(It);
+        return true;
+    }
+
 private:
     static size_t GetActualShardCount(size_t ShardCount)
     {
