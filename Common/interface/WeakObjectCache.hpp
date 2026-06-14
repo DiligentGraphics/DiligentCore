@@ -35,6 +35,7 @@
 #include "SpinLock.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <condition_variable>
 #include <memory>
 #include <mutex>
@@ -183,6 +184,11 @@ public:
     WeakObjectCache& operator=(WeakObjectCache&&)      = delete;
     // clang-format on
 
+    size_t Size() const noexcept
+    {
+        return m_Size.load(std::memory_order_relaxed);
+    }
+
     template <typename CreateObjectFuncType>
     std::pair<RefCntAutoPtr<InterfaceType>, bool> GetOrCreate(const Char*            CacheKey,
                                                               CreateObjectFuncType&& CreateObjectFunc)
@@ -219,6 +225,8 @@ public:
                 pEntry                 = std::make_shared<ObjectEntry>();
                 auto [NewIt, Inserted] = CacheShard.Objects.emplace(HashMapStringKey{CacheKey, true}, pEntry);
                 VERIFY_EXPR(Inserted);
+                if (Inserted)
+                    m_Size.fetch_add(1, std::memory_order_relaxed);
             }
         }
 
@@ -289,6 +297,7 @@ public:
             return false;
 
         CacheShard.Objects.erase(It);
+        m_Size.fetch_sub(1, std::memory_order_relaxed);
         return true;
     }
 
@@ -310,6 +319,7 @@ private:
 
     const size_t             m_ShardCount;
     std::unique_ptr<Shard[]> m_Shards;
+    std::atomic<size_t>      m_Size{0};
 };
 
 } // namespace Diligent

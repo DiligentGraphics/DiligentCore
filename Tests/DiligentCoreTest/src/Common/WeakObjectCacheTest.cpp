@@ -99,6 +99,8 @@ TEST(Common_WeakObjectCache, CreatesAndReusesCachedObject)
     WeakObjectCache<TestObject> Cache;
 
     Uint32 CreateCount = 0;
+    EXPECT_EQ(Cache.Size(), size_t{0});
+
     auto [FirstObject, FirstCreated] =
         Cache.GetOrCreate(
             "object-key",
@@ -110,6 +112,7 @@ TEST(Common_WeakObjectCache, CreatesAndReusesCachedObject)
     ASSERT_NE(FirstObject, nullptr);
     EXPECT_TRUE(FirstCreated);
     EXPECT_EQ(CreateCount, 1u);
+    EXPECT_EQ(Cache.Size(), size_t{1});
     EXPECT_EQ(FirstObject->URI, "object://first");
     EXPECT_EQ(FirstObject->Value, 17u);
 
@@ -125,6 +128,7 @@ TEST(Common_WeakObjectCache, CreatesAndReusesCachedObject)
     ASSERT_NE(SecondObject, nullptr);
     EXPECT_FALSE(SecondCreated);
     EXPECT_EQ(CreateCount, 1u);
+    EXPECT_EQ(Cache.Size(), size_t{1});
     EXPECT_EQ(SecondObject.RawPtr(), FirstObject.RawPtr());
     EXPECT_EQ(SecondObject->Value, 17u);
 }
@@ -151,6 +155,7 @@ TEST(Common_WeakObjectCache, CreatesIndependentObjectsForDifferentKeys)
     EXPECT_TRUE(FirstCreated);
     EXPECT_TRUE(SecondCreated);
     EXPECT_EQ(CreateCount, 2u);
+    EXPECT_EQ(Cache.Size(), size_t{2});
     EXPECT_NE(SecondObject.RawPtr(), FirstObject.RawPtr());
     EXPECT_EQ(FirstObject->Value, 1u);
     EXPECT_EQ(SecondObject->Value, 2u);
@@ -173,7 +178,10 @@ TEST(Common_WeakObjectCache, ReplacesExpiredWeakEntry)
         ASSERT_NE(Object, nullptr);
         EXPECT_TRUE(Created);
         EXPECT_EQ(Object->Value, 3u);
+        EXPECT_EQ(Cache.Size(), size_t{1});
     }
+
+    EXPECT_EQ(Cache.Size(), size_t{1});
 
     auto [Object, Created] =
         Cache.GetOrCreate(
@@ -186,6 +194,7 @@ TEST(Common_WeakObjectCache, ReplacesExpiredWeakEntry)
     ASSERT_NE(Object, nullptr);
     EXPECT_TRUE(Created);
     EXPECT_EQ(CreateCount, 2u);
+    EXPECT_EQ(Cache.Size(), size_t{1});
     EXPECT_EQ(Object->URI, "object://replacement");
     EXPECT_EQ(Object->Value, 4u);
 }
@@ -196,6 +205,7 @@ TEST(Common_WeakObjectCache, EraseIfExpiredRemovesExpiredEntry)
 
     Uint32 CreateCount = 0;
     EXPECT_FALSE(Cache.EraseIfExpired("missing-key"));
+    EXPECT_EQ(Cache.Size(), size_t{0});
 
     {
         auto [Object, Created] =
@@ -208,7 +218,9 @@ TEST(Common_WeakObjectCache, EraseIfExpiredRemovesExpiredEntry)
 
         ASSERT_NE(Object, nullptr);
         EXPECT_TRUE(Created);
+        EXPECT_EQ(Cache.Size(), size_t{1});
         EXPECT_FALSE(Cache.EraseIfExpired("object-key"));
+        EXPECT_EQ(Cache.Size(), size_t{1});
 
         auto [CachedObject, CachedCreated] =
             Cache.GetOrCreate(
@@ -220,11 +232,14 @@ TEST(Common_WeakObjectCache, EraseIfExpiredRemovesExpiredEntry)
 
         ASSERT_NE(CachedObject, nullptr);
         EXPECT_FALSE(CachedCreated);
+        EXPECT_EQ(Cache.Size(), size_t{1});
         EXPECT_EQ(CachedObject.RawPtr(), Object.RawPtr());
     }
 
     EXPECT_TRUE(Cache.EraseIfExpired("object-key"));
+    EXPECT_EQ(Cache.Size(), size_t{0});
     EXPECT_FALSE(Cache.EraseIfExpired("object-key"));
+    EXPECT_EQ(Cache.Size(), size_t{0});
 
     auto [Object, Created] =
         Cache.GetOrCreate(
@@ -237,6 +252,7 @@ TEST(Common_WeakObjectCache, EraseIfExpiredRemovesExpiredEntry)
     ASSERT_NE(Object, nullptr);
     EXPECT_TRUE(Created);
     EXPECT_EQ(CreateCount, 2u);
+    EXPECT_EQ(Cache.Size(), size_t{1});
     EXPECT_EQ(Object->Value, 7u);
 }
 
@@ -279,6 +295,7 @@ TEST(Common_WeakObjectCache, EraseIfExpiredKeepsInFlightEntry)
     }};
 
     FactoryStarted.Wait(true, 1);
+    EXPECT_EQ(Cache.Size(), size_t{1});
     EXPECT_FALSE(Cache.EraseIfExpired("object-key"));
 
     FinishFactory.Trigger(true);
@@ -290,6 +307,7 @@ TEST(Common_WeakObjectCache, EraseIfExpiredKeepsInFlightEntry)
 
     Object.Release();
     EXPECT_TRUE(Cache.EraseIfExpired("object-key"));
+    EXPECT_EQ(Cache.Size(), size_t{0});
 }
 
 TEST(Common_WeakObjectCache, ReturnsEmptyWhenFactoryFails)
