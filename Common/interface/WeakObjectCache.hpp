@@ -394,19 +394,30 @@ public:
         const HashMapStringKey Key{CacheKey};
         Shard&                 CacheShard = GetShard(Key.GetHash());
 
-        std::unique_lock<std::shared_mutex> Lock{CacheShard.Mutex};
+        RefCntAutoPtr<InterfaceType> pLiveObject;
+        bool                         Erased = false;
 
-        const auto It = CacheShard.Objects.find(Key);
-        if (It == CacheShard.Objects.end())
-            return false;
+        {
+            std::unique_lock<std::shared_mutex> Lock{CacheShard.Mutex};
 
-        const std::shared_ptr<ObjectEntry>& pEntry = It->second;
-        if (pEntry.use_count() != 1 || pEntry->Lock())
-            return false;
+            const auto It = CacheShard.Objects.find(Key);
+            if (It == CacheShard.Objects.end())
+                return false;
 
-        CacheShard.Objects.erase(It);
-        m_Size.fetch_sub(1, std::memory_order_relaxed);
-        return true;
+            const std::shared_ptr<ObjectEntry>& pEntry = It->second;
+            if (pEntry.use_count() == 1)
+            {
+                pLiveObject = pEntry->Lock();
+                if (!pLiveObject)
+                {
+                    CacheShard.Objects.erase(It);
+                    m_Size.fetch_sub(1, std::memory_order_relaxed);
+                    Erased = true;
+                }
+            }
+        }
+
+        return Erased;
     }
 
 private:
