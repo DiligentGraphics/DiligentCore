@@ -34,6 +34,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <stdexcept>
 #include <string>
 #include <thread>
 #include <vector>
@@ -220,6 +221,34 @@ TEST(Common_WeakObjectCache, ReturnsEmptyWhenFactoryFails)
     EXPECT_TRUE(Created);
     EXPECT_EQ(CreateCount, 2u);
     EXPECT_EQ(Object->Value, 5u);
+}
+
+TEST(Common_WeakObjectCache, PropagatesFactoryExceptionAndAllowsRetry)
+{
+    WeakObjectCache<TestObject> Cache;
+
+    Uint32 CreateCount = 0;
+    EXPECT_THROW(
+        Cache.GetOrCreate(
+            "object-key",
+            [&]() -> RefCntAutoPtr<TestObject> {
+                ++CreateCount;
+                throw std::runtime_error{"factory failed"};
+            }),
+        std::runtime_error);
+
+    auto [Object, Created] =
+        Cache.GetOrCreate(
+            "object-key",
+            [&]() {
+                ++CreateCount;
+                return CreateTestObject("object://created-after-exception", 6);
+            });
+
+    ASSERT_NE(Object, nullptr);
+    EXPECT_TRUE(Created);
+    EXPECT_EQ(CreateCount, 2u);
+    EXPECT_EQ(Object->Value, 6u);
 }
 
 TEST(Common_WeakObjectCache, ReturnsEmptyForNullOrEmptyKey)
