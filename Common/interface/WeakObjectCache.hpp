@@ -53,6 +53,50 @@ namespace Diligent
 /// Ensures that at most one object creation is in flight for a given key.
 /// Object factories are invoked outside the shard lock, so factories may
 /// recursively request other keys from the same cache.
+///
+/// The cache owns only weak references. A cached object may expire when all
+/// external strong references are released; the key remains in the map until
+/// the object is replaced by a later GetOrCreate() call or explicitly removed
+/// by EraseIfExpired().
+///
+/// Example:
+///
+/// \code
+/// WeakObjectCache<IMyObject> Cache;
+///
+/// auto [pObject, Created] =
+///     Cache.GetOrCreate(
+///         "object-key",
+///         [&]() {
+///             return RefCntAutoPtr<IMyObject>{MakeNewRCObj<MyObject>()(...)};
+///         });
+///
+/// if (pObject == nullptr)
+/// {
+///     // The key was invalid, the factory returned null, or another
+///     // in-flight factory for the same key failed.
+/// }
+/// else if (Created)
+/// {
+///     // This call created and published a new object.
+/// }
+/// \endcode
+///
+/// Same-thread recursion for the same key is detected and fails:
+///
+/// \code
+/// Cache.GetOrCreate("X", [&] {
+///     return Cache.GetOrCreate("X", ...).first; // returns null
+/// });
+/// \endcode
+///
+/// Cross-thread dependency cycles are not detected and may deadlock:
+///
+/// \code
+/// // Thread A creates key X and, from its factory, requests key Y.
+/// // Thread B creates key Y and, from its factory, requests key X.
+/// // Both threads can wait for each other's in-flight creation.
+/// \endcode
 template <typename InterfaceType>
 class WeakObjectCache
 {
@@ -184,11 +228,46 @@ public:
     WeakObjectCache& operator=(WeakObjectCache&&)      = delete;
     // clang-format on
 
+    /// Returns the number of map entries in the cache.
+    ///
+    /// This method is non-blocking and reads a single atomic counter. The
+    /// returned value includes live entries, expired entries that have not been
+    /// erased yet, and in-flight creation placeholders. Under concurrent
+    /// modification, the value is a snapshot and may become stale immediately.
     size_t Size() const noexcept
     {
         return m_Size.load(std::memory_order_relaxed);
     }
 
+    /// Returns a live object for the key, creating one if needed.
+    ///
+    /// If a live object already exists, the method returns it with Created set
+    /// to false.
+    ///
+    /// If the key is missing or the weak object has expired, one caller becomes
+    /// the creator and invokes CreateObjectFunc outside the shard lock. Other
+    /// callers for the same key wait for that creation attempt to finish.
+    ///
+    /// If creation succeeds, the created object is stored as a weak reference
+    /// and returned to the creator with Created set to true. Waiting callers
+    /// retry and return the newly live object with Created set to false.
+    ///
+    /// If CreateObjectFunc returns null, the creator logs an error and returns
+    /// null with Created set to false. Waiting callers wake and also return
+    /// null with Created set to false. A later call may retry creation.
+    ///
+    /// If CreateObjectFunc throws, the exception is propagated to the creator.
+    /// Waiting callers wake and return null with Created set to false. A later
+    /// call may retry creation.
+    ///
+    /// If the key is null or empty, the method logs an error and returns null
+    /// with Created set to false without invoking CreateObjectFunc.
+    ///
+    /// If a factory recursively requests the same key on the same thread, the
+    /// recursive call logs an error and returns null with Created set to false.
+    ///
+    /// The factory may request other keys from the same cache, but callers must
+    /// avoid cross-thread dependency cycles between keys.
     template <typename CreateObjectFuncType>
     std::pair<RefCntAutoPtr<InterfaceType>, bool> GetOrCreate(const Char*            CacheKey,
                                                               CreateObjectFuncType&& CreateObjectFunc)
@@ -281,6 +360,14 @@ public:
         }
     }
 
+    /// Removes the key if it exists and no live object or in-flight operation
+    /// is associated with it.
+    ///
+    /// Returns true only when the entry is actually erased.
+    ///
+    /// Returns false if the key is missing, the object is still live, another
+    /// thread currently holds the entry for creation or waiting, or the key is
+    /// null or empty. Null or empty keys also log an error.
     bool EraseIfExpired(const Char* CacheKey)
     {
         if (CacheKey == nullptr || CacheKey[0] == '\0')
