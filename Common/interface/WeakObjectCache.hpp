@@ -197,6 +197,40 @@ private:
         std::thread::id         m_CreatorThread       = {};
     };
 
+    class CreateGuard
+    {
+    public:
+        explicit CreateGuard(ObjectEntry& Entry) noexcept :
+            m_pEntry{&Entry}
+        {
+        }
+
+        ~CreateGuard() noexcept
+        {
+            if (m_pEntry != nullptr)
+                m_pEntry->EndCreate(false);
+        }
+
+        // clang-format off
+        CreateGuard           (const CreateGuard&) = delete;
+        CreateGuard& operator=(const CreateGuard&) = delete;
+        CreateGuard           (CreateGuard&&)      = delete;
+        CreateGuard& operator=(CreateGuard&&)      = delete;
+        // clang-format on
+
+        void End(bool Succeeded)
+        {
+            if (m_pEntry != nullptr)
+            {
+                m_pEntry->EndCreate(Succeeded);
+                m_pEntry = nullptr;
+            }
+        }
+
+    private:
+        ObjectEntry* m_pEntry = nullptr;
+    };
+
     using ObjectMapType = std::unordered_map<HashMapStringKey, std::shared_ptr<ObjectEntry>>;
 
 #ifdef _MSC_VER
@@ -344,32 +378,25 @@ public:
                 return {};
             }
 
+            CreateGuard Guard{*pEntry};
+
             if (RefCntAutoPtr<InterfaceType> pExisting = pEntry->Lock())
             {
-                pEntry->EndCreate(true);
+                Guard.End(true);
                 return {std::move(pExisting), false};
             }
 
-            RefCntAutoPtr<InterfaceType> pObject;
-            try
-            {
-                pObject = std::forward<CreateObjectFuncType>(CreateObjectFunc)();
-            }
-            catch (...)
-            {
-                pEntry->EndCreate(false);
-                throw;
-            }
+            RefCntAutoPtr<InterfaceType> pObject = std::forward<CreateObjectFuncType>(CreateObjectFunc)();
 
             if (!pObject)
             {
                 LOG_ERROR_MESSAGE("Failed to create object for cache key '", CacheKey, "'");
-                pEntry->EndCreate(false);
+                Guard.End(false);
                 return {};
             }
 
             pEntry->Set(pObject.RawPtr());
-            pEntry->EndCreate(true);
+            Guard.End(true);
 
             return {std::move(pObject), true};
         }
