@@ -2,6 +2,7 @@
 
 ## Current progress
 
+* Added `ShaderFloat64` and `ShaderBarycentrics` members to `DeviceFeatures` struct (API256018)
 * Added `DrawMeshIndirectAttribs::pMtlAttribs` member (API256017)
   * `DrawMeshIndirectAttribs::pMtlAttribs` allows specifying Metal object and mesh thread group sizes for `IDeviceContext::DrawMeshIndirect()`
 * Added `DrawMeshAttribsMtl` struct and `DrawMeshAttribs::pMtlAttribs` member (API256016)
