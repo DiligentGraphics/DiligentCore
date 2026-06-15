@@ -300,15 +300,25 @@ public:
     ///
     /// If creation succeeds, the created object is stored as a weak reference
     /// and returned to the creator with Created set to true. Waiting callers
-    /// retry and return the newly live object with Created set to false.
+    /// retry the lookup. They usually return the newly created object with
+    /// Created set to false, but because the cache stores only a weak
+    /// reference, the object may already have expired if no external strong
+    /// reference remains.
     ///
     /// If CreateObjectFunc returns null, the creator logs an error and returns
-    /// null with Created set to false. Waiting callers wake and also return
+    /// null with Created set to false. Waiting callers wake and may return
     /// null with Created set to false. A later call may retry creation.
     ///
     /// If CreateObjectFunc throws, the exception is propagated to the creator.
-    /// Waiting callers wake and return null with Created set to false. A later
-    /// call may retry creation.
+    /// Waiting callers wake and may return null with Created set to false. A
+    /// later call may retry creation.
+    ///
+    /// A waiter retries after a completed creation attempt is observed as
+    /// successful. The observed result is shared between attempts and is not
+    /// tied to the exact generation the caller originally waited on. Under
+    /// rapid retries, a late waiter can observe a later attempt's result. If no
+    /// live object is available when the waiter retries, it may become the next
+    /// creator or return null if the observed attempt failed.
     ///
     /// If the key is null or empty, the method logs an error and returns null
     /// with Created set to false without invoking CreateObjectFunc.
