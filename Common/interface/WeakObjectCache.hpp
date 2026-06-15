@@ -136,8 +136,14 @@ private:
 
         void Set(InterfaceType* pObject)
         {
-            Threading::SpinLockGuard LockGuard{m_ObjectLock};
-            m_Object = RefCntWeakPtr<InterfaceType>{pObject};
+            RefCntWeakPtr<InterfaceType> NewObject{pObject};
+            RefCntWeakPtr<InterfaceType> OldObject;
+
+            {
+                Threading::SpinLockGuard LockGuard{m_ObjectLock};
+                OldObject = std::move(m_Object);
+                m_Object  = std::move(NewObject);
+            }
         }
 
         CreateState BeginCreate()
@@ -336,6 +342,8 @@ public:
 
         if (!pEntry)
         {
+            std::shared_ptr<ObjectEntry> pNewEntry = std::make_shared<ObjectEntry>();
+
             std::unique_lock<std::shared_mutex> Lock{CacheShard.Mutex};
 
             const auto It = CacheShard.Objects.find(Key);
@@ -345,7 +353,7 @@ public:
             }
             else
             {
-                pEntry                 = std::make_shared<ObjectEntry>();
+                pEntry                 = std::move(pNewEntry);
                 auto [NewIt, Inserted] = CacheShard.Objects.emplace(HashMapStringKey{CacheKey, true}, pEntry);
                 VERIFY_EXPR(Inserted);
                 if (Inserted)
@@ -422,6 +430,7 @@ public:
         Shard&                 CacheShard = GetShard(Key.GetHash());
 
         RefCntAutoPtr<InterfaceType> pLiveObject;
+        std::shared_ptr<ObjectEntry> pRemovedEntry;
         bool                         Erased = false;
 
         {
@@ -432,11 +441,15 @@ public:
                 return false;
 
             const std::shared_ptr<ObjectEntry>& pEntry = It->second;
+            // use_count() is checked while holding the shard mutex. This is required:
+            // GetOrCreate() may only copy an ObjectEntry shared_ptr while holding the
+            // same shard mutex, so use_count() == 1 means the map is the only owner.
             if (pEntry.use_count() == 1)
             {
                 pLiveObject = pEntry->Lock();
                 if (!pLiveObject)
                 {
+                    pRemovedEntry = std::move(It->second);
                     CacheShard.Objects.erase(It);
                     m_Size.fetch_sub(1, std::memory_order_relaxed);
                     Erased = true;
