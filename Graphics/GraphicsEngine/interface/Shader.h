@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -419,6 +419,35 @@ DILIGENT_TYPED_ENUM(SHADER_COMPILE_FLAGS, Uint32)
 };
 DEFINE_FLAG_ENUM_OPERATORS(SHADER_COMPILE_FLAGS);
 
+
+/// Describes the shader optimization level.
+DILIGENT_TYPED_ENUM(SHADER_OPTIMIZATION_LEVEL, Uint8)
+{
+    /// Default optimization level.
+
+    /// Each backend uses its historical default optimization behavior.
+    SHADER_OPTIMIZATION_LEVEL_DEFAULT = 0,
+
+    /// Optimization is explicitly disabled regardless of build configuration
+    /// (DXC `-Od`, FXC `D3DCOMPILE_SKIP_OPTIMIZATION`, no SPIR-V performance pass).
+    SHADER_OPTIMIZATION_LEVEL_DISABLED,
+
+    /// Optimization level 0 (DXC `-O0`, FXC optimization level 0, SPIR-V performance pass).
+    SHADER_OPTIMIZATION_LEVEL_0,
+
+    /// Optimization level 1 (DXC `-O1`, FXC optimization level 1, SPIR-V performance pass).
+    SHADER_OPTIMIZATION_LEVEL_1,
+
+    /// Optimization level 2 (DXC `-O2`, FXC optimization level 2, SPIR-V performance pass).
+    SHADER_OPTIMIZATION_LEVEL_2,
+
+    /// Optimization level 3 (DXC `-O3`, FXC optimization level 3, SPIR-V performance pass).
+    SHADER_OPTIMIZATION_LEVEL_3,
+
+    SHADER_OPTIMIZATION_LEVEL_COUNT
+};
+
+
 // clang-format on
 
 
@@ -524,6 +553,9 @@ struct ShaderCreateInfo
 
     /// Shader compile flags (see Diligent::SHADER_COMPILE_FLAGS).
     SHADER_COMPILE_FLAGS CompileFlags DEFAULT_INITIALIZER(SHADER_COMPILE_FLAG_NONE);
+
+    /// Shader optimization level. See Diligent::SHADER_OPTIMIZATION_LEVEL.
+    SHADER_OPTIMIZATION_LEVEL ShaderOptimizationLevel DEFAULT_INITIALIZER(SHADER_OPTIMIZATION_LEVEL_DEFAULT);
 
     /// Whether to load constant buffer reflection information.
 
@@ -673,6 +705,9 @@ struct ShaderCreateInfo
             return false;
 
         if (CI1.CompileFlags != CI2.CompileFlags)
+            return false;
+
+        if (CI1.ShaderOptimizationLevel != CI2.ShaderOptimizationLevel)
             return false;
 
         if (CI1.LoadConstantBufferReflection != CI2.LoadConstantBufferReflection)

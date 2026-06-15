@@ -520,6 +520,7 @@ bool ShaderSerializer<Mode>::SerializeCI(Serializer<Mode>&            Ser,
              CI.GLESSLVersion,
              CI.MSLVersion,
              CI.CompileFlags,
+             CI.ShaderOptimizationLevel,
              CI.LoadConstantBufferReflection,
              CI.GLSLExtensions,
              CI.WebGPUEmulatedArrayIndexSuffix))

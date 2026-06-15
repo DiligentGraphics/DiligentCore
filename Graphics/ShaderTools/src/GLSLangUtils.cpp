@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -427,6 +427,17 @@ spv_target_env SpirvVersionToSpvTargetEnv(SpirvVersion Version)
 
 } // namespace
 
+#ifdef USE_SPIRV_TOOLS
+static SPIRV_OPTIMIZATION_FLAGS GetSpirvPerformanceFlag(SHADER_OPTIMIZATION_LEVEL OptimizationLevel)
+{
+    // SPIRV-Tools has no O0-O3 granularity. DEFAULT and explicit levels 0..3 enable the
+    // performance pass; only DISABLED skips it. (Legalization, when required, is applied separately.)
+    return OptimizationLevel == SHADER_OPTIMIZATION_LEVEL_DISABLED ?
+        SPIRV_OPTIMIZATION_FLAG_NONE :
+        SPIRV_OPTIMIZATION_FLAG_PERFORMANCE;
+}
+#endif
+
 std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
                                       SpirvVersion            Version,
                                       const char*             ExtraDefinitions,
@@ -487,8 +498,10 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
 
 #ifdef USE_SPIRV_TOOLS
     // SPIR-V bytecode generated from HLSL must be legalized to
-    // turn it into a valid vulkan SPIR-V shader.
-    std::vector<uint32_t> LegalizedSPIRV = OptimizeSPIRV(SPIRV, SpirvVersionToSpvTargetEnv(Version), SPIRV_OPTIMIZATION_FLAG_LEGALIZATION | SPIRV_OPTIMIZATION_FLAG_PERFORMANCE);
+    // turn it into a valid vulkan SPIR-V shader. Legalization is always applied for correctness;
+    // the performance pass is gated by the shader optimization level.
+    const SPIRV_OPTIMIZATION_FLAGS OptimizationFlags = SPIRV_OPTIMIZATION_FLAG_LEGALIZATION | GetSpirvPerformanceFlag(ShaderCI.ShaderOptimizationLevel);
+    std::vector<uint32_t>          LegalizedSPIRV    = OptimizeSPIRV(SPIRV, SpirvVersionToSpvTargetEnv(Version), OptimizationFlags);
     if (!LegalizedSPIRV.empty())
     {
         return LegalizedSPIRV;
@@ -535,14 +548,18 @@ std::vector<unsigned int> GLSLtoSPIRV(const GLSLtoSPIRVAttribs& Attribs)
         return SPIRV;
 
 #ifdef USE_SPIRV_TOOLS
-    std::vector<uint32_t> OptimizedSPIRV = OptimizeSPIRV(SPIRV, SpirvVersionToSpvTargetEnv(Attribs.Version), SPIRV_OPTIMIZATION_FLAG_PERFORMANCE);
-    if (!OptimizedSPIRV.empty())
+    const SPIRV_OPTIMIZATION_FLAGS OptimizationFlags = GetSpirvPerformanceFlag(Attribs.OptimizationLevel);
+    if (OptimizationFlags != SPIRV_OPTIMIZATION_FLAG_NONE)
     {
-        return OptimizedSPIRV;
-    }
-    else
-    {
-        LOG_ERROR("Failed to optimize SPIR-V.");
+        std::vector<uint32_t> OptimizedSPIRV = OptimizeSPIRV(SPIRV, SpirvVersionToSpvTargetEnv(Attribs.Version), OptimizationFlags);
+        if (!OptimizedSPIRV.empty())
+        {
+            return OptimizedSPIRV;
+        }
+        else
+        {
+            LOG_ERROR("Failed to optimize SPIR-V.");
+        }
     }
 #endif
     return SPIRV;

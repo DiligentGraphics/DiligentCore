@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -691,6 +691,37 @@ void DXCompilerImpl::GetD3D12ShaderReflection(IDxcBlob*                pShaderBy
 }
 
 
+static const wchar_t* GetDxcOptimizationArg(SHADER_OPTIMIZATION_LEVEL OptimizationLevel,
+                                            DXCompilerTarget          Target,
+                                            const Version&            DxcVersion)
+{
+    switch (OptimizationLevel)
+    {
+        case SHADER_OPTIMIZATION_LEVEL_DISABLED:
+            return DXC_ARG_SKIP_OPTIMIZATIONS;
+        case SHADER_OPTIMIZATION_LEVEL_0:
+            return DXC_ARG_OPTIMIZATION_LEVEL0;
+        case SHADER_OPTIMIZATION_LEVEL_1:
+            return DXC_ARG_OPTIMIZATION_LEVEL1;
+        case SHADER_OPTIMIZATION_LEVEL_2:
+            return DXC_ARG_OPTIMIZATION_LEVEL2;
+        case SHADER_OPTIMIZATION_LEVEL_3:
+            return DXC_ARG_OPTIMIZATION_LEVEL3;
+        case SHADER_OPTIMIZATION_LEVEL_DEFAULT:
+        default:
+            // DEFAULT reproduces the historical behavior.
+#ifdef DILIGENT_DEBUG
+            return DXC_ARG_SKIP_OPTIMIZATIONS;
+#else
+            // For the Direct3D12 target, optimization was historically only enabled for DXC 1.5+.
+            if (Target == DXCompilerTarget::Direct3D12 && DxcVersion < Version{1, 5})
+                return DXC_ARG_SKIP_OPTIMIZATIONS;
+            return DXC_ARG_OPTIMIZATION_LEVEL3;
+#endif
+    }
+}
+
+
 void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
                              ShaderVersion           ShaderModel,
                              const char*             Preamble,
@@ -733,20 +764,15 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
     {
         //DxilArgs.push_back(L"-WX");  // Warnings as errors
 #ifdef DILIGENT_DEBUG
-        DxilArgs.push_back(DXC_ARG_DEBUG);              // Debug info
-        DxilArgs.push_back(DXC_ARG_SKIP_OPTIMIZATIONS); // Disable optimization
+        DxilArgs.push_back(DXC_ARG_DEBUG); // Debug info
         if (m_Library.GetVersion() >= Version{1, 5})
         {
             // Silence the following warning:
             // no output provided for debug - embedding PDB in shader container.  Use -Qembed_debug to silence this warning.
             DxilArgs.push_back(L"-Qembed_debug");
         }
-#else
-        if (m_Library.GetVersion() >= Version{1, 5})
-            DxilArgs.push_back(DXC_ARG_OPTIMIZATION_LEVEL3); // Optimization level 3
-        else
-            DxilArgs.push_back(DXC_ARG_SKIP_OPTIMIZATIONS); // TODO: something goes wrong if optimization is enabled
 #endif
+        DxilArgs.push_back(GetDxcOptimizationArg(ShaderCI.ShaderOptimizationLevel, m_Library.GetTarget(), m_Library.GetVersion()));
     }
     else if (m_Library.GetTarget() == DXCompilerTarget::Vulkan)
     {
@@ -754,12 +780,8 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
             {
                 L"-spirv",
                 L"-fspv-reflect",
-#ifdef DILIGENT_DEBUG
-                DXC_ARG_SKIP_OPTIMIZATIONS,
-#else
-                DXC_ARG_OPTIMIZATION_LEVEL3
-#endif
             });
+        DxilArgs.push_back(GetDxcOptimizationArg(ShaderCI.ShaderOptimizationLevel, m_Library.GetTarget(), m_Library.GetVersion()));
 
         if (m_APIVersion >= VK_API_VERSION_1_2 && ShaderModel >= ShaderVersion{6, 3})
         {

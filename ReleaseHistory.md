@@ -2,6 +2,7 @@
 
 ## Current progress
 
+* Added `SHADER_OPTIMIZATION_LEVEL` enum and `ShaderCreateInfo::ShaderOptimizationLevel` member (API256018)
 * Added `DrawMeshIndirectAttribs::pMtlAttribs` member (API256017)
   * `DrawMeshIndirectAttribs::pMtlAttribs` allows specifying Metal object and mesh thread group sizes for `IDeviceContext::DrawMeshIndirect()`
 * Added `DrawMeshAttribsMtl` struct and `DrawMeshAttribs::pMtlAttribs` member (API256016)
