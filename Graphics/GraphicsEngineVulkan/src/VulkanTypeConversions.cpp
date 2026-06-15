@@ -2061,9 +2061,11 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
     INIT_FEATURE(NativeMultiDraw,
                  ExtFeatures.MultiDraw.multiDraw != VK_FALSE && ExtFeatures.ShaderDrawParameters.shaderDrawParameters != VK_FALSE);
 
+    INIT_FEATURE(ShaderBarycentrics, ExtFeatures.FragmentShaderBarycentric.fragmentShaderBarycentric != VK_FALSE);
+
 #undef INIT_FEATURE
 
-    ASSERT_SIZEOF(DeviceFeatures, 49, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
+    ASSERT_SIZEOF(DeviceFeatures, 50, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
 
     return Features;
 }

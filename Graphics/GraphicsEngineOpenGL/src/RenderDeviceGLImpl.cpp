@@ -904,6 +904,7 @@ void RenderDeviceGLImpl::InitAdapterInfo()
             ENABLE_FEATURE(AsyncShaderCompilation,        CheckExtension("GL_KHR_parallel_shader_compile"));
             ENABLE_FEATURE(FormattedBuffers,              IsGL40OrAbove);
             ENABLE_FEATURE(ShaderFloat64,                 IsGL40OrAbove || CheckExtension("GL_ARB_gpu_shader_fp64") || CheckExtension("GL_EXT_shader_explicit_arithmetic_types_float64"));
+            ENABLE_FEATURE(ShaderBarycentrics,            CheckExtension("GL_EXT_fragment_shader_barycentric") || CheckExtension("GL_NV_fragment_shader_barycentric"));
             // clang-format on
 
             TexProps.MaxTexture1DDimension      = MaxTextureSize;
@@ -986,6 +987,7 @@ void RenderDeviceGLImpl::InitAdapterInfo()
             ENABLE_FEATURE(AsyncShaderCompilation,    strstr(Extensions, "parallel_shader_compile"));
             ENABLE_FEATURE(FormattedBuffers,          IsGLES32OrAbove);
             ENABLE_FEATURE(ShaderFloat64,             strstr(Extensions, "shader_explicit_arithmetic_types_float64"));
+            ENABLE_FEATURE(ShaderBarycentrics,        strstr(Extensions, "fragment_shader_barycentric"));
             // clang-format on
 
             TexProps.MaxTexture1DDimension      = 0; // Not supported in GLES 3.2
@@ -1163,7 +1165,7 @@ void RenderDeviceGLImpl::InitAdapterInfo()
         m_AdapterInfo.Queues[0].TextureCopyGranularity[2] = 1;
     }
 
-    ASSERT_SIZEOF(DeviceFeatures, 49, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
+    ASSERT_SIZEOF(DeviceFeatures, 50, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
 }
 
 void RenderDeviceGLImpl::FlagSupportedTexFormats()

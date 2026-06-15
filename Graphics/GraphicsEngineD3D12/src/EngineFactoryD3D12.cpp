@@ -936,6 +936,9 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
             {
                 if (d3d12Features3.CopyQueueTimestampQueriesSupported)
                     Features.TransferQueueTimestampQueries = DEVICE_FEATURE_STATE_ENABLED;
+
+                if (d3d12Features3.BarycentricsSupported)
+                    Features.ShaderBarycentrics = DEVICE_FEATURE_STATE_ENABLED;
             }
 
             D3D12_FEATURE_DATA_D3D12_OPTIONS4 d3d12Features4{};
@@ -1113,7 +1116,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
         ASSERT_SIZEOF(DrawCommandProps, 12, "Did you add a new member to DrawCommandProperties? Please initialize it here.");
     }
 
-    ASSERT_SIZEOF(DeviceFeatures, 49, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
+    ASSERT_SIZEOF(DeviceFeatures, 50, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
 
     return AdapterInfo;
 }

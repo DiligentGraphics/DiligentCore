@@ -122,9 +122,10 @@ DeviceFeatures EnableDeviceFeatures(const DeviceFeatures& SupportedFeatures,
     ENABLE_FEATURE(FormattedBuffers,                  "Formatted buffers are");
     ENABLE_FEATURE(SpecializationConstants,           "Specialization constants are");
     ENABLE_FEATURE(ShaderFloat64,                     "64-bit float shader operations are");
+    ENABLE_FEATURE(ShaderBarycentrics,                "Shader barycentrics are");
     // clang-format on
 
-    ASSERT_SIZEOF(DeviceFeatures, 49, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
+    ASSERT_SIZEOF(DeviceFeatures, 50, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
 
     return EnabledFeatures;
 }

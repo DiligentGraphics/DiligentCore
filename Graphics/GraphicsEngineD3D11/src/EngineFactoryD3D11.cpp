@@ -498,7 +498,7 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
         }
     }
 
-    ASSERT_SIZEOF(Features, 49, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
+    ASSERT_SIZEOF(Features, 50, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
 
     // Texture properties
     {
