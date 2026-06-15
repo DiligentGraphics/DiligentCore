@@ -289,6 +289,26 @@ public:
         return m_Size.load(std::memory_order_relaxed);
     }
 
+    /// Reserves space for approximately ExpectedTotalEntries map entries.
+    ///
+    /// The reservation is distributed evenly between cache shards. This can be
+    /// used before bulk loading to reduce unordered_map rehashes while shard
+    /// locks are contended.
+    void Reserve(size_t ExpectedTotalEntries)
+    {
+        if (ExpectedTotalEntries == 0)
+            return;
+
+        const size_t PerShard = (ExpectedTotalEntries + m_ShardCount - 1) / m_ShardCount;
+        for (size_t ShardIdx = 0; ShardIdx < m_ShardCount; ++ShardIdx)
+        {
+            Shard& CacheShard = m_Shards[ShardIdx];
+
+            std::unique_lock<std::shared_mutex> Lock{CacheShard.Mutex};
+            CacheShard.Objects.reserve(PerShard);
+        }
+    }
+
     /// Returns a live object for the key, creating one if needed.
     ///
     /// If a live object already exists, the method returns it with Created set
