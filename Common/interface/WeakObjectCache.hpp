@@ -123,6 +123,12 @@ private:
             Uint64       Generation = 0;
         };
 
+        struct CreateResult
+        {
+            Uint64 Generation = 0;
+            bool   Succeeded  = false;
+        };
+
         RefCntAutoPtr<InterfaceType> Lock()
         {
             RefCntWeakPtr<InterfaceType> Object;
@@ -163,14 +169,14 @@ private:
             return CreateState{CreateAction::Create, m_Generation};
         }
 
-        bool WaitCreate(Uint64 Generation)
+        CreateResult WaitCreate(Uint64 Generation)
         {
             std::unique_lock<std::mutex> LockGuard{m_CreateMtx};
             m_CreateCV.wait(LockGuard, [&]() {
-                return !m_IsCreating || m_Generation != Generation;
+                return m_Generation != Generation;
             });
 
-            return m_LastCreateSucceeded;
+            return CreateResult{m_Generation, m_LastCreateSucceeded};
         }
 
         void EndCreate(bool Succeeded)
@@ -333,12 +339,11 @@ public:
     /// Waiting callers wake and may return null with Created set to false. A
     /// later call may retry creation.
     ///
-    /// A waiter retries after a completed creation attempt is observed as
-    /// successful. The observed result is shared between attempts and is not
-    /// tied to the exact generation the caller originally waited on. Under
-    /// rapid retries, a late waiter can observe a later attempt's result. If no
-    /// live object is available when the waiter retries, it may become the next
-    /// creator or return null if the observed attempt failed.
+    /// A waiter retries after the creation attempt it observed succeeds. If it
+    /// wakes after later attempts have already completed, it retries the normal
+    /// lookup path instead of using a result from the wrong generation. If the
+    /// exact attempt it observed fails, the waiter returns null with Created
+    /// set to false.
     ///
     /// If the key is null or empty, the method logs an error and returns null
     /// with Created set to false without invoking CreateObjectFunc.
@@ -404,7 +409,8 @@ public:
                     m_WaitCreateCallback(CacheKey, m_pWaitCreateCallbackCtx);
 #endif
 
-                if (pEntry->WaitCreate(State.Generation))
+                const typename ObjectEntry::CreateResult Result = pEntry->WaitCreate(State.Generation);
+                if (Result.Generation != State.Generation + 1 || Result.Succeeded)
                     continue;
 
                 return {};

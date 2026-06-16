@@ -807,6 +807,97 @@ TEST(Common_WeakObjectCache, ConcurrentFactoryExceptionWakesAllWaiters)
     EXPECT_EQ(Object->Value, 7u);
 }
 
+TEST(Common_WeakObjectCache, WaiterRetriesWhenCreationGenerationIsMissed)
+{
+    struct WaiterHook
+    {
+        Threading::Signal* pWaiterReady   = nullptr;
+        Threading::Signal* pReleaseWaiter = nullptr;
+    };
+
+    WeakObjectCache<TestObject> Cache{1};
+    Threading::Signal           FirstFactoryStarted;
+    Threading::Signal           FinishFirstFactory;
+    Threading::Signal           WaiterReady;
+    Threading::Signal           ReleaseWaiter;
+    std::atomic<Uint32>         CreateCount{0};
+    std::atomic<Uint32>         WaiterCreateCount{0};
+    TestObjectPtr               WaiterObject;
+    bool                        WaiterCreated = false;
+    bool                        FirstCreated  = false;
+
+    WaiterHook Hook{&WaiterReady, &ReleaseWaiter};
+    Cache.SetWaitCreateCallback(
+        [](const Char*, void* pUserData) {
+            auto& Hook = *static_cast<WaiterHook*>(pUserData);
+            Hook.pWaiterReady->Trigger(true);
+            Hook.pReleaseWaiter->Wait(true, 1);
+        },
+        &Hook);
+
+    std::thread FirstCreator{[&]() {
+        auto [Object, Created] =
+            Cache.GetOrCreate(
+                "object-key",
+                [&]() {
+                    CreateCount.fetch_add(1, std::memory_order_acq_rel);
+                    FirstFactoryStarted.Trigger(true);
+                    FinishFirstFactory.Wait(true, 1);
+                    return CreateTestObject("object://first", 8);
+                });
+
+        EXPECT_NE(Object, nullptr);
+        EXPECT_TRUE(Created);
+        FirstCreated = Created;
+    }};
+
+    FirstFactoryStarted.Wait(true, 1);
+
+    std::thread Waiter{[&]() {
+        auto [Object, Created] =
+            Cache.GetOrCreate(
+                "object-key",
+                [&]() {
+                    CreateCount.fetch_add(1, std::memory_order_acq_rel);
+                    WaiterCreateCount.fetch_add(1, std::memory_order_acq_rel);
+                    return CreateTestObject("object://waiter-retry", 10);
+                });
+
+        WaiterObject  = std::move(Object);
+        WaiterCreated = Created;
+    }};
+
+    WaiterReady.Wait(true, 1);
+
+    FinishFirstFactory.Trigger(true);
+    FirstCreator.join();
+    EXPECT_TRUE(FirstCreated);
+
+    {
+        TestingEnvironment::ErrorScope ExpectedErrors{"Failed to create object for cache key 'object-key'"};
+        auto [Object, Created] =
+            Cache.GetOrCreate(
+                "object-key",
+                [&]() -> RefCntAutoPtr<TestObject> {
+                    CreateCount.fetch_add(1, std::memory_order_acq_rel);
+                    return {};
+                });
+
+        EXPECT_EQ(Object, nullptr);
+        EXPECT_FALSE(Created);
+    }
+
+    ReleaseWaiter.Trigger(true);
+    Waiter.join();
+
+    ASSERT_NE(WaiterObject, nullptr);
+    EXPECT_TRUE(WaiterCreated);
+    EXPECT_EQ(WaiterObject->URI, "object://waiter-retry");
+    EXPECT_EQ(WaiterObject->Value, 10u);
+    EXPECT_EQ(CreateCount.load(std::memory_order_acquire), 3u);
+    EXPECT_EQ(WaiterCreateCount.load(std::memory_order_acquire), 1u);
+}
+
 TEST(Common_WeakObjectCache, ReturnsEmptyForNullOrEmptyKey)
 {
     WeakObjectCache<TestObject> Cache;
