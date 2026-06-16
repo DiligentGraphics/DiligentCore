@@ -44,6 +44,7 @@
 #include <thread>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 namespace Diligent
 {
@@ -494,6 +495,64 @@ public:
         }
 
         return Erased;
+    }
+
+    /// Removes all keys that have no live object or in-flight operation.
+    ///
+    /// Returns the number of entries actually erased.
+    size_t EraseExpired()
+    {
+        size_t RemovedCount = 0;
+
+        // Keep erased entries and temporary live references outside the shard
+        // lock to avoid running object/ref-counter destruction while locked.
+        std::vector<std::shared_ptr<ObjectEntry>> RemovedEntries;
+        std::vector<RefCntAutoPtr<InterfaceType>> LiveObjects;
+
+        for (size_t ShardIdx = 0; ShardIdx < m_ShardCount; ++ShardIdx)
+        {
+            RemovedEntries.clear();
+            LiveObjects.clear();
+
+            Shard& CacheShard = m_Shards[ShardIdx];
+
+            size_t RemovedFromShard = 0;
+            {
+                std::unique_lock<std::shared_mutex> Lock{CacheShard.Mutex};
+
+                for (auto It = CacheShard.Objects.begin(); It != CacheShard.Objects.end();)
+                {
+                    const std::shared_ptr<ObjectEntry>& pEntry = It->second;
+                    // use_count() is checked while holding the shard mutex. This is required:
+                    // GetOrCreate() may only copy an ObjectEntry shared_ptr while holding the
+                    // same shard mutex, so use_count() == 1 means the map is the only owner.
+                    if (pEntry.use_count() != 1)
+                    {
+                        ++It;
+                        continue;
+                    }
+
+                    RefCntAutoPtr<InterfaceType> pLiveObject = pEntry->Lock();
+                    if (pLiveObject)
+                    {
+                        LiveObjects.emplace_back(std::move(pLiveObject));
+                        ++It;
+                        continue;
+                    }
+
+                    RemovedEntries.emplace_back(std::move(It->second));
+                    It = CacheShard.Objects.erase(It);
+                    ++RemovedFromShard;
+                }
+
+                if (RemovedFromShard != 0)
+                    m_Size.fetch_sub(RemovedFromShard, std::memory_order_relaxed);
+            }
+
+            RemovedCount += RemovedFromShard;
+        }
+
+        return RemovedCount;
     }
 
 private:

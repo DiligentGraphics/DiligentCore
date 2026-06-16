@@ -502,6 +502,133 @@ TEST(Common_WeakObjectCache, EraseIfExpiredReturnsFalseForNullOrEmptyKey)
     }
 }
 
+TEST(Common_WeakObjectCache, EraseExpiredRemovesExpiredEntries)
+{
+    WeakObjectCache<TestObject> Cache{2};
+
+    Uint32 CreateCount = 0;
+    {
+        auto [Object, Created] =
+            Cache.GetOrCreate(
+                "expired-key-0",
+                [&]() {
+                    ++CreateCount;
+                    return CreateTestObject("object://expired-0", 8);
+                });
+
+        ASSERT_NE(Object, nullptr);
+        EXPECT_TRUE(Created);
+    }
+
+    {
+        auto [Object, Created] =
+            Cache.GetOrCreate(
+                "expired-key-1",
+                [&]() {
+                    ++CreateCount;
+                    return CreateTestObject("object://expired-1", 9);
+                });
+
+        ASSERT_NE(Object, nullptr);
+        EXPECT_TRUE(Created);
+    }
+
+    TestObjectPtr LiveObject;
+    {
+        auto [Object, Created] =
+            Cache.GetOrCreate(
+                "live-key",
+                [&]() {
+                    ++CreateCount;
+                    return CreateTestObject("object://live", 10);
+                });
+
+        ASSERT_NE(Object, nullptr);
+        EXPECT_TRUE(Created);
+        LiveObject = std::move(Object);
+    }
+
+    {
+        TestingEnvironment::ErrorScope ExpectedErrors{"Failed to create object for cache key 'failed-key'"};
+        auto [Object, Created] =
+            Cache.GetOrCreate(
+                "failed-key",
+                []() -> RefCntAutoPtr<TestObject> {
+                    return {};
+                });
+
+        EXPECT_EQ(Object, nullptr);
+        EXPECT_FALSE(Created);
+    }
+
+    EXPECT_EQ(CreateCount, 3u);
+    EXPECT_EQ(Cache.Size(), size_t{4});
+    EXPECT_EQ(Cache.EraseExpired(), size_t{3});
+    EXPECT_EQ(Cache.Size(), size_t{1});
+    EXPECT_EQ(Cache.EraseExpired(), size_t{0});
+    EXPECT_EQ(Cache.Size(), size_t{1});
+
+    ASSERT_NE(LiveObject, nullptr);
+    EXPECT_EQ(LiveObject->Value, 10u);
+    LiveObject.Release();
+
+    EXPECT_EQ(Cache.EraseExpired(), size_t{1});
+    EXPECT_EQ(Cache.Size(), size_t{0});
+}
+
+TEST(Common_WeakObjectCache, EraseExpiredKeepsInFlightEntry)
+{
+    WeakObjectCache<TestObject> Cache{1};
+
+    {
+        auto [Object, Created] =
+            Cache.GetOrCreate(
+                "expired-key",
+                []() {
+                    return CreateTestObject("object://expired", 11);
+                });
+
+        ASSERT_NE(Object, nullptr);
+        EXPECT_TRUE(Created);
+    }
+
+    Threading::Signal FactoryStarted;
+    Threading::Signal FinishFactory;
+    TestObjectPtr     Object;
+    bool              Created = false;
+
+    std::thread Worker{[&]() {
+        auto [CreatedObject, WasCreated] =
+            Cache.GetOrCreate(
+                "in-flight-key",
+                [&]() {
+                    FactoryStarted.Trigger(true);
+                    FinishFactory.Wait(true, 1);
+                    return CreateTestObject("object://created", 12);
+                });
+
+        Object  = std::move(CreatedObject);
+        Created = WasCreated;
+    }};
+
+    FactoryStarted.Wait(true, 1);
+    EXPECT_EQ(Cache.Size(), size_t{2});
+    EXPECT_EQ(Cache.EraseExpired(), size_t{1});
+    EXPECT_EQ(Cache.Size(), size_t{1});
+
+    FinishFactory.Trigger(true);
+    Worker.join();
+
+    ASSERT_NE(Object, nullptr);
+    EXPECT_TRUE(Created);
+    EXPECT_EQ(Cache.EraseExpired(), size_t{0});
+    EXPECT_EQ(Cache.Size(), size_t{1});
+
+    Object.Release();
+    EXPECT_EQ(Cache.EraseExpired(), size_t{1});
+    EXPECT_EQ(Cache.Size(), size_t{0});
+}
+
 TEST(Common_WeakObjectCache, EraseIfExpiredKeepsInFlightEntry)
 {
     WeakObjectCache<TestObject> Cache{1};
