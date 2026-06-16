@@ -562,8 +562,8 @@ TEST(Common_WeakObjectCache, EraseExpiredRemovesExpiredEntries)
     }
 
     EXPECT_EQ(CreateCount, 3u);
-    EXPECT_EQ(Cache.Size(), size_t{4});
-    EXPECT_EQ(Cache.EraseExpired(), size_t{3});
+    EXPECT_EQ(Cache.Size(), size_t{3});
+    EXPECT_EQ(Cache.EraseExpired(), size_t{2});
     EXPECT_EQ(Cache.Size(), size_t{1});
     EXPECT_EQ(Cache.EraseExpired(), size_t{0});
     EXPECT_EQ(Cache.Size(), size_t{1});
@@ -686,6 +686,7 @@ TEST(Common_WeakObjectCache, ReturnsEmptyWhenFactoryFails)
         EXPECT_EQ(Object, nullptr);
         EXPECT_FALSE(Created);
     }
+    EXPECT_EQ(Cache.Size(), size_t{0});
 
     auto [Object, Created] =
         Cache.GetOrCreate(
@@ -783,6 +784,7 @@ TEST(Common_WeakObjectCache, ConcurrentFactoryFailureWakesAllWaiters)
     EXPECT_EQ(CreatorObject, nullptr);
     EXPECT_FALSE(CreatorCreated);
     EXPECT_EQ(CreateCount.load(std::memory_order_acquire), 1u);
+    EXPECT_EQ(Cache.Size(), size_t{0});
 
     for (const TestObjectPtr& Object : Objects)
         EXPECT_EQ(Object, nullptr);
@@ -815,6 +817,7 @@ TEST(Common_WeakObjectCache, PropagatesFactoryExceptionAndAllowsRetry)
                 throw std::runtime_error{"factory failed"};
             }),
         std::runtime_error);
+    EXPECT_EQ(Cache.Size(), size_t{0});
 
     auto [Object, Created] =
         Cache.GetOrCreate(
@@ -915,6 +918,7 @@ TEST(Common_WeakObjectCache, ConcurrentFactoryExceptionWakesAllWaiters)
 
     EXPECT_TRUE(CaughtException);
     EXPECT_EQ(CreateCount.load(std::memory_order_acquire), 1u);
+    EXPECT_EQ(Cache.Size(), size_t{0});
 
     for (const TestObjectPtr& Object : Objects)
         EXPECT_EQ(Object, nullptr);

@@ -365,11 +365,14 @@ public:
     ///
     /// If CreateObjectFunc returns null, the creator logs an error and returns
     /// null with Created set to false. Waiting callers wake and may return
-    /// null with Created set to false. A later call may retry creation.
+    /// null with Created set to false. The failed placeholder entry is removed
+    /// once no current caller still references it, and a later call may retry
+    /// creation.
     ///
     /// If CreateObjectFunc throws, the exception is propagated to the creator.
     /// Waiting callers wake and may return null with Created set to false. A
-    /// later call may retry creation.
+    /// later call may retry creation. As with null factory results, the failed
+    /// placeholder entry is removed once current callers release it.
     ///
     /// A waiter retries after the creation attempt it observed succeeds. If it
     /// wakes after later attempts have already completed, it retries the normal
@@ -456,6 +459,7 @@ public:
                 if (Result.Generation != State.Generation + 1 || Result.Succeeded)
                     continue;
 
+                TryEraseFailedEntry(CacheKey, std::move(pEntry));
                 return {};
             }
 
@@ -476,12 +480,23 @@ public:
                 return {std::move(pExisting), false};
             }
 
-            RefCntAutoPtr<InterfaceType> pObject = std::forward<CreateObjectFuncType>(CreateObjectFunc)();
+            RefCntAutoPtr<InterfaceType> pObject;
+            try
+            {
+                pObject = std::forward<CreateObjectFuncType>(CreateObjectFunc)();
+            }
+            catch (...)
+            {
+                Guard.End(false);
+                TryEraseFailedEntry(CacheKey, std::move(pEntry));
+                throw;
+            }
 
             if (!pObject)
             {
                 LOG_ERROR_MESSAGE("Failed to create object for cache key '", CacheKey, "'");
                 Guard.End(false);
+                TryEraseFailedEntry(CacheKey, std::move(pEntry));
                 return {};
             }
 
@@ -616,6 +631,16 @@ private:
     {
         VERIFY_EXPR(m_ShardCount > 0);
         return m_Shards[Hash % m_ShardCount];
+    }
+
+    void TryEraseFailedEntry(const Char* CacheKey, std::shared_ptr<ObjectEntry> pEntry)
+    {
+        // The current call's shared_ptr would make ObjectEntry::use_count() > 1
+        // and prevent EraseIfExpired() from removing a failed placeholder.
+        // Drop it first; if other waiters are still returning from the same
+        // failure, the last one to leave will erase the entry.
+        pEntry.reset();
+        EraseIfExpired(CacheKey);
     }
 
     const size_t             m_ShardCount;
