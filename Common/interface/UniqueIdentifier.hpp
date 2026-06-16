@@ -71,7 +71,7 @@ public:
         {
             static std::atomic<UniqueIdentifier> GlobalCounter{0};
 
-            const UniqueIdentifier NewID = GlobalCounter.fetch_add(1, std::memory_order_relaxed) + 1;
+            const UniqueIdentifier NewID      = GlobalCounter.fetch_add(1, std::memory_order_relaxed) + 1;
             UniqueIdentifier       ExpectedID = 0;
             if (m_ID.compare_exchange_strong(ExpectedID, NewID, std::memory_order_release, std::memory_order_acquire))
             {

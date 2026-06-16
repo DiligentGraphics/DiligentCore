@@ -111,6 +111,9 @@ private:
     class ObjectEntry
     {
     public:
+        // Per-key creation state. The shard lock only protects the map entry;
+        // once a thread has copied the shared_ptr<ObjectEntry>, creation and
+        // waiting are coordinated here without holding the shard lock.
         enum class CreateAction
         {
             Create,
@@ -138,6 +141,10 @@ private:
                 Object = m_Object;
             }
 
+            // Promote the weak pointer after releasing m_ObjectLock. Lock()
+            // may touch reference counters and query interfaces; doing that
+            // outside the spin lock keeps hot cache hits from serializing on
+            // more than the weak-pointer copy.
             return Object.Lock();
         }
 
@@ -151,6 +158,10 @@ private:
                 OldObject = std::move(m_Object);
                 m_Object  = std::move(NewObject);
             }
+
+            // OldObject is released after m_ObjectLock is dropped. Releasing a
+            // weak pointer can touch reference-counter metadata and allocator
+            // state, so keep that work outside the spin lock.
         }
 
         CreateState BeginCreate()
@@ -165,6 +176,10 @@ private:
                 };
             }
 
+            // The current thread owns the creation attempt for m_Generation
+            // until it calls EndCreate(). Generation is incremented only when
+            // the attempt completes, so waiters can identify the attempt they
+            // joined.
             m_IsCreating    = true;
             m_CreatorThread = std::this_thread::get_id();
             return CreateState{CreateAction::Create, m_Generation};
@@ -173,10 +188,19 @@ private:
         CreateResult WaitCreate(Uint64 Generation)
         {
             std::unique_lock<std::mutex> LockGuard{m_CreateMtx};
+            // Wait for the observed attempt to complete. We intentionally use
+            // generation change as the completion signal rather than
+            // !m_IsCreating: if another retry starts before this waiter runs,
+            // the cache may be creating again, but the attempt this waiter
+            // joined is already over.
             m_CreateCV.wait(LockGuard, [&]() {
                 return m_Generation != Generation;
             });
 
+            // The returned result describes the latest completed generation.
+            // A very late waiter may observe a later generation than the one
+            // it joined; GetOrCreate() detects that and retries instead of
+            // consuming a result that belongs to another attempt.
             return CreateResult{m_Generation, m_LastCreateSucceeded};
         }
 
@@ -187,6 +211,9 @@ private:
                 VERIFY_EXPR(m_IsCreating);
                 VERIFY_EXPR(m_CreatorThread == std::this_thread::get_id());
 
+                // Store the result before advancing the generation. Waiters
+                // that wake on this exact generation will see this result;
+                // waiters that missed it will retry.
                 m_IsCreating          = false;
                 m_LastCreateSucceeded = Succeeded;
                 m_CreatorThread       = {};
@@ -220,6 +247,10 @@ private:
 
         ~CreateGuard() noexcept
         {
+            // Once BeginCreate() returns Create, every exit path must wake
+            // waiters. The guard converts exceptions or early returns in the
+            // create path into a failed creation attempt instead of leaving the
+            // entry permanently in m_IsCreating state.
             if (m_pEntry != nullptr)
                 m_pEntry->EndCreate(false);
         }
@@ -378,6 +409,9 @@ public:
 
         if (!pEntry)
         {
+            // Allocate outside the shard write lock. The map is rechecked
+            // under the lock before inserting because another thread may have
+            // inserted the entry after our shared-lock miss.
             std::shared_ptr<ObjectEntry> pNewEntry = std::make_shared<ObjectEntry>();
 
             std::unique_lock<std::shared_mutex> Lock{CacheShard.Mutex};
@@ -397,6 +431,9 @@ public:
             }
         }
 
+        // The loop is entered again after waiting for a successful creation,
+        // after missing the exact generation we waited for, or after an object
+        // expires before a waiter can promote the weak reference.
         for (;;)
         {
             if (RefCntAutoPtr<InterfaceType> pExisting = pEntry->Lock())
@@ -411,6 +448,11 @@ public:
 #endif
 
                 const typename ObjectEntry::CreateResult Result = pEntry->WaitCreate(State.Generation);
+                // EndCreate() advances the generation exactly once. If the
+                // observed generation is State.Generation + 1, Result belongs
+                // to the attempt this waiter joined. Any other generation means
+                // this waiter resumed late and the result may belong to a
+                // different attempt, so retry the lookup/create path.
                 if (Result.Generation != State.Generation + 1 || Result.Succeeded)
                     continue;
 
@@ -425,6 +467,9 @@ public:
 
             CreateGuard Guard{*pEntry};
 
+            // Re-check after becoming the creator. A previous creator may have
+            // published an object between our initial Lock() and BeginCreate().
+            // If so, do not run a duplicate factory.
             if (RefCntAutoPtr<InterfaceType> pExisting = pEntry->Lock())
             {
                 Guard.End(true);
@@ -504,8 +549,10 @@ public:
     {
         size_t RemovedCount = 0;
 
-        // Keep erased entries and temporary live references outside the shard
-        // lock to avoid running object/ref-counter destruction while locked.
+        // Keep erased entries and temporary live references alive until after
+        // the shard lock is released. Destroying an ObjectEntry or a temporary
+        // strong reference can run reference-counter/allocator work and may
+        // call back into code that touches the cache.
         std::vector<std::shared_ptr<ObjectEntry>> RemovedEntries;
         std::vector<RefCntAutoPtr<InterfaceType>> LiveObjects;
 
