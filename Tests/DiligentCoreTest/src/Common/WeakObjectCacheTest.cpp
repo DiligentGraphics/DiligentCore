@@ -702,6 +702,40 @@ TEST(Common_WeakObjectCache, ReturnsEmptyWhenFactoryFails)
     EXPECT_EQ(Object->Value, 5u);
 }
 
+TEST(Common_WeakObjectCache, FactoryMayMutateCacheKeyStorageOnFailure)
+{
+    WeakObjectCache<TestObject> Cache;
+
+    std::string Key{"object-key"};
+    {
+        TestingEnvironment::ErrorScope ExpectedErrors{"Failed to create object for cache key 'object-key'"};
+        auto [Object, Created] =
+            Cache.GetOrCreate(
+                Key.c_str(),
+                [&]() -> RefCntAutoPtr<TestObject> {
+                    Key = "different-key";
+                    return {};
+                });
+
+        EXPECT_EQ(Object, nullptr);
+        EXPECT_FALSE(Created);
+    }
+
+    EXPECT_EQ(Key, "different-key");
+    EXPECT_EQ(Cache.Size(), size_t{0});
+
+    auto [Object, Created] =
+        Cache.GetOrCreate(
+            "object-key",
+            []() {
+                return CreateTestObject("object://created-after-key-mutation", 25);
+            });
+
+    ASSERT_NE(Object, nullptr);
+    EXPECT_TRUE(Created);
+    EXPECT_EQ(Object->Value, 25u);
+}
+
 TEST(Common_WeakObjectCache, ConcurrentFactoryFailureWakesAllWaiters)
 {
     static constexpr Uint32 WaiterCount = 8;
@@ -831,6 +865,35 @@ TEST(Common_WeakObjectCache, PropagatesFactoryExceptionAndAllowsRetry)
     EXPECT_TRUE(Created);
     EXPECT_EQ(CreateCount, 2u);
     EXPECT_EQ(Object->Value, 6u);
+}
+
+TEST(Common_WeakObjectCache, FactoryMayMutateCacheKeyStorageOnException)
+{
+    WeakObjectCache<TestObject> Cache;
+
+    std::string Key{"object-key"};
+    EXPECT_THROW(
+        Cache.GetOrCreate(
+            Key.c_str(),
+            [&]() -> RefCntAutoPtr<TestObject> {
+                Key = "different-key";
+                throw std::runtime_error{"factory failed"};
+            }),
+        std::runtime_error);
+
+    EXPECT_EQ(Key, "different-key");
+    EXPECT_EQ(Cache.Size(), size_t{0});
+
+    auto [Object, Created] =
+        Cache.GetOrCreate(
+            "object-key",
+            []() {
+                return CreateTestObject("object://created-after-key-mutation", 26);
+            });
+
+    ASSERT_NE(Object, nullptr);
+    EXPECT_TRUE(Created);
+    EXPECT_EQ(Object->Value, 26u);
 }
 
 TEST(Common_WeakObjectCache, ConcurrentFactoryExceptionWakesAllWaiters)

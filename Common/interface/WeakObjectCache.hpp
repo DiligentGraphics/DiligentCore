@@ -41,6 +41,7 @@
 #include <mutex>
 #include <new>
 #include <shared_mutex>
+#include <string>
 #include <thread>
 #include <unordered_map>
 #include <utility>
@@ -480,6 +481,11 @@ public:
                 return {std::move(pExisting), false};
             }
 
+            // The factory is arbitrary user code and may mutate or destroy the
+            // storage behind CacheKey. Keep an owned copy for all code that
+            // runs after the factory starts, including logging and cleanup.
+            const std::string StableCacheKey{CacheKey};
+
             RefCntAutoPtr<InterfaceType> pObject;
             try
             {
@@ -488,15 +494,15 @@ public:
             catch (...)
             {
                 Guard.End(false);
-                TryEraseFailedEntry(CacheKey, std::move(pEntry));
+                TryEraseFailedEntry(StableCacheKey.c_str(), std::move(pEntry));
                 throw;
             }
 
             if (!pObject)
             {
-                LOG_ERROR_MESSAGE("Failed to create object for cache key '", CacheKey, "'");
+                LOG_ERROR_MESSAGE("Failed to create object for cache key '", StableCacheKey.c_str(), "'");
                 Guard.End(false);
-                TryEraseFailedEntry(CacheKey, std::move(pEntry));
+                TryEraseFailedEntry(StableCacheKey.c_str(), std::move(pEntry));
                 return {};
             }
 
