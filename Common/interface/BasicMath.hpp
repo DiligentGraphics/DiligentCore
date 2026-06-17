@@ -52,6 +52,7 @@
 #include <algorithm>
 #include <iostream>
 
+#include "BasicMathNEON.hpp"
 #include "BasicMathSSE.hpp"
 #include "HashUtils.hpp"
 
@@ -114,6 +115,8 @@ inline void MultiplyMatrix4x4(const float* const A, const float* const B, float*
 {
 #if DILIGENT_SSE_SUPPORTED
     BasicMathDetail::MultiplyMatrix4x4SSE(A, B, Result);
+#elif DILIGENT_NEON_SUPPORTED
+    BasicMathDetail::MultiplyMatrix4x4NEON(A, B, Result);
 #else
     BasicMathDetail::MultiplyMatrix4x4Scalar(A, B, Result);
 #endif

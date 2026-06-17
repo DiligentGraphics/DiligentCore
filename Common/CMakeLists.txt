@@ -12,6 +12,7 @@ set(INTERFACE
     interface/Array2DTools.hpp
     interface/AsyncInitializer.hpp
     interface/BasicMath.hpp
+    interface/BasicMathNEON.hpp
     interface/BasicMathSSE.hpp
     interface/Float16.hpp
     interface/BasicFileStream.hpp
