@@ -958,18 +958,11 @@ template <class T> struct Matrix2x2
 
     constexpr static Matrix2x2 Mul(const Matrix2x2& m1, const Matrix2x2& m2)
     {
-        Matrix2x2 mOut;
-        for (int i = 0; i < 2; i++)
-        {
-            for (int j = 0; j < 2; j++)
-            {
-                for (int k = 0; k < 2; k++)
-                {
-                    mOut.m[i][j] += m1.m[i][k] * m2.m[k][j];
-                }
-            }
-        }
-        return mOut;
+        // clang-format off
+        return Matrix2x2{
+            m1._11 * m2._11 + m1._12 * m2._21, m1._11 * m2._12 + m1._12 * m2._22,
+            m1._21 * m2._11 + m1._22 * m2._21, m1._21 * m2._12 + m1._22 * m2._22};
+        // clang-format on
     }
 
     constexpr static Matrix2x2 Rotation(T angleInRadians)
@@ -1298,19 +1291,20 @@ template <class T> struct Matrix3x3
 
     constexpr static Matrix3x3 Mul(const Matrix3x3& m1, const Matrix3x3& m2)
     {
-        Matrix3x3 mOut;
-        for (int i = 0; i < 3; i++)
-        {
-            for (int j = 0; j < 3; j++)
-            {
-                for (int k = 0; k < 3; k++)
-                {
-                    mOut.m[i][j] += m1.m[i][k] * m2.m[k][j];
-                }
-            }
-        }
+        // clang-format off
+        return Matrix3x3{
+            m1._11 * m2._11 + m1._12 * m2._21 + m1._13 * m2._31,
+            m1._11 * m2._12 + m1._12 * m2._22 + m1._13 * m2._32,
+            m1._11 * m2._13 + m1._12 * m2._23 + m1._13 * m2._33,
 
-        return mOut;
+            m1._21 * m2._11 + m1._22 * m2._21 + m1._23 * m2._31,
+            m1._21 * m2._12 + m1._22 * m2._22 + m1._23 * m2._32,
+            m1._21 * m2._13 + m1._22 * m2._23 + m1._23 * m2._33,
+
+            m1._31 * m2._11 + m1._32 * m2._21 + m1._33 * m2._31,
+            m1._31 * m2._12 + m1._32 * m2._22 + m1._33 * m2._32,
+            m1._31 * m2._13 + m1._32 * m2._23 + m1._33 * m2._33};
+        // clang-format on
     }
 
     constexpr T Determinant() const
