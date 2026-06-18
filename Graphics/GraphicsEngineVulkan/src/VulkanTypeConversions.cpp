@@ -1991,6 +1991,7 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
     INIT_FEATURE(PixelUAVWritesAndAtomics,          vkFeatures.fragmentStoresAndAtomics);
     INIT_FEATURE(TextureUAVExtendedFormats,         vkFeatures.shaderStorageImageExtendedFormats);
     INIT_FEATURE(SparseResources,                   vkFeatures.sparseBinding && (vkFeatures.sparseResidencyBuffer || vkFeatures.sparseResidencyImage2D)); // requires support for resident resources
+    INIT_FEATURE(ShaderFloat64,                     vkFeatures.shaderFloat64);
     // clang-format on
 
     const VkPhysicalDeviceMeshShaderFeaturesEXT& MeshShaderFeats = ExtFeatures.MeshShader;
@@ -2062,7 +2063,7 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
 
 #undef INIT_FEATURE
 
-    ASSERT_SIZEOF(DeviceFeatures, 48, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
+    ASSERT_SIZEOF(DeviceFeatures, 49, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
 
     return Features;
 }

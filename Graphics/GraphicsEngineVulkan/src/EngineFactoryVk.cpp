@@ -881,6 +881,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         ENABLE_VKFEATURE(vertexPipelineStoresAndAtomics,    EnabledFeatures.VertexPipelineUAVWritesAndAtomics);
         ENABLE_VKFEATURE(fragmentStoresAndAtomics,          EnabledFeatures.PixelUAVWritesAndAtomics);
         ENABLE_VKFEATURE(shaderStorageImageExtendedFormats, EnabledFeatures.TextureUAVExtendedFormats);
+        ENABLE_VKFEATURE(shaderFloat64,                     EnabledFeatures.ShaderFloat64);
         // clang-format on
 #undef ENABLE_VKFEATURE
 
@@ -1308,7 +1309,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
             }
         }
 
-        ASSERT_SIZEOF(DeviceFeatures, 48, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
+        ASSERT_SIZEOF(DeviceFeatures, 49, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
 
         for (Uint32 i = 0; i < EngineCI.DeviceExtensionCount; ++i)
         {

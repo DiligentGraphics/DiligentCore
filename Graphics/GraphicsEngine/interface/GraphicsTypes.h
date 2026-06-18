@@ -1867,6 +1867,9 @@ struct DeviceFeatures
 	/// Not supported by D3D11, D3D12, OpenGL, or Metal backends.
     DEVICE_FEATURE_STATE SpecializationConstants DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
+    /// Indicates if device supports native 64-bit float operations.
+    DEVICE_FEATURE_STATE ShaderFloat64 DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
 #if DILIGENT_CPP_INTERFACE
     constexpr DeviceFeatures() noexcept {}
 
@@ -1918,11 +1921,12 @@ struct DeviceFeatures
 	Handler(NativeMultiDraw)                   \
     Handler(AsyncShaderCompilation)			   \
 	Handler(FormattedBuffers)                  \
-    Handler(SpecializationConstants)
+    Handler(SpecializationConstants)           \
+    Handler(ShaderFloat64)
 
     explicit constexpr DeviceFeatures(DEVICE_FEATURE_STATE State) noexcept
     {
-        static_assert(sizeof(*this) == 48, "Did you add a new feature to DeviceFeatures? Please add it to ENUMERATE_DEVICE_FEATURES.");
+        static_assert(sizeof(*this) == 49, "Did you add a new feature to DeviceFeatures? Please add it to ENUMERATE_DEVICE_FEATURES.");
     #define INIT_FEATURE(Feature) Feature = State;
         ENUMERATE_DEVICE_FEATURES(INIT_FEATURE)
     #undef INIT_FEATURE

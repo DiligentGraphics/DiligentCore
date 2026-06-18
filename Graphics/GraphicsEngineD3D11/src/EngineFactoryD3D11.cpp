@@ -490,7 +490,15 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
         Features.ShaderFloat16 = ShaderFloat16Supported ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
     }
 
-    ASSERT_SIZEOF(Features, 48, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
+    {
+        D3D11_FEATURE_DATA_DOUBLES d3d11Doubles{};
+        if (SUCCEEDED(pd3d11Device->CheckFeatureSupport(D3D11_FEATURE_DOUBLES, &d3d11Doubles, sizeof(d3d11Doubles))))
+        {
+            Features.ShaderFloat64 = (d3d11Doubles.DoublePrecisionFloatShaderOps != FALSE) ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
+        }
+    }
+
+    ASSERT_SIZEOF(Features, 49, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
 
     // Texture properties
     {
