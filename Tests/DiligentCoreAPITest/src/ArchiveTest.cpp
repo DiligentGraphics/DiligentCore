@@ -1612,7 +1612,7 @@ TEST(ArchiveTest, ComputePipeline_SplitArchive_Async)
     TestComputePipeline(PSO_ARCHIVE_FLAG_DO_NOT_PACK_SIGNATURES, /*CompileAsync = */ true);
 }
 
-void TestRayTracingPipeline(bool CompileAsync = false)
+void TestRayTracingPipeline(bool CompileAsync = false, bool UseCurrentDeviceArchiveFlags = false)
 {
     GPUTestingEnvironment* pEnv             = GPUTestingEnvironment::GetInstance();
     IRenderDevice*         pDevice          = pEnv->GetDevice();
@@ -1652,7 +1652,13 @@ void TestRayTracingPipeline(bool CompileAsync = false)
     pArchiverFactory->CreateSerializationDevice(DeviceCI, &pSerializationDevice);
     ASSERT_NE(pSerializationDevice, nullptr);
 
-    const ARCHIVE_DEVICE_DATA_FLAGS DeviceBits = GetDeviceBits() & (ARCHIVE_DEVICE_DATA_FLAG_D3D12 | ARCHIVE_DEVICE_DATA_FLAG_VULKAN);
+    ARCHIVE_DEVICE_DATA_FLAGS DeviceBits = GetDeviceBits() & (ARCHIVE_DEVICE_DATA_FLAG_D3D12 | ARCHIVE_DEVICE_DATA_FLAG_VULKAN);
+    if (UseCurrentDeviceArchiveFlags)
+    {
+        DeviceBits &= RenderDeviceTypeToArchiveDataFlag(pDevice->GetDeviceInfo().Type);
+        if (DeviceBits == ARCHIVE_DEVICE_DATA_FLAG_NONE)
+            GTEST_SKIP() << "Current device is not supported by ray tracing archive test";
+    }
 
     RefCntAutoPtr<IPipelineState> pRefPSO;
     {
@@ -1961,6 +1967,11 @@ void TestRayTracingPipeline(bool CompileAsync = false)
 TEST(ArchiveTest, RayTracingPipeline)
 {
     TestRayTracingPipeline();
+}
+
+TEST(ArchiveTest, RayTracingPipeline_CurrentDevice)
+{
+    TestRayTracingPipeline(/*CompileAsync = */ false, /*UseCurrentDeviceArchiveFlags = */ true);
 }
 
 TEST(ArchiveTest, RayTracingPipeline_Async)
