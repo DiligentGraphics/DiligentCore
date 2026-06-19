@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -239,6 +239,13 @@ inline bool GetTimestampQueryData(const VulkanUtilities::LogicalDevice& LogicalD
     return DataAvailable;
 }
 
+constexpr Uint64 GetTimestampMask(Uint32 TimestampValidBits) noexcept
+{
+    return TimestampValidBits >= 64 ?
+        ~Uint64{0} :
+        (Uint64{1} << TimestampValidBits) - Uint64{1};
+}
+
 inline bool GetDurationQueryData(const VulkanUtilities::LogicalDevice& LogicalDevice,
                                  VkQueryPool                           vkQueryPool,
                                  const std::array<Uint32, 2>&          QueryIdx,
@@ -264,8 +271,11 @@ inline bool GetDurationQueryData(const VulkanUtilities::LogicalDevice& LogicalDe
     {
         QueryDataDuration& QueryData = *reinterpret_cast<QueryDataDuration*>(pData);
         VERIFY_EXPR(DataSize == sizeof(QueryData));
+        VERIFY_EXPR(TimestampValidBits != 0);
+        const Uint64 TimestampMask = GetTimestampMask(TimestampValidBits);
+
         DEV_CHECK_WARN(EndCounter >= StartCounter, "GPU time overflowed");
-        QueryData.Duration  = (EndCounter - StartCounter) & (~0ull >> (64 - TimestampValidBits));
+        QueryData.Duration  = (EndCounter - StartCounter) & TimestampMask;
         QueryData.Frequency = CounterFrequency;
     }
 
