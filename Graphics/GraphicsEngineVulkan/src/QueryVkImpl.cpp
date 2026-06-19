@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -239,10 +239,45 @@ inline bool GetTimestampQueryData(const VulkanUtilities::LogicalDevice& LogicalD
     return DataAvailable;
 }
 
+constexpr Uint64 GetTimestampMask(Uint32 TimestampValidBits) noexcept
+{
+    return TimestampValidBits >= 64 ?
+        ~Uint64{0} :
+        (Uint64{1} << TimestampValidBits) - Uint64{1};
+}
+
+// Vulkan timestamp counters may wrap at TimestampValidBits. The high bits of
+// LastExtendedTimestampCounter store the wrap epoch, while the low bits store
+// the last raw counter value observed for this query object.
+Uint64 ExtendTimestampCounter(Uint64  Counter,
+                              Uint32  TimestampValidBits,
+                              Uint64& LastExtendedTimestampCounter)
+{
+    VERIFY_EXPR(TimestampValidBits != 0);
+    if (TimestampValidBits >= 64)
+        return Counter;
+
+    const Uint64 TimestampMask = GetTimestampMask(TimestampValidBits);
+    VERIFY_EXPR(TimestampMask != 0);
+
+    const Uint64 TimestampPeriod = TimestampMask + Uint64{1};
+    const Uint64 RawCounter      = Counter & TimestampMask;
+    const Uint64 LastEpoch       = LastExtendedTimestampCounter & ~TimestampMask;
+    const Uint64 LastRawCounter  = LastExtendedTimestampCounter & TimestampMask;
+
+    Uint64 ExtendedCounter = LastEpoch + RawCounter;
+    if (RawCounter < LastRawCounter)
+        ExtendedCounter += TimestampPeriod;
+
+    LastExtendedTimestampCounter = ExtendedCounter;
+    return ExtendedCounter;
+}
+
 inline bool GetDurationQueryData(const VulkanUtilities::LogicalDevice& LogicalDevice,
                                  VkQueryPool                           vkQueryPool,
                                  const std::array<Uint32, 2>&          QueryIdx,
                                  Uint64                                CounterFrequency,
+                                 Uint32                                TimestampValidBits,
                                  void*                                 pData,
                                  Uint32                                DataSize)
 {
@@ -263,8 +298,12 @@ inline bool GetDurationQueryData(const VulkanUtilities::LogicalDevice& LogicalDe
     {
         QueryDataDuration& QueryData = *reinterpret_cast<QueryDataDuration*>(pData);
         VERIFY_EXPR(DataSize == sizeof(QueryData));
-        VERIFY_EXPR(EndCounter >= StartCounter);
-        QueryData.Duration  = EndCounter - StartCounter;
+        VERIFY_EXPR(TimestampValidBits != 0);
+        const Uint64 TimestampMask = GetTimestampMask(TimestampValidBits);
+        VERIFY_EXPR(TimestampMask != 0);
+
+        DEV_CHECK_WARN(EndCounter >= StartCounter, "GPU time overflowed");
+        QueryData.Duration  = (EndCounter - StartCounter) & TimestampMask;
         QueryData.Frequency = CounterFrequency;
     }
 
@@ -347,7 +386,20 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
                 break;
 
             case QUERY_TYPE_TIMESTAMP:
-                DataAvailable = GetTimestampQueryData(LogicalDevice, vkQueryPool, m_QueryPoolIndex[0], m_pQueryMgr->GetCounterFrequency(), pData, DataSize);
+                DataAvailable = GetTimestampQueryData(LogicalDevice,
+                                                      vkQueryPool,
+                                                      m_QueryPoolIndex[0],
+                                                      m_pQueryMgr->GetCounterFrequency(),
+                                                      pData,
+                                                      DataSize);
+                if (DataAvailable && pData != nullptr)
+                {
+                    QueryDataTimestamp& QueryData = *reinterpret_cast<QueryDataTimestamp*>(pData);
+
+                    QueryData.Counter = ExtendTimestampCounter(QueryData.Counter,
+                                                               m_pQueryMgr->GetTimestampValidBits(),
+                                                               m_LastExtendedTimestampCounter);
+                }
                 break;
 
             case QUERY_TYPE_PIPELINE_STATISTICS:
@@ -355,7 +407,13 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
                 break;
 
             case QUERY_TYPE_DURATION:
-                DataAvailable = GetDurationQueryData(LogicalDevice, vkQueryPool, m_QueryPoolIndex, m_pQueryMgr->GetCounterFrequency(), pData, DataSize);
+                DataAvailable = GetDurationQueryData(LogicalDevice,
+                                                     vkQueryPool,
+                                                     m_QueryPoolIndex,
+                                                     m_pQueryMgr->GetCounterFrequency(),
+                                                     m_pQueryMgr->GetTimestampValidBits(),
+                                                     pData,
+                                                     DataSize);
                 break;
 
             default:

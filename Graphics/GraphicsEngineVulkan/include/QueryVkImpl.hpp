@@ -76,6 +76,10 @@ private:
 
     Uint64 m_QueryEndFenceValue = ~Uint64{0};
 
+    // Timestamp counters may expose fewer than 64 valid bits. Keep the last extended
+    // counter so wraps can be detected across query reuse.
+    Uint64 m_LastExtendedTimestampCounter = 0;
+
     QueryManagerVk* m_pQueryMgr = nullptr;
 };
 

@@ -12,6 +12,8 @@ set(INTERFACE
     interface/Array2DTools.hpp
     interface/AsyncInitializer.hpp
     interface/BasicMath.hpp
+    interface/BasicMathNEON.hpp
+    interface/BasicMathSSE.hpp
     interface/Float16.hpp
     interface/BasicFileStream.hpp
     interface/DataBlobImpl.hpp
@@ -52,6 +54,7 @@ set(INTERFACE
     interface/Cast.hpp
     interface/CompilerDefinitions.h
     interface/CallbackWrapper.hpp
+    interface/WeakObjectCache.hpp
     interface/WeakValueHashMap.hpp
 )
 

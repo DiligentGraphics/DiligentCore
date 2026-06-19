@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -50,30 +50,43 @@ public:
     // clang-format on
 
     UniqueIdHelper(UniqueIdHelper&& RHS) noexcept :
-        m_ID{RHS.m_ID}
+        m_ID{RHS.m_ID.exchange(0, std::memory_order_acq_rel)}
     {
-        RHS.m_ID = 0;
     }
 
     UniqueIdHelper& operator=(UniqueIdHelper&& RHS) noexcept
     {
-        m_ID     = RHS.m_ID;
-        RHS.m_ID = 0;
+        if (this != &RHS)
+        {
+            m_ID.store(RHS.m_ID.exchange(0, std::memory_order_acq_rel),
+                       std::memory_order_release);
+        }
         return *this;
     }
 
     UniqueIdentifier GetID() const noexcept
     {
-        if (m_ID == 0)
+        UniqueIdentifier ID = m_ID.load(std::memory_order_acquire);
+        if (ID == 0)
         {
             static std::atomic<UniqueIdentifier> GlobalCounter{0};
-            m_ID = GlobalCounter.fetch_add(1) + 1;
+
+            const UniqueIdentifier NewID      = GlobalCounter.fetch_add(1, std::memory_order_relaxed) + 1;
+            UniqueIdentifier       ExpectedID = 0;
+            if (m_ID.compare_exchange_strong(ExpectedID, NewID, std::memory_order_release, std::memory_order_acquire))
+            {
+                ID = NewID;
+            }
+            else
+            {
+                ID = ExpectedID;
+            }
         }
-        return m_ID;
+        return ID;
     }
 
 private:
-    mutable UniqueIdentifier m_ID = 0;
+    mutable std::atomic<UniqueIdentifier> m_ID{0};
 };
 
 } // namespace Diligent

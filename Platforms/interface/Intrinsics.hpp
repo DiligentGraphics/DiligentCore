@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,6 +25,16 @@
  */
 
 #pragma once
+
+#if (defined(_MSC_VER) && ((_M_IX86_FP >= 1) || defined(_M_X64))) || ((defined(__clang__) || defined(__GNUC__)) && defined(__SSE__))
+#    include <xmmintrin.h>
+#    define DILIGENT_SSE_SUPPORTED 1
+#endif
+
+#if defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)
+#    include <arm_neon.h>
+#    define DILIGENT_NEON_SUPPORTED 1
+#endif
 
 #if (defined(_MSC_VER) && ((_M_IX86_FP >= 2) || defined(_M_X64))) || ((defined(__clang__) || defined(__GNUC__)) && (defined(__i386__) || defined(__x86_64__)))
 #    include <immintrin.h>

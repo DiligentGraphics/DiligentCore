@@ -27,6 +27,7 @@
 
 #include <climits>
 #include <sstream>
+#include <array>
 
 #include "BasicMath.hpp"
 #include "AdvancedMath.hpp"
@@ -65,6 +66,129 @@ void ExpectIdentityNear(const float4x4& Value, float Epsilon = 1e-5f)
         }
     }
 }
+
+#if DILIGENT_SSE_SUPPORTED || DILIGENT_NEON_SUPPORTED
+using Matrix4x4Data = std::array<float, 16>;
+
+Matrix4x4Data MultiplyMatrix4x4ScalarData(const Matrix4x4Data& A, const Matrix4x4Data& B)
+{
+    Matrix4x4Data Result{};
+    BasicMathDetail::MultiplyMatrix4x4Scalar(A.data(), B.data(), Result.data());
+    return Result;
+}
+
+#    if DILIGENT_SSE_SUPPORTED
+Matrix4x4Data MultiplyMatrix4x4SSEData(const Matrix4x4Data& A, const Matrix4x4Data& B)
+{
+    Matrix4x4Data Result{};
+    BasicMathDetail::MultiplyMatrix4x4SSE(A.data(), B.data(), Result.data());
+    return Result;
+}
+#    endif
+
+#    if DILIGENT_NEON_SUPPORTED
+Matrix4x4Data MultiplyMatrix4x4NEONData(const Matrix4x4Data& A, const Matrix4x4Data& B)
+{
+    Matrix4x4Data Result{};
+    BasicMathDetail::MultiplyMatrix4x4NEON(A.data(), B.data(), Result.data());
+    return Result;
+}
+#    endif
+
+Matrix4x4Data MultiplyMatrix4x4DispatchData(const Matrix4x4Data& A, const Matrix4x4Data& B)
+{
+    Matrix4x4Data Result{};
+    MultiplyMatrix4x4(A.data(), B.data(), Result.data());
+    return Result;
+}
+
+void ExpectMatrix4x4DataEqual(const Matrix4x4Data& Value, const Matrix4x4Data& Reference)
+{
+    for (size_t i = 0; i < Value.size(); ++i)
+        EXPECT_EQ(Value[i], Reference[i]) << "Element " << i;
+}
+
+template <typename MultiplyFuncType>
+void ExpectMultiplyMatrix4x4SIMDMatchesScalar(const Matrix4x4Data& A, const Matrix4x4Data& B, MultiplyFuncType MultiplyFunc)
+{
+    const Matrix4x4Data ScalarResult   = MultiplyMatrix4x4ScalarData(A, B);
+    const Matrix4x4Data SIMDResult     = MultiplyFunc(A, B);
+    const Matrix4x4Data DispatchResult = MultiplyMatrix4x4DispatchData(A, B);
+
+    ExpectMatrix4x4DataEqual(SIMDResult, ScalarResult);
+    ExpectMatrix4x4DataEqual(DispatchResult, SIMDResult);
+}
+
+template <typename MultiplyFuncType>
+void TestMultiplyMatrix4x4SIMDMatchesScalar(MultiplyFuncType MultiplyFunc)
+{
+    for (size_t Row = 0; Row < 4; ++Row)
+    {
+        for (size_t K = 0; K < 4; ++K)
+        {
+            for (size_t Col = 0; Col < 4; ++Col)
+            {
+                std::stringstream Trace;
+                Trace << "Row " << Row << ", K " << K << ", Col " << Col;
+                SCOPED_TRACE(Trace.str());
+
+                Matrix4x4Data A{};
+                Matrix4x4Data B{};
+
+                const float AValue = ((Row + K) % 2 == 0 ? 1.f : -1.f) * static_cast<float>(Row * 4 + K + 1);
+                const float BValue = ((K + Col) % 2 == 0 ? -1.f : 1.f) * static_cast<float>(K * 4 + Col + 17);
+
+                A[Row * 4 + K] = AValue;
+                B[K * 4 + Col] = BValue;
+
+                Matrix4x4Data Expected{};
+                Expected[Row * 4 + Col] = AValue * BValue;
+
+                ExpectMatrix4x4DataEqual(MultiplyMatrix4x4ScalarData(A, B), Expected);
+                ExpectMultiplyMatrix4x4SIMDMatchesScalar(A, B, MultiplyFunc);
+            }
+        }
+    }
+
+    constexpr Matrix4x4Data Zero{};
+    constexpr Matrix4x4Data Identity{
+        1.f, 0.f, 0.f, 0.f,
+        0.f, 1.f, 0.f, 0.f,
+        0.f, 0.f, 1.f, 0.f,
+        0.f, 0.f, 0.f, 1.f};
+    constexpr Matrix4x4Data DenseA{
+        1.f, -2.f, 3.f, -4.f,
+        5.f, -6.f, 7.f, -8.f,
+        9.f, -10.f, 11.f, -12.f,
+        13.f, -14.f, 15.f, -16.f};
+    constexpr Matrix4x4Data DenseB{
+        -17.f, 18.f, -19.f, 20.f,
+        21.f, -22.f, 23.f, -24.f,
+        -25.f, 26.f, -27.f, 28.f,
+        29.f, -30.f, 31.f, -32.f};
+    constexpr Matrix4x4Data Permutation{
+        0.f, 0.f, 1.f, 0.f,
+        1.f, 0.f, 0.f, 0.f,
+        0.f, 0.f, 0.f, 1.f,
+        0.f, 1.f, 0.f, 0.f};
+    constexpr Matrix4x4Data ScaleTranslate{
+        2.f, 0.f, 0.f, 0.f,
+        0.f, -3.f, 0.f, 0.f,
+        0.f, 0.f, 4.f, 0.f,
+        11.f, 12.f, 13.f, 1.f};
+
+    ExpectMultiplyMatrix4x4SIMDMatchesScalar(Zero, DenseA, MultiplyFunc);
+    ExpectMultiplyMatrix4x4SIMDMatchesScalar(DenseA, Zero, MultiplyFunc);
+    ExpectMultiplyMatrix4x4SIMDMatchesScalar(Identity, DenseA, MultiplyFunc);
+    ExpectMultiplyMatrix4x4SIMDMatchesScalar(DenseA, Identity, MultiplyFunc);
+    ExpectMultiplyMatrix4x4SIMDMatchesScalar(DenseA, DenseB, MultiplyFunc);
+    ExpectMultiplyMatrix4x4SIMDMatchesScalar(DenseB, DenseA, MultiplyFunc);
+    ExpectMultiplyMatrix4x4SIMDMatchesScalar(Permutation, DenseA, MultiplyFunc);
+    ExpectMultiplyMatrix4x4SIMDMatchesScalar(DenseA, Permutation, MultiplyFunc);
+    ExpectMultiplyMatrix4x4SIMDMatchesScalar(ScaleTranslate, DenseA, MultiplyFunc);
+    ExpectMultiplyMatrix4x4SIMDMatchesScalar(DenseA, ScaleTranslate, MultiplyFunc);
+}
+#endif
 
 // Constructors
 TEST(Common_BasicMath, VectorConstructors)
@@ -1293,6 +1417,20 @@ TEST(Common_BasicMath, MatrixMultiply)
         EXPECT_EQ(m, m1 * m2);
     }
 }
+
+#if DILIGENT_SSE_SUPPORTED
+TEST(Common_BasicMath, MultiplyMatrix4x4SSEMatchesScalar)
+{
+    TestMultiplyMatrix4x4SIMDMatchesScalar(MultiplyMatrix4x4SSEData);
+}
+#endif
+
+#if DILIGENT_NEON_SUPPORTED
+TEST(Common_BasicMath, MultiplyMatrix4x4NEONMatchesScalar)
+{
+    TestMultiplyMatrix4x4SIMDMatchesScalar(MultiplyMatrix4x4NEONData);
+}
+#endif
 
 TEST(Common_BasicMath, VectorRecast)
 {
@@ -3020,6 +3158,7 @@ TEST(Common_AdvancedMath, GetPointToBoxDistance)
                 float dz = z < Box.Min.z ?
                     Box.Min.z - z :
                     (z > Box.Max.z ? z - Box.Max.z : 0);
+
                 float DistSqr = dx * dx + dy * dy + dz * dz;
                 EXPECT_EQ(GetPointToBoxDistanceSqr(Box, float3{x, y, z}), DistSqr);
             }

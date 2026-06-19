@@ -52,6 +52,8 @@
 #include <algorithm>
 #include <iostream>
 
+#include "BasicMathNEON.hpp"
+#include "BasicMathSSE.hpp"
 #include "HashUtils.hpp"
 
 #ifdef _MSC_VER
@@ -71,6 +73,54 @@ template <class T> struct Matrix3x3;
 template <class T> struct Matrix4x4;
 template <class T> struct Quaternion;
 template <class T> struct Vector4;
+
+namespace BasicMathDetail
+{
+
+template <typename T>
+inline void MultiplyMatrix4x4Scalar(const T* const A, const T* const B, T* const Result)
+{
+    // clang-format off
+    Result[0]  = A[0]  * B[0] + A[1]  * B[4] + A[2]  * B[8]  + A[3]  * B[12];
+    Result[1]  = A[0]  * B[1] + A[1]  * B[5] + A[2]  * B[9]  + A[3]  * B[13];
+    Result[2]  = A[0]  * B[2] + A[1]  * B[6] + A[2]  * B[10] + A[3]  * B[14];
+    Result[3]  = A[0]  * B[3] + A[1]  * B[7] + A[2]  * B[11] + A[3]  * B[15];
+
+    Result[4]  = A[4]  * B[0] + A[5]  * B[4] + A[6]  * B[8]  + A[7]  * B[12];
+    Result[5]  = A[4]  * B[1] + A[5]  * B[5] + A[6]  * B[9]  + A[7]  * B[13];
+    Result[6]  = A[4]  * B[2] + A[5]  * B[6] + A[6]  * B[10] + A[7]  * B[14];
+    Result[7]  = A[4]  * B[3] + A[5]  * B[7] + A[6]  * B[11] + A[7]  * B[15];
+
+    Result[8]  = A[8]  * B[0] + A[9]  * B[4] + A[10] * B[8]  + A[11] * B[12];
+    Result[9]  = A[8]  * B[1] + A[9]  * B[5] + A[10] * B[9]  + A[11] * B[13];
+    Result[10] = A[8]  * B[2] + A[9]  * B[6] + A[10] * B[10] + A[11] * B[14];
+    Result[11] = A[8]  * B[3] + A[9]  * B[7] + A[10] * B[11] + A[11] * B[15];
+
+    Result[12] = A[12] * B[0] + A[13] * B[4] + A[14] * B[8]  + A[15] * B[12];
+    Result[13] = A[12] * B[1] + A[13] * B[5] + A[14] * B[9]  + A[15] * B[13];
+    Result[14] = A[12] * B[2] + A[13] * B[6] + A[14] * B[10] + A[15] * B[14];
+    Result[15] = A[12] * B[3] + A[13] * B[7] + A[14] * B[11] + A[15] * B[15];
+    // clang-format on
+}
+
+} // namespace BasicMathDetail
+
+template <typename T>
+inline void MultiplyMatrix4x4(const T* const A, const T* const B, T* const Result)
+{
+    BasicMathDetail::MultiplyMatrix4x4Scalar(A, B, Result);
+}
+
+inline void MultiplyMatrix4x4(const float* const A, const float* const B, float* const Result)
+{
+#if DILIGENT_SSE_SUPPORTED
+    BasicMathDetail::MultiplyMatrix4x4SSE(A, B, Result);
+#elif DILIGENT_NEON_SUPPORTED
+    BasicMathDetail::MultiplyMatrix4x4NEON(A, B, Result);
+#else
+    BasicMathDetail::MultiplyMatrix4x4Scalar(A, B, Result);
+#endif
+}
 
 template <class T> struct Vector2
 {
@@ -911,18 +961,11 @@ template <class T> struct Matrix2x2
 
     constexpr static Matrix2x2 Mul(const Matrix2x2& m1, const Matrix2x2& m2)
     {
-        Matrix2x2 mOut;
-        for (int i = 0; i < 2; i++)
-        {
-            for (int j = 0; j < 2; j++)
-            {
-                for (int k = 0; k < 2; k++)
-                {
-                    mOut.m[i][j] += m1.m[i][k] * m2.m[k][j];
-                }
-            }
-        }
-        return mOut;
+        // clang-format off
+        return Matrix2x2{
+            m1._11 * m2._11 + m1._12 * m2._21, m1._11 * m2._12 + m1._12 * m2._22,
+            m1._21 * m2._11 + m1._22 * m2._21, m1._21 * m2._12 + m1._22 * m2._22};
+        // clang-format on
     }
 
     constexpr static Matrix2x2 Rotation(T angleInRadians)
@@ -1251,19 +1294,20 @@ template <class T> struct Matrix3x3
 
     constexpr static Matrix3x3 Mul(const Matrix3x3& m1, const Matrix3x3& m2)
     {
-        Matrix3x3 mOut;
-        for (int i = 0; i < 3; i++)
-        {
-            for (int j = 0; j < 3; j++)
-            {
-                for (int k = 0; k < 3; k++)
-                {
-                    mOut.m[i][j] += m1.m[i][k] * m2.m[k][j];
-                }
-            }
-        }
+        // clang-format off
+        return Matrix3x3{
+            m1._11 * m2._11 + m1._12 * m2._21 + m1._13 * m2._31,
+            m1._11 * m2._12 + m1._12 * m2._22 + m1._13 * m2._32,
+            m1._11 * m2._13 + m1._12 * m2._23 + m1._13 * m2._33,
 
-        return mOut;
+            m1._21 * m2._11 + m1._22 * m2._21 + m1._23 * m2._31,
+            m1._21 * m2._12 + m1._22 * m2._22 + m1._23 * m2._32,
+            m1._21 * m2._13 + m1._22 * m2._23 + m1._23 * m2._33,
+
+            m1._31 * m2._11 + m1._32 * m2._21 + m1._33 * m2._31,
+            m1._31 * m2._12 + m1._32 * m2._22 + m1._33 * m2._32,
+            m1._31 * m2._13 + m1._32 * m2._23 + m1._33 * m2._33};
+        // clang-format on
     }
 
     constexpr T Determinant() const
@@ -1830,16 +1874,7 @@ template <class T> struct Matrix4x4
     static Matrix4x4 Mul(const Matrix4x4& m1, const Matrix4x4& m2)
     {
         Matrix4x4 mOut;
-        for (int i = 0; i < 4; i++)
-        {
-            for (int j = 0; j < 4; j++)
-            {
-                for (int k = 0; k < 4; k++)
-                {
-                    mOut.m[i][j] += m1.m[i][k] * m2.m[k][j];
-                }
-            }
-        }
+        MultiplyMatrix4x4(m1.Data(), m2.Data(), mOut.Data());
         return mOut;
     }
 

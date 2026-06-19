@@ -881,6 +881,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         ENABLE_VKFEATURE(vertexPipelineStoresAndAtomics,    EnabledFeatures.VertexPipelineUAVWritesAndAtomics);
         ENABLE_VKFEATURE(fragmentStoresAndAtomics,          EnabledFeatures.PixelUAVWritesAndAtomics);
         ENABLE_VKFEATURE(shaderStorageImageExtendedFormats, EnabledFeatures.TextureUAVExtendedFormats);
+        ENABLE_VKFEATURE(shaderFloat64,                     EnabledFeatures.ShaderFloat64);
         // clang-format on
 #undef ENABLE_VKFEATURE
 
@@ -1248,6 +1249,17 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
                 NextExt  = &EnabledExtFeats.ShaderDrawParameters.pNext;
             }
 
+            if (EnabledFeatures.ShaderBarycentrics != DEVICE_FEATURE_STATE_DISABLED)
+            {
+                VERIFY_EXPR(PhysicalDevice->IsExtensionSupported(VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME));
+                DeviceExtensions.push_back(VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME);
+
+                EnabledExtFeats.FragmentShaderBarycentric = DeviceExtFeatures.FragmentShaderBarycentric;
+
+                *NextExt = &EnabledExtFeats.FragmentShaderBarycentric;
+                NextExt  = &EnabledExtFeats.FragmentShaderBarycentric.pNext;
+            }
+
             if (EnabledFeaturesVk.DynamicRendering)
             {
                 VERIFY_EXPR(PhysicalDevice->IsExtensionSupported(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME));
@@ -1308,7 +1320,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
             }
         }
 
-        ASSERT_SIZEOF(DeviceFeatures, 48, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
+        ASSERT_SIZEOF(DeviceFeatures, 50, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
 
         for (Uint32 i = 0; i < EngineCI.DeviceExtensionCount; ++i)
         {

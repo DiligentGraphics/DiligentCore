@@ -343,6 +343,14 @@ PhysicalDevice::PhysicalDevice(const CreateInfo& CI) :
             m_ExtFeatures.DynamicRendering.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
         }
 
+        if (IsExtensionSupported(VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME))
+        {
+            *NextFeat = &m_ExtFeatures.FragmentShaderBarycentric;
+            NextFeat  = &m_ExtFeatures.FragmentShaderBarycentric.pNext;
+
+            m_ExtFeatures.FragmentShaderBarycentric.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_FEATURES_KHR;
+        }
+
         const bool HostImageCopySupported = IsExtensionSupported(VK_EXT_HOST_IMAGE_COPY_EXTENSION_NAME);
         if (HostImageCopySupported)
         {

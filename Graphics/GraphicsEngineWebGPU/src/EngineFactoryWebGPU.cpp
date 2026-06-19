@@ -404,13 +404,15 @@ DeviceFeatures GetSupportedFeatures(WGPUAdapter wgpuAdapter, WGPUDevice wgpuDevi
     Features.AsyncShaderCompilation            = DEVICE_FEATURE_STATE_ENABLED;
     Features.FormattedBuffers                  = DEVICE_FEATURE_STATE_DISABLED;
     Features.SpecializationConstants           = DEVICE_FEATURE_STATE_ENABLED;
+    Features.ShaderFloat64                     = DEVICE_FEATURE_STATE_DISABLED;
+    Features.ShaderBarycentrics                = DEVICE_FEATURE_STATE_DISABLED;
 
     Features.TimestampQueries = CheckFeature(WGPUFeatureName_TimestampQuery);
     Features.DurationQueries  = Features.TimestampQueries ?
         CheckFeature(WGPUFeatureName_ChromiumExperimentalTimestampQueryInsidePasses) :
         DEVICE_FEATURE_STATE_DISABLED;
 
-    ASSERT_SIZEOF(DeviceFeatures, 48, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
+    ASSERT_SIZEOF(DeviceFeatures, 50, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
 
     return Features;
 }
