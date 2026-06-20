@@ -505,6 +505,8 @@ static std::string UnrollShaderIncludesImpl(ShaderCreateInfo ShaderCI, std::unor
 {
     const ShaderSourceFileData SourceData = ReadShaderSourceFile(ShaderCI);
 
+    const ShaderCreateInfo IncludeContextCI{ShaderCI};
+
     ShaderCI.Source       = SourceData.Source;
     ShaderCI.SourceLength = SourceData.SourceLength;
     ShaderCI.FilePath     = nullptr;
@@ -517,20 +519,21 @@ static std::string UnrollShaderIncludesImpl(ShaderCreateInfo ShaderCI, std::unor
             // Insert text before the include start
             Stream.write(ShaderCI.Source + PrevIncludeEnd, IncludeStart - PrevIncludeEnd);
 
-            if (AllIncludes.insert(Path).second)
+            const std::string ResolvedPath = ResolveIncludePathForPreprocess(IncludeContextCI, Path);
+            if (AllIncludes.insert(ResolvedPath).second)
             {
                 // Process the #include directive
                 ShaderCreateInfo IncludeCI{ShaderCI};
                 IncludeCI.Source            = nullptr;
                 IncludeCI.SourceLength      = 0;
-                IncludeCI.FilePath          = Path.c_str();
+                IncludeCI.FilePath          = ResolvedPath.c_str();
                 std::string UnrolledInclude = UnrollShaderIncludesImpl(IncludeCI, AllIncludes);
                 Stream << UnrolledInclude;
             }
 
             PrevIncludeEnd = IncludeEnd;
         },
-        std::bind(ProcessIncludeErrorHandler, ShaderCI, std::placeholders::_1));
+        std::bind(ProcessIncludeErrorHandler, IncludeContextCI, std::placeholders::_1));
 
     // Insert text after the last include
     Stream.write(ShaderCI.Source + PrevIncludeEnd, ShaderCI.SourceLength - PrevIncludeEnd);

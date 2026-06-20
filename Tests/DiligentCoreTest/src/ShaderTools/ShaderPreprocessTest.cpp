@@ -222,6 +222,27 @@ TEST(ShaderPreprocessTest, UnrollIncludes)
         auto UnrolledStr = UnrollShaderIncludes(ShaderCI);
         ASSERT_EQ(RefString, UnrolledStr);
     }
+
+    {
+        ShaderCreateInfo ShaderCI{};
+        ShaderCI.Desc.Name                  = "TestShader";
+        ShaderCI.FilePath                   = "IncludeNestedParentRelativeTest.hlsl";
+        ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+
+        constexpr char RefString[] =
+            "// Start IncludeNestedParentRelativeTest.hlsl\n"
+            "// Start Nested/Types.hlsl\n"
+            "// Start Nested/Config.hlsl\n"
+            "#define NESTED_CONFIG_VALUE 1\n"
+            "// End Nested/Config.hlsl\n"
+            "\n"
+            "// End Nested/Types.hlsl\n"
+            "\n"
+            "// End IncludeNestedParentRelativeTest.hlsl\n";
+
+        auto UnrolledStr = UnrollShaderIncludes(ShaderCI);
+        ASSERT_EQ(RefString, UnrolledStr);
+    }
 }
 
 TEST(ShaderPreprocessTest, ShaderSourceLanguageDefiniton)
