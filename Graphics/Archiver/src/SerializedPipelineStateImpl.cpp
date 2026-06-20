@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -83,7 +83,8 @@ void ValidatePipelineStateArchiveInfo(const PipelineStateCreateInfo&  PSOCreateI
 template <SerializerMode Mode>
 void SerializePSOCreateInfo(Serializer<Mode>&                                 Ser,
                             const GraphicsPipelineStateCreateInfo&            PSOCreateInfo,
-                            std::array<const char*, MAX_RESOURCE_SIGNATURES>& PRSNames)
+                            std::array<const char*, MAX_RESOURCE_SIGNATURES>& PRSNames,
+                            ARCHIVE_DEVICE_DATA_FLAGS)
 {
     const char* RPName = PSOCreateInfo.GraphicsPipeline.pRenderPass != nullptr ? PSOCreateInfo.GraphicsPipeline.pRenderPass->GetDesc().Name : "";
     PSOSerializer<Mode>::SerializeCreateInfo(Ser, PSOCreateInfo, PRSNames, nullptr, RPName);
@@ -92,7 +93,8 @@ void SerializePSOCreateInfo(Serializer<Mode>&                                 Se
 template <SerializerMode Mode>
 void SerializePSOCreateInfo(Serializer<Mode>&                                 Ser,
                             const ComputePipelineStateCreateInfo&             PSOCreateInfo,
-                            std::array<const char*, MAX_RESOURCE_SIGNATURES>& PRSNames)
+                            std::array<const char*, MAX_RESOURCE_SIGNATURES>& PRSNames,
+                            ARCHIVE_DEVICE_DATA_FLAGS)
 {
     PSOSerializer<Mode>::SerializeCreateInfo(Ser, PSOCreateInfo, PRSNames, nullptr);
 }
@@ -100,7 +102,8 @@ void SerializePSOCreateInfo(Serializer<Mode>&                                 Se
 template <SerializerMode Mode>
 void SerializePSOCreateInfo(Serializer<Mode>&                                 Ser,
                             const TilePipelineStateCreateInfo&                PSOCreateInfo,
-                            std::array<const char*, MAX_RESOURCE_SIGNATURES>& PRSNames)
+                            std::array<const char*, MAX_RESOURCE_SIGNATURES>& PRSNames,
+                            ARCHIVE_DEVICE_DATA_FLAGS)
 {
     PSOSerializer<Mode>::SerializeCreateInfo(Ser, PSOCreateInfo, PRSNames, nullptr);
 }
@@ -108,18 +111,25 @@ void SerializePSOCreateInfo(Serializer<Mode>&                                 Se
 template <SerializerMode Mode>
 void SerializePSOCreateInfo(Serializer<Mode>&                                 Ser,
                             const RayTracingPipelineStateCreateInfo&          PSOCreateInfo,
-                            std::array<const char*, MAX_RESOURCE_SIGNATURES>& PRSNames)
+                            std::array<const char*, MAX_RESOURCE_SIGNATURES>& PRSNames,
+                            ARCHIVE_DEVICE_DATA_FLAGS                         DeviceFlags)
 {
     using RayTracingShaderMapType = SerializedPipelineStateImpl::RayTracingShaderMapType;
     RayTracingShaderMapType ShaderMapVk;
     RayTracingShaderMapType ShaderMapD3D12;
 #if VULKAN_SUPPORTED
-    SerializedPipelineStateImpl::ExtractShadersVk(PSOCreateInfo, ShaderMapVk);
-    VERIFY_EXPR(!ShaderMapVk.empty());
+    if (DeviceFlags & ARCHIVE_DEVICE_DATA_FLAG_VULKAN)
+    {
+        SerializedPipelineStateImpl::ExtractShadersVk(PSOCreateInfo, ShaderMapVk);
+        VERIFY_EXPR(!ShaderMapVk.empty());
+    }
 #endif
 #if D3D12_SUPPORTED
-    SerializedPipelineStateImpl::ExtractShadersD3D12(PSOCreateInfo, ShaderMapD3D12);
-    VERIFY_EXPR(!ShaderMapD3D12.empty());
+    if (DeviceFlags & ARCHIVE_DEVICE_DATA_FLAG_D3D12)
+    {
+        SerializedPipelineStateImpl::ExtractShadersD3D12(PSOCreateInfo, ShaderMapD3D12);
+        VERIFY_EXPR(!ShaderMapD3D12.empty());
+    }
 #endif
 
     VERIFY(ShaderMapVk.empty() || ShaderMapD3D12.empty() || ShaderMapVk == ShaderMapD3D12,
@@ -282,7 +292,7 @@ void SerializedPipelineStateImpl::Initialize(const PSOCreateInfoType&        Cre
 
         auto SerializePsoCI = [&](auto& Ser) //
         {
-            SerializePSOCreateInfo(Ser, CreateInfo, PRSNames);
+            SerializePSOCreateInfo(Ser, CreateInfo, PRSNames, ArchiveInfo.DeviceFlags);
             constexpr auto SerMode = std::remove_reference<decltype(Ser)>::type::GetMode();
             PSOSerializer<SerMode>::SerializeAuxData(Ser, m_Data.Aux, nullptr);
         };
