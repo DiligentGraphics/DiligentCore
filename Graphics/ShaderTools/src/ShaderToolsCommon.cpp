@@ -424,6 +424,33 @@ static void ProcessIncludeErrorHandler(const ShaderCreateInfo& ShaderCI, const s
     throw std::pair<std::string, std::string>{std::move(FileInfo), Error};
 }
 
+static std::string ResolveIncludePathForPreprocess(const ShaderCreateInfo& ShaderCI, const std::string& IncludeName)
+{
+    if (ShaderCI.FilePath == nullptr || BasicFileSystem::IsPathAbsolute(IncludeName.c_str()))
+        return IncludeName;
+
+    String ParentDir;
+    BasicFileSystem::GetPathComponents(ShaderCI.FilePath, &ParentDir, nullptr);
+    if (ParentDir.empty())
+        return IncludeName;
+
+    const std::string RelativePath = BasicFileSystem::SimplifyPath(
+        (ParentDir + BasicFileSystem::SlashSymbol + IncludeName).c_str(),
+        BasicFileSystem::SlashSymbol);
+
+    if (ShaderCI.pShaderSourceStreamFactory != nullptr)
+    {
+        RefCntAutoPtr<IFileStream> pSourceStream;
+        ShaderCI.pShaderSourceStreamFactory->CreateInputStream2(RelativePath.c_str(), CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT, &pSourceStream);
+        if (pSourceStream)
+            return RelativePath;
+
+        return IncludeName;
+    }
+
+    return RelativePath;
+}
+
 template <typename IncludeHandlerType>
 void ProcessShaderIncludesImpl(const ShaderCreateInfo& ShaderCI, std::unordered_set<std::string>& Includes, IncludeHandlerType&& IncludeHandler) noexcept(false)
 {
@@ -436,13 +463,14 @@ void ProcessShaderIncludesImpl(const ShaderCreateInfo& ShaderCI, std::unordered_
 
     FindIncludes(
         FileInfo.Source, FileInfo.SourceLength,
-        [&](const std::string& FilePath, size_t Start, size_t End) //
+        [&](const std::string& IncludeName, size_t /*Start*/, size_t /*End*/) //
         {
-            if (!Includes.insert(FilePath).second)
+            const std::string ResolvedPath = ResolveIncludePathForPreprocess(ShaderCI, IncludeName);
+            if (!Includes.insert(ResolvedPath).second)
                 return;
 
             ShaderCreateInfo IncludeCI{ShaderCI};
-            IncludeCI.FilePath     = FilePath.c_str();
+            IncludeCI.FilePath     = ResolvedPath.c_str();
             IncludeCI.Source       = nullptr;
             IncludeCI.SourceLength = 0;
             ProcessShaderIncludesImpl(IncludeCI, Includes, IncludeHandler);
@@ -477,6 +505,8 @@ static std::string UnrollShaderIncludesImpl(ShaderCreateInfo ShaderCI, std::unor
 {
     const ShaderSourceFileData SourceData = ReadShaderSourceFile(ShaderCI);
 
+    const ShaderCreateInfo IncludeContextCI{ShaderCI};
+
     ShaderCI.Source       = SourceData.Source;
     ShaderCI.SourceLength = SourceData.SourceLength;
     ShaderCI.FilePath     = nullptr;
@@ -489,20 +519,21 @@ static std::string UnrollShaderIncludesImpl(ShaderCreateInfo ShaderCI, std::unor
             // Insert text before the include start
             Stream.write(ShaderCI.Source + PrevIncludeEnd, IncludeStart - PrevIncludeEnd);
 
-            if (AllIncludes.insert(Path).second)
+            const std::string ResolvedPath = ResolveIncludePathForPreprocess(IncludeContextCI, Path);
+            if (AllIncludes.insert(ResolvedPath).second)
             {
                 // Process the #include directive
                 ShaderCreateInfo IncludeCI{ShaderCI};
                 IncludeCI.Source            = nullptr;
                 IncludeCI.SourceLength      = 0;
-                IncludeCI.FilePath          = Path.c_str();
+                IncludeCI.FilePath          = ResolvedPath.c_str();
                 std::string UnrolledInclude = UnrollShaderIncludesImpl(IncludeCI, AllIncludes);
                 Stream << UnrolledInclude;
             }
 
             PrevIncludeEnd = IncludeEnd;
         },
-        std::bind(ProcessIncludeErrorHandler, ShaderCI, std::placeholders::_1));
+        std::bind(ProcessIncludeErrorHandler, IncludeContextCI, std::placeholders::_1));
 
     // Insert text after the last include
     Stream.write(ShaderCI.Source + PrevIncludeEnd, ShaderCI.SourceLength - PrevIncludeEnd);
