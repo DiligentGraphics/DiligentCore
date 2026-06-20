@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@
 #include <deque>
 
 #include "ShaderToolsCommon.hpp"
+#include "BasicFileSystem.hpp"
 #include "DefaultShaderSourceStreamFactory.h"
 #include "RenderDevice.h"
 #include "TestingEnvironment.hpp"
@@ -133,6 +134,35 @@ TEST(ShaderPreprocessTest, Include)
 
         EXPECT_EQ(Result, true);
     }
+}
+
+TEST(ShaderPreprocessTest, IncludeNestedParentRelative)
+{
+    RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
+    CreateDefaultShaderSourceStreamFactory("shaders/ShaderPreprocessor", &pShaderSourceFactory);
+    ASSERT_NE(pShaderSourceFactory, nullptr);
+
+    const auto NestedTypesPath  = std::string{"Nested/Types.hlsl"};
+    const auto NestedConfigPath = std::string{"Nested"} + BasicFileSystem::SlashSymbol + "Config.hlsl";
+
+    std::deque<std::string> Includes{
+        NestedConfigPath,
+        NestedTypesPath,
+        "IncludeNestedParentRelativeTest.hlsl"};
+
+    ShaderCreateInfo ShaderCI{};
+    ShaderCI.Desc.Name                  = "TestShader";
+    ShaderCI.FilePath                   = "IncludeNestedParentRelativeTest.hlsl";
+    ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+
+    const auto Result = ProcessShaderIncludes(ShaderCI, [&](const ShaderIncludePreprocessInfo& ProcessInfo) {
+        ASSERT_FALSE(Includes.empty());
+        EXPECT_EQ(ProcessInfo.FilePath, Includes.front());
+        Includes.pop_front();
+    });
+
+    EXPECT_EQ(Result, true);
+    EXPECT_TRUE(Includes.empty());
 }
 
 TEST(ShaderPreprocessTest, InvalidInclude)
