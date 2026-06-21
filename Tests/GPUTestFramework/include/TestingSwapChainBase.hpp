@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,6 +26,7 @@
  */
 #pragma once
 
+#include <cstring>
 #include <vector>
 #include <unordered_map>
 
@@ -36,6 +37,7 @@
 #include "SwapChain.h"
 #include "Texture.h"
 #include "TextureView.h"
+#include "GraphicsAccessories.hpp"
 #include "GPUTestingEnvironment.hpp"
 
 namespace Diligent
@@ -69,6 +71,10 @@ class ITestingSwapChain : public IObject
 {
 public:
     virtual void TakeSnapshot(ITexture* pCopyFrom = nullptr) = 0;
+
+    /// Sets the reference image used by Present()/CompareWithSnapshot().
+    /// Data must contain rows matching the swap-chain dimensions and color format.
+    virtual void SetReferenceData(const void* pData, size_t Stride = 0) = 0;
 
     virtual ITextureView* GetCurrentBackBufferUAV() = 0;
 
@@ -176,6 +182,39 @@ public:
     virtual void DILIGENT_CALL_TYPE Present(Uint32 SyncInterval = 1) override
     {
         CompareWithSnapshot(nullptr);
+    }
+
+    virtual void SetReferenceData(const void* pData, size_t Stride = 0) override final
+    {
+        VERIFY_EXPR(pData != nullptr);
+
+        TextureDesc ReferenceDesc;
+        ReferenceDesc.Type   = RESOURCE_DIM_TEX_2D;
+        ReferenceDesc.Width  = m_SwapChainDesc.Width;
+        ReferenceDesc.Height = m_SwapChainDesc.Height;
+        ReferenceDesc.Format = m_SwapChainDesc.ColorBufferFormat;
+
+        const MipLevelProperties MipProps = GetMipLevelProperties(ReferenceDesc, 0);
+        VERIFY_EXPR(MipProps.RowSize != 0);
+        VERIFY_EXPR(MipProps.DepthSliceSize != 0);
+
+        const size_t RowSize        = static_cast<size_t>(MipProps.RowSize);
+        const size_t DepthSliceSize = static_cast<size_t>(MipProps.DepthSliceSize);
+        if (Stride == 0)
+            Stride = RowSize;
+        VERIFY_EXPR(Stride >= RowSize);
+
+        m_ReferenceDataPitch = static_cast<Uint32>(RowSize);
+        m_ReferenceData.resize(DepthSliceSize);
+
+        const Uint8* const pSrcData = static_cast<const Uint8*>(pData);
+        const size_t       RowCount = DepthSliceSize / RowSize;
+        for (size_t row = 0; row < RowCount; ++row)
+        {
+            std::memcpy(m_ReferenceData.data() + row * m_ReferenceDataPitch,
+                        pSrcData + row * Stride,
+                        RowSize);
+        }
     }
 
     virtual void DILIGENT_CALL_TYPE Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFORM NewPreTransform) override final
