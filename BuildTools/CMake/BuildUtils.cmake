@@ -535,16 +535,20 @@ endfunction()
 
 # The GIT_SHALLOW option in FetchContent is buggy and does not actually perform
 # a shallow clone. This macro fixes that. Also, we do not want to clone all
-# submodules to reduce download time, therefore we add an option GIT_SUBMODULES
-# to specify which submodules should be cloned (if any).
-macro(FetchContent_DeclareShallowGit Name GIT_REPOSITORY GitRepository GIT_TAG GitTag GIT_SUBMODULES GitSubmodules)
+# submodules to reduce download time, therefore an optional GIT_SUBMODULES
+# argument specifies which submodules should be cloned (if omitted, all of them).
+macro(FetchContent_DeclareShallowGit Name)
+    set(oneValueArgs   GIT_REPOSITORY GIT_TAG)
+    set(multiValueArgs GIT_SUBMODULES)
+    cmake_parse_arguments(ARG "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
     include(FetchContent)
 
     # This is what it'd look like if GIT_SHALLOW was indeed working:
-    #GIT_REPOSITORY "${GitRepository}"
-    #GIT_TAG        "${GitTag}"
+    #GIT_REPOSITORY "${ARG_GIT_REPOSITORY}"
+    #GIT_TAG        "${ARG_GIT_TAG}"
     #GIT_SHALLOW     ON
-    #GIT_SUBMODULES "${GitSubmodules}"
+    #GIT_SUBMODULES "${ARG_GIT_SUBMODULES}"
 
     # Manual download mode instead:
     FetchContent_Declare(
@@ -552,10 +556,10 @@ macro(FetchContent_DeclareShallowGit Name GIT_REPOSITORY GitRepository GIT_TAG G
         DOWNLOAD_COMMAND
             cd "${FETCHCONTENT_BASE_DIR}/${Name}-src" &&
             git init &&
-            git remote add origin "${GitRepository}" &&
-            git fetch --depth=1 origin "${GitTag}" &&
+            git remote add origin "${ARG_GIT_REPOSITORY}" &&
+            git fetch --depth=1 origin "${ARG_GIT_TAG}" &&
             git checkout FETCH_HEAD &&
-            git submodule update --init --recursive --depth=1 ${GitSubmodules}
+            git submodule update --init --recursive --depth=1 ${ARG_GIT_SUBMODULES}
     )
 endmacro()
 
