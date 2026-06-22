@@ -67,6 +67,8 @@ public:
 
     virtual void DILIGENT_CALL_TYPE GetStats(GPUUploadManagerStats& Stats) override final;
 
+    virtual void DILIGENT_CALL_TYPE Shutdown() override final;
+
 private:
     class UploadStream;
 
@@ -290,6 +292,8 @@ public:
     };
 
 private:
+    void SignalShutdown();
+
     void ReclaimCompletedPages(IDeviceContext* pContext);
     void ProcessPendingPages(IDeviceContext* pContext);
 

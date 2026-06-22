@@ -693,7 +693,7 @@ TEST(GPUUploadManagerTest, DestroyWhileBufferUpdatesAreRunning)
 
         // Wait for some time to ensure that ScheduleTextureUpdate starts.
         std::this_thread::sleep_for(10ms);
-        EXPECT_EQ(NumUpdatesRunning.load(), kNumThreads) << "All threads sh0ould be running updates because RenderThreadUpdate() was not called";
+        EXPECT_EQ(NumUpdatesRunning.load(), kNumThreads) << "All threads should be running updates because RenderThreadUpdate() was not called";
 
         if (i == kNumIterations - 1)
         {
@@ -712,6 +712,64 @@ TEST(GPUUploadManagerTest, DestroyWhileBufferUpdatesAreRunning)
         pContext->FinishFrame();
         pDevice->ReleaseStaleResources();
     }
+}
+
+
+TEST(GPUUploadManagerTest, ShutdownReleasesBlockedBufferUpdates)
+{
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    RefCntAutoPtr<IGPUUploadManager> pUploadManager;
+    // Use small page size to make the upload attempts request a page rotation
+    // and block until RenderThreadUpdate() or Shutdown().
+    GPUUploadManagerCreateInfo CreateInfo{pDevice, pContext, 1024, 2048};
+    CreateGPUUploadManager(CreateInfo, &pUploadManager);
+    ASSERT_TRUE(pUploadManager != nullptr);
+
+    constexpr size_t         kNumThreads = 4;
+    std::vector<std::thread> Threads;
+    std::atomic<Uint32>      NumUpdatesRunning{0};
+    Threading::Signal        AllThreadsRunningSignal;
+    for (size_t t = 0; t < kNumThreads; ++t)
+    {
+        RefCntAutoPtr<IGPUUploadManager> pThreadUploadManager = pUploadManager;
+        Threads.emplace_back(
+            [pThreadUploadManager, &NumUpdatesRunning, &AllThreadsRunningSignal]() {
+                if (NumUpdatesRunning.fetch_add(1) == kNumThreads - 1)
+                {
+                    AllThreadsRunningSignal.Trigger();
+                }
+
+                pThreadUploadManager->ScheduleBufferUpdate({nullptr, 0, 4096, nullptr});
+                NumUpdatesRunning.fetch_sub(1);
+            });
+    }
+
+    AllThreadsRunningSignal.Wait();
+
+    // Wait for some time to ensure that ScheduleBufferUpdate() starts. The
+    // worker threads keep strong references to the manager, so destruction
+    // cannot be used to release them.
+    std::this_thread::sleep_for(10ms);
+    EXPECT_EQ(NumUpdatesRunning.load(), kNumThreads) << "All threads should be running updates because RenderThreadUpdate() was not called";
+
+    pUploadManager->Shutdown();
+
+    for (std::thread& thread : Threads)
+    {
+        thread.join();
+    }
+    EXPECT_EQ(NumUpdatesRunning.load(), 0u);
+
+    pUploadManager.Release();
+
+    pContext->Flush();
+    pContext->FinishFrame();
+    pDevice->ReleaseStaleResources();
 }
 
 

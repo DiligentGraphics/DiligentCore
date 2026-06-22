@@ -578,6 +578,16 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     /// and must not be used after that.
     VIRTUAL void METHOD(GetStats)(THIS_
                                   GPUUploadManagerStats REF Stats) PURE;
+
+    /// Permanently shuts down the upload manager.
+    ///
+    /// The method wakes any threads blocked in ScheduleBufferUpdate() or ScheduleTextureUpdate().
+    /// After this call, the manager must not be used for new upload scheduling, render-thread
+    /// updates, or statistics queries; only releasing outstanding references is allowed.
+    ///
+    /// The method is thread-safe and may be called while worker threads are inside
+    /// ScheduleBufferUpdate() or ScheduleTextureUpdate().
+    VIRTUAL void METHOD(Shutdown)(THIS) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -588,6 +598,7 @@ DILIGENT_END_INTERFACE
 // clang-format off
 
 #    define IGPUUploadManager_RenderThreadUpdate(This, ...)    CALL_IFACE_METHOD(GPUUploadManager, RenderThreadUpdate, This, __VA_ARGS__)
+#    define IGPUUploadManager_Shutdown(This)                   CALL_IFACE_METHOD(GPUUploadManager, Shutdown,           This)
 #    define IGPUUploadManager_ScheduleBufferUpdate(This, ...)  CALL_IFACE_METHOD(GPUUploadManager, ScheduleBufferUpdate, This, __VA_ARGS__)
 #    define IGPUUploadManager_ScheduleTextureUpdate(This, ...) CALL_IFACE_METHOD(GPUUploadManager, ScheduleTextureUpdate, This, __VA_ARGS__)
 #    define IGPUUploadManager_GetStats(This, ...)              CALL_IFACE_METHOD(GPUUploadManager, GetStats, This, __VA_ARGS__)

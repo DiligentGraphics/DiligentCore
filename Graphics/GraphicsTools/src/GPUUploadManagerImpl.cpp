@@ -905,9 +905,10 @@ void GPUUploadManagerImpl::UploadStream::SignalStop()
     m_PageRotatedSignal.RequestStop();
 }
 
-GPUUploadManagerImpl::~GPUUploadManagerImpl()
+void GPUUploadManagerImpl::SignalShutdown()
 {
-    m_Stopping.store(true, std::memory_order_release);
+    if (m_Stopping.exchange(true, std::memory_order_acq_rel))
+        return;
 
     if (m_pTextureStreams)
     {
@@ -920,6 +921,16 @@ GPUUploadManagerImpl::~GPUUploadManagerImpl()
     {
         Stream->SignalStop();
     }
+}
+
+void GPUUploadManagerImpl::Shutdown()
+{
+    SignalShutdown();
+}
+
+GPUUploadManagerImpl::~GPUUploadManagerImpl()
+{
+    SignalShutdown();
 
     // Wait for any running updates to finish.
     if (m_NumRunningUpdates.load(std::memory_order_acquire) > 0)
@@ -936,6 +947,11 @@ GPUUploadManagerImpl::~GPUUploadManagerImpl()
 void GPUUploadManagerImpl::RenderThreadUpdate(IDeviceContext* pContext)
 {
     DEV_CHECK_ERR(pContext != nullptr, "A valid context must be provided to RenderThreadUpdate");
+    if (m_Stopping.load(std::memory_order_acquire))
+    {
+        DEV_ERROR("GPU upload manager has been shut down");
+        return;
+    }
 
     if (!m_pContext)
     {
@@ -1100,6 +1116,12 @@ void GPUUploadManagerImpl::UploadStream::ScheduleUpdate(IDeviceContext* pContext
 
 void GPUUploadManagerImpl::ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& UpdateInfo)
 {
+    if (m_Stopping.load(std::memory_order_acquire))
+    {
+        DEV_ERROR("GPU upload manager has been shut down");
+        return;
+    }
+
     UploadStream& Stream = GetStreamForUpdateSize(UpdateInfo.NumBytes);
     Stream.ScheduleUpdate(UpdateInfo.pContext, UpdateInfo.NumBytes, &UpdateInfo,
                           [](Page::Writer& Writer, const void* pUpdateData) {
@@ -1110,6 +1132,12 @@ void GPUUploadManagerImpl::ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& 
 
 void GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo)
 {
+    if (m_Stopping.load(std::memory_order_acquire))
+    {
+        DEV_ERROR("GPU upload manager has been shut down");
+        return;
+    }
+
     const TEXTURE_FORMAT Format = UpdateInfo.pDstTexture != nullptr ?
         UpdateInfo.pDstTexture->GetDesc().Format :
         UpdateInfo.Format;
@@ -1450,6 +1478,13 @@ void GPUUploadManagerImpl::UploadStream::GetStats(GPUUploadManagerStreamStats& S
 
 void GPUUploadManagerImpl::GetStats(GPUUploadManagerStats& Stats)
 {
+    if (m_Stopping.load(std::memory_order_acquire))
+    {
+        DEV_ERROR("GPU upload manager has been shut down");
+        Stats = GPUUploadManagerStats{};
+        return;
+    }
+
     m_StreamStats.resize(m_Streams.size());
     for (size_t i = 0; i < m_Streams.size(); ++i)
     {
