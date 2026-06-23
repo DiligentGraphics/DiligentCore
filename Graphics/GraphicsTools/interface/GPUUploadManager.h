@@ -619,8 +619,10 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
 
     /// Retrieves GPU upload manager statistics.
     ///
-    /// The method must not be called concurrently with RenderThreadUpdate() and GetStats() calls,
-    /// but can be called concurrently with ScheduleBufferUpdate() and ScheduleTextureUpdate() calls.
+    /// The method must not be called concurrently with RenderThreadUpdate(), GetStats(), or
+    /// ScheduleBufferUpdate()/ScheduleTextureUpdate() calls that provide a non-null device context.
+    /// It may be called concurrently with worker-thread ScheduleBufferUpdate()/ScheduleTextureUpdate()
+    /// calls that use a null device context.
     /// 
     /// Pointers returned in the Stats structure are valid only until the next call to GetStats()
     /// and must not be used after that.
