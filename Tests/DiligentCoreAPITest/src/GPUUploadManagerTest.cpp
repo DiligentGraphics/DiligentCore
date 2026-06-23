@@ -748,6 +748,7 @@ TEST(GPUUploadManagerTest, DestroyWhileBufferUpdatesAreRunning)
         std::vector<std::thread> Threads;
         std::atomic<Uint32>      NumUpdatesRunning{0};
         Threading::Signal        AllThreadsRunningSignal;
+        IGPUUploadManager&       UploadManager = *pUploadManager;
         for (size_t t = 0; t < kNumThreads; ++t)
         {
             Threads.emplace_back(
@@ -757,7 +758,7 @@ TEST(GPUUploadManagerTest, DestroyWhileBufferUpdatesAreRunning)
                         AllThreadsRunningSignal.Trigger();
                     }
                     // Set update size to be larger than page size to make the manager create new large page and block in ScheduleBufferUpdate
-                    EXPECT_FALSE(pUploadManager->ScheduleBufferUpdate({pBuffer, 0, UpdateSize, BufferData.data()}));
+                    EXPECT_FALSE(UploadManager.ScheduleBufferUpdate({pBuffer, 0, UpdateSize, BufferData.data()}));
                     NumUpdatesRunning.fetch_sub(1);
                 });
         }
@@ -773,6 +774,9 @@ TEST(GPUUploadManagerTest, DestroyWhileBufferUpdatesAreRunning)
             LogUploadManagerStats(pUploadManager);
         }
 
+        // Release the last manager reference while worker calls are blocked.
+        // This test intentionally uses a non-owning manager reference in the
+        // workers to verify that destruction wakes the blocked calls.
         pUploadManager.Release();
 
         for (std::thread& thread : Threads)
@@ -2376,6 +2380,7 @@ TEST(GPUUploadManagerTest, DestroyWhileTextureUpdatesAreRunning)
         std::atomic<Uint32>      NumUpdatesRunning{0};
         Threading::Signal        AllThreadsRunningSignal;
         std::vector<Uint32>      Data(256 * 256 * 4);
+        IGPUUploadManager&       UploadManager = *pUploadManager;
 
         for (size_t t = 0; t < kNumThreads; ++t)
         {
@@ -2394,7 +2399,7 @@ TEST(GPUUploadManagerTest, DestroyWhileTextureUpdatesAreRunning)
                     UpdateInfo.DstSlice    = 0;
                     // Set a large box to make the manager request a new large page for update and block in ScheduleTextureUpdate.
                     UpdateInfo.DstBox = {0, 256, 0, 256};
-                    EXPECT_FALSE(pUploadManager->ScheduleTextureUpdate(UpdateInfo));
+                    EXPECT_FALSE(UploadManager.ScheduleTextureUpdate(UpdateInfo));
 
                     NumUpdatesRunning.fetch_sub(1);
                 },
@@ -2412,6 +2417,9 @@ TEST(GPUUploadManagerTest, DestroyWhileTextureUpdatesAreRunning)
             LogUploadManagerStats(pUploadManager);
         }
 
+        // Release the last manager reference while worker calls are blocked.
+        // This test intentionally uses a non-owning manager reference in the
+        // workers to verify that destruction wakes the blocked calls.
         pUploadManager.Release();
 
         for (std::thread& thread : Threads)
