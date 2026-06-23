@@ -1408,9 +1408,11 @@ bool GPUUploadManagerImpl::UploadStream::ScheduleUpdate(IDeviceContext* pContext
 
 bool GPUUploadManagerImpl::ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& UpdateInfo)
 {
+    // Cancellation guard must be declared after ScheduleUpdateGuard, so abandoned-update
+    // callbacks run before the admission count is decremented. Stop() waits on this count
+    // and must not return while a cancellation callback is still using user data.
+    ScheduleUpdateGuard     ScheduleGuard{*this};
     BufferUpdateCancelGuard CancelGuard{UpdateInfo};
-
-    ScheduleUpdateGuard ScheduleGuard{*this};
     if (!ScheduleGuard)
     {
         // Worker-thread scheduling may race with Stop(). Quietly cancel the update
@@ -1444,10 +1446,10 @@ bool GPUUploadManagerImpl::ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& 
 
 bool GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo)
 {
-    const bool               UseD3D11TextureCallback = m_DeviceType == RENDER_DEVICE_TYPE_D3D11;
+    const bool UseD3D11TextureCallback = m_DeviceType == RENDER_DEVICE_TYPE_D3D11;
+    // See ScheduleBufferUpdate() for why the cancellation guard follows ScheduleUpdateGuard.
+    ScheduleUpdateGuard      ScheduleGuard{*this};
     TextureUpdateCancelGuard CancelGuard{UpdateInfo, UseD3D11TextureCallback};
-
-    ScheduleUpdateGuard ScheduleGuard{*this};
     if (!ScheduleGuard)
     {
         // Worker-thread scheduling may race with Stop(). Quietly cancel the update
