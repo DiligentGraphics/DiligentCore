@@ -125,6 +125,110 @@ private:
     const bool                       m_UseD3D11TextureCallback = false;
 };
 
+bool ValidateBufferUpdate(const ScheduleBufferUpdateInfo& UpdateInfo)
+{
+    if (UpdateInfo.NumBytes != 0 &&
+        UpdateInfo.pSrcData == nullptr &&
+        UpdateInfo.WriteDataCallback == nullptr)
+    {
+        LOG_ERROR_MESSAGE("ScheduleBufferUpdate() with non-zero NumBytes requires pSrcData or WriteDataCallback");
+        return false;
+    }
+
+    if (UpdateInfo.CopyBuffer == nullptr)
+    {
+        if (UpdateInfo.pDstBuffer == nullptr)
+        {
+            LOG_ERROR_MESSAGE("ScheduleBufferUpdate() requires pDstBuffer when CopyBuffer is not provided");
+            return false;
+        }
+
+        const Uint64 BufferSize = UpdateInfo.pDstBuffer->GetDesc().Size;
+        if (UpdateInfo.DstOffset > BufferSize ||
+            static_cast<Uint64>(UpdateInfo.NumBytes) > BufferSize - UpdateInfo.DstOffset)
+        {
+            LOG_ERROR_MESSAGE("ScheduleBufferUpdate() destination range is outside of the destination buffer");
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool ValidateTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo,
+                           TEXTURE_FORMAT                   Format,
+                           bool                             HasCopyCallback)
+{
+    if (!UpdateInfo.DstBox.IsValid())
+    {
+        LOG_ERROR_MESSAGE("ScheduleTextureUpdate() requires a valid destination box");
+        return false;
+    }
+
+    if (UpdateInfo.pSrcData == nullptr && UpdateInfo.WriteDataCallback == nullptr)
+    {
+        LOG_ERROR_MESSAGE("ScheduleTextureUpdate() requires pSrcData or WriteDataCallback");
+        return false;
+    }
+
+    if (!HasCopyCallback && UpdateInfo.pDstTexture == nullptr)
+    {
+        LOG_ERROR_MESSAGE("ScheduleTextureUpdate() requires pDstTexture when no copy callback is provided");
+        return false;
+    }
+
+    if (UpdateInfo.pDstTexture != nullptr)
+    {
+        const TextureDesc& TexDesc = UpdateInfo.pDstTexture->GetDesc();
+        if (UpdateInfo.DstMipLevel >= TexDesc.MipLevels)
+        {
+            LOG_ERROR_MESSAGE("ScheduleTextureUpdate() destination mip level is outside of the destination texture");
+            return false;
+        }
+
+        if (UpdateInfo.DstSlice >= TexDesc.GetArraySize())
+        {
+            LOG_ERROR_MESSAGE("ScheduleTextureUpdate() destination slice is outside of the destination texture");
+            return false;
+        }
+
+        const MipLevelProperties Mip = GetMipLevelProperties(TexDesc, UpdateInfo.DstMipLevel);
+        if (UpdateInfo.DstBox.MaxX > Mip.LogicalWidth ||
+            UpdateInfo.DstBox.MaxY > Mip.LogicalHeight ||
+            UpdateInfo.DstBox.MaxZ > Mip.Depth)
+        {
+            LOG_ERROR_MESSAGE("ScheduleTextureUpdate() destination box is outside of the destination texture subresource");
+            return false;
+        }
+    }
+
+    if (UpdateInfo.pSrcData != nullptr)
+    {
+        const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(Format);
+        const Uint64                RowSize =
+            static_cast<Uint64>(AlignUp(UpdateInfo.DstBox.Width(), FmtAttribs.BlockWidth) / FmtAttribs.BlockWidth) *
+            FmtAttribs.GetElementSize();
+        if (UpdateInfo.Stride < RowSize)
+        {
+            LOG_ERROR_MESSAGE("ScheduleTextureUpdate() source stride is too small");
+            return false;
+        }
+
+        const Uint32 NumRows = AlignUp(UpdateInfo.DstBox.Height(), FmtAttribs.BlockHeight) / FmtAttribs.BlockHeight;
+        if (UpdateInfo.DstBox.Depth() > 1)
+        {
+            const Uint64 MinDepthStride = UpdateInfo.Stride * (NumRows - 1) + RowSize;
+            if (UpdateInfo.DepthStride < MinDepthStride)
+            {
+                LOG_ERROR_MESSAGE("ScheduleTextureUpdate() source depth stride is too small");
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
 } // namespace
 
 GPUUploadManagerImpl::Page::Writer::Writer(Writer&& Other) noexcept :
@@ -1230,6 +1334,9 @@ void GPUUploadManagerImpl::ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& 
         return;
     }
 
+    if (!ValidateBufferUpdate(UpdateInfo))
+        return;
+
     if (UpdateInfo.CopyBuffer != nullptr && UpdateInfo.UploadEnqueued != nullptr)
     {
         LOG_WARNING_MESSAGE("ScheduleBufferUpdateInfo::UploadEnqueued is ignored when CopyBuffer is provided.");
@@ -1272,9 +1379,12 @@ void GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo
         UpdateInfo.Format;
     if (Format == TEX_FORMAT_UNKNOWN)
     {
-        DEV_ERROR("If pDstTexture is null, a valid format must be specified in ScheduleTextureUpdateInfo.Format");
+        LOG_ERROR_MESSAGE("ScheduleTextureUpdate() requires pDstTexture or a valid ScheduleTextureUpdateInfo::Format");
         return;
     }
+
+    if (!ValidateTextureUpdate(UpdateInfo, Format, HasCopyCallback))
+        return;
 
     struct ScheduleUpdateData
     {

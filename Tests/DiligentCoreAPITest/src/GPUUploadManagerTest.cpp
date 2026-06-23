@@ -54,6 +54,27 @@ void LogUploadManagerStats(IGPUUploadManager* pUploadManager)
     LOG_INFO_MESSAGE("GPU Upload Manager Stats:\n", GetGPUUploadManagerStatsString(Stats));
 }
 
+RefCntAutoPtr<IBuffer> CreateUploadTestBuffer(IRenderDevice* pDevice, Uint64 Size)
+{
+    BufferDesc Desc;
+    Desc.Name      = "GPUUploadManagerTest buffer";
+    Desc.Size      = Size;
+    Desc.Usage     = USAGE_DEFAULT;
+    Desc.BindFlags = BIND_VERTEX_BUFFER;
+
+    RefCntAutoPtr<IBuffer> pBuffer;
+    pDevice->CreateBuffer(Desc, nullptr, &pBuffer);
+    return pBuffer;
+}
+
+unsigned int GetWorkerThreadCount(unsigned int MinThreadCount)
+{
+    const unsigned int HardwareConcurrency = std::thread::hardware_concurrency();
+    return HardwareConcurrency > 1 ?
+        std::max(MinThreadCount, HardwareConcurrency - 1) :
+        MinThreadCount;
+}
+
 TEST(GPUUploadManagerTest, Creation)
 {
     GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
@@ -123,14 +144,7 @@ void TestWriterScheduleBufferUpdates(bool UseWriteCallback, bool UseCopyCallback
     static constexpr Uint32                   kNumUpdates = 10;
     constexpr std::array<Uint32, kNumUpdates> UpdateSizes = {256, 512, 256, 1024, 2048, 1024, 2048, 512, 256, 256};
 
-    BufferDesc Desc;
-    Desc.Name      = "GPUUploadManagerTest buffer";
-    Desc.Size      = BufferData.size();
-    Desc.Usage     = USAGE_DEFAULT;
-    Desc.BindFlags = BIND_VERTEX_BUFFER;
-
-    RefCntAutoPtr<IBuffer> pBuffer;
-    pDevice->CreateBuffer(Desc, nullptr, &pBuffer);
+    RefCntAutoPtr<IBuffer> pBuffer = CreateUploadTestBuffer(pDevice, BufferData.size());
     ASSERT_TRUE(pBuffer);
 
     Uint32 CurrOffset = 0;
@@ -274,13 +288,7 @@ TEST(GPUUploadManagerTest, Writer_ScheduleBufferUpdateParallel)
         BufferData[i] = static_cast<Uint8>(i % 256);
     }
 
-    BufferDesc Desc;
-    Desc.Name      = "GPUUploadManagerTest buffer";
-    Desc.Size      = BufferData.size();
-    Desc.Usage     = USAGE_DEFAULT;
-    Desc.BindFlags = BIND_VERTEX_BUFFER;
-    RefCntAutoPtr<IBuffer> pBuffer;
-    pDevice->CreateBuffer(Desc, nullptr, &pBuffer);
+    RefCntAutoPtr<IBuffer> pBuffer = CreateUploadTestBuffer(pDevice, BufferData.size());
     ASSERT_TRUE(pBuffer);
 
     GPUUploadManagerImpl::Page Page{nullptr, pDevice, kPageSize};
@@ -361,14 +369,7 @@ TEST(GPUUploadManagerTest, ScheduleBufferUpdates)
         BufferData[i] = static_cast<Uint8>(i % 256);
     }
 
-    BufferDesc Desc;
-    Desc.Name      = "GPUUploadManagerTest buffer";
-    Desc.Size      = BufferData.size();
-    Desc.Usage     = USAGE_DEFAULT;
-    Desc.BindFlags = BIND_VERTEX_BUFFER;
-
-    RefCntAutoPtr<IBuffer> pBuffer;
-    pDevice->CreateBuffer(Desc, nullptr, &pBuffer);
+    RefCntAutoPtr<IBuffer> pBuffer = CreateUploadTestBuffer(pDevice, BufferData.size());
     ASSERT_TRUE(pBuffer);
 
     pUploadManager->ScheduleBufferUpdate({pContext, pBuffer, 0, 0, nullptr});
@@ -409,14 +410,7 @@ TEST(GPUUploadManagerTest, ScheduleBufferUpdatesWithCopyBufferCallback)
         BufferData[i] = static_cast<Uint8>(i % 256);
     }
 
-    BufferDesc Desc;
-    Desc.Name      = "GPUUploadManagerTest buffer";
-    Desc.Size      = BufferData.size();
-    Desc.Usage     = USAGE_DEFAULT;
-    Desc.BindFlags = BIND_VERTEX_BUFFER;
-
-    RefCntAutoPtr<IBuffer> pBuffer;
-    pDevice->CreateBuffer(Desc, nullptr, &pBuffer);
+    RefCntAutoPtr<IBuffer> pBuffer = CreateUploadTestBuffer(pDevice, BufferData.size());
     ASSERT_TRUE(pBuffer);
 
     Uint32 CurrOffset = 0;
@@ -467,14 +461,7 @@ TEST(GPUUploadManagerTest, ScheduleBufferUpdatesWithWriteDataCallback)
         BufferData[i] = static_cast<Uint8>(i % 256);
     }
 
-    BufferDesc Desc;
-    Desc.Name      = "GPUUploadManagerTest buffer";
-    Desc.Size      = BufferData.size();
-    Desc.Usage     = USAGE_DEFAULT;
-    Desc.BindFlags = BIND_VERTEX_BUFFER;
-
-    RefCntAutoPtr<IBuffer> pBuffer;
-    pDevice->CreateBuffer(Desc, nullptr, &pBuffer);
+    RefCntAutoPtr<IBuffer> pBuffer = CreateUploadTestBuffer(pDevice, BufferData.size());
     ASSERT_TRUE(pBuffer);
 
     Uint32 CurrOffset = 0;
@@ -514,6 +501,14 @@ TEST(GPUUploadManagerTest, ReleaseBufferCallbackResources)
     CreateGPUUploadManager(CreateInfo, &pUploadManager);
     ASSERT_TRUE(pUploadManager != nullptr);
 
+    static constexpr Uint32 BufferSize      = 1024;
+    static constexpr Uint32 UploadDstOffset = 128;
+    static constexpr Uint32 UploadSize      = 256;
+
+    std::vector<Uint8>     BufferData(BufferSize);
+    RefCntAutoPtr<IBuffer> pBuffer = CreateUploadTestBuffer(pDevice, BufferData.size());
+    ASSERT_NE(pBuffer, nullptr);
+
     bool UploadEnqueuedCallbackCalled = false;
     bool CopyBufferCallbackCalled     = false;
 
@@ -522,8 +517,8 @@ TEST(GPUUploadManagerTest, ReleaseBufferCallbackResources)
                                         Uint32   DstOffset,
                                         Uint32   NumBytes) {
             EXPECT_EQ(pDstBuffer, nullptr);
-            EXPECT_EQ(DstOffset, 128u);
-            EXPECT_EQ(NumBytes, 256u);
+            EXPECT_EQ(DstOffset, UploadDstOffset);
+            EXPECT_EQ(NumBytes, UploadSize);
             UploadEnqueuedCallbackCalled = true;
         });
 
@@ -535,14 +530,14 @@ TEST(GPUUploadManagerTest, ReleaseBufferCallbackResources)
             EXPECT_EQ(pContext, nullptr);
             EXPECT_EQ(pSrcBuffer, nullptr);
             EXPECT_EQ(SrcOffset, ~0u);
-            EXPECT_EQ(NumBytes, 1024u);
+            EXPECT_EQ(NumBytes, BufferSize);
             CopyBufferCallbackCalled = true;
         });
 
     std::thread Worker{
         [&]() {
-            pUploadManager->ScheduleBufferUpdate({nullptr, 128, 256, nullptr, UploadEnqueuedCallback, UploadEnqueuedCallback});
-            pUploadManager->ScheduleBufferUpdate({1024, nullptr, CopyBufferCallback, CopyBufferCallback});
+            pUploadManager->ScheduleBufferUpdate({pBuffer, UploadDstOffset, UploadSize, BufferData.data(), UploadEnqueuedCallback, UploadEnqueuedCallback});
+            pUploadManager->ScheduleBufferUpdate({BufferSize, BufferData.data(), CopyBufferCallback, CopyBufferCallback});
         }};
 
     Worker.join();
@@ -570,14 +565,13 @@ TEST(GPUUploadManagerTest, ShutdownReleasesPendingBufferUpdates)
     CreateGPUUploadManager(CreateInfo, &pUploadManager);
     ASSERT_TRUE(pUploadManager != nullptr);
 
-    BufferDesc Desc;
-    Desc.Name      = "GPUUploadManagerTest buffer";
-    Desc.Size      = 1024;
-    Desc.Usage     = USAGE_DEFAULT;
-    Desc.BindFlags = BIND_VERTEX_BUFFER;
+    static constexpr Uint32 BufferSize      = 1024;
+    static constexpr Uint32 UploadDstOffset = 128;
+    static constexpr Uint32 UploadSize      = 256;
+    static constexpr Uint32 CopySize        = 512;
 
-    RefCntAutoPtr<IBuffer> pBuffer;
-    pDevice->CreateBuffer(Desc, nullptr, &pBuffer);
+    std::vector<Uint8>     BufferData(BufferSize);
+    RefCntAutoPtr<IBuffer> pBuffer = CreateUploadTestBuffer(pDevice, BufferData.size());
     ASSERT_NE(pBuffer, nullptr);
 
     Uint32 UploadEnqueuedCallbackCalled = 0;
@@ -586,8 +580,9 @@ TEST(GPUUploadManagerTest, ShutdownReleasesPendingBufferUpdates)
     ScheduleBufferUpdateInfo UploadUpdate;
     UploadUpdate.pContext   = pContext;
     UploadUpdate.pDstBuffer = pBuffer;
-    UploadUpdate.DstOffset  = 128;
-    UploadUpdate.NumBytes   = 256;
+    UploadUpdate.DstOffset  = UploadDstOffset;
+    UploadUpdate.NumBytes   = UploadSize;
+    UploadUpdate.pSrcData   = BufferData.data();
     UploadUpdate.UploadEnqueued =
         [](IBuffer* pDstBuffer,
            Uint32   DstOffset,
@@ -595,8 +590,8 @@ TEST(GPUUploadManagerTest, ShutdownReleasesPendingBufferUpdates)
            void*    pUserData) {
             Uint32& CallbackCount = *static_cast<Uint32*>(pUserData);
             EXPECT_EQ(pDstBuffer, nullptr);
-            EXPECT_EQ(DstOffset, 128u);
-            EXPECT_EQ(NumBytes, 256u);
+            EXPECT_EQ(DstOffset, UploadDstOffset);
+            EXPECT_EQ(NumBytes, UploadSize);
             ++CallbackCount;
         };
     UploadUpdate.pUploadEnqueuedData = &UploadEnqueuedCallbackCalled;
@@ -604,7 +599,8 @@ TEST(GPUUploadManagerTest, ShutdownReleasesPendingBufferUpdates)
 
     ScheduleBufferUpdateInfo CopyUpdate;
     CopyUpdate.pContext = pContext;
-    CopyUpdate.NumBytes = 512;
+    CopyUpdate.NumBytes = CopySize;
+    CopyUpdate.pSrcData = BufferData.data();
     CopyUpdate.CopyBuffer =
         [](IDeviceContext* pContext,
            IBuffer*        pSrcBuffer,
@@ -615,7 +611,7 @@ TEST(GPUUploadManagerTest, ShutdownReleasesPendingBufferUpdates)
             EXPECT_EQ(pContext, nullptr);
             EXPECT_EQ(pSrcBuffer, nullptr);
             EXPECT_EQ(SrcOffset, ~0u);
-            EXPECT_EQ(NumBytes, 512u);
+            EXPECT_EQ(NumBytes, CopySize);
             ++CallbackCount;
         };
     CopyUpdate.pCopyBufferData = &CopyBufferCallbackCalled;
@@ -654,18 +650,10 @@ TEST(GPUUploadManagerTest, ParallelBufferUpdates)
         BufferData[i] = static_cast<Uint8>(i % 256);
     }
 
-    BufferDesc Desc;
-    Desc.Name      = "GPUUploadManagerTest buffer";
-    Desc.Size      = BufferData.size();
-    Desc.Usage     = USAGE_DEFAULT;
-    Desc.BindFlags = BIND_VERTEX_BUFFER;
-
-    RefCntAutoPtr<IBuffer> pBuffer;
-
-    pDevice->CreateBuffer(Desc, nullptr, &pBuffer);
+    RefCntAutoPtr<IBuffer> pBuffer = CreateUploadTestBuffer(pDevice, BufferData.size());
     ASSERT_TRUE(pBuffer);
 
-    const size_t kNumThreads = std::max(2u, std::thread::hardware_concurrency() - 1);
+    const size_t kNumThreads = GetWorkerThreadCount(2u);
     LOG_INFO_MESSAGE("Number of threads: ", kNumThreads);
 
     std::atomic<Uint32> CurrOffset{0};
@@ -749,6 +737,13 @@ TEST(GPUUploadManagerTest, DestroyWhileBufferUpdatesAreRunning)
         CreateGPUUploadManager(CreateInfo, &pUploadManager);
         ASSERT_TRUE(pUploadManager != nullptr);
 
+        constexpr Uint32 UpdateSize = 4096;
+
+        std::vector<Uint8> BufferData(UpdateSize);
+
+        RefCntAutoPtr<IBuffer> pBuffer = CreateUploadTestBuffer(pDevice, BufferData.size());
+        ASSERT_NE(pBuffer, nullptr);
+
         const size_t             kNumThreads = 4;
         std::vector<std::thread> Threads;
         std::atomic<Uint32>      NumUpdatesRunning{0};
@@ -762,7 +757,7 @@ TEST(GPUUploadManagerTest, DestroyWhileBufferUpdatesAreRunning)
                         AllThreadsRunningSignal.Trigger();
                     }
                     // Set update size to be larger than page size to make the manager create new large page and block in ScheduleBufferUpdate
-                    pUploadManager->ScheduleBufferUpdate({nullptr, 0, 4096, nullptr});
+                    pUploadManager->ScheduleBufferUpdate({pBuffer, 0, UpdateSize, BufferData.data()});
                     NumUpdatesRunning.fetch_sub(1);
                 });
         }
@@ -808,6 +803,13 @@ TEST(GPUUploadManagerTest, ShutdownReleasesBlockedBufferUpdates)
     CreateGPUUploadManager(CreateInfo, &pUploadManager);
     ASSERT_TRUE(pUploadManager != nullptr);
 
+    static constexpr Uint32 UpdateSize = 4096;
+
+    std::vector<Uint8> BufferData(UpdateSize);
+
+    RefCntAutoPtr<IBuffer> pBuffer = CreateUploadTestBuffer(pDevice, BufferData.size());
+    ASSERT_NE(pBuffer, nullptr);
+
     constexpr size_t         kNumThreads = 4;
     constexpr size_t         kNumUpdates = kNumThreads * 2;
     std::vector<std::thread> Threads;
@@ -818,14 +820,15 @@ TEST(GPUUploadManagerTest, ShutdownReleasesBlockedBufferUpdates)
     for (size_t t = 0; t < kNumThreads; ++t)
     {
         Threads.emplace_back(
-            [pUploadManager, &NumUpdatesRunning, &NumCopyCallbacks, &AllThreadsRunningSignal]() {
+            [pUploadManager, &BufferData, &NumUpdatesRunning, &NumCopyCallbacks, &AllThreadsRunningSignal]() {
                 if (NumUpdatesRunning.fetch_add(1) == kNumUpdates - 1)
                 {
                     AllThreadsRunningSignal.Trigger();
                 }
 
                 ScheduleBufferUpdateInfo UpdateInfo;
-                UpdateInfo.NumBytes = 4096;
+                UpdateInfo.NumBytes = UpdateSize;
+                UpdateInfo.pSrcData = BufferData.data();
 
                 UpdateInfo.CopyBuffer =
                     [](IDeviceContext* pContext,
@@ -837,7 +840,7 @@ TEST(GPUUploadManagerTest, ShutdownReleasesBlockedBufferUpdates)
                         EXPECT_EQ(pContext, nullptr);
                         EXPECT_EQ(pSrcBuffer, nullptr);
                         EXPECT_EQ(SrcOffset, ~0u);
-                        EXPECT_EQ(NumBytes, 4096u);
+                        EXPECT_EQ(NumBytes, UpdateSize);
                         Count.fetch_add(1, std::memory_order_relaxed);
                     };
                 UpdateInfo.pCopyBufferData = &NumCopyCallbacks;
@@ -847,14 +850,16 @@ TEST(GPUUploadManagerTest, ShutdownReleasesBlockedBufferUpdates)
             });
 
         Threads.emplace_back(
-            [pUploadManager, &NumUpdatesRunning, &NumUploadEnqueuedCallbacks, &AllThreadsRunningSignal]() {
+            [pUploadManager, pBuffer, &BufferData, &NumUpdatesRunning, &NumUploadEnqueuedCallbacks, &AllThreadsRunningSignal]() {
                 if (NumUpdatesRunning.fetch_add(1) == kNumUpdates - 1)
                 {
                     AllThreadsRunningSignal.Trigger();
                 }
 
                 ScheduleBufferUpdateInfo UpdateInfo;
-                UpdateInfo.NumBytes = 4096;
+                UpdateInfo.pDstBuffer = pBuffer;
+                UpdateInfo.NumBytes   = UpdateSize;
+                UpdateInfo.pSrcData   = BufferData.data();
 
                 UpdateInfo.UploadEnqueued =
                     [](IBuffer* pDstBuffer,
@@ -864,7 +869,7 @@ TEST(GPUUploadManagerTest, ShutdownReleasesBlockedBufferUpdates)
                         auto& Count = *static_cast<std::atomic<Uint32>*>(pUserData);
                         EXPECT_EQ(pDstBuffer, nullptr);
                         EXPECT_EQ(DstOffset, 0u);
-                        EXPECT_EQ(NumBytes, 4096u);
+                        EXPECT_EQ(NumBytes, UpdateSize);
                         Count.fetch_add(1, std::memory_order_relaxed);
                     };
                 UpdateInfo.pUploadEnqueuedData = &NumUploadEnqueuedCallbacks;
@@ -1081,7 +1086,7 @@ TEST(GPUUploadManagerTest, CreateWithNullContext)
     CreateGPUUploadManager(CreateInfo, &pUploadManager);
     ASSERT_TRUE(pUploadManager != nullptr);
 
-    const size_t kNumThreads = std::max(2u, std::thread::hardware_concurrency() - 1);
+    const size_t kNumThreads = GetWorkerThreadCount(2u);
     LOG_INFO_MESSAGE("Number of threads: ", kNumThreads);
 
     constexpr size_t kNumUpdatesPerThread = 16;
@@ -1093,14 +1098,7 @@ TEST(GPUUploadManagerTest, CreateWithNullContext)
         BufferData[i] = static_cast<Uint8>(i % 256);
     }
 
-    BufferDesc Desc;
-    Desc.Name      = "GPUUploadManagerTest buffer";
-    Desc.Size      = BufferData.size();
-    Desc.Usage     = USAGE_DEFAULT;
-    Desc.BindFlags = BIND_VERTEX_BUFFER;
-
-    RefCntAutoPtr<IBuffer> pBuffer;
-    pDevice->CreateBuffer(Desc, nullptr, &pBuffer);
+    RefCntAutoPtr<IBuffer> pBuffer = CreateUploadTestBuffer(pDevice, BufferData.size());
     ASSERT_TRUE(pBuffer);
 
     std::vector<std::thread> Threads;
@@ -1170,7 +1168,7 @@ TEST(GPUUploadManagerTest, MaxPageCount)
     CreateGPUUploadManager(CreateInfo, &pUploadManager);
     ASSERT_TRUE(pUploadManager != nullptr);
 
-    const size_t kNumThreads = std::max(2u, std::thread::hardware_concurrency() - 1);
+    const size_t kNumThreads = GetWorkerThreadCount(2u);
     LOG_INFO_MESSAGE("Number of threads: ", kNumThreads);
 
     constexpr size_t kNumUpdatesPerThread = 32;
@@ -1182,14 +1180,7 @@ TEST(GPUUploadManagerTest, MaxPageCount)
         BufferData[i] = static_cast<Uint8>(i % 256);
     }
 
-    BufferDesc Desc;
-    Desc.Name      = "GPUUploadManagerTest buffer";
-    Desc.Size      = BufferData.size();
-    Desc.Usage     = USAGE_DEFAULT;
-    Desc.BindFlags = BIND_VERTEX_BUFFER;
-
-    RefCntAutoPtr<IBuffer> pBuffer;
-    pDevice->CreateBuffer(Desc, nullptr, &pBuffer);
+    RefCntAutoPtr<IBuffer> pBuffer = CreateUploadTestBuffer(pDevice, BufferData.size());
     ASSERT_TRUE(pBuffer);
 
     std::vector<std::thread> Threads;
@@ -1969,6 +1960,8 @@ TEST(GPUUploadManagerTest, ReleaseTextureCallbackResources)
     pDevice->CreateTexture(TexDesc, nullptr, &pTexture);
     ASSERT_NE(pTexture, nullptr);
 
+    std::vector<Uint8> TextureData(16 * 16 * 4);
+
     if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D11)
     {
         // Force creation of texture upload page, otherwise ScheduleTextureUpdate()
@@ -1979,6 +1972,8 @@ TEST(GPUUploadManagerTest, ReleaseTextureCallbackResources)
         UpdateInfo.DstMipLevel = 0;
         UpdateInfo.DstSlice    = 0;
         UpdateInfo.DstBox      = {0, 16, 0, 16};
+        UpdateInfo.pSrcData    = TextureData.data();
+        UpdateInfo.Stride      = 16 * 4;
         pUploadManager->ScheduleTextureUpdate(UpdateInfo);
     }
 
@@ -1992,6 +1987,8 @@ TEST(GPUUploadManagerTest, ReleaseTextureCallbackResources)
                 UpdateInfo.UploadEnqueued      = UploadEnqueuedCallback;
                 UpdateInfo.pUploadEnqueuedData = UploadEnqueuedCallback;
                 UpdateInfo.DstBox              = {0, 16, 0, 16};
+                UpdateInfo.pSrcData            = TextureData.data();
+                UpdateInfo.Stride              = 16 * 4;
                 pUploadManager->ScheduleTextureUpdate(UpdateInfo);
             }
 
@@ -2004,6 +2001,8 @@ TEST(GPUUploadManagerTest, ReleaseTextureCallbackResources)
                 UpdateInfo.CopyD3D11Texture = CopyD3D11TextureCallback;
                 UpdateInfo.pCopyTextureData = &CopyTextureCallbackCalled;
                 UpdateInfo.DstBox           = {0, 16, 0, 16};
+                UpdateInfo.pSrcData         = TextureData.data();
+                UpdateInfo.Stride           = 16 * 4;
                 pUploadManager->ScheduleTextureUpdate(UpdateInfo);
             }
         }};
@@ -2049,6 +2048,8 @@ TEST(GPUUploadManagerTest, ShutdownReleasesPendingTextureUpdates)
     CreateGPUUploadManager(CreateInfo, &pUploadManager);
     ASSERT_TRUE(pUploadManager != nullptr);
 
+    std::vector<Uint8> TextureData(16 * 16 * 4);
+
     Uint32 UploadEnqueuedCallbackCalled = 0;
     Uint32 CopyTextureCallbackCalled    = 0;
 
@@ -2058,6 +2059,8 @@ TEST(GPUUploadManagerTest, ShutdownReleasesPendingTextureUpdates)
     UploadUpdate.DstMipLevel = 1;
     UploadUpdate.DstSlice    = 2;
     UploadUpdate.DstBox      = {0, 16, 0, 16};
+    UploadUpdate.pSrcData    = TextureData.data();
+    UploadUpdate.Stride      = 16 * 4;
     UploadUpdate.UploadEnqueued =
         [](ITexture*  pDstTexture,
            Uint32     DstMipLevel,
@@ -2083,6 +2086,8 @@ TEST(GPUUploadManagerTest, ShutdownReleasesPendingTextureUpdates)
     CopyUpdate.DstMipLevel = 3;
     CopyUpdate.DstSlice    = 4;
     CopyUpdate.DstBox      = {0, 16, 0, 16};
+    CopyUpdate.pSrcData    = TextureData.data();
+    CopyUpdate.Stride      = 16 * 4;
     CopyUpdate.CopyTexture =
         [](IDeviceContext*          pContext,
            Uint32                   DstMipLevel,
@@ -2233,17 +2238,10 @@ TEST(GPUUploadManagerTest, ParallelBufferAndTextureUpdates)
         BufferData[i] = static_cast<Uint8>(i % 256);
     }
 
-    BufferDesc Desc;
-    Desc.Name      = "GPUUploadManagerTest buffer";
-    Desc.Size      = BufferData.size();
-    Desc.Usage     = USAGE_DEFAULT;
-    Desc.BindFlags = BIND_VERTEX_BUFFER;
-
-    RefCntAutoPtr<IBuffer> pBuffer;
-    pDevice->CreateBuffer(Desc, nullptr, &pBuffer);
+    RefCntAutoPtr<IBuffer> pBuffer = CreateUploadTestBuffer(pDevice, BufferData.size());
     ASSERT_TRUE(pBuffer);
 
-    const size_t kNumThreads = std::max(2u, std::thread::hardware_concurrency() - 1);
+    const size_t kNumThreads = GetWorkerThreadCount(2u);
     LOG_INFO_MESSAGE("Number of threads: ", kNumThreads);
 
     std::atomic<Uint32> CurrOffset{0};
