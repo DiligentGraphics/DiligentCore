@@ -1053,11 +1053,19 @@ GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, con
     m_TextureUpdateOffsetAlignment{m_pDevice->GetAdapterInfo().Buffer.TextureUpdateOffsetAlignment},
     m_TextureUpdateStrideAlignment{m_pDevice->GetAdapterInfo().Buffer.TextureUpdateStrideAlignment}
 {
+    const Uint32 PageSize = CI.PageSize != 0 ? CI.PageSize : GPUUploadManagerCreateInfo{}.PageSize;
+    if (CI.PageSize == 0)
+        LOG_ERROR_MESSAGE("GPUUploadManagerCreateInfo::PageSize must not be zero; using the default value ", PageSize);
+
+    const Uint32 LargePageSize = CI.LargePageSize != 0 ? CI.LargePageSize : GPUUploadManagerCreateInfo{}.LargePageSize;
+    if (CI.LargePageSize == 0)
+        LOG_ERROR_MESSAGE("GPUUploadManagerCreateInfo::LargePageSize must not be zero; using the default value ", LargePageSize);
+
     m_Streams.reserve(2);
     m_Streams.push_back(std::make_unique<UploadStream>(
         *this,
         CI.pContext,
-        CI.PageSize,
+        PageSize,
         CI.MaxPageCount,
         CI.InitialPageCount));
     m_pNormalStream = m_Streams.back().get();
@@ -1065,7 +1073,7 @@ GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, con
     m_Streams.push_back(std::make_unique<UploadStream>(
         *this,
         CI.pContext,
-        std::max(CI.LargePageSize, CI.PageSize * 2),
+        std::max(LargePageSize, PageSize * 2),
         CI.MaxLargePageCount,
         CI.InitialLargePageCount));
     m_pLargeStream = m_Streams.back().get();
