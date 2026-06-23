@@ -576,6 +576,9 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     ///
     /// The method is thread-safe and can be called from multiple threads simultaneously with other calls to ScheduleBufferUpdate()
     /// and RenderThreadUpdate().
+    /// The caller must keep the upload manager alive for the entire duration of this call. Worker threads should
+    /// hold their own strong reference to the manager if the manager may be shut down or released concurrently.
+    /// Calls that race with Shutdown() are ignored and return false. Calls must not race with manager destruction.
     /// 
     /// If the method is called from a worker thread, the pContext parameter must be null, and the render thread must periodically
     /// call RenderThreadUpdate() to process pending buffer updates. If RenderThreadUpdate() is not called, the method may block indefinitely
@@ -597,6 +600,9 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     /// 
     /// The method is thread-safe and can be called from multiple threads simultaneously with other calls to ScheduleTextureUpdate()
     /// and RenderThreadUpdate().
+    /// The caller must keep the upload manager alive for the entire duration of this call. Worker threads should
+    /// hold their own strong reference to the manager if the manager may be shut down or released concurrently.
+    /// Calls that race with Shutdown() are ignored and return false. Calls must not race with manager destruction.
     /// 
     /// If the method is called from a worker thread, the pContext parameter must be null, and the render thread must periodically
     /// call RenderThreadUpdate() to process pending texture updates. If RenderThreadUpdate() is not called, the method may block indefinitely
@@ -622,11 +628,10 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     /// The method wakes any threads blocked in ScheduleBufferUpdate() or ScheduleTextureUpdate().
     /// After this call, the manager must not be used for new upload scheduling, render-thread
     /// updates, or statistics queries; only releasing outstanding references is allowed.
-    /// Worker-thread ScheduleBufferUpdate() and ScheduleTextureUpdate() calls that race with
-    /// Shutdown() are cancelled and invoke their callbacks with null handles so user data can
-    /// be released. Accepted updates that have not yet been submitted by RenderThreadUpdate()
-    /// are also cancelled before Shutdown() returns. RenderThreadUpdate() and GetStats() calls
-    /// after shutdown are misuse.
+    /// Worker-thread calls that are already blocked in ScheduleBufferUpdate() or ScheduleTextureUpdate()
+    /// are cancelled and invoke their callbacks with null handles so user data can be released.
+    /// Accepted updates that have not yet been submitted by RenderThreadUpdate() are also cancelled
+    /// before Shutdown() returns. RenderThreadUpdate() and GetStats() calls after shutdown are misuse.
     ///
     /// The method is thread-safe and may be called while worker threads are inside
     /// ScheduleBufferUpdate() or ScheduleTextureUpdate().
