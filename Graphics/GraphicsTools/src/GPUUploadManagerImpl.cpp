@@ -1146,7 +1146,7 @@ void GPUUploadManagerImpl::UploadStream::SignalStop()
     m_PageRotatedSignal.RequestStop();
 }
 
-void GPUUploadManagerImpl::ShutdownImpl()
+void GPUUploadManagerImpl::Stop()
 {
     if (m_Stopping.exchange(true, std::memory_order_acq_rel))
         return;
@@ -1163,15 +1163,23 @@ void GPUUploadManagerImpl::ShutdownImpl()
         Stream->SignalStop();
     }
 
-    // A scheduling call may have raced with shutdown and entered page-writing code.
-    // Wait before destroying streams/pages so no worker can touch them after release.
+    // Do not tear down streams or pages here. ScheduleBufferUpdate() and
+    // ScheduleTextureUpdate() may already have passed the top-level stop check
+    // and may be about to enter a stream. Keeping streams alive until the manager
+    // destructor lets these calls observe the stop state and return safely.
+}
+
+GPUUploadManagerImpl::~GPUUploadManagerImpl()
+{
+    Stop();
+
     if (m_NumRunningUpdates.load(std::memory_order_acquire) > 0)
     {
         m_LastRunningThreadFinishedSignal.Wait();
     }
 
     // Pending page pointers are owned by the streams below. The manager is terminally
-    // shut down, so discard the queue nodes before destroying the pages.
+    // destroyed, so discard the queue nodes before destroying the pages.
     Page* pPage = nullptr;
     while (m_PendingPages.Dequeue(pPage))
     {}
@@ -1180,23 +1188,6 @@ void GPUUploadManagerImpl::ShutdownImpl()
     {
         Stream->ReleaseStagingBuffers();
     }
-
-    m_pTextureStreams.reset();
-    m_pNormalStream = nullptr;
-    m_pLargeStream  = nullptr;
-    m_InFlightPages.clear();
-    m_TmpPages.clear();
-    m_Streams.clear();
-}
-
-void GPUUploadManagerImpl::Shutdown()
-{
-    ShutdownImpl();
-}
-
-GPUUploadManagerImpl::~GPUUploadManagerImpl()
-{
-    ShutdownImpl();
 }
 
 void GPUUploadManagerImpl::RenderThreadUpdate(IDeviceContext* pContext)
@@ -1204,7 +1195,7 @@ void GPUUploadManagerImpl::RenderThreadUpdate(IDeviceContext* pContext)
     DEV_CHECK_ERR(pContext != nullptr, "A valid context must be provided to RenderThreadUpdate");
     if (m_Stopping.load(std::memory_order_acquire))
     {
-        DEV_ERROR("GPU upload manager has been shut down");
+        DEV_ERROR("GPU upload manager has been stopped");
         return;
     }
 
@@ -1377,7 +1368,7 @@ bool GPUUploadManagerImpl::ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& 
 
     if (m_Stopping.load(std::memory_order_acquire))
     {
-        // Worker-thread scheduling may race with Shutdown(). Quietly cancel the update
+        // Worker-thread scheduling may race with Stop(). Quietly cancel the update
         // through the guard so callback-owned user data is released.
         return false;
     }
@@ -1413,7 +1404,7 @@ bool GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo
 
     if (m_Stopping.load(std::memory_order_acquire))
     {
-        // Worker-thread scheduling may race with Shutdown(). Quietly cancel the update
+        // Worker-thread scheduling may race with Stop(). Quietly cancel the update
         // through the guard so callback-owned user data is released.
         return false;
     }
@@ -1778,7 +1769,7 @@ void GPUUploadManagerImpl::GetStats(GPUUploadManagerStats& Stats)
 {
     if (m_Stopping.load(std::memory_order_acquire))
     {
-        DEV_ERROR("GPU upload manager has been shut down");
+        DEV_ERROR("GPU upload manager has been stopped");
         Stats = GPUUploadManagerStats{};
         return;
     }

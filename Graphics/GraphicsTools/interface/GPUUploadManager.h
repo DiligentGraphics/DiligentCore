@@ -91,15 +91,15 @@ typedef void (*WriteStagingBufferDataCallbackType)(void* pDstData, Uint32 NumByt
 /// has been enqueued into the device context command stream (i.e. the copy is *scheduled*,
 /// but may not have executed on the GPU yet).
 ///
-/// If the copy operation has not been scheduled by the time the manager is destroyed
-/// or shut down, or if scheduling is otherwise abandoned, the callback will be invoked
+/// If the copy operation has not been scheduled by the time the manager is stopped or destroyed,
+/// or if scheduling is otherwise abandoned, the callback will be invoked
 /// with a null buffer pointer, allowing the application to clean up any resources
 /// associated with the copy operation.
 ///
 /// \warning Reentrancy / thread-safety:
 ///          The callback is normally executed from inside IGPUUploadManager::RenderThreadUpdate().
 ///          If scheduling is abandoned, it may be executed with a null buffer pointer
-///          from inside ScheduleBufferUpdate() or the manager shutdown/destruction path.
+///          from inside ScheduleBufferUpdate() or the manager stop/destruction path.
 ///          The callback MUST NOT call back into the same IGPUUploadManager instance
 ///          (e.g. ScheduleBufferUpdate(), RenderThreadUpdate(), GetStats()), and MUST NOT
 ///          perform actions that may synchronously trigger RenderThreadUpdate() or otherwise
@@ -129,15 +129,15 @@ typedef void (*GPUBufferUploadEnqueuedCallbackType)(IBuffer* pDstBuffer,
 /// \param [in] NumBytes   - Number of bytes to copy.
 /// \param [in] pUserData  - User-provided pointer passed to ScheduleBufferUpdate().
 ///
-/// If the copy operation was not scheduled by the time the manager is destroyed
-/// or shut down, or if scheduling is otherwise abandoned, the callback will be called
+/// If the copy operation was not scheduled by the time the manager is stopped or destroyed,
+/// or if scheduling is otherwise abandoned, the callback will be called
 /// with a null device context pointer so that the application can clean up any resources
 /// associated with the copy operation.
 ///
 /// \warning Reentrancy / thread-safety:
 ///          The callback is normally executed from inside IGPUUploadManager::RenderThreadUpdate().
 ///          If scheduling is abandoned, it may be executed with a null context pointer
-///          from inside ScheduleBufferUpdate() or the manager shutdown/destruction path.
+///          from inside ScheduleBufferUpdate() or the manager stop/destruction path.
 ///          The callback MUST NOT call back into the same IGPUUploadManager instance
 ///          (e.g. ScheduleBufferUpdate(), RenderThreadUpdate(), GetStats()), and MUST NOT
 ///          perform actions that may synchronously trigger RenderThreadUpdate() or otherwise
@@ -293,15 +293,15 @@ typedef void (*WriteStagingTextureDataCallbackType)(void*         pDstData,
 /// has been enqueued into the device context command stream (i.e. the copy is *scheduled*,
 /// but may not have executed on the GPU yet).
 ///
-/// If the copy operation has not been scheduled by the time the manager is destroyed
-/// or shut down, or if scheduling is otherwise abandoned, the callback will be invoked
+/// If the copy operation has not been scheduled by the time the manager is stopped or destroyed,
+/// or if scheduling is otherwise abandoned, the callback will be invoked
 /// with a null texture pointer, allowing the application to clean up any resources
 /// associated with the copy operation.
 ///
 /// \warning Reentrancy / thread-safety:
 ///          The callback is normally executed from inside IGPUUploadManager::RenderThreadUpdate().
 ///          If scheduling is abandoned, it may be executed with a null texture pointer
-///          from inside ScheduleTextureUpdate() or the manager shutdown/destruction path.
+///          from inside ScheduleTextureUpdate() or the manager stop/destruction path.
 ///          The callback MUST NOT call back into the same IGPUUploadManager instance
 ///          (e.g. ScheduleTextureUpdate(), RenderThreadUpdate(), GetStats()), and MUST NOT
 ///          perform actions that may synchronously trigger RenderThreadUpdate() or otherwise
@@ -334,15 +334,15 @@ typedef void (*GPUTextureUploadEnqueuedCallbackType)(ITexture*     pDstTexture,
 /// \param [in] SrcData     - Source data description.
 /// \param [in] pUserData   - User-provided pointer passed to ScheduleTextureUpdate().
 ///
-/// If the copy operation was not scheduled by the time the manager is destroyed
-/// or shut down, or if scheduling is otherwise abandoned, the callback will be called
+/// If the copy operation was not scheduled by the time the manager is stopped or destroyed,
+/// or if scheduling is otherwise abandoned, the callback will be called
 /// with a null device context pointer so that the application can clean up any resources
 /// associated with the copy operation.
 ///
 /// \warning Reentrancy / thread-safety:
 ///          The callback is normally executed from inside IGPUUploadManager::RenderThreadUpdate().
 ///          If scheduling is abandoned, it may be executed with a null context pointer
-///          from inside ScheduleTextureUpdate() or the manager shutdown/destruction path.
+///          from inside ScheduleTextureUpdate() or the manager stop/destruction path.
 ///          The callback MUST NOT call back into the same IGPUUploadManager instance
 ///          (e.g. ScheduleTextureUpdate(), RenderThreadUpdate(), GetStats()), and MUST NOT
 ///          perform actions that may synchronously trigger RenderThreadUpdate() or otherwise
@@ -372,15 +372,15 @@ typedef void (*CopyStagingTextureCallbackType)(IDeviceContext*             pCont
 /// \param [in] SrcY        - Y offset in the staging texture where the source data starts.
 /// \param [in] pUserData   - User-provided pointer passed to ScheduleTextureUpdate().
 ///
-/// If the copy operation was not scheduled by the time the manager is destroyed
-/// or shut down, or if scheduling is otherwise abandoned, the callback will be called
+/// If the copy operation was not scheduled by the time the manager is stopped or destroyed,
+/// or if scheduling is otherwise abandoned, the callback will be called
 /// with a null device context pointer and a null source texture so that the application
 /// can clean up any resources associated with the copy operation.
 ///
 /// \warning Reentrancy / thread-safety:
 ///          The callback is normally executed from inside IGPUUploadManager::RenderThreadUpdate().
 ///          If scheduling is abandoned, it may be executed with a null context pointer
-///          from inside ScheduleTextureUpdate() or the manager shutdown/destruction path.
+///          from inside ScheduleTextureUpdate() or the manager stop/destruction path.
 ///          The callback MUST NOT call back into the same IGPUUploadManager instance.
 typedef void (*CopyStagingD3D11TextureCallbackType)(IDeviceContext* pContext,
                                                     Uint32          DstMipLevel,
@@ -561,7 +561,7 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     ///
     /// The method can be called in parallel with ScheduleBufferUpdate() and ScheduleTextureUpdate()
     /// from worker threads, but only one thread is allowed to call RenderThreadUpdate() at a time.
-    /// RenderThreadUpdate() must not be called concurrently with Shutdown(), and the device context
+    /// RenderThreadUpdate() must not be called concurrently with Stop(), and the device context
     /// used by the manager must not be used concurrently by other threads.
     ///
     /// The method must be called periodically to process pending updates. If the method is not called,
@@ -575,14 +575,14 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     /// \param [in] UpdateInfo - Structure describing the buffer update operation. See ScheduleBufferUpdateInfo for details.
     ///
     /// \return true if the update was successfully accepted by the manager, false if it was rejected
-    ///         due to invalid parameters, shutdown, or an internal scheduling failure.
+    ///         due to invalid parameters, a stopped manager, or an internal scheduling failure.
     ///         If false is returned, any abandoned-scheduling callback is invoked before the method returns.
     ///
     /// The method is thread-safe and can be called from multiple threads simultaneously with other calls to ScheduleBufferUpdate()
     /// and RenderThreadUpdate().
     /// The caller must keep the upload manager alive for the entire duration of this call. Worker threads should
-    /// hold their own strong reference to the manager if the manager may be shut down or released concurrently.
-    /// Calls that race with Shutdown() are ignored and return false. Calls must not race with manager destruction.
+    /// hold their own strong reference to the manager if the manager may be stopped or released concurrently.
+    /// Calls that race with Stop() are ignored and return false. Calls must not race with manager destruction.
     /// 
     /// If the method is called from a worker thread, the pContext parameter must be null, and the render thread must periodically
     /// call RenderThreadUpdate() to process pending buffer updates. If RenderThreadUpdate() is not called, the method may block indefinitely
@@ -599,14 +599,14 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     /// \param [in] UpdateInfo - Structure describing the texture update operation. See ScheduleTextureUpdateInfo for details.
     ///
     /// \return true if the update was successfully accepted by the manager, false if it was rejected
-    ///         due to invalid parameters, shutdown, or an internal scheduling failure.
+    ///         due to invalid parameters, a stopped manager, or an internal scheduling failure.
     ///         If false is returned, any abandoned-scheduling callback is invoked before the method returns.
     /// 
     /// The method is thread-safe and can be called from multiple threads simultaneously with other calls to ScheduleTextureUpdate()
     /// and RenderThreadUpdate().
     /// The caller must keep the upload manager alive for the entire duration of this call. Worker threads should
-    /// hold their own strong reference to the manager if the manager may be shut down or released concurrently.
-    /// Calls that race with Shutdown() are ignored and return false. Calls must not race with manager destruction.
+    /// hold their own strong reference to the manager if the manager may be stopped or released concurrently.
+    /// Calls that race with Stop() are ignored and return false. Calls must not race with manager destruction.
     /// 
     /// If the method is called from a worker thread, the pContext parameter must be null, and the render thread must periodically
     /// call RenderThreadUpdate() to process pending texture updates. If RenderThreadUpdate() is not called, the method may block indefinitely
@@ -627,23 +627,23 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     VIRTUAL void METHOD(GetStats)(THIS_
                                   GPUUploadManagerStats REF Stats) PURE;
 
-    /// Permanently shuts down the upload manager.
+    /// Permanently stops the upload manager.
     ///
     /// The method wakes any threads blocked in ScheduleBufferUpdate() or ScheduleTextureUpdate().
     /// After this call, the manager must not be used for new upload scheduling, render-thread
     /// updates, or statistics queries; only releasing outstanding references is allowed.
     /// Worker-thread calls that are already blocked in ScheduleBufferUpdate() or ScheduleTextureUpdate()
-    /// are cancelled and invoke their callbacks with null handles so user data can be released.
-    /// Accepted updates that have not yet been submitted by RenderThreadUpdate() are also cancelled
-    /// before Shutdown() returns. RenderThreadUpdate() and GetStats() calls after shutdown are misuse.
+    /// are cancelled and invoke their callbacks with null handles as the calls return.
+    /// Accepted updates that have not yet been submitted by RenderThreadUpdate() are abandoned and
+    /// will invoke their callbacks with null handles during manager teardown. RenderThreadUpdate()
+    /// and GetStats() calls after Stop() are misuse.
     ///
-    /// Shutdown() releases and unmaps staging resources through the manager's device context. It must
-    /// not be called concurrently with RenderThreadUpdate() or GetStats(), and the device context used
-    /// by the manager must not be used concurrently by other threads.
+    /// Stop() does not release staging resources or destroy internal streams. Final cleanup is delayed
+    /// until the manager is destroyed.
     ///
     /// The method may be called while worker threads are inside ScheduleBufferUpdate() or
-    /// ScheduleTextureUpdate().
-    VIRTUAL void METHOD(Shutdown)(THIS) PURE;
+    /// ScheduleTextureUpdate(). The manager must remain alive until these calls have returned.
+    VIRTUAL void METHOD(Stop)(THIS) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -654,7 +654,7 @@ DILIGENT_END_INTERFACE
 // clang-format off
 
 #    define IGPUUploadManager_RenderThreadUpdate(This, ...)    CALL_IFACE_METHOD(GPUUploadManager, RenderThreadUpdate, This, __VA_ARGS__)
-#    define IGPUUploadManager_Shutdown(This)                   CALL_IFACE_METHOD(GPUUploadManager, Shutdown,           This)
+#    define IGPUUploadManager_Stop(This)                       CALL_IFACE_METHOD(GPUUploadManager, Stop,               This)
 #    define IGPUUploadManager_ScheduleBufferUpdate(This, ...)  CALL_IFACE_METHOD(GPUUploadManager, ScheduleBufferUpdate, This, __VA_ARGS__)
 #    define IGPUUploadManager_ScheduleTextureUpdate(This, ...) CALL_IFACE_METHOD(GPUUploadManager, ScheduleTextureUpdate, This, __VA_ARGS__)
 #    define IGPUUploadManager_GetStats(This, ...)              CALL_IFACE_METHOD(GPUUploadManager, GetStats, This, __VA_ARGS__)

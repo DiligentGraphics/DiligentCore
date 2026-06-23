@@ -552,7 +552,7 @@ TEST(GPUUploadManagerTest, ReleaseBufferCallbackResources)
     EXPECT_TRUE(CopyBufferCallbackCalled) << "CopyBuffer callback should have been called before the upload manager is destroyed";
 }
 
-TEST(GPUUploadManagerTest, ShutdownReleasesPendingBufferUpdates)
+TEST(GPUUploadManagerTest, StopKeepsPendingBufferUpdatesUntilDestruction)
 {
     GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
     IRenderDevice*         pDevice  = pEnv->GetDevice();
@@ -620,10 +620,10 @@ TEST(GPUUploadManagerTest, ShutdownReleasesPendingBufferUpdates)
     EXPECT_EQ(UploadEnqueuedCallbackCalled, 0u);
     EXPECT_EQ(CopyBufferCallbackCalled, 0u);
 
-    pUploadManager->Shutdown();
+    pUploadManager->Stop();
 
-    EXPECT_EQ(UploadEnqueuedCallbackCalled, 1u);
-    EXPECT_EQ(CopyBufferCallbackCalled, 1u);
+    EXPECT_EQ(UploadEnqueuedCallbackCalled, 0u);
+    EXPECT_EQ(CopyBufferCallbackCalled, 0u);
 
     pUploadManager.Release();
 
@@ -720,7 +720,7 @@ TEST(GPUUploadManagerTest, ParallelBufferUpdates)
 }
 
 
-TEST(GPUUploadManagerTest, ShutdownReleasesBlockedBufferUpdates)
+TEST(GPUUploadManagerTest, StopReleasesBlockedBufferUpdates)
 {
     GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
     IRenderDevice*         pDevice  = pEnv->GetDevice();
@@ -730,7 +730,7 @@ TEST(GPUUploadManagerTest, ShutdownReleasesBlockedBufferUpdates)
 
     RefCntAutoPtr<IGPUUploadManager> pUploadManager;
     // Use small page size to make the upload attempts request a page rotation
-    // and block until RenderThreadUpdate() or Shutdown().
+    // and block until RenderThreadUpdate() or Stop().
     GPUUploadManagerCreateInfo CreateInfo{pDevice, pContext, 1024, 2048};
     CreateGPUUploadManager(CreateInfo, &pUploadManager);
     ASSERT_TRUE(pUploadManager != nullptr);
@@ -819,7 +819,7 @@ TEST(GPUUploadManagerTest, ShutdownReleasesBlockedBufferUpdates)
     std::this_thread::sleep_for(10ms);
     EXPECT_EQ(NumUpdatesRunning.load(), kNumUpdates) << "All threads should be running updates because RenderThreadUpdate() was not called";
 
-    pUploadManager->Shutdown();
+    pUploadManager->Stop();
 
     for (std::thread& thread : Threads)
     {
@@ -836,7 +836,7 @@ TEST(GPUUploadManagerTest, ShutdownReleasesBlockedBufferUpdates)
     pDevice->ReleaseStaleResources();
 }
 
-TEST(GPUUploadManagerTest, ShutdownReleasesBlockedTextureUpdates)
+TEST(GPUUploadManagerTest, StopReleasesBlockedTextureUpdates)
 {
     GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
     IRenderDevice*         pDevice  = pEnv->GetDevice();
@@ -861,7 +861,7 @@ TEST(GPUUploadManagerTest, ShutdownReleasesBlockedTextureUpdates)
 
     RefCntAutoPtr<IGPUUploadManager> pUploadManager;
     // Use small page sizes to make the upload attempts request a page rotation
-    // and block until RenderThreadUpdate() or Shutdown().
+    // and block until RenderThreadUpdate() or Stop().
     GPUUploadManagerCreateInfo CreateInfo{pDevice, pContext, 1024, 2048};
     CreateGPUUploadManager(CreateInfo, &pUploadManager);
     ASSERT_TRUE(pUploadManager != nullptr);
@@ -983,7 +983,7 @@ TEST(GPUUploadManagerTest, ShutdownReleasesBlockedTextureUpdates)
     std::this_thread::sleep_for(10ms);
     EXPECT_EQ(NumUpdatesRunning.load(), kNumUpdates) << "All threads should be running updates because RenderThreadUpdate() was not called";
 
-    pUploadManager->Shutdown();
+    pUploadManager->Stop();
 
     for (std::thread& thread : Threads)
     {
@@ -1958,7 +1958,7 @@ TEST(GPUUploadManagerTest, ReleaseTextureCallbackResources)
     EXPECT_EQ(CopyTextureCallbackCalled, 1) << "CopyTexture callback should have been called before the upload manager is destroyed";
 }
 
-TEST(GPUUploadManagerTest, ShutdownReleasesPendingTextureUpdates)
+TEST(GPUUploadManagerTest, StopKeepsPendingTextureUpdatesUntilDestruction)
 {
     GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
     IRenderDevice*         pDevice  = pEnv->GetDevice();
@@ -2073,10 +2073,10 @@ TEST(GPUUploadManagerTest, ShutdownReleasesPendingTextureUpdates)
     EXPECT_EQ(UploadEnqueuedCallbackCalled, 0u);
     EXPECT_EQ(CopyTextureCallbackCalled, 0u);
 
-    pUploadManager->Shutdown();
+    pUploadManager->Stop();
 
-    EXPECT_EQ(UploadEnqueuedCallbackCalled, 1u);
-    EXPECT_EQ(CopyTextureCallbackCalled, 1u);
+    EXPECT_EQ(UploadEnqueuedCallbackCalled, 0u);
+    EXPECT_EQ(CopyTextureCallbackCalled, 0u);
 
     pUploadManager.Release();
 
