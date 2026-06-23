@@ -202,18 +202,18 @@ bool ValidateTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo,
             return false;
         }
 
+        if (TexDesc.SampleCount != 1)
+        {
+            LOG_ERROR_MESSAGE("ScheduleTextureUpdate() does not support multisampled destination textures");
+            return false;
+        }
+
         if (DeviceType == RENDER_DEVICE_TYPE_D3D11)
         {
             if (TexDesc.Type != RESOURCE_DIM_TEX_2D &&
                 TexDesc.Type != RESOURCE_DIM_TEX_2D_ARRAY)
             {
                 LOG_ERROR_MESSAGE("ScheduleTextureUpdate() in D3D11 only supports 2D and 2D array destination textures");
-                return false;
-            }
-
-            if (TexDesc.SampleCount != 1)
-            {
-                LOG_ERROR_MESSAGE("ScheduleTextureUpdate() in D3D11 does not support multisampled destination textures");
                 return false;
             }
         }
