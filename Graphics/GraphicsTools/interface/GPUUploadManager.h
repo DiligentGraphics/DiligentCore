@@ -613,7 +613,9 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     /// updates, or statistics queries; only releasing outstanding references is allowed.
     /// Worker-thread ScheduleBufferUpdate() and ScheduleTextureUpdate() calls that race with
     /// Shutdown() are cancelled and invoke their callbacks with null handles so user data can
-    /// be released. RenderThreadUpdate() and GetStats() calls after shutdown are misuse.
+    /// be released. Accepted updates that have not yet been submitted by RenderThreadUpdate()
+    /// are also cancelled before Shutdown() returns. RenderThreadUpdate() and GetStats() calls
+    /// after shutdown are misuse.
     ///
     /// The method is thread-safe and may be called while worker threads are inside
     /// ScheduleBufferUpdate() or ScheduleTextureUpdate().

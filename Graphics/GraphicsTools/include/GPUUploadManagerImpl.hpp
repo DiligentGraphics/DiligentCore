@@ -292,7 +292,7 @@ public:
     };
 
 private:
-    void SignalShutdown();
+    void ShutdownImpl();
 
     void ReclaimCompletedPages(IDeviceContext* pContext);
     void ProcessPendingPages(IDeviceContext* pContext);

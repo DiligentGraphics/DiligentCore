@@ -557,6 +557,84 @@ TEST(GPUUploadManagerTest, ReleaseBufferCallbackResources)
     EXPECT_TRUE(CopyBufferCallbackCalled) << "CopyBuffer callback should have been called before the upload manager is destroyed";
 }
 
+TEST(GPUUploadManagerTest, ShutdownReleasesPendingBufferUpdates)
+{
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    RefCntAutoPtr<IGPUUploadManager> pUploadManager;
+    GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext, 2048, 4096};
+    CreateGPUUploadManager(CreateInfo, &pUploadManager);
+    ASSERT_TRUE(pUploadManager != nullptr);
+
+    BufferDesc Desc;
+    Desc.Name      = "GPUUploadManagerTest buffer";
+    Desc.Size      = 1024;
+    Desc.Usage     = USAGE_DEFAULT;
+    Desc.BindFlags = BIND_VERTEX_BUFFER;
+
+    RefCntAutoPtr<IBuffer> pBuffer;
+    pDevice->CreateBuffer(Desc, nullptr, &pBuffer);
+    ASSERT_NE(pBuffer, nullptr);
+
+    Uint32 UploadEnqueuedCallbackCalled = 0;
+    Uint32 CopyBufferCallbackCalled     = 0;
+
+    ScheduleBufferUpdateInfo UploadUpdate;
+    UploadUpdate.pContext   = pContext;
+    UploadUpdate.pDstBuffer = pBuffer;
+    UploadUpdate.DstOffset  = 128;
+    UploadUpdate.NumBytes   = 256;
+    UploadUpdate.UploadEnqueued =
+        [](IBuffer* pDstBuffer,
+           Uint32   DstOffset,
+           Uint32   NumBytes,
+           void*    pUserData) {
+            Uint32& CallbackCount = *static_cast<Uint32*>(pUserData);
+            EXPECT_EQ(pDstBuffer, nullptr);
+            EXPECT_EQ(DstOffset, 128u);
+            EXPECT_EQ(NumBytes, 256u);
+            ++CallbackCount;
+        };
+    UploadUpdate.pUploadEnqueuedData = &UploadEnqueuedCallbackCalled;
+    pUploadManager->ScheduleBufferUpdate(UploadUpdate);
+
+    ScheduleBufferUpdateInfo CopyUpdate;
+    CopyUpdate.pContext = pContext;
+    CopyUpdate.NumBytes = 512;
+    CopyUpdate.CopyBuffer =
+        [](IDeviceContext* pContext,
+           IBuffer*        pSrcBuffer,
+           Uint32          SrcOffset,
+           Uint32          NumBytes,
+           void*           pUserData) {
+            Uint32& CallbackCount = *static_cast<Uint32*>(pUserData);
+            EXPECT_EQ(pContext, nullptr);
+            EXPECT_EQ(pSrcBuffer, nullptr);
+            EXPECT_EQ(SrcOffset, ~0u);
+            EXPECT_EQ(NumBytes, 512u);
+            ++CallbackCount;
+        };
+    CopyUpdate.pCopyBufferData = &CopyBufferCallbackCalled;
+    pUploadManager->ScheduleBufferUpdate(CopyUpdate);
+
+    EXPECT_EQ(UploadEnqueuedCallbackCalled, 0u);
+    EXPECT_EQ(CopyBufferCallbackCalled, 0u);
+
+    pUploadManager->Shutdown();
+
+    EXPECT_EQ(UploadEnqueuedCallbackCalled, 1u);
+    EXPECT_EQ(CopyBufferCallbackCalled, 1u);
+
+    pUploadManager.Release();
+
+    EXPECT_EQ(UploadEnqueuedCallbackCalled, 1u);
+    EXPECT_EQ(CopyBufferCallbackCalled, 1u);
+}
+
 TEST(GPUUploadManagerTest, ParallelBufferUpdates)
 {
     GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
@@ -1908,6 +1986,126 @@ TEST(GPUUploadManagerTest, ReleaseTextureCallbackResources)
 
     EXPECT_EQ(UploadEnqueuedCallbackCalled, 1) << "UploadEnqueued callback should have been called before the upload manager is destroyed";
     EXPECT_EQ(CopyTextureCallbackCalled, 1) << "CopyTexture callback should have been called before the upload manager is destroyed";
+}
+
+TEST(GPUUploadManagerTest, ShutdownReleasesPendingTextureUpdates)
+{
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    TextureDesc TexDesc;
+    TexDesc.Name      = "GPUUploadManagerTest texture";
+    TexDesc.Type      = RESOURCE_DIM_TEX_2D_ARRAY;
+    TexDesc.Format    = TEX_FORMAT_RGBA8_UNORM;
+    TexDesc.Usage     = USAGE_DEFAULT;
+    TexDesc.Width     = 256;
+    TexDesc.Height    = 256;
+    TexDesc.ArraySize = 5;
+    TexDesc.MipLevels = 4;
+    TexDesc.BindFlags = BIND_SHADER_RESOURCE;
+
+    RefCntAutoPtr<ITexture> pTexture;
+    pDevice->CreateTexture(TexDesc, nullptr, &pTexture);
+    ASSERT_NE(pTexture, nullptr);
+
+    RefCntAutoPtr<IGPUUploadManager> pUploadManager;
+    GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext, 16384, 65536};
+    CreateGPUUploadManager(CreateInfo, &pUploadManager);
+    ASSERT_TRUE(pUploadManager != nullptr);
+
+    Uint32 UploadEnqueuedCallbackCalled = 0;
+    Uint32 CopyTextureCallbackCalled    = 0;
+
+    ScheduleTextureUpdateInfo UploadUpdate;
+    UploadUpdate.pContext    = pContext;
+    UploadUpdate.pDstTexture = pTexture;
+    UploadUpdate.DstMipLevel = 1;
+    UploadUpdate.DstSlice    = 2;
+    UploadUpdate.DstBox      = {0, 16, 0, 16};
+    UploadUpdate.UploadEnqueued =
+        [](ITexture*  pDstTexture,
+           Uint32     DstMipLevel,
+           Uint32     DstSlice,
+           const Box& DstBox,
+           void*      pUserData) {
+            Uint32& CallbackCount = *static_cast<Uint32*>(pUserData);
+            EXPECT_EQ(pDstTexture, nullptr);
+            EXPECT_EQ(DstMipLevel, 1u);
+            EXPECT_EQ(DstSlice, 2u);
+            EXPECT_EQ(DstBox.MinX, 0u);
+            EXPECT_EQ(DstBox.MaxX, 16u);
+            EXPECT_EQ(DstBox.MinY, 0u);
+            EXPECT_EQ(DstBox.MaxY, 16u);
+            ++CallbackCount;
+        };
+    UploadUpdate.pUploadEnqueuedData = &UploadEnqueuedCallbackCalled;
+    pUploadManager->ScheduleTextureUpdate(UploadUpdate);
+
+    ScheduleTextureUpdateInfo CopyUpdate;
+    CopyUpdate.pContext    = pContext;
+    CopyUpdate.pDstTexture = pTexture;
+    CopyUpdate.DstMipLevel = 3;
+    CopyUpdate.DstSlice    = 4;
+    CopyUpdate.DstBox      = {0, 16, 0, 16};
+    CopyUpdate.CopyTexture =
+        [](IDeviceContext*          pContext,
+           Uint32                   DstMipLevel,
+           Uint32                   DstSlice,
+           const Box&               DstBox,
+           const TextureSubResData& SrcData,
+           void*                    pUserData) {
+            Uint32& CallbackCount = *static_cast<Uint32*>(pUserData);
+            EXPECT_EQ(pContext, nullptr);
+            EXPECT_EQ(DstMipLevel, 3u);
+            EXPECT_EQ(DstSlice, 4u);
+            EXPECT_EQ(DstBox.MinX, 0u);
+            EXPECT_EQ(DstBox.MaxX, 16u);
+            EXPECT_EQ(DstBox.MinY, 0u);
+            EXPECT_EQ(DstBox.MaxY, 16u);
+            EXPECT_EQ(SrcData.pData, nullptr);
+            EXPECT_EQ(SrcData.pSrcBuffer, nullptr);
+            ++CallbackCount;
+        };
+    CopyUpdate.CopyD3D11Texture =
+        [](IDeviceContext* pContext,
+           Uint32          DstMipLevel,
+           Uint32          DstSlice,
+           const Box&      DstBox,
+           ITexture*       pSrcTexture,
+           Uint32          SrcX,
+           Uint32          SrcY,
+           void*           pUserData) {
+            Uint32& CallbackCount = *static_cast<Uint32*>(pUserData);
+            EXPECT_EQ(pContext, nullptr);
+            EXPECT_EQ(DstMipLevel, 3u);
+            EXPECT_EQ(DstSlice, 4u);
+            EXPECT_EQ(DstBox.MinX, 0u);
+            EXPECT_EQ(DstBox.MaxX, 16u);
+            EXPECT_EQ(DstBox.MinY, 0u);
+            EXPECT_EQ(DstBox.MaxY, 16u);
+            EXPECT_EQ(pSrcTexture, nullptr);
+            EXPECT_EQ(SrcX, 0u);
+            EXPECT_EQ(SrcY, 0u);
+            ++CallbackCount;
+        };
+    CopyUpdate.pCopyTextureData = &CopyTextureCallbackCalled;
+    pUploadManager->ScheduleTextureUpdate(CopyUpdate);
+
+    EXPECT_EQ(UploadEnqueuedCallbackCalled, 0u);
+    EXPECT_EQ(CopyTextureCallbackCalled, 0u);
+
+    pUploadManager->Shutdown();
+
+    EXPECT_EQ(UploadEnqueuedCallbackCalled, 1u);
+    EXPECT_EQ(CopyTextureCallbackCalled, 1u);
+
+    pUploadManager.Release();
+
+    EXPECT_EQ(UploadEnqueuedCallbackCalled, 1u);
+    EXPECT_EQ(CopyTextureCallbackCalled, 1u);
 }
 
 

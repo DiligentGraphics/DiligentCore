@@ -991,7 +991,7 @@ void GPUUploadManagerImpl::UploadStream::SignalStop()
     m_PageRotatedSignal.RequestStop();
 }
 
-void GPUUploadManagerImpl::SignalShutdown()
+void GPUUploadManagerImpl::ShutdownImpl()
 {
     if (m_Stopping.exchange(true, std::memory_order_acq_rel))
         return;
@@ -1007,27 +1007,41 @@ void GPUUploadManagerImpl::SignalShutdown()
     {
         Stream->SignalStop();
     }
-}
 
-void GPUUploadManagerImpl::Shutdown()
-{
-    SignalShutdown();
-}
-
-GPUUploadManagerImpl::~GPUUploadManagerImpl()
-{
-    SignalShutdown();
-
-    // Wait for any running updates to finish.
+    // A scheduling call may have raced with shutdown and entered page-writing code.
+    // Wait before destroying streams/pages so no worker can touch them after release.
     if (m_NumRunningUpdates.load(std::memory_order_acquire) > 0)
     {
         m_LastRunningThreadFinishedSignal.Wait();
     }
 
+    // Pending page pointers are owned by the streams below. The manager is terminally
+    // shut down, so discard the queue nodes before destroying the pages.
+    Page* pPage = nullptr;
+    while (m_PendingPages.Dequeue(pPage))
+    {}
+
     for (UploadStreamUniquePtr& Stream : m_Streams)
     {
         Stream->ReleaseStagingBuffers();
     }
+
+    m_pTextureStreams.reset();
+    m_pNormalStream = nullptr;
+    m_pLargeStream  = nullptr;
+    m_InFlightPages.clear();
+    m_TmpPages.clear();
+    m_Streams.clear();
+}
+
+void GPUUploadManagerImpl::Shutdown()
+{
+    ShutdownImpl();
+}
+
+GPUUploadManagerImpl::~GPUUploadManagerImpl()
+{
+    ShutdownImpl();
 }
 
 void GPUUploadManagerImpl::RenderThreadUpdate(IDeviceContext* pContext)
