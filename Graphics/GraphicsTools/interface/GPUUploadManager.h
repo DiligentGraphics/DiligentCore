@@ -611,6 +611,9 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     /// The method wakes any threads blocked in ScheduleBufferUpdate() or ScheduleTextureUpdate().
     /// After this call, the manager must not be used for new upload scheduling, render-thread
     /// updates, or statistics queries; only releasing outstanding references is allowed.
+    /// Worker-thread ScheduleBufferUpdate() and ScheduleTextureUpdate() calls that race with
+    /// Shutdown() are cancelled and invoke their callbacks with null handles so user data can
+    /// be released. RenderThreadUpdate() and GetStats() calls after shutdown are misuse.
     ///
     /// The method is thread-safe and may be called while worker threads are inside
     /// ScheduleBufferUpdate() or ScheduleTextureUpdate().

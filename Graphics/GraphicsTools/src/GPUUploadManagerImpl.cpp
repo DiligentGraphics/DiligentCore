@@ -1208,6 +1208,8 @@ void GPUUploadManagerImpl::ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& 
 
     if (m_Stopping.load(std::memory_order_acquire))
     {
+        // Worker-thread scheduling may race with Shutdown(). Quietly cancel the update
+        // through the guard so callback-owned user data is released.
         return;
     }
 
@@ -1229,6 +1231,8 @@ void GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo
 
     if (m_Stopping.load(std::memory_order_acquire))
     {
+        // Worker-thread scheduling may race with Shutdown(). Quietly cancel the update
+        // through the guard so callback-owned user data is released.
         return;
     }
 
