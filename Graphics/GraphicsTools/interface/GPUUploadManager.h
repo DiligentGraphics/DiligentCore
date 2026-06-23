@@ -559,10 +559,14 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
 {
     /// Executes pending render-thread operations.
     ///
-    /// The method can be called in parallel with ScheduleBufferUpdate() from worker threads, but only
-    /// one thread is allowed to call RenderThreadUpdate() at a time. The method must be called periodically
-    /// to process pending buffer updates. If the method is not called, ScheduleBufferUpdate() may block indefinitely
-    /// when there are no free pages available for new updates.
+    /// The method can be called in parallel with ScheduleBufferUpdate() and ScheduleTextureUpdate()
+    /// from worker threads, but only one thread is allowed to call RenderThreadUpdate() at a time.
+    /// RenderThreadUpdate() must not be called concurrently with Shutdown(), and the device context
+    /// used by the manager must not be used concurrently by other threads.
+    ///
+    /// The method must be called periodically to process pending updates. If the method is not called,
+    /// ScheduleBufferUpdate() or ScheduleTextureUpdate() may block indefinitely when there are no free
+    /// pages available for new updates.
     VIRTUAL void METHOD(RenderThreadUpdate)(THIS_
                                             IDeviceContext* pContext) PURE;
 
@@ -633,8 +637,12 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     /// Accepted updates that have not yet been submitted by RenderThreadUpdate() are also cancelled
     /// before Shutdown() returns. RenderThreadUpdate() and GetStats() calls after shutdown are misuse.
     ///
-    /// The method is thread-safe and may be called while worker threads are inside
-    /// ScheduleBufferUpdate() or ScheduleTextureUpdate().
+    /// Shutdown() releases and unmaps staging resources through the manager's device context. It must
+    /// not be called concurrently with RenderThreadUpdate() or GetStats(), and the device context used
+    /// by the manager must not be used concurrently by other threads.
+    ///
+    /// The method may be called while worker threads are inside ScheduleBufferUpdate() or
+    /// ScheduleTextureUpdate().
     VIRTUAL void METHOD(Shutdown)(THIS) PURE;
 };
 DILIGENT_END_INTERFACE
