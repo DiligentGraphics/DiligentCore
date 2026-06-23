@@ -582,7 +582,8 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     /// and RenderThreadUpdate().
     /// The caller must keep the upload manager alive for the entire duration of this call. Worker threads should
     /// hold their own strong reference to the manager if the manager may be stopped or released concurrently.
-    /// Calls that race with Stop() are ignored and return false. Calls must not race with manager destruction.
+    /// Calls admitted before Stop() may complete; calls admitted after Stop() are ignored and return false.
+    /// Calls must not race with manager destruction.
     /// 
     /// If the method is called from a worker thread, the pContext parameter must be null, and the render thread must periodically
     /// call RenderThreadUpdate() to process pending buffer updates. If RenderThreadUpdate() is not called, the method may block indefinitely
@@ -606,7 +607,8 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     /// and RenderThreadUpdate().
     /// The caller must keep the upload manager alive for the entire duration of this call. Worker threads should
     /// hold their own strong reference to the manager if the manager may be stopped or released concurrently.
-    /// Calls that race with Stop() are ignored and return false. Calls must not race with manager destruction.
+    /// Calls admitted before Stop() may complete; calls admitted after Stop() are ignored and return false.
+    /// Calls must not race with manager destruction.
     /// 
     /// If the method is called from a worker thread, the pContext parameter must be null, and the render thread must periodically
     /// call RenderThreadUpdate() to process pending texture updates. If RenderThreadUpdate() is not called, the method may block indefinitely

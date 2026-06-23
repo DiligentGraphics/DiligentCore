@@ -921,13 +921,13 @@ void GPUUploadManagerImpl::FreePages::Push(Page** ppPages, size_t NumPages)
     m_Size.fetch_add(TotalAddedPages, std::memory_order_release);
 }
 
-GPUUploadManagerImpl::Page* GPUUploadManagerImpl::FreePages::Pop(Uint32 RequiredSize, const std::atomic<Uint32>* pNumRunningUpdates)
+GPUUploadManagerImpl::Page* GPUUploadManagerImpl::FreePages::Pop(Uint32 RequiredSize, const std::atomic<Uint32>* pScheduleAdmissionState)
 {
     Page* P = nullptr;
     {
         std::lock_guard<std::mutex> Guard{m_PagesMtx};
-        if (pNumRunningUpdates != nullptr &&
-            pNumRunningUpdates->load(std::memory_order_acquire) > 0)
+        if (pScheduleAdmissionState != nullptr &&
+            (pScheduleAdmissionState->load(std::memory_order_acquire) & GPUUploadManagerImpl::SCHEDULE_COUNT_MASK) != 0)
         {
             return nullptr;
         }
@@ -1146,10 +1146,70 @@ void GPUUploadManagerImpl::UploadStream::SignalStop()
     m_PageRotatedSignal.RequestStop();
 }
 
+bool GPUUploadManagerImpl::TryBeginScheduleUpdate() noexcept
+{
+    Uint32 State = m_ScheduleAdmissionState.load(std::memory_order_acquire);
+    for (;;)
+    {
+        if ((State & SCHEDULE_STOP_BIT) != 0)
+            return false;
+
+        VERIFY((State & SCHEDULE_COUNT_MASK) != SCHEDULE_COUNT_MASK, "Too many active GPU upload schedule calls");
+
+        // Atomically register this update only if Stop() has not claimed the stop bit.
+        // Splitting this into a load of m_Stopping followed by a separate counter increment
+        // would leave a window where Stop()/destruction can observe zero active updates while
+        // this thread is already on its way into stream scheduling.
+        if (m_ScheduleAdmissionState.compare_exchange_weak(
+                State,
+                State + 1,
+                std::memory_order_acq_rel,
+                std::memory_order_acquire))
+        {
+            return true;
+        }
+    }
+}
+
+void GPUUploadManagerImpl::EndScheduleUpdate() noexcept
+{
+    const Uint32 PrevState = m_ScheduleAdmissionState.fetch_sub(1, std::memory_order_acq_rel);
+    VERIFY((PrevState & SCHEDULE_COUNT_MASK) != 0, "GPU upload schedule-call count underflow");
+
+    if ((PrevState & SCHEDULE_STOP_BIT) != 0 &&
+        (PrevState & SCHEDULE_COUNT_MASK) == 1)
+    {
+        m_LastRunningThreadFinishedSignal.Trigger();
+    }
+}
+
+bool GPUUploadManagerImpl::SetStopping() noexcept
+{
+    // From this point on, new schedule calls fail admission. Calls that already incremented
+    // the counter are allowed to return through their normal path, and the destructor can wait
+    // for the last one using m_LastRunningThreadFinishedSignal.
+    const Uint32 PrevState = m_ScheduleAdmissionState.fetch_or(SCHEDULE_STOP_BIT, std::memory_order_acq_rel);
+    return (PrevState & SCHEDULE_STOP_BIT) == 0;
+}
+
+GPUUploadManagerImpl::ScheduleUpdateGuard::ScheduleUpdateGuard(GPUUploadManagerImpl& Mgr) noexcept
+{
+    if (Mgr.TryBeginScheduleUpdate())
+        m_pMgr = &Mgr;
+}
+
+GPUUploadManagerImpl::ScheduleUpdateGuard::~ScheduleUpdateGuard()
+{
+    if (m_pMgr != nullptr)
+        m_pMgr->EndScheduleUpdate();
+}
+
 void GPUUploadManagerImpl::Stop()
 {
-    if (m_Stopping.exchange(true, std::memory_order_acq_rel))
+    if (!SetStopping())
         return;
+
+    m_Stopping.store(true, std::memory_order_release);
 
     if (m_pTextureStreams)
     {
@@ -1164,16 +1224,16 @@ void GPUUploadManagerImpl::Stop()
     }
 
     // Do not tear down streams or pages here. ScheduleBufferUpdate() and
-    // ScheduleTextureUpdate() may already have passed the top-level stop check
-    // and may be about to enter a stream. Keeping streams alive until the manager
-    // destructor lets these calls observe the stop state and return safely.
+    // ScheduleTextureUpdate() calls that were admitted before Stop() may still be
+    // using stream state. Keeping streams alive until the manager destructor lets
+    // these calls return safely.
 }
 
 GPUUploadManagerImpl::~GPUUploadManagerImpl()
 {
     Stop();
 
-    if (m_NumRunningUpdates.load(std::memory_order_acquire) > 0)
+    if ((m_ScheduleAdmissionState.load(std::memory_order_acquire) & SCHEDULE_COUNT_MASK) != 0)
     {
         m_LastRunningThreadFinishedSignal.Wait();
     }
@@ -1262,34 +1322,6 @@ bool GPUUploadManagerImpl::UploadStream::ScheduleUpdate(IDeviceContext* pContext
                   "If a context is provided to ScheduleBufferUpdate/ScheduleTextureUpdate, it must be the same as the "
                   "one used to create the GPUUploadManagerImpl");
 
-    class RunningUpdatesGuard
-    {
-    public:
-        explicit RunningUpdatesGuard(UploadStream& Stream) noexcept :
-            m_Stream{Stream}
-        {
-            m_Stream.m_Mgr.m_NumRunningUpdates.fetch_add(1, std::memory_order_acq_rel);
-            m_Stream.m_NumRunningUpdates.fetch_add(1, std::memory_order_acq_rel);
-        }
-
-        ~RunningUpdatesGuard()
-        {
-            // Decrement the stream's counter first because if the manager is stopping, the
-            // stream can be destroyed after m_LastRunningThreadFinishedSignal is triggered.
-            m_Stream.m_NumRunningUpdates.fetch_sub(1, std::memory_order_acq_rel);
-            Uint32 NumRunningUpdates = m_Stream.m_Mgr.m_NumRunningUpdates.fetch_sub(1, std::memory_order_acq_rel);
-            if (m_Stream.m_Mgr.m_Stopping.load(std::memory_order_acquire) && NumRunningUpdates == 1)
-            {
-                m_Stream.m_Mgr.m_LastRunningThreadFinishedSignal.Trigger();
-            }
-        }
-
-    private:
-        UploadStream& m_Stream;
-    };
-    RunningUpdatesGuard Guard{*this};
-
-
     bool IsFirstAttempt  = true;
     bool AbortUpdate     = false;
     bool UpdateScheduled = false;
@@ -1366,7 +1398,8 @@ bool GPUUploadManagerImpl::ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& 
 {
     BufferUpdateCancelGuard CancelGuard{UpdateInfo};
 
-    if (m_Stopping.load(std::memory_order_acquire))
+    ScheduleUpdateGuard ScheduleGuard{*this};
+    if (!ScheduleGuard)
     {
         // Worker-thread scheduling may race with Stop(). Quietly cancel the update
         // through the guard so callback-owned user data is released.
@@ -1402,7 +1435,8 @@ bool GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo
     const bool               UseD3D11TextureCallback = m_DeviceType == RENDER_DEVICE_TYPE_D3D11;
     TextureUpdateCancelGuard CancelGuard{UpdateInfo, UseD3D11TextureCallback};
 
-    if (m_Stopping.load(std::memory_order_acquire))
+    ScheduleUpdateGuard ScheduleGuard{*this};
+    if (!ScheduleGuard)
     {
         // Worker-thread scheduling may race with Stop(). Quietly cancel the update
         // through the guard so callback-owned user data is released.
@@ -1670,7 +1704,7 @@ void GPUUploadManagerImpl::UploadStream::ProcessPagesToRelease(IDeviceContext* p
         // * Render thread frees the page.
         // * T1 resumes and crashes at
         //      Page::Writer Writer = P->TryBeginWriting();
-        if (Page* pPage = m_FreePages.Pop(0, &m_NumRunningUpdates))
+        if (Page* pPage = m_FreePages.Pop(0, &m_Mgr.m_ScheduleAdmissionState))
         {
             pPage->ReleaseStagingBuffer(pContext);
             auto it = m_PageSizeToCount.find(pPage->GetSize());
