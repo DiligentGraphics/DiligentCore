@@ -372,12 +372,12 @@ TEST(GPUUploadManagerTest, ScheduleBufferUpdates)
     RefCntAutoPtr<IBuffer> pBuffer = CreateUploadTestBuffer(pDevice, BufferData.size());
     ASSERT_TRUE(pBuffer);
 
-    pUploadManager->ScheduleBufferUpdate({pContext, pBuffer, 0, 0, nullptr});
-    pUploadManager->ScheduleBufferUpdate({pContext, pBuffer, 0, 256, &BufferData[0]});
-    pUploadManager->ScheduleBufferUpdate({pContext, pBuffer, 256, 256, &BufferData[256]});
-    pUploadManager->ScheduleBufferUpdate({pContext, pBuffer, 512, 1024, &BufferData[512]});
-    pUploadManager->ScheduleBufferUpdate({pContext, pBuffer, 1536, 512, &BufferData[1536]});
-    pUploadManager->ScheduleBufferUpdate({pContext, pBuffer, 2048, 2048, &BufferData[2048]});
+    EXPECT_TRUE(pUploadManager->ScheduleBufferUpdate({pContext, pBuffer, 0, 0, nullptr}));
+    EXPECT_TRUE(pUploadManager->ScheduleBufferUpdate({pContext, pBuffer, 0, 256, &BufferData[0]}));
+    EXPECT_TRUE(pUploadManager->ScheduleBufferUpdate({pContext, pBuffer, 256, 256, &BufferData[256]}));
+    EXPECT_TRUE(pUploadManager->ScheduleBufferUpdate({pContext, pBuffer, 512, 1024, &BufferData[512]}));
+    EXPECT_TRUE(pUploadManager->ScheduleBufferUpdate({pContext, pBuffer, 1536, 512, &BufferData[1536]}));
+    EXPECT_TRUE(pUploadManager->ScheduleBufferUpdate({pContext, pBuffer, 2048, 2048, &BufferData[2048]}));
     pUploadManager->RenderThreadUpdate(pContext);
     pUploadManager->RenderThreadUpdate(pContext);
 
@@ -424,13 +424,13 @@ TEST(GPUUploadManagerTest, ScheduleBufferUpdatesWithCopyBufferCallback)
         CurrOffset += NumBytes;
     });
 
-    pUploadManager->ScheduleBufferUpdate({pContext, 256, &BufferData[0], CopyBufferCallback, CopyBufferCallback});
-    pUploadManager->ScheduleBufferUpdate({pContext, 256, &BufferData[256], CopyBufferCallback, CopyBufferCallback});
-    pUploadManager->ScheduleBufferUpdate({pContext, 1024, &BufferData[512], CopyBufferCallback, CopyBufferCallback});
-    pUploadManager->ScheduleBufferUpdate({pContext, 512, &BufferData[1536], CopyBufferCallback, CopyBufferCallback});
-    pUploadManager->ScheduleBufferUpdate({pContext, 2048, &BufferData[2048], CopyBufferCallback, CopyBufferCallback});
-    pUploadManager->ScheduleBufferUpdate({pContext, 4096, &BufferData[4096], CopyBufferCallback, CopyBufferCallback});
-    pUploadManager->ScheduleBufferUpdate({pContext, 8192, &BufferData[8192], CopyBufferCallback, CopyBufferCallback});
+    EXPECT_TRUE(pUploadManager->ScheduleBufferUpdate({pContext, 256, &BufferData[0], CopyBufferCallback, CopyBufferCallback}));
+    EXPECT_TRUE(pUploadManager->ScheduleBufferUpdate({pContext, 256, &BufferData[256], CopyBufferCallback, CopyBufferCallback}));
+    EXPECT_TRUE(pUploadManager->ScheduleBufferUpdate({pContext, 1024, &BufferData[512], CopyBufferCallback, CopyBufferCallback}));
+    EXPECT_TRUE(pUploadManager->ScheduleBufferUpdate({pContext, 512, &BufferData[1536], CopyBufferCallback, CopyBufferCallback}));
+    EXPECT_TRUE(pUploadManager->ScheduleBufferUpdate({pContext, 2048, &BufferData[2048], CopyBufferCallback, CopyBufferCallback}));
+    EXPECT_TRUE(pUploadManager->ScheduleBufferUpdate({pContext, 4096, &BufferData[4096], CopyBufferCallback, CopyBufferCallback}));
+    EXPECT_TRUE(pUploadManager->ScheduleBufferUpdate({pContext, 8192, &BufferData[8192], CopyBufferCallback, CopyBufferCallback}));
 
     pUploadManager->RenderThreadUpdate(pContext);
     pUploadManager->RenderThreadUpdate(pContext);
@@ -475,7 +475,7 @@ TEST(GPUUploadManagerTest, ScheduleBufferUpdatesWithWriteDataCallback)
         ScheduleBufferUpdateInfo UpdateInfo{pContext, pBuffer, CurrOffset, NumBytes, nullptr};
         UpdateInfo.WriteDataCallback          = WriteDataCallback;
         UpdateInfo.pWriteDataCallbackUserData = WriteDataCallback;
-        pUploadManager->ScheduleBufferUpdate(UpdateInfo);
+        EXPECT_TRUE(pUploadManager->ScheduleBufferUpdate(UpdateInfo));
 
         CurrOffset += NumBytes;
     }
@@ -536,8 +536,8 @@ TEST(GPUUploadManagerTest, ReleaseBufferCallbackResources)
 
     std::thread Worker{
         [&]() {
-            pUploadManager->ScheduleBufferUpdate({pBuffer, UploadDstOffset, UploadSize, BufferData.data(), UploadEnqueuedCallback, UploadEnqueuedCallback});
-            pUploadManager->ScheduleBufferUpdate({BufferSize, BufferData.data(), CopyBufferCallback, CopyBufferCallback});
+            EXPECT_TRUE(pUploadManager->ScheduleBufferUpdate({pBuffer, UploadDstOffset, UploadSize, BufferData.data(), UploadEnqueuedCallback, UploadEnqueuedCallback}));
+            EXPECT_TRUE(pUploadManager->ScheduleBufferUpdate({BufferSize, BufferData.data(), CopyBufferCallback, CopyBufferCallback}));
         }};
 
     Worker.join();
@@ -595,7 +595,7 @@ TEST(GPUUploadManagerTest, ShutdownReleasesPendingBufferUpdates)
             ++CallbackCount;
         };
     UploadUpdate.pUploadEnqueuedData = &UploadEnqueuedCallbackCalled;
-    pUploadManager->ScheduleBufferUpdate(UploadUpdate);
+    EXPECT_TRUE(pUploadManager->ScheduleBufferUpdate(UploadUpdate));
 
     ScheduleBufferUpdateInfo CopyUpdate;
     CopyUpdate.pContext = pContext;
@@ -615,7 +615,7 @@ TEST(GPUUploadManagerTest, ShutdownReleasesPendingBufferUpdates)
             ++CallbackCount;
         };
     CopyUpdate.pCopyBufferData = &CopyBufferCallbackCalled;
-    pUploadManager->ScheduleBufferUpdate(CopyUpdate);
+    EXPECT_TRUE(pUploadManager->ScheduleBufferUpdate(CopyUpdate));
 
     EXPECT_EQ(UploadEnqueuedCallbackCalled, 0u);
     EXPECT_EQ(CopyBufferCallbackCalled, 0u);
@@ -672,7 +672,7 @@ TEST(GPUUploadManagerTest, ParallelBufferUpdates)
                     Uint32 Offset = CurrOffset.fetch_add(UpdateSize);
                     if (Offset >= BufferData.size())
                         break;
-                    pUploadManager->ScheduleBufferUpdate({pBuffer, Offset, UpdateSize, &BufferData[Offset]});
+                    EXPECT_TRUE(pUploadManager->ScheduleBufferUpdate({pBuffer, Offset, UpdateSize, &BufferData[Offset]}));
                     NumUpdatesScheduled.fetch_add(1);
                 }
                 NumThreadsCompleted.fetch_add(1);
@@ -757,7 +757,7 @@ TEST(GPUUploadManagerTest, DestroyWhileBufferUpdatesAreRunning)
                         AllThreadsRunningSignal.Trigger();
                     }
                     // Set update size to be larger than page size to make the manager create new large page and block in ScheduleBufferUpdate
-                    pUploadManager->ScheduleBufferUpdate({pBuffer, 0, UpdateSize, BufferData.data()});
+                    EXPECT_FALSE(pUploadManager->ScheduleBufferUpdate({pBuffer, 0, UpdateSize, BufferData.data()}));
                     NumUpdatesRunning.fetch_sub(1);
                 });
         }
@@ -845,7 +845,7 @@ TEST(GPUUploadManagerTest, ShutdownReleasesBlockedBufferUpdates)
                     };
                 UpdateInfo.pCopyBufferData = &NumCopyCallbacks;
 
-                pUploadManager->ScheduleBufferUpdate(UpdateInfo);
+                EXPECT_FALSE(pUploadManager->ScheduleBufferUpdate(UpdateInfo));
                 NumUpdatesRunning.fetch_sub(1);
             });
 
@@ -874,7 +874,7 @@ TEST(GPUUploadManagerTest, ShutdownReleasesBlockedBufferUpdates)
                     };
                 UpdateInfo.pUploadEnqueuedData = &NumUploadEnqueuedCallbacks;
 
-                pUploadManager->ScheduleBufferUpdate(UpdateInfo);
+                EXPECT_FALSE(pUploadManager->ScheduleBufferUpdate(UpdateInfo));
                 NumUpdatesRunning.fetch_sub(1);
             });
     }
@@ -1002,7 +1002,7 @@ TEST(GPUUploadManagerTest, ShutdownReleasesBlockedTextureUpdates)
                     };
                 UpdateInfo.pCopyTextureData = &NumCopyCallbacks;
 
-                pUploadManager->ScheduleTextureUpdate(UpdateInfo);
+                EXPECT_FALSE(pUploadManager->ScheduleTextureUpdate(UpdateInfo));
                 NumUpdatesRunning.fetch_sub(1);
             });
 
@@ -1038,7 +1038,7 @@ TEST(GPUUploadManagerTest, ShutdownReleasesBlockedTextureUpdates)
                     };
                 UpdateInfo.pUploadEnqueuedData = &NumUploadEnqueuedCallbacks;
 
-                pUploadManager->ScheduleTextureUpdate(UpdateInfo);
+                EXPECT_FALSE(pUploadManager->ScheduleTextureUpdate(UpdateInfo));
                 NumUpdatesRunning.fetch_sub(1);
             });
     }
@@ -1117,7 +1117,7 @@ TEST(GPUUploadManagerTest, CreateWithNullContext)
                 for (size_t i = 0; i < kNumUpdatesPerThread; ++i)
                 {
                     Uint32 Offset = static_cast<Uint32>(CurrOffset.fetch_add(kUpdateSize));
-                    pUploadManager->ScheduleBufferUpdate({pBuffer, Offset, kUpdateSize, &BufferData[Offset]});
+                    EXPECT_TRUE(pUploadManager->ScheduleBufferUpdate({pBuffer, Offset, kUpdateSize, &BufferData[Offset]}));
                 }
                 NumUpdatesRunning.fetch_sub(1);
             });
@@ -1197,7 +1197,7 @@ TEST(GPUUploadManagerTest, MaxPageCount)
                     for (Uint32 j = 0; j < kUpdateSize / UpadateSize; ++j)
                     {
                         Uint32 Offset = CurrOffset.fetch_add(UpadateSize);
-                        pUploadManager->ScheduleBufferUpdate({pBuffer, Offset, UpadateSize, &BufferData[Offset]});
+                        EXPECT_TRUE(pUploadManager->ScheduleBufferUpdate({pBuffer, Offset, UpadateSize, &BufferData[Offset]}));
                     }
                 }
                 NumThreadsCompleted.fetch_add(1);
@@ -1819,7 +1819,7 @@ void TestTextureUpdates(TEXTURE_FORMAT Format, RESOURCE_DIMENSION Type, Uint32 F
                                 };
                         }
 
-                        pUploadManager->ScheduleTextureUpdate(UpdateInfo);
+                        EXPECT_TRUE(pUploadManager->ScheduleTextureUpdate(UpdateInfo));
                     }
                 }
             }
@@ -1974,7 +1974,7 @@ TEST(GPUUploadManagerTest, ReleaseTextureCallbackResources)
         UpdateInfo.DstBox      = {0, 16, 0, 16};
         UpdateInfo.pSrcData    = TextureData.data();
         UpdateInfo.Stride      = 16 * 4;
-        pUploadManager->ScheduleTextureUpdate(UpdateInfo);
+        EXPECT_TRUE(pUploadManager->ScheduleTextureUpdate(UpdateInfo));
     }
 
     std::thread Worker{
@@ -1989,7 +1989,7 @@ TEST(GPUUploadManagerTest, ReleaseTextureCallbackResources)
                 UpdateInfo.DstBox              = {0, 16, 0, 16};
                 UpdateInfo.pSrcData            = TextureData.data();
                 UpdateInfo.Stride              = 16 * 4;
-                pUploadManager->ScheduleTextureUpdate(UpdateInfo);
+                EXPECT_TRUE(pUploadManager->ScheduleTextureUpdate(UpdateInfo));
             }
 
             {
@@ -2003,7 +2003,7 @@ TEST(GPUUploadManagerTest, ReleaseTextureCallbackResources)
                 UpdateInfo.DstBox           = {0, 16, 0, 16};
                 UpdateInfo.pSrcData         = TextureData.data();
                 UpdateInfo.Stride           = 16 * 4;
-                pUploadManager->ScheduleTextureUpdate(UpdateInfo);
+                EXPECT_TRUE(pUploadManager->ScheduleTextureUpdate(UpdateInfo));
             }
         }};
 
@@ -2078,7 +2078,7 @@ TEST(GPUUploadManagerTest, ShutdownReleasesPendingTextureUpdates)
             ++CallbackCount;
         };
     UploadUpdate.pUploadEnqueuedData = &UploadEnqueuedCallbackCalled;
-    pUploadManager->ScheduleTextureUpdate(UploadUpdate);
+    EXPECT_TRUE(pUploadManager->ScheduleTextureUpdate(UploadUpdate));
 
     ScheduleTextureUpdateInfo CopyUpdate;
     CopyUpdate.pContext    = pContext;
@@ -2130,7 +2130,7 @@ TEST(GPUUploadManagerTest, ShutdownReleasesPendingTextureUpdates)
             ++CallbackCount;
         };
     CopyUpdate.pCopyTextureData = &CopyTextureCallbackCalled;
-    pUploadManager->ScheduleTextureUpdate(CopyUpdate);
+    EXPECT_TRUE(pUploadManager->ScheduleTextureUpdate(CopyUpdate));
 
     EXPECT_EQ(UploadEnqueuedCallbackCalled, 0u);
     EXPECT_EQ(CopyTextureCallbackCalled, 0u);
@@ -2259,13 +2259,13 @@ TEST(GPUUploadManagerTest, ParallelBufferAndTextureUpdates)
                     Uint32 Offset = CurrOffset.fetch_add(BufferUpdateSize);
                     if (Offset < BufferData.size())
                     {
-                        pUploadManager->ScheduleBufferUpdate({pBuffer, Offset, BufferUpdateSize, &BufferData[Offset]});
+                        EXPECT_TRUE(pUploadManager->ScheduleBufferUpdate({pBuffer, Offset, BufferUpdateSize, &BufferData[Offset]}));
                     }
 
                     Uint32 TexUpdateIndex = NextTextureUpdate.fetch_add(1);
                     if (TexUpdateIndex < TextureUpdates.size())
                     {
-                        pUploadManager->ScheduleTextureUpdate(TextureUpdates[TexUpdateIndex]);
+                        EXPECT_TRUE(pUploadManager->ScheduleTextureUpdate(TextureUpdates[TexUpdateIndex]));
                     }
 
                     if (Offset >= BufferData.size() && TexUpdateIndex >= TextureUpdates.size())
@@ -2394,7 +2394,7 @@ TEST(GPUUploadManagerTest, DestroyWhileTextureUpdatesAreRunning)
                     UpdateInfo.DstSlice    = 0;
                     // Set a large box to make the manager request a new large page for update and block in ScheduleTextureUpdate.
                     UpdateInfo.DstBox = {0, 256, 0, 256};
-                    pUploadManager->ScheduleTextureUpdate(UpdateInfo);
+                    EXPECT_FALSE(pUploadManager->ScheduleTextureUpdate(UpdateInfo));
 
                     NumUpdatesRunning.fetch_sub(1);
                 },

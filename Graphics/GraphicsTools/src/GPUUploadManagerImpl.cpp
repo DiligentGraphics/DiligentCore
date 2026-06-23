@@ -1323,7 +1323,7 @@ bool GPUUploadManagerImpl::UploadStream::ScheduleUpdate(IDeviceContext* pContext
     return UpdateScheduled;
 }
 
-void GPUUploadManagerImpl::ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& UpdateInfo)
+bool GPUUploadManagerImpl::ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& UpdateInfo)
 {
     BufferUpdateCancelGuard CancelGuard{UpdateInfo};
 
@@ -1331,11 +1331,11 @@ void GPUUploadManagerImpl::ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& 
     {
         // Worker-thread scheduling may race with Shutdown(). Quietly cancel the update
         // through the guard so callback-owned user data is released.
-        return;
+        return false;
     }
 
     if (!ValidateBufferUpdate(UpdateInfo))
-        return;
+        return false;
 
     if (UpdateInfo.CopyBuffer != nullptr && UpdateInfo.UploadEnqueued != nullptr)
     {
@@ -1343,17 +1343,22 @@ void GPUUploadManagerImpl::ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& 
     }
 
     UploadStream& Stream = GetStreamForUpdateSize(UpdateInfo.NumBytes);
-    if (Stream.ScheduleUpdate(UpdateInfo.pContext, UpdateInfo.NumBytes, &UpdateInfo,
-                              [](Page::Writer& Writer, const void* pUpdateData) {
-                                  const ScheduleBufferUpdateInfo* pBufferUpdateInfo = static_cast<const ScheduleBufferUpdateInfo*>(pUpdateData);
-                                  return Writer.ScheduleBufferUpdate(*pBufferUpdateInfo);
-                              }))
+
+    const bool Scheduled = Stream.ScheduleUpdate(
+        UpdateInfo.pContext, UpdateInfo.NumBytes, &UpdateInfo,
+        [](Page::Writer& Writer, const void* pUpdateData) {
+            const ScheduleBufferUpdateInfo* pBufferUpdateInfo = static_cast<const ScheduleBufferUpdateInfo*>(pUpdateData);
+            return Writer.ScheduleBufferUpdate(*pBufferUpdateInfo);
+        });
+    if (Scheduled)
     {
         CancelGuard.Disarm();
     }
+
+    return Scheduled;
 }
 
-void GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo)
+bool GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo)
 {
     const bool               UseD3D11TextureCallback = m_pTextureStreams != nullptr;
     TextureUpdateCancelGuard CancelGuard{UpdateInfo, UseD3D11TextureCallback};
@@ -1362,7 +1367,7 @@ void GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo
     {
         // Worker-thread scheduling may race with Shutdown(). Quietly cancel the update
         // through the guard so callback-owned user data is released.
-        return;
+        return false;
     }
 
     const bool HasCopyCallback =
@@ -1380,11 +1385,11 @@ void GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo
     if (Format == TEX_FORMAT_UNKNOWN)
     {
         LOG_ERROR_MESSAGE("ScheduleTextureUpdate() requires pDstTexture or a valid ScheduleTextureUpdateInfo::Format");
-        return;
+        return false;
     }
 
     if (!ValidateTextureUpdate(UpdateInfo, Format, HasCopyCallback))
-        return;
+        return false;
 
     struct ScheduleUpdateData
     {
@@ -1408,7 +1413,7 @@ void GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo
     if (pStream == nullptr)
     {
         // GetStreamForFormat can return null if the manager is stopping.
-        return;
+        return false;
     }
 
     // For texture updates, use the maximum upload region size as the update size.
@@ -1416,14 +1421,18 @@ void GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo
         std::max(UpdateInfo.DstBox.Width(), UpdateInfo.DstBox.Height()) :
         static_cast<Uint32>(UpdateData.CopyInfo.MemorySize);
 
-    if (pStream->ScheduleUpdate(UpdateInfo.pContext, UpdateSize, &UpdateData,
-                                [](Page::Writer& Writer, const void* pData) {
-                                    const ScheduleUpdateData* pUpdateData = static_cast<const ScheduleUpdateData*>(pData);
-                                    return Writer.ScheduleTextureUpdate(pUpdateData->UpdateInfo, pUpdateData->CopyInfo, pUpdateData->OffsetAlignment);
-                                }))
+    const bool Scheduled = pStream->ScheduleUpdate(
+        UpdateInfo.pContext, UpdateSize, &UpdateData,
+        [](Page::Writer& Writer, const void* pData) {
+            const ScheduleUpdateData* pUpdateData = static_cast<const ScheduleUpdateData*>(pData);
+            return Writer.ScheduleTextureUpdate(pUpdateData->UpdateInfo, pUpdateData->CopyInfo, pUpdateData->OffsetAlignment);
+        });
+    if (Scheduled)
     {
         CancelGuard.Disarm();
     }
+
+    return Scheduled;
 }
 
 GPUUploadManagerImpl::Page* GPUUploadManagerImpl::UploadStream::CreatePage(IDeviceContext* pContext, Uint32 RequiredSize, bool AllowOverLimit)

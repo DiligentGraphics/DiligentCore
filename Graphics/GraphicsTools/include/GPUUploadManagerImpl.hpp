@@ -61,9 +61,9 @@ public:
 
     virtual void DILIGENT_CALL_TYPE RenderThreadUpdate(IDeviceContext* pContext) override final;
 
-    virtual void DILIGENT_CALL_TYPE ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& UpdateInfo) override final;
+    virtual bool DILIGENT_CALL_TYPE ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& UpdateInfo) override final;
 
-    virtual void DILIGENT_CALL_TYPE ScheduleTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo) override final;
+    virtual bool DILIGENT_CALL_TYPE ScheduleTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo) override final;
 
     virtual void DILIGENT_CALL_TYPE GetStats(GPUUploadManagerStats& Stats) override final;
 

@@ -570,6 +570,10 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     ///
     /// \param [in] UpdateInfo - Structure describing the buffer update operation. See ScheduleBufferUpdateInfo for details.
     ///
+    /// \return true if the update was successfully accepted by the manager, false if it was rejected
+    ///         due to invalid parameters, shutdown, or an internal scheduling failure.
+    ///         If false is returned, any abandoned-scheduling callback is invoked before the method returns.
+    ///
     /// The method is thread-safe and can be called from multiple threads simultaneously with other calls to ScheduleBufferUpdate()
     /// and RenderThreadUpdate().
     /// 
@@ -579,13 +583,17 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     /// 
     /// If the method is called from the render thread, the pContext parameter must be a pointer to the device context used to create the
     /// GPU upload manager. If the method is called from the render thread with null pContext, it may never return.
-    VIRTUAL void METHOD(ScheduleBufferUpdate)(THIS_
+    VIRTUAL bool METHOD(ScheduleBufferUpdate)(THIS_
                                               const ScheduleBufferUpdateInfo REF UpdateInfo) PURE;
 
 
     /// Schedules an asynchronous texture update operation.
     ///
     /// \param [in] UpdateInfo - Structure describing the texture update operation. See ScheduleTextureUpdateInfo for details.
+    ///
+    /// \return true if the update was successfully accepted by the manager, false if it was rejected
+    ///         due to invalid parameters, shutdown, or an internal scheduling failure.
+    ///         If false is returned, any abandoned-scheduling callback is invoked before the method returns.
     /// 
     /// The method is thread-safe and can be called from multiple threads simultaneously with other calls to ScheduleTextureUpdate()
     /// and RenderThreadUpdate().
@@ -596,7 +604,7 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     /// 
     /// If the method is called from the render thread, the pContext parameter must be a pointer to the device context used to create the
     /// GPU upload manager. If the method is called from the render thread with null pContext, it may never return.
-    VIRTUAL void METHOD(ScheduleTextureUpdate)(THIS_
+    VIRTUAL bool METHOD(ScheduleTextureUpdate)(THIS_
                                                const ScheduleTextureUpdateInfo REF UpdateInfo) PURE;
 
     /// Retrieves GPU upload manager statistics.
