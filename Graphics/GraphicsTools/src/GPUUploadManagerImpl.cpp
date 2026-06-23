@@ -38,6 +38,92 @@
 namespace Diligent
 {
 
+namespace
+{
+
+class BufferUpdateCancelGuard
+{
+public:
+    explicit BufferUpdateCancelGuard(const ScheduleBufferUpdateInfo& UpdateInfo) noexcept :
+        m_pUpdateInfo{&UpdateInfo}
+    {}
+
+    ~BufferUpdateCancelGuard()
+    {
+        if (m_pUpdateInfo == nullptr)
+            return;
+
+        const ScheduleBufferUpdateInfo& UpdateInfo = *m_pUpdateInfo;
+        if (UpdateInfo.CopyBuffer != nullptr)
+        {
+            UpdateInfo.CopyBuffer(nullptr, nullptr, ~0u, UpdateInfo.NumBytes, UpdateInfo.pCopyBufferData);
+        }
+        if (UpdateInfo.UploadEnqueued != nullptr)
+        {
+            UpdateInfo.UploadEnqueued(nullptr, UpdateInfo.DstOffset, UpdateInfo.NumBytes, UpdateInfo.pUploadEnqueuedData);
+        }
+    }
+
+    void Disarm() noexcept
+    {
+        m_pUpdateInfo = nullptr;
+    }
+
+private:
+    const ScheduleBufferUpdateInfo* m_pUpdateInfo = nullptr;
+};
+
+class TextureUpdateCancelGuard
+{
+public:
+    TextureUpdateCancelGuard(const ScheduleTextureUpdateInfo& UpdateInfo,
+                             bool                             UseD3D11TextureCallback) noexcept :
+        m_pUpdateInfo{&UpdateInfo},
+        m_UseD3D11TextureCallback{UseD3D11TextureCallback}
+    {}
+
+    ~TextureUpdateCancelGuard()
+    {
+        if (m_pUpdateInfo == nullptr)
+            return;
+
+        const ScheduleTextureUpdateInfo& UpdateInfo = *m_pUpdateInfo;
+
+        // CopyTexture and CopyD3D11Texture share pCopyTextureData and are backend alternatives,
+        // so cancellation must call the same copy callback that would be used for this backend.
+        if (m_UseD3D11TextureCallback)
+        {
+            if (UpdateInfo.CopyD3D11Texture != nullptr)
+            {
+                UpdateInfo.CopyD3D11Texture(nullptr, UpdateInfo.DstMipLevel, UpdateInfo.DstSlice, UpdateInfo.DstBox, nullptr, 0, 0, UpdateInfo.pCopyTextureData);
+            }
+        }
+        else
+        {
+            if (UpdateInfo.CopyTexture != nullptr)
+            {
+                UpdateInfo.CopyTexture(nullptr, UpdateInfo.DstMipLevel, UpdateInfo.DstSlice, UpdateInfo.DstBox, TextureSubResData{}, UpdateInfo.pCopyTextureData);
+            }
+        }
+
+        if (UpdateInfo.UploadEnqueued != nullptr)
+        {
+            UpdateInfo.UploadEnqueued(nullptr, UpdateInfo.DstMipLevel, UpdateInfo.DstSlice, UpdateInfo.DstBox, UpdateInfo.pUploadEnqueuedData);
+        }
+    }
+
+    void Disarm() noexcept
+    {
+        m_pUpdateInfo = nullptr;
+    }
+
+private:
+    const ScheduleTextureUpdateInfo* m_pUpdateInfo             = nullptr;
+    const bool                       m_UseD3D11TextureCallback = false;
+};
+
+} // namespace
+
 GPUUploadManagerImpl::Page::Writer::Writer(Writer&& Other) noexcept :
     m_pPage{Other.m_pPage}
 {
@@ -1007,7 +1093,7 @@ GPUUploadManagerImpl::UploadStream& GPUUploadManagerImpl::GetStreamForUpdateSize
     return UpdateSize > LargeUpdateThreshold ? *m_pLargeStream : *m_pNormalStream;
 }
 
-void GPUUploadManagerImpl::UploadStream::ScheduleUpdate(IDeviceContext* pContext,
+bool GPUUploadManagerImpl::UploadStream::ScheduleUpdate(IDeviceContext* pContext,
                                                         Uint32          UpdateSize,
                                                         const void*     pUpdateInfo,
                                                         bool            ScheduleUpdate(Page::Writer& Writer, const void* pUpdateInfo))
@@ -1044,8 +1130,9 @@ void GPUUploadManagerImpl::UploadStream::ScheduleUpdate(IDeviceContext* pContext
     RunningUpdatesGuard Guard{*this};
 
 
-    bool IsFirstAttempt = true;
-    bool AbortUpdate    = false;
+    bool IsFirstAttempt  = true;
+    bool AbortUpdate     = false;
+    bool UpdateScheduled = false;
 
     auto UpdatePendingSizeAndTryRotate = [&](Page* P) {
         Uint64 PageEpoch = m_PageRotatedSignal.CurrentEpoch();
@@ -1098,7 +1185,7 @@ void GPUUploadManagerImpl::UploadStream::ScheduleUpdate(IDeviceContext* pContext
             continue;
         }
 
-        const bool UpdateScheduled = ScheduleUpdate(Writer, pUpdateInfo);
+        UpdateScheduled = ScheduleUpdate(Writer, pUpdateInfo);
         EndWriting();
 
         if (UpdateScheduled)
@@ -1112,29 +1199,36 @@ void GPUUploadManagerImpl::UploadStream::ScheduleUpdate(IDeviceContext* pContext
     }
 
     AtomicMax(m_PeakUpdateSize, UpdateSize, std::memory_order_relaxed);
+    return UpdateScheduled;
 }
 
 void GPUUploadManagerImpl::ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& UpdateInfo)
 {
+    BufferUpdateCancelGuard CancelGuard{UpdateInfo};
+
     if (m_Stopping.load(std::memory_order_acquire))
     {
-        DEV_ERROR("GPU upload manager has been shut down");
         return;
     }
 
     UploadStream& Stream = GetStreamForUpdateSize(UpdateInfo.NumBytes);
-    Stream.ScheduleUpdate(UpdateInfo.pContext, UpdateInfo.NumBytes, &UpdateInfo,
-                          [](Page::Writer& Writer, const void* pUpdateData) {
-                              const ScheduleBufferUpdateInfo* pBufferUpdateInfo = static_cast<const ScheduleBufferUpdateInfo*>(pUpdateData);
-                              return Writer.ScheduleBufferUpdate(*pBufferUpdateInfo);
-                          });
+    if (Stream.ScheduleUpdate(UpdateInfo.pContext, UpdateInfo.NumBytes, &UpdateInfo,
+                              [](Page::Writer& Writer, const void* pUpdateData) {
+                                  const ScheduleBufferUpdateInfo* pBufferUpdateInfo = static_cast<const ScheduleBufferUpdateInfo*>(pUpdateData);
+                                  return Writer.ScheduleBufferUpdate(*pBufferUpdateInfo);
+                              }))
+    {
+        CancelGuard.Disarm();
+    }
 }
 
 void GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo)
 {
+    const bool               UseD3D11TextureCallback = m_pTextureStreams != nullptr;
+    TextureUpdateCancelGuard CancelGuard{UpdateInfo, UseD3D11TextureCallback};
+
     if (m_Stopping.load(std::memory_order_acquire))
     {
-        DEV_ERROR("GPU upload manager has been shut down");
         return;
     }
 
@@ -1155,10 +1249,10 @@ void GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo
     };
     ScheduleUpdateData UpdateData{
         UpdateInfo,
-        !m_pTextureStreams ?
+        !UseD3D11TextureCallback ?
             GetBufferToTextureCopyInfo(Format, UpdateInfo.DstBox, m_TextureUpdateStrideAlignment) :
             BufferToTextureCopyInfo{},
-        !m_pTextureStreams ?
+        !UseD3D11TextureCallback ?
             m_TextureUpdateOffsetAlignment :
             0,
     };
@@ -1177,11 +1271,14 @@ void GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo
         std::max(UpdateInfo.DstBox.Width(), UpdateInfo.DstBox.Height()) :
         static_cast<Uint32>(UpdateData.CopyInfo.MemorySize);
 
-    pStream->ScheduleUpdate(UpdateInfo.pContext, UpdateSize, &UpdateData,
-                            [](Page::Writer& Writer, const void* pData) {
-                                const ScheduleUpdateData* pUpdateData = static_cast<const ScheduleUpdateData*>(pData);
-                                return Writer.ScheduleTextureUpdate(pUpdateData->UpdateInfo, pUpdateData->CopyInfo, pUpdateData->OffsetAlignment);
-                            });
+    if (pStream->ScheduleUpdate(UpdateInfo.pContext, UpdateSize, &UpdateData,
+                                [](Page::Writer& Writer, const void* pData) {
+                                    const ScheduleUpdateData* pUpdateData = static_cast<const ScheduleUpdateData*>(pData);
+                                    return Writer.ScheduleTextureUpdate(pUpdateData->UpdateInfo, pUpdateData->CopyInfo, pUpdateData->OffsetAlignment);
+                                }))
+    {
+        CancelGuard.Disarm();
+    }
 }
 
 GPUUploadManagerImpl::Page* GPUUploadManagerImpl::UploadStream::CreatePage(IDeviceContext* pContext, Uint32 RequiredSize, bool AllowOverLimit)

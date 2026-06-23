@@ -91,12 +91,15 @@ typedef void (*WriteStagingBufferDataCallbackType)(void* pDstData, Uint32 NumByt
 /// has been enqueued into the device context command stream (i.e. the copy is *scheduled*,
 /// but may not have executed on the GPU yet).
 ///
-/// If the copy operation has not been scheduled by the time the manager is destroyed,
-/// the callback will be invoked with a null buffer pointer, allowing the application
-/// to clean up any resources associated with the copy operation.
+/// If the copy operation has not been scheduled by the time the manager is destroyed
+/// or shut down, or if scheduling is otherwise abandoned, the callback will be invoked
+/// with a null buffer pointer, allowing the application to clean up any resources
+/// associated with the copy operation.
 ///
 /// \warning Reentrancy / thread-safety:
-///          The callback is executed from inside IGPUUploadManager::RenderThreadUpdate().
+///          The callback is normally executed from inside IGPUUploadManager::RenderThreadUpdate().
+///          If scheduling is abandoned, it may be executed with a null buffer pointer
+///          from inside ScheduleBufferUpdate() or the manager shutdown/destruction path.
 ///          The callback MUST NOT call back into the same IGPUUploadManager instance
 ///          (e.g. ScheduleBufferUpdate(), RenderThreadUpdate(), GetStats()), and MUST NOT
 ///          perform actions that may synchronously trigger RenderThreadUpdate() or otherwise
@@ -126,12 +129,15 @@ typedef void (*GPUBufferUploadEnqueuedCallbackType)(IBuffer* pDstBuffer,
 /// \param [in] NumBytes   - Number of bytes to copy.
 /// \param [in] pUserData  - User-provided pointer passed to ScheduleBufferUpdate().
 ///
-/// If the copy operation was not scheduled by the time the manager is destroyed,
-/// the callback will be called with a null device context pointer so that the application
-/// can clean up any resources associated with the copy operation.
+/// If the copy operation was not scheduled by the time the manager is destroyed
+/// or shut down, or if scheduling is otherwise abandoned, the callback will be called
+/// with a null device context pointer so that the application can clean up any resources
+/// associated with the copy operation.
 ///
 /// \warning Reentrancy / thread-safety:
-///          The callback is executed from inside IGPUUploadManager::RenderThreadUpdate().
+///          The callback is normally executed from inside IGPUUploadManager::RenderThreadUpdate().
+///          If scheduling is abandoned, it may be executed with a null context pointer
+///          from inside ScheduleBufferUpdate() or the manager shutdown/destruction path.
 ///          The callback MUST NOT call back into the same IGPUUploadManager instance
 ///          (e.g. ScheduleBufferUpdate(), RenderThreadUpdate(), GetStats()), and MUST NOT
 ///          perform actions that may synchronously trigger RenderThreadUpdate() or otherwise
@@ -200,8 +206,10 @@ struct ScheduleBufferUpdateInfo
     void* pCopyBufferData DEFAULT_INITIALIZER(nullptr);
 
     /// Optional callback to be called when the GPU copy operation is scheduled for execution.
-    /// If CopyBuffer is provided, the callback will not be called, and the CopyBuffer callback is expected
-    /// to perform any necessary follow-up actions after scheduling the copy operation.
+    /// If CopyBuffer is provided and the update is accepted, the callback will not be called, and the
+    /// CopyBuffer callback is expected to perform any necessary follow-up actions after scheduling the copy operation.
+    /// If scheduling is abandoned, the callback may still be called with a null destination buffer so the
+    /// application can release callback-specific user data.
     GPUBufferUploadEnqueuedCallbackType UploadEnqueued DEFAULT_INITIALIZER(nullptr);
 
     /// Optional pointer to user data that will be passed to the UploadEnqueued callback.
@@ -284,14 +292,17 @@ typedef void (*WriteStagingTextureDataCallbackType)(void*         pDstData,
 /// has been enqueued into the device context command stream (i.e. the copy is *scheduled*,
 /// but may not have executed on the GPU yet).
 ///
-/// If the copy operation has not been scheduled by the time the manager is destroyed,
-/// the callback will be invoked with a null texture pointer, allowing the application
-/// to clean up any resources associated with the copy operation.
+/// If the copy operation has not been scheduled by the time the manager is destroyed
+/// or shut down, or if scheduling is otherwise abandoned, the callback will be invoked
+/// with a null texture pointer, allowing the application to clean up any resources
+/// associated with the copy operation.
 ///
 /// \warning Reentrancy / thread-safety:
-///          The callback is executed from inside IGPUUploadManager::RenderThreadUpdate().
+///          The callback is normally executed from inside IGPUUploadManager::RenderThreadUpdate().
+///          If scheduling is abandoned, it may be executed with a null texture pointer
+///          from inside ScheduleTextureUpdate() or the manager shutdown/destruction path.
 ///          The callback MUST NOT call back into the same IGPUUploadManager instance
-///          (e.g. SchedulTextureUpdate(), RenderThreadUpdate(), GetStats()), and MUST NOT
+///          (e.g. ScheduleTextureUpdate(), RenderThreadUpdate(), GetStats()), and MUST NOT
 ///          perform actions that may synchronously trigger RenderThreadUpdate() or otherwise
 ///          re-enter the manager, as this may lead to deadlocks, unbounded recursion, or
 ///          inconsistent internal state.
@@ -322,12 +333,15 @@ typedef void (*GPUTextureUploadEnqueuedCallbackType)(ITexture*     pDstTexture,
 /// \param [in] SrcData     - Source data description.
 /// \param [in] pUserData   - User-provided pointer passed to ScheduleTextureUpdate().
 ///
-/// If the copy operation was not scheduled by the time the manager is destroyed,
-/// the callback will be called with a null device context pointer so that the application
-/// can clean up any resources associated with the copy operation.
+/// If the copy operation was not scheduled by the time the manager is destroyed
+/// or shut down, or if scheduling is otherwise abandoned, the callback will be called
+/// with a null device context pointer so that the application can clean up any resources
+/// associated with the copy operation.
 ///
 /// \warning Reentrancy / thread-safety:
-///          The callback is executed from inside IGPUUploadManager::RenderThreadUpdate().
+///          The callback is normally executed from inside IGPUUploadManager::RenderThreadUpdate().
+///          If scheduling is abandoned, it may be executed with a null context pointer
+///          from inside ScheduleTextureUpdate() or the manager shutdown/destruction path.
 ///          The callback MUST NOT call back into the same IGPUUploadManager instance
 ///          (e.g. ScheduleTextureUpdate(), RenderThreadUpdate(), GetStats()), and MUST NOT
 ///          perform actions that may synchronously trigger RenderThreadUpdate() or otherwise
@@ -356,6 +370,17 @@ typedef void (*CopyStagingTextureCallbackType)(IDeviceContext*             pCont
 /// \param [in] SrcX        - X offset in the staging texture where the source data starts.
 /// \param [in] SrcY        - Y offset in the staging texture where the source data starts.
 /// \param [in] pUserData   - User-provided pointer passed to ScheduleTextureUpdate().
+///
+/// If the copy operation was not scheduled by the time the manager is destroyed
+/// or shut down, or if scheduling is otherwise abandoned, the callback will be called
+/// with a null device context pointer and a null source texture so that the application
+/// can clean up any resources associated with the copy operation.
+///
+/// \warning Reentrancy / thread-safety:
+///          The callback is normally executed from inside IGPUUploadManager::RenderThreadUpdate().
+///          If scheduling is abandoned, it may be executed with a null context pointer
+///          from inside ScheduleTextureUpdate() or the manager shutdown/destruction path.
+///          The callback MUST NOT call back into the same IGPUUploadManager instance.
 typedef void (*CopyStagingD3D11TextureCallbackType)(IDeviceContext* pContext,
                                                     Uint32          DstMipLevel,
                                                     Uint32          DstSlice,
@@ -439,8 +464,10 @@ struct ScheduleTextureUpdateInfo
 
 
     /// Optional callback to be called when the GPU copy operation is scheduled for execution.
-    /// If CopyTexture is provided, the callback will not be called, and the CopyTexture callback is expected
-    /// to perform any necessary follow-up actions after scheduling the copy operation.
+    /// If CopyTexture is provided and the update is accepted, the callback will not be called, and the
+    /// CopyTexture callback is expected to perform any necessary follow-up actions after scheduling the copy operation.
+    /// If scheduling is abandoned, the callback may still be called with a null destination texture so the
+    /// application can release callback-specific user data.
     GPUTextureUploadEnqueuedCallbackType UploadEnqueued DEFAULT_INITIALIZER(nullptr);
 
     /// Optional pointer to user data that will be passed to the UploadEnqueued callback.

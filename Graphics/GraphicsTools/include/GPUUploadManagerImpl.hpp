@@ -350,7 +350,7 @@ private:
         void  AddFreePages(IDeviceContext* pContext);
         void  AddFreePage(Page* pPage) { m_FreePages.Push(pPage); }
 
-        void ScheduleUpdate(IDeviceContext* pContext,
+        bool ScheduleUpdate(IDeviceContext* pContext,
                             Uint32          UpdateSize,
                             const void*     pUpdateInfo,
                             bool            ScheduleUpdate(Page::Writer& Writer, const void* pUpdateInfo));

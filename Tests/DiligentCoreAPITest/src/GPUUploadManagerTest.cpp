@@ -733,18 +733,51 @@ TEST(GPUUploadManagerTest, ShutdownReleasesBlockedBufferUpdates)
     constexpr size_t         kNumThreads = 4;
     std::vector<std::thread> Threads;
     std::atomic<Uint32>      NumUpdatesRunning{0};
+    std::atomic<Uint32>      NumCopyCallbacks{0};
+    std::atomic<Uint32>      NumUploadEnqueuedCallbacks{0};
     Threading::Signal        AllThreadsRunningSignal;
     for (size_t t = 0; t < kNumThreads; ++t)
     {
         RefCntAutoPtr<IGPUUploadManager> pThreadUploadManager = pUploadManager;
         Threads.emplace_back(
-            [pThreadUploadManager, &NumUpdatesRunning, &AllThreadsRunningSignal]() {
+            [pThreadUploadManager, &NumUpdatesRunning, &NumCopyCallbacks, &NumUploadEnqueuedCallbacks, &AllThreadsRunningSignal]() {
                 if (NumUpdatesRunning.fetch_add(1) == kNumThreads - 1)
                 {
                     AllThreadsRunningSignal.Trigger();
                 }
 
-                pThreadUploadManager->ScheduleBufferUpdate({nullptr, 0, 4096, nullptr});
+                ScheduleBufferUpdateInfo UpdateInfo;
+                UpdateInfo.NumBytes = 4096;
+
+                UpdateInfo.CopyBuffer =
+                    [](IDeviceContext* pContext,
+                       IBuffer*        pSrcBuffer,
+                       Uint32          SrcOffset,
+                       Uint32          NumBytes,
+                       void*           pUserData) {
+                        auto& Count = *static_cast<std::atomic<Uint32>*>(pUserData);
+                        EXPECT_EQ(pContext, nullptr);
+                        EXPECT_EQ(pSrcBuffer, nullptr);
+                        EXPECT_EQ(SrcOffset, ~0u);
+                        EXPECT_EQ(NumBytes, 4096u);
+                        Count.fetch_add(1, std::memory_order_relaxed);
+                    };
+                UpdateInfo.pCopyBufferData = &NumCopyCallbacks;
+
+                UpdateInfo.UploadEnqueued =
+                    [](IBuffer* pDstBuffer,
+                       Uint32   DstOffset,
+                       Uint32   NumBytes,
+                       void*    pUserData) {
+                        auto& Count = *static_cast<std::atomic<Uint32>*>(pUserData);
+                        EXPECT_EQ(pDstBuffer, nullptr);
+                        EXPECT_EQ(DstOffset, 0u);
+                        EXPECT_EQ(NumBytes, 4096u);
+                        Count.fetch_add(1, std::memory_order_relaxed);
+                    };
+                UpdateInfo.pUploadEnqueuedData = &NumUploadEnqueuedCallbacks;
+
+                pThreadUploadManager->ScheduleBufferUpdate(UpdateInfo);
                 NumUpdatesRunning.fetch_sub(1);
             });
     }
@@ -764,6 +797,153 @@ TEST(GPUUploadManagerTest, ShutdownReleasesBlockedBufferUpdates)
         thread.join();
     }
     EXPECT_EQ(NumUpdatesRunning.load(), 0u);
+    EXPECT_EQ(NumCopyCallbacks.load(), kNumThreads);
+    EXPECT_EQ(NumUploadEnqueuedCallbacks.load(), kNumThreads);
+
+    pUploadManager.Release();
+
+    pContext->Flush();
+    pContext->FinishFrame();
+    pDevice->ReleaseStaleResources();
+}
+
+TEST(GPUUploadManagerTest, ShutdownReleasesBlockedTextureUpdates)
+{
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    TextureDesc TexDesc;
+    TexDesc.Name      = "GPUUploadManagerTest texture";
+    TexDesc.Type      = RESOURCE_DIM_TEX_2D_ARRAY;
+    TexDesc.Format    = TEX_FORMAT_RGBA8_UNORM;
+    TexDesc.Usage     = USAGE_DEFAULT;
+    TexDesc.Width     = 512;
+    TexDesc.Height    = 512;
+    TexDesc.ArraySize = 4;
+    TexDesc.MipLevels = 1;
+    TexDesc.BindFlags = BIND_SHADER_RESOURCE;
+
+    RefCntAutoPtr<ITexture> pTexture;
+    pDevice->CreateTexture(TexDesc, nullptr, &pTexture);
+    ASSERT_NE(pTexture, nullptr);
+
+    RefCntAutoPtr<IGPUUploadManager> pUploadManager;
+    // Use small page sizes to make the upload attempts request a page rotation
+    // and block until RenderThreadUpdate() or Shutdown().
+    GPUUploadManagerCreateInfo CreateInfo{pDevice, pContext, 1024, 2048};
+    CreateGPUUploadManager(CreateInfo, &pUploadManager);
+    ASSERT_TRUE(pUploadManager != nullptr);
+
+    constexpr size_t         kNumThreads = 4;
+    std::vector<std::thread> Threads;
+    std::atomic<Uint32>      NumUpdatesRunning{0};
+    std::atomic<Uint32>      NumCopyCallbacks{0};
+    std::atomic<Uint32>      NumUploadEnqueuedCallbacks{0};
+    Threading::Signal        AllThreadsRunningSignal;
+    std::vector<Uint8>       Data(256 * 256 * 4);
+
+    for (size_t t = 0; t < kNumThreads; ++t)
+    {
+        RefCntAutoPtr<IGPUUploadManager> pThreadUploadManager = pUploadManager;
+        Threads.emplace_back(
+            [pThreadUploadManager, pTexture, &Data, &NumUpdatesRunning, &NumCopyCallbacks, &NumUploadEnqueuedCallbacks, &AllThreadsRunningSignal, t]() {
+                if (NumUpdatesRunning.fetch_add(1) == kNumThreads - 1)
+                {
+                    AllThreadsRunningSignal.Trigger();
+                }
+
+                ScheduleTextureUpdateInfo UpdateInfo;
+                UpdateInfo.pSrcData    = Data.data();
+                UpdateInfo.Stride      = 256 * 4;
+                UpdateInfo.pDstTexture = pTexture;
+                UpdateInfo.DstMipLevel = 0;
+                UpdateInfo.DstSlice    = static_cast<Uint32>(t);
+                UpdateInfo.DstBox      = {0, 256, 0, 256};
+
+                UpdateInfo.CopyTexture =
+                    [](IDeviceContext*          pContext,
+                       Uint32                   DstMipLevel,
+                       Uint32                   DstSlice,
+                       const Box&               DstBox,
+                       const TextureSubResData& SrcData,
+                       void*                    pUserData) {
+                        auto& Count = *static_cast<std::atomic<Uint32>*>(pUserData);
+                        EXPECT_EQ(pContext, nullptr);
+                        EXPECT_EQ(DstMipLevel, 0u);
+                        EXPECT_EQ(DstBox.MinX, 0u);
+                        EXPECT_EQ(DstBox.MaxX, 256u);
+                        EXPECT_EQ(DstBox.MinY, 0u);
+                        EXPECT_EQ(DstBox.MaxY, 256u);
+                        EXPECT_EQ(SrcData.pData, nullptr);
+                        EXPECT_EQ(SrcData.pSrcBuffer, nullptr);
+                        Count.fetch_add(1, std::memory_order_relaxed);
+                    };
+
+                UpdateInfo.CopyD3D11Texture =
+                    [](IDeviceContext* pContext,
+                       Uint32          DstMipLevel,
+                       Uint32          DstSlice,
+                       const Box&      DstBox,
+                       ITexture*       pSrcTexture,
+                       Uint32          SrcX,
+                       Uint32          SrcY,
+                       void*           pUserData) {
+                        auto& Count = *static_cast<std::atomic<Uint32>*>(pUserData);
+                        EXPECT_EQ(pContext, nullptr);
+                        EXPECT_EQ(DstMipLevel, 0u);
+                        EXPECT_EQ(DstBox.MinX, 0u);
+                        EXPECT_EQ(DstBox.MaxX, 256u);
+                        EXPECT_EQ(DstBox.MinY, 0u);
+                        EXPECT_EQ(DstBox.MaxY, 256u);
+                        EXPECT_EQ(pSrcTexture, nullptr);
+                        EXPECT_EQ(SrcX, 0u);
+                        EXPECT_EQ(SrcY, 0u);
+                        Count.fetch_add(1, std::memory_order_relaxed);
+                    };
+                UpdateInfo.pCopyTextureData = &NumCopyCallbacks;
+
+                UpdateInfo.UploadEnqueued =
+                    [](ITexture*  pDstTexture,
+                       Uint32     DstMipLevel,
+                       Uint32     DstSlice,
+                       const Box& DstBox,
+                       void*      pUserData) {
+                        auto& Count = *static_cast<std::atomic<Uint32>*>(pUserData);
+                        EXPECT_EQ(pDstTexture, nullptr);
+                        EXPECT_EQ(DstMipLevel, 0u);
+                        EXPECT_EQ(DstBox.MinX, 0u);
+                        EXPECT_EQ(DstBox.MaxX, 256u);
+                        EXPECT_EQ(DstBox.MinY, 0u);
+                        EXPECT_EQ(DstBox.MaxY, 256u);
+                        Count.fetch_add(1, std::memory_order_relaxed);
+                    };
+                UpdateInfo.pUploadEnqueuedData = &NumUploadEnqueuedCallbacks;
+
+                pThreadUploadManager->ScheduleTextureUpdate(UpdateInfo);
+                NumUpdatesRunning.fetch_sub(1);
+            });
+    }
+
+    AllThreadsRunningSignal.Wait();
+
+    // Wait for some time to ensure that ScheduleTextureUpdate() starts. The
+    // worker threads keep strong references to the manager, so destruction
+    // cannot be used to release them.
+    std::this_thread::sleep_for(10ms);
+    EXPECT_EQ(NumUpdatesRunning.load(), kNumThreads) << "All threads should be running updates because RenderThreadUpdate() was not called";
+
+    pUploadManager->Shutdown();
+
+    for (std::thread& thread : Threads)
+    {
+        thread.join();
+    }
+    EXPECT_EQ(NumUpdatesRunning.load(), 0u);
+    EXPECT_EQ(NumCopyCallbacks.load(), kNumThreads);
+    EXPECT_EQ(NumUploadEnqueuedCallbacks.load(), kNumThreads);
 
     pUploadManager.Release();
 
