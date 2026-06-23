@@ -1500,9 +1500,12 @@ bool GPUUploadManagerImpl::UploadStream::TryRotatePage(IDeviceContext* pContext,
     Page* Cur = ExpectedCurrent;
     if (!m_pCurrentPage.compare_exchange_strong(Cur, Fresh, std::memory_order_acq_rel))
     {
-        // Lost the race: put Fresh back
-        Fresh->Seal();
-        m_FreePages.Push(Fresh);
+        // Lost the race. Fresh was unsealed by AcquireFreePage(), so a stale
+        // writer may have acquired it before the CAS failed. Return it to the
+        // free list only if sealing observes no active writers; otherwise the
+        // last writer will recycle the empty page through TryEnqueuePage().
+        if (Fresh->TrySeal() == Page::SealStatus::Ready)
+            m_FreePages.Push(Fresh);
         return true; // Rotation happened by someone else
     }
 
