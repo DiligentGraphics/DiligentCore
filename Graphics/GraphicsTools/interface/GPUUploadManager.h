@@ -645,6 +645,9 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
 
     /// Permanently stops the upload manager.
     ///
+    /// \param [in] pContext - Device context used to release staging resources. If null, the manager
+    ///                        uses the context provided at creation or during RenderThreadUpdate(), if any.
+    ///
     /// The method wakes any threads blocked in ScheduleBufferUpdate() or ScheduleTextureUpdate().
     /// After this call, the manager must not be used for new upload scheduling, render-thread
     /// updates, or statistics queries; only releasing outstanding references is allowed.
@@ -654,13 +657,19 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     /// will invoke their callbacks with null handles during manager teardown. RenderThreadUpdate()
     /// and GetStats() calls after Stop() are misuse.
     ///
-    /// Stop() does not release staging resources or destroy internal streams. Final cleanup is delayed
-    /// until the manager is destroyed.
+    /// Stop() waits for admitted scheduling calls to return and releases staging resources using pContext
+    /// or the manager's stored context. The context must be the same context used by RenderThreadUpdate(),
+    /// if any, and must not be used concurrently while Stop() is executing. Internal stream/page objects
+    /// remain alive until the manager is destroyed.
     ///
     /// The method may be called while worker threads are inside ScheduleBufferUpdate() or
     /// ScheduleTextureUpdate(). The manager must remain alive until these calls have returned.
     /// Stop() must not be called concurrently with RenderThreadUpdate() or GetStats().
-    VIRTUAL void METHOD(Stop)(THIS) PURE;
+    ///
+    /// If Stop() is not called explicitly, it is called by the manager destructor using the stored
+    /// context from whichever thread releases the last reference.
+    VIRTUAL void METHOD(Stop)(THIS_
+                              IDeviceContext* pContext) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -671,7 +680,7 @@ DILIGENT_END_INTERFACE
 // clang-format off
 
 #    define IGPUUploadManager_RenderThreadUpdate(This, ...)    CALL_IFACE_METHOD(GPUUploadManager, RenderThreadUpdate, This, __VA_ARGS__)
-#    define IGPUUploadManager_Stop(This)                       CALL_IFACE_METHOD(GPUUploadManager, Stop,               This)
+#    define IGPUUploadManager_Stop(This, ...)                  CALL_IFACE_METHOD(GPUUploadManager, Stop,               This, __VA_ARGS__)
 #    define IGPUUploadManager_ScheduleBufferUpdate(This, ...)  CALL_IFACE_METHOD(GPUUploadManager, ScheduleBufferUpdate, This, __VA_ARGS__)
 #    define IGPUUploadManager_ScheduleTextureUpdate(This, ...) CALL_IFACE_METHOD(GPUUploadManager, ScheduleTextureUpdate, This, __VA_ARGS__)
 #    define IGPUUploadManager_GetStats(This, ...)              CALL_IFACE_METHOD(GPUUploadManager, GetStats, This, __VA_ARGS__)

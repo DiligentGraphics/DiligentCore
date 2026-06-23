@@ -48,5 +48,5 @@ void TestRenderStateCacheCInterface()
     GPUUploadManagerStats Stats;
     IGPUUploadManager_GetStats(pMgr, &Stats);
 
-    IGPUUploadManager_Stop(pMgr);
+    IGPUUploadManager_Stop(pMgr, NULL);
 }

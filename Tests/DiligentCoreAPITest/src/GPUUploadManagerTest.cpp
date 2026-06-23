@@ -620,7 +620,7 @@ TEST(GPUUploadManagerTest, StopKeepsPendingBufferUpdatesUntilDestruction)
     EXPECT_EQ(UploadEnqueuedCallbackCalled, 0u);
     EXPECT_EQ(CopyBufferCallbackCalled, 0u);
 
-    pUploadManager->Stop();
+    pUploadManager->Stop(pContext);
 
     EXPECT_EQ(UploadEnqueuedCallbackCalled, 0u);
     EXPECT_EQ(CopyBufferCallbackCalled, 0u);
@@ -629,6 +629,58 @@ TEST(GPUUploadManagerTest, StopKeepsPendingBufferUpdatesUntilDestruction)
 
     EXPECT_EQ(UploadEnqueuedCallbackCalled, 1u);
     EXPECT_EQ(CopyBufferCallbackCalled, 1u);
+}
+
+TEST(GPUUploadManagerTest, StopRejectsWorkerBufferUpdates)
+{
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    RefCntAutoPtr<IGPUUploadManager> pUploadManager;
+    GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext};
+    CreateGPUUploadManager(CreateInfo, &pUploadManager);
+    ASSERT_NE(pUploadManager, nullptr);
+
+    std::vector<Uint8>     BufferData(128, 17);
+    RefCntAutoPtr<IBuffer> pBuffer = CreateUploadTestBuffer(pDevice, BufferData.size());
+    ASSERT_NE(pBuffer, nullptr);
+
+    pUploadManager->Stop(pContext);
+
+    std::atomic_bool    UpdateScheduled{true};
+    std::atomic<Uint32> UploadEnqueuedCallbackCalled{0};
+
+    std::thread Worker{
+        [pUploadManager, pBuffer, &BufferData, &UpdateScheduled, &UploadEnqueuedCallbackCalled]() {
+            ScheduleBufferUpdateInfo UpdateInfo;
+            UpdateInfo.pContext   = nullptr;
+            UpdateInfo.pDstBuffer = pBuffer;
+            UpdateInfo.DstOffset  = 16;
+            UpdateInfo.NumBytes   = static_cast<Uint32>(BufferData.size());
+            UpdateInfo.pSrcData   = BufferData.data();
+            UpdateInfo.UploadEnqueued =
+                [](IBuffer* pDstBuffer,
+                   Uint32   DstOffset,
+                   Uint32   NumBytes,
+                   void*    pUserData) {
+                    auto& CallbackCount = *static_cast<std::atomic<Uint32>*>(pUserData);
+                    EXPECT_EQ(pDstBuffer, nullptr);
+                    EXPECT_EQ(DstOffset, 16u);
+                    EXPECT_EQ(NumBytes, 128u);
+                    CallbackCount.fetch_add(1, std::memory_order_relaxed);
+                };
+            UpdateInfo.pUploadEnqueuedData = &UploadEnqueuedCallbackCalled;
+
+            UpdateScheduled.store(pUploadManager->ScheduleBufferUpdate(UpdateInfo), std::memory_order_release);
+        }};
+
+    Worker.join();
+
+    EXPECT_FALSE(UpdateScheduled.load(std::memory_order_acquire));
+    EXPECT_EQ(UploadEnqueuedCallbackCalled.load(std::memory_order_acquire), 1u);
 }
 
 TEST(GPUUploadManagerTest, ParallelBufferUpdates)
@@ -819,7 +871,7 @@ TEST(GPUUploadManagerTest, StopReleasesBlockedBufferUpdates)
     std::this_thread::sleep_for(10ms);
     EXPECT_EQ(NumUpdatesRunning.load(), kNumUpdates) << "All threads should be running updates because RenderThreadUpdate() was not called";
 
-    pUploadManager->Stop();
+    pUploadManager->Stop(pContext);
 
     for (std::thread& thread : Threads)
     {
@@ -983,7 +1035,7 @@ TEST(GPUUploadManagerTest, StopReleasesBlockedTextureUpdates)
     std::this_thread::sleep_for(10ms);
     EXPECT_EQ(NumUpdatesRunning.load(), kNumUpdates) << "All threads should be running updates because RenderThreadUpdate() was not called";
 
-    pUploadManager->Stop();
+    pUploadManager->Stop(pContext);
 
     for (std::thread& thread : Threads)
     {
@@ -2073,7 +2125,7 @@ TEST(GPUUploadManagerTest, StopKeepsPendingTextureUpdatesUntilDestruction)
     EXPECT_EQ(UploadEnqueuedCallbackCalled, 0u);
     EXPECT_EQ(CopyTextureCallbackCalled, 0u);
 
-    pUploadManager->Stop();
+    pUploadManager->Stop(pContext);
 
     EXPECT_EQ(UploadEnqueuedCallbackCalled, 0u);
     EXPECT_EQ(CopyTextureCallbackCalled, 0u);
@@ -2082,6 +2134,74 @@ TEST(GPUUploadManagerTest, StopKeepsPendingTextureUpdatesUntilDestruction)
 
     EXPECT_EQ(UploadEnqueuedCallbackCalled, 1u);
     EXPECT_EQ(CopyTextureCallbackCalled, 1u);
+}
+
+TEST(GPUUploadManagerTest, StopRejectsWorkerTextureUpdates)
+{
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    TextureDesc TexDesc;
+    TexDesc.Name      = "GPUUploadManagerTest stopped texture";
+    TexDesc.Type      = RESOURCE_DIM_TEX_2D;
+    TexDesc.Format    = TEX_FORMAT_RGBA8_UNORM;
+    TexDesc.Usage     = USAGE_DEFAULT;
+    TexDesc.Width     = 16;
+    TexDesc.Height    = 16;
+    TexDesc.BindFlags = BIND_SHADER_RESOURCE;
+
+    RefCntAutoPtr<ITexture> pTexture;
+    pDevice->CreateTexture(TexDesc, nullptr, &pTexture);
+    ASSERT_NE(pTexture, nullptr);
+
+    RefCntAutoPtr<IGPUUploadManager> pUploadManager;
+    GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext};
+    CreateGPUUploadManager(CreateInfo, &pUploadManager);
+    ASSERT_NE(pUploadManager, nullptr);
+
+    std::vector<Uint8> TextureData(TexDesc.Width * TexDesc.Height * 4, 23);
+
+    pUploadManager->Stop(pContext);
+
+    std::atomic_bool    UpdateScheduled{true};
+    std::atomic<Uint32> UploadEnqueuedCallbackCalled{0};
+
+    std::thread Worker{
+        [pUploadManager, pTexture, &TextureData, &UpdateScheduled, &UploadEnqueuedCallbackCalled]() {
+            ScheduleTextureUpdateInfo UpdateInfo;
+            UpdateInfo.pContext    = nullptr;
+            UpdateInfo.pDstTexture = pTexture;
+            UpdateInfo.DstBox      = {0, 16, 0, 16};
+            UpdateInfo.pSrcData    = TextureData.data();
+            UpdateInfo.Stride      = 16 * 4;
+            UpdateInfo.UploadEnqueued =
+                [](ITexture*  pDstTexture,
+                   Uint32     DstMipLevel,
+                   Uint32     DstSlice,
+                   const Box& DstBox,
+                   void*      pUserData) {
+                    auto& CallbackCount = *static_cast<std::atomic<Uint32>*>(pUserData);
+                    EXPECT_EQ(pDstTexture, nullptr);
+                    EXPECT_EQ(DstMipLevel, 0u);
+                    EXPECT_EQ(DstSlice, 0u);
+                    EXPECT_EQ(DstBox.MinX, 0u);
+                    EXPECT_EQ(DstBox.MaxX, 16u);
+                    EXPECT_EQ(DstBox.MinY, 0u);
+                    EXPECT_EQ(DstBox.MaxY, 16u);
+                    CallbackCount.fetch_add(1, std::memory_order_relaxed);
+                };
+            UpdateInfo.pUploadEnqueuedData = &UploadEnqueuedCallbackCalled;
+
+            UpdateScheduled.store(pUploadManager->ScheduleTextureUpdate(UpdateInfo), std::memory_order_release);
+        }};
+
+    Worker.join();
+
+    EXPECT_FALSE(UpdateScheduled.load(std::memory_order_acquire));
+    EXPECT_EQ(UploadEnqueuedCallbackCalled.load(std::memory_order_acquire), 1u);
 }
 
 

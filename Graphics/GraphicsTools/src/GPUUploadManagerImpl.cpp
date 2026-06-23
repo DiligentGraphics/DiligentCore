@@ -1133,11 +1133,11 @@ GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, con
     }
 }
 
-void GPUUploadManagerImpl::UploadStream::ReleaseStagingBuffers()
+void GPUUploadManagerImpl::UploadStream::ReleaseStagingBuffers(IDeviceContext* pContext)
 {
     for (auto& it : m_Pages)
     {
-        it.second->ReleaseStagingBuffer(m_Mgr.m_pContext);
+        it.second->ReleaseStagingBuffer(pContext);
     }
 }
 
@@ -1186,7 +1186,7 @@ void GPUUploadManagerImpl::EndScheduleUpdate() noexcept
 bool GPUUploadManagerImpl::SetStopping() noexcept
 {
     // From this point on, new schedule calls fail admission. Calls that already incremented
-    // the counter are allowed to return through their normal path, and the destructor can wait
+    // the counter are allowed to return through their normal path, and Stop() can wait
     // for the last one using m_LastRunningThreadFinishedSignal.
     const Uint32 PrevState = m_ScheduleAdmissionState.fetch_or(SCHEDULE_STOP_BIT, std::memory_order_acq_rel);
     return (PrevState & SCHEDULE_STOP_BIT) == 0;
@@ -1204,12 +1204,24 @@ GPUUploadManagerImpl::ScheduleUpdateGuard::~ScheduleUpdateGuard()
         m_pMgr->EndScheduleUpdate();
 }
 
-void GPUUploadManagerImpl::Stop()
+void GPUUploadManagerImpl::Stop(IDeviceContext* pContext)
 {
     if (!SetStopping())
         return;
 
     m_Stopping.store(true, std::memory_order_release);
+
+    if (pContext != nullptr)
+    {
+        if (!m_pContext)
+            m_pContext = pContext;
+        else
+            DEV_CHECK_ERR(pContext == m_pContext, "The context provided to Stop must be the same as the one used to create the GPUUploadManagerImpl");
+    }
+    else
+    {
+        pContext = m_pContext;
+    }
 
     if (m_pTextureStreams)
     {
@@ -1223,31 +1235,31 @@ void GPUUploadManagerImpl::Stop()
         Stream->SignalStop();
     }
 
-    // Do not tear down streams or pages here. ScheduleBufferUpdate() and
-    // ScheduleTextureUpdate() calls that were admitted before Stop() may still be
-    // using stream state. Keeping streams alive until the manager destructor lets
-    // these calls return safely.
-}
-
-GPUUploadManagerImpl::~GPUUploadManagerImpl()
-{
-    Stop();
-
     if ((m_ScheduleAdmissionState.load(std::memory_order_acquire) & SCHEDULE_COUNT_MASK) != 0)
     {
         m_LastRunningThreadFinishedSignal.Wait();
     }
+
+    // Once all admitted ScheduleBufferUpdate()/ScheduleTextureUpdate() calls have returned,
+    // it is safe to unmap and release staging resources here. Do this in Stop() instead of
+    // the destructor so the application controls the thread/phase where the manager's device
+    // context is touched. Keep streams and pages alive until destruction, because pending
+    // operations still own callback payloads that must be released during teardown.
+    for (UploadStreamUniquePtr& Stream : m_Streams)
+    {
+        Stream->ReleaseStagingBuffers(pContext);
+    }
+}
+
+GPUUploadManagerImpl::~GPUUploadManagerImpl()
+{
+    Stop(m_pContext);
 
     // Pending page pointers are owned by the streams below. The manager is terminally
     // destroyed, so discard the queue nodes before destroying the pages.
     Page* pPage = nullptr;
     while (m_PendingPages.Dequeue(pPage))
     {}
-
-    for (UploadStreamUniquePtr& Stream : m_Streams)
-    {
-        Stream->ReleaseStagingBuffers();
-    }
 }
 
 void GPUUploadManagerImpl::RenderThreadUpdate(IDeviceContext* pContext)

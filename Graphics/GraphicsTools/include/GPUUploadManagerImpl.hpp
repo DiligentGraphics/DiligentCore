@@ -67,7 +67,7 @@ public:
 
     virtual void DILIGENT_CALL_TYPE GetStats(GPUUploadManagerStats& Stats) override final;
 
-    virtual void DILIGENT_CALL_TYPE Stop() override final;
+    virtual void DILIGENT_CALL_TYPE Stop(IDeviceContext* pContext) override final;
 
 private:
     class UploadStream;
@@ -354,7 +354,7 @@ private:
                             Uint32          UpdateSize,
                             const void*     pUpdateInfo,
                             bool            ScheduleUpdate(Page::Writer& Writer, const void* pUpdateInfo));
-        void ReleaseStagingBuffers();
+        void ReleaseStagingBuffers(IDeviceContext* pContext);
         void SignalPageRotated() { m_PageRotatedSignal.Tick(); }
         void SignalStop();
 
