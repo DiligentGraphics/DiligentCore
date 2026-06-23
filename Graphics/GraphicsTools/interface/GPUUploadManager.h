@@ -662,6 +662,12 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     /// if any, and must not be used concurrently while Stop() is executing. Internal stream/page objects
     /// remain alive until the manager is destroyed.
     ///
+    /// The intended use is to call Stop() once, normally from the render thread.
+    /// Multiple and parallel Stop() calls are allowed, but only the first call performs
+    /// the stop, wait, and staging-resource release. Any subsequent Stop() call from
+    /// any thread is a no-op and returns immediately, potentially before the first
+    /// Stop() call has completed.
+    ///
     /// The method may be called while worker threads are inside ScheduleBufferUpdate() or
     /// ScheduleTextureUpdate(). The manager must remain alive until these calls have returned.
     /// Stop() must not be called concurrently with RenderThreadUpdate() or GetStats().
