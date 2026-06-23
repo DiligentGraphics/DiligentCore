@@ -645,6 +645,7 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     ///
     /// The method may be called while worker threads are inside ScheduleBufferUpdate() or
     /// ScheduleTextureUpdate(). The manager must remain alive until these calls have returned.
+    /// Stop() must not be called concurrently with RenderThreadUpdate() or GetStats().
     VIRTUAL void METHOD(Stop)(THIS) PURE;
 };
 DILIGENT_END_INTERFACE
