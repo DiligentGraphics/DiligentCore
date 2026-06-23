@@ -921,11 +921,17 @@ void GPUUploadManagerImpl::FreePages::Push(Page** ppPages, size_t NumPages)
     m_Size.fetch_add(TotalAddedPages, std::memory_order_release);
 }
 
-GPUUploadManagerImpl::Page* GPUUploadManagerImpl::FreePages::Pop(Uint32 RequiredSize)
+GPUUploadManagerImpl::Page* GPUUploadManagerImpl::FreePages::Pop(Uint32 RequiredSize, const std::atomic<Uint32>* pNumRunningUpdates)
 {
     Page* P = nullptr;
     {
         std::lock_guard<std::mutex> Guard{m_PagesMtx};
+        if (pNumRunningUpdates != nullptr &&
+            pNumRunningUpdates->load(std::memory_order_acquire) > 0)
+        {
+            return nullptr;
+        }
+
         // Find the first page that is large enough to accommodate the required size
         auto it = m_PagesBySize.lower_bound(RequiredSize);
         if (it != m_PagesBySize.end())
@@ -1661,23 +1667,19 @@ void GPUUploadManagerImpl::UploadStream::ProcessPagesToRelease(IDeviceContext* p
     if (m_MaxPageCount == 0)
         return;
 
-    if (m_NumRunningUpdates.load(std::memory_order_acquire) > 0)
+    VERIFY_EXPR(pContext != nullptr);
+    while (m_Pages.size() > m_MaxPageCount)
     {
-        // Delay releasing pages until there are no running updates, to avoid ABA issue in ScheduleBufferUpdate:
+        // Pop the smallest free page and release it until we are within the limit.
+        // The running-update counter is checked under the free-list lock to avoid
+        // ABA issue in ScheduleBufferUpdate/ScheduleTextureUpdate:
         // * T1:
         //      Page* P = m_pCurrentPage.load(std::memory_order_acquire);
         // * T1 gets descheduled
         // * Render thread frees the page.
         // * T1 resumes and crashes at
         //      Page::Writer Writer = P->TryBeginWriting();
-        return;
-    }
-
-    VERIFY_EXPR(pContext != nullptr);
-    while (m_Pages.size() > m_MaxPageCount)
-    {
-        // Pop the smallest free page and release it until we are within the limit.
-        if (Page* pPage = m_FreePages.Pop())
+        if (Page* pPage = m_FreePages.Pop(0, &m_NumRunningUpdates))
         {
             pPage->ReleaseStagingBuffer(pContext);
             auto it = m_PageSizeToCount.find(pPage->GetSize());

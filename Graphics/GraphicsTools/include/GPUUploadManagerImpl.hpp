@@ -317,7 +317,7 @@ private:
     public:
         void   Push(Page** ppPages, size_t NumPages);
         void   Push(Page* pPage) { Push(&pPage, 1); }
-        Page*  Pop(Uint32 MinSize = 0);
+        Page*  Pop(Uint32 MinSize = 0, const std::atomic<Uint32>* pNumRunningUpdates = nullptr);
         size_t Size() const { return m_Size.load(std::memory_order_acquire); }
 
     private:
