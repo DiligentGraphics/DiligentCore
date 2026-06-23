@@ -178,6 +178,19 @@ bool ValidateTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo,
         return false;
     }
 
+    const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(Format);
+    if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+    {
+        if ((UpdateInfo.DstBox.MinX % FmtAttribs.BlockWidth) != 0 ||
+            (UpdateInfo.DstBox.MinY % FmtAttribs.BlockHeight) != 0)
+        {
+            LOG_ERROR_MESSAGE("ScheduleTextureUpdate() compressed texture update box origin must be block-aligned");
+            return false;
+        }
+    }
+    // If pDstTexture is null, a custom copy callback is required and the manager
+    // does not know logical mip dimensions, so edge-block validation belongs to the callback.
+
     if (UpdateInfo.pDstTexture != nullptr)
     {
         const TextureDesc& TexDesc = UpdateInfo.pDstTexture->GetDesc();
@@ -200,6 +213,23 @@ bool ValidateTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo,
         {
             LOG_ERROR_MESSAGE("ScheduleTextureUpdate() destination box is outside of the destination texture subresource");
             return false;
+        }
+
+        if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+        {
+            if (UpdateInfo.DstBox.MaxX != Mip.LogicalWidth &&
+                (UpdateInfo.DstBox.Width() % FmtAttribs.BlockWidth) != 0)
+            {
+                LOG_ERROR_MESSAGE("ScheduleTextureUpdate() compressed texture update box width must be block-aligned unless it ends at the mip edge");
+                return false;
+            }
+
+            if (UpdateInfo.DstBox.MaxY != Mip.LogicalHeight &&
+                (UpdateInfo.DstBox.Height() % FmtAttribs.BlockHeight) != 0)
+            {
+                LOG_ERROR_MESSAGE("ScheduleTextureUpdate() compressed texture update box height must be block-aligned unless it ends at the mip edge");
+                return false;
+            }
         }
 
         if (TexDesc.SampleCount != 1)
@@ -237,8 +267,7 @@ bool ValidateTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo,
     if (UpdateInfo.pSrcData != nullptr &&
         UpdateInfo.WriteDataCallback == nullptr)
     {
-        const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(Format);
-        const Uint64                RowSize =
+        const Uint64 RowSize =
             static_cast<Uint64>(AlignUp(UpdateInfo.DstBox.Width(), FmtAttribs.BlockWidth) / FmtAttribs.BlockWidth) *
             FmtAttribs.GetElementSize();
         if (UpdateInfo.Stride < RowSize)
