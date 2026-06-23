@@ -303,6 +303,8 @@ private:
     RefCntAutoPtr<IRenderDevice>  m_pDevice;
     RefCntAutoPtr<IDeviceContext> m_pContext;
 
+    const RENDER_DEVICE_TYPE m_DeviceType;
+
     const Uint32 m_TextureUpdateOffsetAlignment;
     const Uint32 m_TextureUpdateStrideAlignment;
 

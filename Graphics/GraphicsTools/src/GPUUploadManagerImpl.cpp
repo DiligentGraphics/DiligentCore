@@ -1051,6 +1051,7 @@ GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, con
     TBase{pRefCounters},
     m_pDevice{CI.pDevice},
     m_pContext{CI.pContext},
+    m_DeviceType{CI.pDevice->GetDeviceInfo().Type},
     m_TextureUpdateOffsetAlignment{m_pDevice->GetAdapterInfo().Buffer.TextureUpdateOffsetAlignment},
     m_TextureUpdateStrideAlignment{m_pDevice->GetAdapterInfo().Buffer.TextureUpdateStrideAlignment}
 {
@@ -1085,7 +1086,7 @@ GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, con
     m_pDevice->CreateFence(Desc, &m_pFence);
     VERIFY_EXPR(m_pFence != nullptr);
 
-    if (CI.pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D11)
+    if (m_DeviceType == RENDER_DEVICE_TYPE_D3D11)
     {
         m_pTextureStreams = std::make_unique<TextureUploadStreams>(
             *this,
@@ -1369,7 +1370,7 @@ bool GPUUploadManagerImpl::ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& 
 
 bool GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo)
 {
-    const bool               UseD3D11TextureCallback = m_pTextureStreams != nullptr;
+    const bool               UseD3D11TextureCallback = m_DeviceType == RENDER_DEVICE_TYPE_D3D11;
     TextureUpdateCancelGuard CancelGuard{UpdateInfo, UseD3D11TextureCallback};
 
     if (m_Stopping.load(std::memory_order_acquire))
