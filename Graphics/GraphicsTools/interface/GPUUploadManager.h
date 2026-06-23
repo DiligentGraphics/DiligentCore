@@ -206,10 +206,11 @@ struct ScheduleBufferUpdateInfo
     void* pCopyBufferData DEFAULT_INITIALIZER(nullptr);
 
     /// Optional callback to be called when the GPU copy operation is scheduled for execution.
-    /// If CopyBuffer is provided and the update is accepted, the callback will not be called, and the
-    /// CopyBuffer callback is expected to perform any necessary follow-up actions after scheduling the copy operation.
-    /// If scheduling is abandoned, the callback may still be called with a null destination buffer so the
-    /// application can release callback-specific user data.
+    /// If CopyBuffer is provided, this callback is ignored and will not be called, including
+    /// when scheduling is abandoned. CopyBuffer is expected to perform any necessary follow-up
+    /// and cleanup work. Providing both callbacks will produce a warning.
+    /// If CopyBuffer is not provided and scheduling is abandoned, the callback may be called
+    /// with a null destination buffer so the application can release callback-specific user data.
     GPUBufferUploadEnqueuedCallbackType UploadEnqueued DEFAULT_INITIALIZER(nullptr);
 
     /// Optional pointer to user data that will be passed to the UploadEnqueued callback.
@@ -464,10 +465,12 @@ struct ScheduleTextureUpdateInfo
 
 
     /// Optional callback to be called when the GPU copy operation is scheduled for execution.
-    /// If CopyTexture is provided and the update is accepted, the callback will not be called, and the
-    /// CopyTexture callback is expected to perform any necessary follow-up actions after scheduling the copy operation.
-    /// If scheduling is abandoned, the callback may still be called with a null destination texture so the
-    /// application can release callback-specific user data.
+    /// If the backend-specific copy callback is provided (CopyTexture on most backends or
+    /// CopyD3D11Texture on Direct3D11), this callback is ignored and will not be called,
+    /// including when scheduling is abandoned. The copy callback is expected to perform any
+    /// necessary follow-up and cleanup work. Providing both callbacks will produce a warning.
+    /// If no copy callback is provided and scheduling is abandoned, the callback may be called
+    /// with a null destination texture so the application can release callback-specific user data.
     GPUTextureUploadEnqueuedCallbackType UploadEnqueued DEFAULT_INITIALIZER(nullptr);
 
     /// Optional pointer to user data that will be passed to the UploadEnqueued callback.

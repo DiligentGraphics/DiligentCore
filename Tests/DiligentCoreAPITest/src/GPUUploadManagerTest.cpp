@@ -809,6 +809,7 @@ TEST(GPUUploadManagerTest, ShutdownReleasesBlockedBufferUpdates)
     ASSERT_TRUE(pUploadManager != nullptr);
 
     constexpr size_t         kNumThreads = 4;
+    constexpr size_t         kNumUpdates = kNumThreads * 2;
     std::vector<std::thread> Threads;
     std::atomic<Uint32>      NumUpdatesRunning{0};
     std::atomic<Uint32>      NumCopyCallbacks{0};
@@ -816,10 +817,9 @@ TEST(GPUUploadManagerTest, ShutdownReleasesBlockedBufferUpdates)
     Threading::Signal        AllThreadsRunningSignal;
     for (size_t t = 0; t < kNumThreads; ++t)
     {
-        RefCntAutoPtr<IGPUUploadManager> pThreadUploadManager = pUploadManager;
         Threads.emplace_back(
-            [pThreadUploadManager, &NumUpdatesRunning, &NumCopyCallbacks, &NumUploadEnqueuedCallbacks, &AllThreadsRunningSignal]() {
-                if (NumUpdatesRunning.fetch_add(1) == kNumThreads - 1)
+            [pUploadManager, &NumUpdatesRunning, &NumCopyCallbacks, &AllThreadsRunningSignal]() {
+                if (NumUpdatesRunning.fetch_add(1) == kNumUpdates - 1)
                 {
                     AllThreadsRunningSignal.Trigger();
                 }
@@ -842,6 +842,20 @@ TEST(GPUUploadManagerTest, ShutdownReleasesBlockedBufferUpdates)
                     };
                 UpdateInfo.pCopyBufferData = &NumCopyCallbacks;
 
+                pUploadManager->ScheduleBufferUpdate(UpdateInfo);
+                NumUpdatesRunning.fetch_sub(1);
+            });
+
+        Threads.emplace_back(
+            [pUploadManager, &NumUpdatesRunning, &NumUploadEnqueuedCallbacks, &AllThreadsRunningSignal]() {
+                if (NumUpdatesRunning.fetch_add(1) == kNumUpdates - 1)
+                {
+                    AllThreadsRunningSignal.Trigger();
+                }
+
+                ScheduleBufferUpdateInfo UpdateInfo;
+                UpdateInfo.NumBytes = 4096;
+
                 UpdateInfo.UploadEnqueued =
                     [](IBuffer* pDstBuffer,
                        Uint32   DstOffset,
@@ -855,7 +869,7 @@ TEST(GPUUploadManagerTest, ShutdownReleasesBlockedBufferUpdates)
                     };
                 UpdateInfo.pUploadEnqueuedData = &NumUploadEnqueuedCallbacks;
 
-                pThreadUploadManager->ScheduleBufferUpdate(UpdateInfo);
+                pUploadManager->ScheduleBufferUpdate(UpdateInfo);
                 NumUpdatesRunning.fetch_sub(1);
             });
     }
@@ -866,7 +880,7 @@ TEST(GPUUploadManagerTest, ShutdownReleasesBlockedBufferUpdates)
     // worker threads keep strong references to the manager, so destruction
     // cannot be used to release them.
     std::this_thread::sleep_for(10ms);
-    EXPECT_EQ(NumUpdatesRunning.load(), kNumThreads) << "All threads should be running updates because RenderThreadUpdate() was not called";
+    EXPECT_EQ(NumUpdatesRunning.load(), kNumUpdates) << "All threads should be running updates because RenderThreadUpdate() was not called";
 
     pUploadManager->Shutdown();
 
@@ -916,6 +930,7 @@ TEST(GPUUploadManagerTest, ShutdownReleasesBlockedTextureUpdates)
     ASSERT_TRUE(pUploadManager != nullptr);
 
     constexpr size_t         kNumThreads = 4;
+    constexpr size_t         kNumUpdates = kNumThreads * 2;
     std::vector<std::thread> Threads;
     std::atomic<Uint32>      NumUpdatesRunning{0};
     std::atomic<Uint32>      NumCopyCallbacks{0};
@@ -925,10 +940,9 @@ TEST(GPUUploadManagerTest, ShutdownReleasesBlockedTextureUpdates)
 
     for (size_t t = 0; t < kNumThreads; ++t)
     {
-        RefCntAutoPtr<IGPUUploadManager> pThreadUploadManager = pUploadManager;
         Threads.emplace_back(
-            [pThreadUploadManager, pTexture, &Data, &NumUpdatesRunning, &NumCopyCallbacks, &NumUploadEnqueuedCallbacks, &AllThreadsRunningSignal, t]() {
-                if (NumUpdatesRunning.fetch_add(1) == kNumThreads - 1)
+            [pUploadManager, pTexture, &Data, &NumUpdatesRunning, &NumCopyCallbacks, &AllThreadsRunningSignal, t]() {
+                if (NumUpdatesRunning.fetch_add(1) == kNumUpdates - 1)
                 {
                     AllThreadsRunningSignal.Trigger();
                 }
@@ -983,6 +997,25 @@ TEST(GPUUploadManagerTest, ShutdownReleasesBlockedTextureUpdates)
                     };
                 UpdateInfo.pCopyTextureData = &NumCopyCallbacks;
 
+                pUploadManager->ScheduleTextureUpdate(UpdateInfo);
+                NumUpdatesRunning.fetch_sub(1);
+            });
+
+        Threads.emplace_back(
+            [pUploadManager, pTexture, &Data, &NumUpdatesRunning, &NumUploadEnqueuedCallbacks, &AllThreadsRunningSignal, t]() {
+                if (NumUpdatesRunning.fetch_add(1) == kNumUpdates - 1)
+                {
+                    AllThreadsRunningSignal.Trigger();
+                }
+
+                ScheduleTextureUpdateInfo UpdateInfo;
+                UpdateInfo.pSrcData    = Data.data();
+                UpdateInfo.Stride      = 256 * 4;
+                UpdateInfo.pDstTexture = pTexture;
+                UpdateInfo.DstMipLevel = 0;
+                UpdateInfo.DstSlice    = static_cast<Uint32>(t);
+                UpdateInfo.DstBox      = {0, 256, 0, 256};
+
                 UpdateInfo.UploadEnqueued =
                     [](ITexture*  pDstTexture,
                        Uint32     DstMipLevel,
@@ -1000,7 +1033,7 @@ TEST(GPUUploadManagerTest, ShutdownReleasesBlockedTextureUpdates)
                     };
                 UpdateInfo.pUploadEnqueuedData = &NumUploadEnqueuedCallbacks;
 
-                pThreadUploadManager->ScheduleTextureUpdate(UpdateInfo);
+                pUploadManager->ScheduleTextureUpdate(UpdateInfo);
                 NumUpdatesRunning.fetch_sub(1);
             });
     }
@@ -1011,7 +1044,7 @@ TEST(GPUUploadManagerTest, ShutdownReleasesBlockedTextureUpdates)
     // worker threads keep strong references to the manager, so destruction
     // cannot be used to release them.
     std::this_thread::sleep_for(10ms);
-    EXPECT_EQ(NumUpdatesRunning.load(), kNumThreads) << "All threads should be running updates because RenderThreadUpdate() was not called";
+    EXPECT_EQ(NumUpdatesRunning.load(), kNumUpdates) << "All threads should be running updates because RenderThreadUpdate() was not called";
 
     pUploadManager->Shutdown();
 

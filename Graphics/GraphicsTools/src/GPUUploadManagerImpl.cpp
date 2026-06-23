@@ -58,7 +58,7 @@ public:
         {
             UpdateInfo.CopyBuffer(nullptr, nullptr, ~0u, UpdateInfo.NumBytes, UpdateInfo.pCopyBufferData);
         }
-        if (UpdateInfo.UploadEnqueued != nullptr)
+        else if (UpdateInfo.UploadEnqueued != nullptr)
         {
             UpdateInfo.UploadEnqueued(nullptr, UpdateInfo.DstOffset, UpdateInfo.NumBytes, UpdateInfo.pUploadEnqueuedData);
         }
@@ -91,11 +91,13 @@ public:
 
         // CopyTexture and CopyD3D11Texture share pCopyTextureData and are backend alternatives,
         // so cancellation must call the same copy callback that would be used for this backend.
+        bool CopyCallbackCalled = false;
         if (m_UseD3D11TextureCallback)
         {
             if (UpdateInfo.CopyD3D11Texture != nullptr)
             {
                 UpdateInfo.CopyD3D11Texture(nullptr, UpdateInfo.DstMipLevel, UpdateInfo.DstSlice, UpdateInfo.DstBox, nullptr, 0, 0, UpdateInfo.pCopyTextureData);
+                CopyCallbackCalled = true;
             }
         }
         else
@@ -103,10 +105,11 @@ public:
             if (UpdateInfo.CopyTexture != nullptr)
             {
                 UpdateInfo.CopyTexture(nullptr, UpdateInfo.DstMipLevel, UpdateInfo.DstSlice, UpdateInfo.DstBox, TextureSubResData{}, UpdateInfo.pCopyTextureData);
+                CopyCallbackCalled = true;
             }
         }
 
-        if (UpdateInfo.UploadEnqueued != nullptr)
+        if (!CopyCallbackCalled && UpdateInfo.UploadEnqueued != nullptr)
         {
             UpdateInfo.UploadEnqueued(nullptr, UpdateInfo.DstMipLevel, UpdateInfo.DstSlice, UpdateInfo.DstBox, UpdateInfo.pUploadEnqueuedData);
         }
@@ -1227,6 +1230,11 @@ void GPUUploadManagerImpl::ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& 
         return;
     }
 
+    if (UpdateInfo.CopyBuffer != nullptr && UpdateInfo.UploadEnqueued != nullptr)
+    {
+        LOG_WARNING_MESSAGE("ScheduleBufferUpdateInfo::UploadEnqueued is ignored when CopyBuffer is provided.");
+    }
+
     UploadStream& Stream = GetStreamForUpdateSize(UpdateInfo.NumBytes);
     if (Stream.ScheduleUpdate(UpdateInfo.pContext, UpdateInfo.NumBytes, &UpdateInfo,
                               [](Page::Writer& Writer, const void* pUpdateData) {
@@ -1248,6 +1256,15 @@ void GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo
         // Worker-thread scheduling may race with Shutdown(). Quietly cancel the update
         // through the guard so callback-owned user data is released.
         return;
+    }
+
+    const bool HasCopyCallback =
+        UseD3D11TextureCallback ?
+        UpdateInfo.CopyD3D11Texture != nullptr :
+        UpdateInfo.CopyTexture != nullptr;
+    if (HasCopyCallback && UpdateInfo.UploadEnqueued != nullptr)
+    {
+        LOG_WARNING_MESSAGE("ScheduleTextureUpdateInfo::UploadEnqueued is ignored when a copy callback is provided.");
     }
 
     const TEXTURE_FORMAT Format = UpdateInfo.pDstTexture != nullptr ?
