@@ -157,7 +157,8 @@ bool ValidateBufferUpdate(const ScheduleBufferUpdateInfo& UpdateInfo)
 
 bool ValidateTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo,
                            TEXTURE_FORMAT                   Format,
-                           bool                             HasCopyCallback)
+                           bool                             HasCopyCallback,
+                           RENDER_DEVICE_TYPE               DeviceType)
 {
     if (!UpdateInfo.DstBox.IsValid())
     {
@@ -198,6 +199,37 @@ bool ValidateTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo,
             UpdateInfo.DstBox.MaxZ > Mip.Depth)
         {
             LOG_ERROR_MESSAGE("ScheduleTextureUpdate() destination box is outside of the destination texture subresource");
+            return false;
+        }
+
+        if (DeviceType == RENDER_DEVICE_TYPE_D3D11)
+        {
+            if (TexDesc.Type != RESOURCE_DIM_TEX_2D &&
+                TexDesc.Type != RESOURCE_DIM_TEX_2D_ARRAY)
+            {
+                LOG_ERROR_MESSAGE("ScheduleTextureUpdate() in D3D11 only supports 2D and 2D array destination textures");
+                return false;
+            }
+
+            if (TexDesc.SampleCount != 1)
+            {
+                LOG_ERROR_MESSAGE("ScheduleTextureUpdate() in D3D11 does not support multisampled destination textures");
+                return false;
+            }
+        }
+    }
+
+    if (DeviceType == RENDER_DEVICE_TYPE_D3D11)
+    {
+        if (UpdateInfo.DstBox.Depth() != 1)
+        {
+            LOG_ERROR_MESSAGE("ScheduleTextureUpdate() in D3D11 only supports single-slice texture updates");
+            return false;
+        }
+
+        if (GetTextureFormatAttribs(Format).IsDepthStencil())
+        {
+            LOG_ERROR_MESSAGE("ScheduleTextureUpdate() in D3D11 does not support depth-stencil texture updates");
             return false;
         }
     }
@@ -1398,7 +1430,7 @@ bool GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo
         return false;
     }
 
-    if (!ValidateTextureUpdate(UpdateInfo, Format, HasCopyCallback))
+    if (!ValidateTextureUpdate(UpdateInfo, Format, HasCopyCallback, m_DeviceType))
         return false;
 
     struct ScheduleUpdateData
