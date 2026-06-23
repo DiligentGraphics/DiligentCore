@@ -584,6 +584,12 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     /// hold their own strong reference to the manager if the manager may be stopped or released concurrently.
     /// Calls admitted before Stop() may complete; calls admitted after Stop() are ignored and return false.
     /// Calls must not race with manager destruction.
+    ///
+    /// Accepted updates are not ordered by submission time. Updates may be submitted to different
+    /// internal streams or different pages and can be executed or reported through callbacks in a
+    /// different order than ScheduleBufferUpdate() calls were made. If the final contents depend on
+    /// the order of overlapping destination ranges, schedule the later update only after the earlier
+    /// update's callback has reported that it was enqueued, or submit one update with the final data.
     /// 
     /// If the method is called from a worker thread, the pContext parameter must be null, and the render thread must periodically
     /// call RenderThreadUpdate() to process pending buffer updates. If RenderThreadUpdate() is not called, the method may block indefinitely
@@ -609,6 +615,12 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     /// hold their own strong reference to the manager if the manager may be stopped or released concurrently.
     /// Calls admitted before Stop() may complete; calls admitted after Stop() are ignored and return false.
     /// Calls must not race with manager destruction.
+    ///
+    /// Accepted updates are not ordered by submission time. Updates may be submitted to different
+    /// internal streams or different pages and can be executed or reported through callbacks in a
+    /// different order than ScheduleTextureUpdate() calls were made. If the final contents depend on
+    /// the order of overlapping destination regions, schedule the later update only after the earlier
+    /// update's callback has reported that it was enqueued, or submit one update with the final data.
     /// 
     /// If the method is called from a worker thread, the pContext parameter must be null, and the render thread must periodically
     /// call RenderThreadUpdate() to process pending texture updates. If RenderThreadUpdate() is not called, the method may block indefinitely
