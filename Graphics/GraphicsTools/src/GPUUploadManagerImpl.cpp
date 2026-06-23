@@ -202,7 +202,8 @@ bool ValidateTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo,
         }
     }
 
-    if (UpdateInfo.pSrcData != nullptr)
+    if (UpdateInfo.pSrcData != nullptr &&
+        UpdateInfo.WriteDataCallback == nullptr)
     {
         const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(Format);
         const Uint64                RowSize =

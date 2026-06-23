@@ -1668,11 +1668,17 @@ void TestTextureUpdates(TEXTURE_FORMAT Format, RESOURCE_DIMENSION Type, Uint32 F
                             };
                             UpdateInfo.pWriteDataCallbackUserData = new CallbackData{
                                 pSrcData,
-                                static_cast<Uint32>(UpdateInfo.Stride),
-                                static_cast<Uint32>(UpdateInfo.DepthStride),
+                                static_cast<Uint32>(Mip.RowSize),
+                                static_cast<Uint32>(Mip.DepthSliceSize),
                                 AlignUp(DstBox.Width(), FmtAttribs.BlockWidth) / FmtAttribs.BlockWidth * ElementSize,
                                 FmtAttribs.BlockHeight,
                             };
+                            // pSrcData, Stride, and DepthStride are ignored when WriteDataCallback is provided.
+                            // Keep pSrcData non-null and stale strides to verify validation follows the same rule.
+                            UpdateInfo.pSrcData    = pSrcData;
+                            UpdateInfo.Stride      = 0;
+                            UpdateInfo.DepthStride = 0;
+
                             UpdateInfo.WriteDataCallback = [](void* pDstData, Uint32 Stride, Uint32 DepthStride, const Box& DstBox, void* pUserData) {
                                 CallbackData* pData   = static_cast<CallbackData*>(pUserData);
                                 const Uint32  NumRows = AlignUp(DstBox.Height(), pData->BlockHeight) / pData->BlockHeight;
