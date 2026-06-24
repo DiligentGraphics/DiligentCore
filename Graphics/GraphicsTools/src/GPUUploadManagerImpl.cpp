@@ -913,7 +913,7 @@ bool GPUUploadManagerImpl::Page::TryEnqueue()
 
 void GPUUploadManagerImpl::Page::Recycle()
 {
-    m_pStream->AddFreePage(this);
+    m_pStream->ReturnFreePage(this);
 }
 
 void GPUUploadManagerImpl::Page::ReleaseStagingBuffer(IDeviceContext* pContext)
@@ -1172,7 +1172,15 @@ void GPUUploadManagerImpl::UploadStream::ReleaseStagingBuffers(IDeviceContext* p
 
 void GPUUploadManagerImpl::UploadStream::SignalStop()
 {
-    m_PageRotatedSignal.RequestStop();
+    m_PagePoolChangedSignal.RequestStop();
+}
+
+void GPUUploadManagerImpl::UploadStream::ReturnFreePage(Page* pPage)
+{
+    // Publish the page before waking schedulers so a waiter that observes the tick
+    // can immediately acquire the returned page.
+    m_FreePages.Push(pPage);
+    m_PagePoolChangedSignal.Tick();
 }
 
 bool GPUUploadManagerImpl::TryBeginScheduleUpdate() noexcept
@@ -1368,7 +1376,7 @@ bool GPUUploadManagerImpl::UploadStream::ScheduleUpdate(IDeviceContext* pContext
     bool UpdateScheduled = false;
 
     auto UpdatePendingSizeAndTryRotate = [&](Page* P) {
-        Uint64 PageEpoch = m_PageRotatedSignal.CurrentEpoch();
+        Uint64 PageEpoch = m_PagePoolChangedSignal.CurrentEpoch();
         // Note that for texture pages, UpdateSize is the texture dimension.
         if (!TryRotatePage(pContext, P, UpdateSize))
         {
@@ -1379,7 +1387,7 @@ bool GPUUploadManagerImpl::UploadStream::ScheduleUpdate(IDeviceContext* pContext
                 m_TotalPendingUpdateSize.fetch_add(UpdateSize, std::memory_order_acq_rel);
                 IsFirstAttempt = false;
             }
-            AbortUpdate = m_PageRotatedSignal.WaitNext(PageEpoch) == 0;
+            AbortUpdate = m_PagePoolChangedSignal.WaitNext(PageEpoch) == 0;
         }
     };
 
@@ -1621,7 +1629,7 @@ bool GPUUploadManagerImpl::UploadStream::TryRotatePage(IDeviceContext* pContext,
         // free list only if sealing observes no active writers; otherwise the
         // last writer will recycle the empty page through TryEnqueuePage().
         if (Fresh->TrySeal() == Page::SealStatus::Ready)
-            m_FreePages.Push(Fresh);
+            ReturnFreePage(Fresh);
         return true; // Rotation happened by someone else
     }
 
@@ -1629,7 +1637,7 @@ bool GPUUploadManagerImpl::UploadStream::TryRotatePage(IDeviceContext* pContext,
     if (ExpectedCurrent != nullptr && ExpectedCurrent->TrySeal() == Page::SealStatus::Ready)
         TryEnqueuePage(ExpectedCurrent);
 
-    m_PageRotatedSignal.Tick();
+    m_PagePoolChangedSignal.Tick();
     return true;
 }
 
@@ -1646,7 +1654,7 @@ bool GPUUploadManagerImpl::UploadStream::TryEnqueuePage(Page* P)
         else
         {
             P->Reset(nullptr);
-            m_FreePages.Push(P);
+            ReturnFreePage(P);
         }
         return true;
     }

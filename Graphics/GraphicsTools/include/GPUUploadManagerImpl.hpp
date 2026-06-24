@@ -348,14 +348,14 @@ private:
         bool  TryEnqueuePage(Page* P);
         void  ProcessPagesToRelease(IDeviceContext* pContext);
         void  AddFreePages(IDeviceContext* pContext);
-        void  AddFreePage(Page* pPage) { m_FreePages.Push(pPage); }
+        void  ReturnFreePage(Page* pPage);
 
         bool ScheduleUpdate(IDeviceContext* pContext,
                             Uint32          UpdateSize,
                             const void*     pUpdateInfo,
                             bool            ScheduleUpdate(Page::Writer& Writer, const void* pUpdateInfo));
         void ReleaseStagingBuffers(IDeviceContext* pContext);
-        void SignalPageRotated() { m_PageRotatedSignal.Tick(); }
+        void SignalPageRotated() { m_PagePoolChangedSignal.Tick(); }
         void SignalStop();
 
         Uint32 GetPageSize() const { return m_PageSize; }
@@ -370,7 +370,7 @@ private:
 
         std::atomic<Page*> m_pCurrentPage{nullptr};
 
-        Threading::TickSignal m_PageRotatedSignal;
+        Threading::TickSignal m_PagePoolChangedSignal;
 
         std::unordered_map<Page*, std::unique_ptr<Page>> m_Pages;
         std::map<Uint32, Uint32>                         m_PageSizeToCount;
