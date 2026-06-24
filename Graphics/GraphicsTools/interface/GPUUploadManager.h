@@ -656,8 +656,7 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
 
     /// Permanently stops the upload manager.
     ///
-    /// \param [in] pContext - Device context used to release staging resources. If null, the manager
-    ///                        uses the context provided at creation or during RenderThreadUpdate(), if any.
+    /// \param [in] pContext - Device context used to release staging resources. Must not be null.
     ///
     /// The method wakes any threads blocked in ScheduleBufferUpdate() or ScheduleTextureUpdate().
     /// After this call, the manager must not be used for new upload scheduling, render-thread
@@ -668,10 +667,11 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     /// will invoke their callbacks with null handles during manager teardown. RenderThreadUpdate()
     /// and GetStats() calls after Stop() are misuse.
     ///
-    /// Stop() waits for admitted scheduling calls to return and releases staging resources using pContext
-    /// or the manager's stored context. The context must be the same context used by RenderThreadUpdate(),
-    /// if any, and must not be used concurrently while Stop() is executing. Internal stream/page objects
-    /// remain alive until the manager is destroyed.
+    /// Stop() waits for admitted scheduling calls to return and releases staging resources using pContext.
+    /// If the manager context has not been set yet, pContext becomes the manager context.
+    /// Otherwise, pContext must be the same as the manager context. The context must not be used
+    /// concurrently while Stop() is executing. Internal stream/page objects remain alive until the
+    /// manager is destroyed.
     ///
     /// The intended use is to call Stop() once, normally from the render thread.
     /// Multiple and parallel Stop() calls are allowed, but only the first call performs
@@ -683,8 +683,10 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     /// ScheduleTextureUpdate(). The manager must remain alive until these calls have returned.
     /// Stop() must not be called concurrently with RenderThreadUpdate() or GetStats().
     ///
-    /// If Stop() is not called explicitly, it is called by the manager destructor using the stored
-    /// context from whichever thread releases the last reference.
+    /// If Stop() is not called explicitly, the manager destructor performs the same internal stop
+    /// sequence using the stored manager context from whichever thread releases the last reference.
+    /// If no context has ever been provided to the manager, destructor cleanup proceeds without a
+    /// context; in this case no staging resources have been mapped through the manager.
     VIRTUAL void METHOD(Stop)(THIS_
                               IDeviceContext* pContext) PURE;
 };

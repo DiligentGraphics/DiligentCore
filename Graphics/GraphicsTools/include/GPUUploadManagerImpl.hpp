@@ -448,6 +448,7 @@ private:
     bool TryBeginScheduleUpdate() noexcept;
     void EndScheduleUpdate() noexcept;
     bool SetStopping() noexcept;
+    void StopInternal(IDeviceContext* pContext);
 
     static constexpr Uint32 SCHEDULE_STOP_BIT   = 0x80000000u;
     static constexpr Uint32 SCHEDULE_COUNT_MASK = ~SCHEDULE_STOP_BIT;

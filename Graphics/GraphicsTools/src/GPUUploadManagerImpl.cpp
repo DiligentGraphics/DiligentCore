@@ -1266,22 +1266,31 @@ GPUUploadManagerImpl::ScheduleUpdateGuard::~ScheduleUpdateGuard()
 
 void GPUUploadManagerImpl::Stop(IDeviceContext* pContext)
 {
+    if (pContext == nullptr)
+    {
+        LOG_ERROR_MESSAGE("A valid context must be provided to Stop()");
+        return;
+    }
+
+    if (!m_pContext)
+    {
+        m_pContext = pContext;
+    }
+    else if (pContext != m_pContext)
+    {
+        LOG_ERROR_MESSAGE("The context provided to Stop() must be the same as the one already used by the GPUUploadManagerImpl");
+        return;
+    }
+
+    StopInternal(pContext);
+}
+
+void GPUUploadManagerImpl::StopInternal(IDeviceContext* pContext)
+{
     if (!SetStopping())
         return;
 
     m_Stopping.store(true, std::memory_order_release);
-
-    if (pContext != nullptr)
-    {
-        if (!m_pContext)
-            m_pContext = pContext;
-        else
-            DEV_CHECK_ERR(pContext == m_pContext, "The context provided to Stop must be the same as the one used to create the GPUUploadManagerImpl");
-    }
-    else
-    {
-        pContext = m_pContext;
-    }
 
     if (m_pTextureStreams)
     {
@@ -1305,15 +1314,18 @@ void GPUUploadManagerImpl::Stop(IDeviceContext* pContext)
     // the destructor so the application controls the thread/phase where the manager's device
     // context is touched. Keep streams and pages alive until destruction, because pending
     // operations still own callback payloads that must be released during teardown.
-    for (UploadStreamUniquePtr& Stream : m_Streams)
+    if (pContext != nullptr)
     {
-        Stream->ReleaseStagingBuffers(pContext);
+        for (UploadStreamUniquePtr& Stream : m_Streams)
+        {
+            Stream->ReleaseStagingBuffers(pContext);
+        }
     }
 }
 
 GPUUploadManagerImpl::~GPUUploadManagerImpl()
 {
-    Stop(m_pContext);
+    StopInternal(m_pContext);
 
     // Pending page pointers are owned by the streams below. The manager is terminally
     // destroyed, so discard the queue nodes before destroying the pages.
