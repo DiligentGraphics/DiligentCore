@@ -139,6 +139,7 @@ std::vector<uint32_t> CompileShaderGLSLang(const ShaderCreateInfo&         Shade
         GLSLangUtils::GLSLtoSPIRVAttribs Attribs;
         Attribs.ShaderType                 = ShaderCI.Desc.ShaderType;
         Attribs.ShaderSource               = SourceData.Source;
+        Attribs.SourceName                 = ShaderCI.FilePath;
         Attribs.SourceCodeLen              = static_cast<int>(SourceData.SourceLength);
         Attribs.Version                    = GLSLangUtils::SpirvVersion::Vk100;
         Attribs.Macros                     = Macros;
