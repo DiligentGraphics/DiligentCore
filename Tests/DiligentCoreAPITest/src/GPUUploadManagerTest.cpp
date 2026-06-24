@@ -87,6 +87,12 @@ TEST(GPUUploadManagerTest, Creation)
     GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext};
     CreateGPUUploadManager(CreateInfo, &pUploadManager);
     ASSERT_TRUE(pUploadManager != nullptr);
+
+    RefCntAutoPtr<IObject> pObject{pUploadManager, IID_Unknown};
+    ASSERT_TRUE(pObject != nullptr);
+
+    RefCntAutoPtr<IGPUUploadManager> pQueriedManager{pObject, IID_GPUUploadManager};
+    EXPECT_EQ(pQueriedManager.RawPtr(), pUploadManager.RawPtr());
 }
 
 void VerifyBufferContents(IBuffer* pBuffer, const std::vector<Uint8>& ExpectedData)

@@ -59,6 +59,8 @@ public:
     GPUUploadManagerImpl(IReferenceCounters* pRefCounters, const GPUUploadManagerCreateInfo& CI);
     ~GPUUploadManagerImpl();
 
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_GPUUploadManager, TBase);
+
     virtual void DILIGENT_CALL_TYPE RenderThreadUpdate(IDeviceContext* pContext) override final;
 
     virtual bool DILIGENT_CALL_TYPE ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& UpdateInfo) override final;

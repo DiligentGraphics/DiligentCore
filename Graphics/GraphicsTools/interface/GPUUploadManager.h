@@ -82,6 +82,7 @@ typedef struct GPUUploadManagerCreateInfo GPUUploadManagerCreateInfo;
 /// \warning Reentrancy / thread-safety:
 ///          The callback is executed from inside IGPUUploadManager::ScheduleBufferUpdate().
 ///          The callback MUST NOT call back into the same IGPUUploadManager instance.
+///          The callback MUST NOT throw exceptions. It must handle any errors internally.
 typedef void (*WriteStagingBufferDataCallbackType)(void* pDstData, Uint32 NumBytes, void* pUserData);
 
 
@@ -105,6 +106,7 @@ typedef void (*WriteStagingBufferDataCallbackType)(void* pDstData, Uint32 NumByt
 ///          perform actions that may synchronously trigger RenderThreadUpdate() or otherwise
 ///          re-enter the manager, as this may lead to deadlocks, unbounded recursion, or
 ///          inconsistent internal state.
+///          The callback MUST NOT throw exceptions. It must handle any errors internally.
 ///
 ///          If follow-up work is required, the callback should only enqueue work to be
 ///          processed later (e.g. push a task into a user-owned queue) and return promptly.
@@ -143,6 +145,7 @@ typedef void (*GPUBufferUploadEnqueuedCallbackType)(IBuffer* pDstBuffer,
 ///          perform actions that may synchronously trigger RenderThreadUpdate() or otherwise
 ///          re-enter the manager, as this may lead to deadlocks, unbounded recursion, or
 ///          inconsistent internal state.
+///          The callback MUST NOT throw exceptions. It must handle any errors internally.
 ///
 ///          If follow-up work is required, the callback should only enqueue work to be
 ///          processed later (e.g. push a task into a user-owned queue) and return promptly.
@@ -280,6 +283,7 @@ typedef struct ScheduleBufferUpdateInfo ScheduleBufferUpdateInfo;
 /// \warning Reentrancy / thread-safety:
 ///          The callback is executed from inside IGPUUploadManager::ScheduleTextureUpdate().
 ///          The callback MUST NOT call back into the same IGPUUploadManager instance.
+///          The callback MUST NOT throw exceptions. It must handle any errors internally.
 typedef void (*WriteStagingTextureDataCallbackType)(void*         pDstData,
                                                     Uint32        Stride,
                                                     Uint32        DepthStride,
@@ -307,6 +311,7 @@ typedef void (*WriteStagingTextureDataCallbackType)(void*         pDstData,
 ///          perform actions that may synchronously trigger RenderThreadUpdate() or otherwise
 ///          re-enter the manager, as this may lead to deadlocks, unbounded recursion, or
 ///          inconsistent internal state.
+///          The callback MUST NOT throw exceptions. It must handle any errors internally.
 ///
 ///          If follow-up work is required, the callback should only enqueue work to be
 ///          processed later (e.g. push a task into a user-owned queue) and return promptly.
@@ -348,6 +353,7 @@ typedef void (*GPUTextureUploadEnqueuedCallbackType)(ITexture*     pDstTexture,
 ///          perform actions that may synchronously trigger RenderThreadUpdate() or otherwise
 ///          re-enter the manager, as this may lead to deadlocks, unbounded recursion, or
 ///          inconsistent internal state.
+///          The callback MUST NOT throw exceptions. It must handle any errors internally.
 ///
 ///          If follow-up work is required, the callback should only enqueue work to be
 ///          processed later (e.g. push a task into a user-owned queue) and return promptly.
@@ -382,6 +388,7 @@ typedef void (*CopyStagingTextureCallbackType)(IDeviceContext*             pCont
 ///          If scheduling is abandoned, it may be executed with a null context pointer
 ///          from inside ScheduleTextureUpdate() or the manager stop/destruction path.
 ///          The callback MUST NOT call back into the same IGPUUploadManager instance.
+///          The callback MUST NOT throw exceptions. It must handle any errors internally.
 typedef void (*CopyStagingD3D11TextureCallbackType)(IDeviceContext* pContext,
                                                     Uint32          DstMipLevel,
                                                     Uint32          DstSlice,
@@ -547,11 +554,15 @@ typedef struct GPUUploadManagerStats GPUUploadManagerStats;
 
 // clang-format off
 
+// {1C5CF903-9E24-4B2C-9D63-FE63D49BE1F6}
+static DILIGENT_CONSTEXPR INTERFACE_ID IID_GPUUploadManager =
+    { 0x1c5cf903, 0x9e24, 0x4b2c, { 0x9d, 0x63, 0xfe, 0x63, 0xd4, 0x9b, 0xe1, 0xf6 } };
+
 #define DILIGENT_INTERFACE_NAME IGPUUploadManager
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 #define IGPUUploadManagerInclusiveMethods \
-    IDeviceObjectInclusiveMethods;        \
+    IObjectInclusiveMethods;              \
     IGPUUploadManagerMethods GPUUploadManager
 
 /// Asynchronous GPU upload manager
