@@ -47,6 +47,7 @@
 #include "DataBlobImpl.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "ShaderToolsCommon.hpp"
+#include "BasicFileSystem.hpp"
 #ifdef USE_SPIRV_TOOLS
 #    include "SPIRVTools.hpp"
 #    include "spirv-tools/libspirv.h"
@@ -308,27 +309,14 @@ public:
                                          const char* /*includerName*/,
                                          size_t /*inclusionDepth*/)
     {
-        DEV_CHECK_ERR(m_pInputStreamFactory != nullptr, "The shader source contains #include directives, but no input stream factory was provided");
-        RefCntAutoPtr<IFileStream> pSourceStream;
-        m_pInputStreamFactory->CreateInputStream(headerName, &pSourceStream);
-        if (pSourceStream == nullptr)
+        IncludeResult* pInclude = ReadIncludeFile(headerName, CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_NONE);
+        if (pInclude == nullptr)
         {
             LOG_ERROR("Failed to open shader include file '", headerName, "'. Check that the file exists");
             return nullptr;
         }
 
-        RefCntAutoPtr<DataBlobImpl> pFileData = DataBlobImpl::Create();
-        pSourceStream->ReadBlob(pFileData);
-        IncludeResult* pNewInclude =
-            new IncludeResult{
-                headerName,
-                pFileData->GetConstDataPtr<char>(),
-                pFileData->GetSize(),
-                nullptr};
-
-        m_IncludeRes.emplace(pNewInclude);
-        m_DataBlobs.emplace(pNewInclude, std::move(pFileData));
-        return pNewInclude;
+        return pInclude;
     }
 
     // For the "local"-only aspect of a "" include. Should not search in the
@@ -336,9 +324,23 @@ public:
     // call includeSystem() to look in the "system" locations.
     virtual IncludeResult* includeLocal(const char* headerName,
                                         const char* includerName,
-                                        size_t      inclusionDepth)
+                                        size_t /*inclusionDepth*/)
     {
-        return nullptr;
+        if (m_pInputStreamFactory == nullptr)
+            return nullptr;
+
+        if (BasicFileSystem::IsPathAbsolute(headerName))
+            return ReadIncludeFile(headerName, CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT);
+
+        String ParentDir;
+        BasicFileSystem::GetPathComponents(includerName, &ParentDir, nullptr);
+        if (ParentDir.empty())
+            return nullptr;
+
+        const std::string LocalPath = BasicFileSystem::SimplifyPath(
+            (ParentDir + BasicFileSystem::SlashSymbol + headerName).c_str(),
+            BasicFileSystem::SlashSymbol);
+        return ReadIncludeFile(LocalPath.c_str(), CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT);
     }
 
     // Signals that the parser will no longer use the contents of the
@@ -349,6 +351,29 @@ public:
     }
 
 private:
+    IncludeResult* ReadIncludeFile(const char* IncludePath, CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS Flags)
+    {
+        DEV_CHECK_ERR(m_pInputStreamFactory != nullptr, "The shader source contains #include directives, but no input stream factory was provided");
+
+        RefCntAutoPtr<IFileStream> pSourceStream;
+        m_pInputStreamFactory->CreateInputStream2(IncludePath, Flags, &pSourceStream);
+        if (pSourceStream == nullptr)
+            return nullptr;
+
+        RefCntAutoPtr<DataBlobImpl> pFileData = DataBlobImpl::Create();
+        pSourceStream->ReadBlob(pFileData);
+        IncludeResult* pNewInclude =
+            new IncludeResult{
+                IncludePath,
+                pFileData->GetConstDataPtr<char>(),
+                pFileData->GetSize(),
+                nullptr};
+
+        m_IncludeRes.emplace(pNewInclude);
+        m_DataBlobs.emplace(pNewInclude, std::move(pFileData));
+        return pNewInclude;
+    }
+
     IShaderSourceInputStreamFactory* const                       m_pInputStreamFactory;
     std::unordered_set<std::unique_ptr<IncludeResult>>           m_IncludeRes;
     std::unordered_map<IncludeResult*, RefCntAutoPtr<IDataBlob>> m_DataBlobs;
@@ -531,7 +556,15 @@ std::vector<unsigned int> GLSLtoSPIRV(const GLSLtoSPIRVAttribs& Attribs)
 
     const char* ShaderStrings[] = {Attribs.ShaderSource};
     int         Lengths[]       = {Attribs.SourceCodeLen};
-    Shader.setStringsWithLengths(ShaderStrings, Lengths, 1);
+    if (Attribs.SourceName != nullptr)
+    {
+        const char* Names[] = {Attribs.SourceName};
+        Shader.setStringsWithLengthsAndNames(ShaderStrings, Lengths, Names, 1);
+    }
+    else
+    {
+        Shader.setStringsWithLengths(ShaderStrings, Lengths, 1);
+    }
 
     std::string Preamble;
     if (Attribs.UseRowMajorMatrices)
