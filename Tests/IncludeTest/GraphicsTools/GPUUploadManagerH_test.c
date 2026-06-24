@@ -28,6 +28,9 @@
 
 void TestRenderStateCacheCInterface()
 {
+    const INTERFACE_ID* pIID = &IID_GPUUploadManager;
+    (void)pIID;
+
     GPUUploadManagerCreateInfo CI;
     CI.pDevice  = NULL;
     CI.pContext = NULL;
@@ -47,4 +50,6 @@ void TestRenderStateCacheCInterface()
 
     GPUUploadManagerStats Stats;
     IGPUUploadManager_GetStats(pMgr, &Stats);
+
+    IGPUUploadManager_Stop(pMgr, NULL);
 }

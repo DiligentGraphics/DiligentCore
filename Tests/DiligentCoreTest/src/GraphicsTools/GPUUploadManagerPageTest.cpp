@@ -349,8 +349,8 @@ TEST(GPUUploadManagerPageTest, ReleaseCallbackData)
         GPUUploadManagerImpl::Page::Writer Writer = Page.TryBeginWriting();
         ASSERT_TRUE(Writer);
 
-        Writer.ScheduleBufferUpdate({nullptr, nullptr, 128, 256, nullptr, UploadEnqueuedCallback, UploadEnqueuedCallback});
-        Writer.ScheduleBufferUpdate({nullptr, 1024, nullptr, CopyBufferCallback, CopyBufferCallback});
+        EXPECT_TRUE(Writer.ScheduleBufferUpdate({nullptr, nullptr, 128, 256, nullptr, UploadEnqueuedCallback, UploadEnqueuedCallback}));
+        EXPECT_TRUE(Writer.ScheduleBufferUpdate({nullptr, 1024, nullptr, CopyBufferCallback, CopyBufferCallback}));
         Writer.EndWriting();
     }
 

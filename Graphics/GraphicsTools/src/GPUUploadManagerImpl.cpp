@@ -38,6 +38,261 @@
 namespace Diligent
 {
 
+namespace
+{
+
+class BufferUpdateCancelGuard
+{
+public:
+    explicit BufferUpdateCancelGuard(const ScheduleBufferUpdateInfo& UpdateInfo) noexcept :
+        m_pUpdateInfo{&UpdateInfo}
+    {}
+
+    ~BufferUpdateCancelGuard()
+    {
+        if (m_pUpdateInfo == nullptr)
+            return;
+
+        const ScheduleBufferUpdateInfo& UpdateInfo = *m_pUpdateInfo;
+        if (UpdateInfo.CopyBuffer != nullptr)
+        {
+            UpdateInfo.CopyBuffer(nullptr, nullptr, ~0u, UpdateInfo.NumBytes, UpdateInfo.pCopyBufferData);
+        }
+        else if (UpdateInfo.UploadEnqueued != nullptr)
+        {
+            UpdateInfo.UploadEnqueued(nullptr, UpdateInfo.DstOffset, UpdateInfo.NumBytes, UpdateInfo.pUploadEnqueuedData);
+        }
+    }
+
+    void Disarm() noexcept
+    {
+        m_pUpdateInfo = nullptr;
+    }
+
+private:
+    const ScheduleBufferUpdateInfo* m_pUpdateInfo = nullptr;
+};
+
+class TextureUpdateCancelGuard
+{
+public:
+    TextureUpdateCancelGuard(const ScheduleTextureUpdateInfo& UpdateInfo,
+                             bool                             UseD3D11TextureCallback) noexcept :
+        m_pUpdateInfo{&UpdateInfo},
+        m_UseD3D11TextureCallback{UseD3D11TextureCallback}
+    {}
+
+    ~TextureUpdateCancelGuard()
+    {
+        if (m_pUpdateInfo == nullptr)
+            return;
+
+        const ScheduleTextureUpdateInfo& UpdateInfo = *m_pUpdateInfo;
+
+        // CopyTexture and CopyD3D11Texture share pCopyTextureData and are backend alternatives,
+        // so cancellation must call the same copy callback that would be used for this backend.
+        bool CopyCallbackCalled = false;
+        if (m_UseD3D11TextureCallback)
+        {
+            if (UpdateInfo.CopyD3D11Texture != nullptr)
+            {
+                UpdateInfo.CopyD3D11Texture(nullptr, UpdateInfo.DstMipLevel, UpdateInfo.DstSlice, UpdateInfo.DstBox, nullptr, 0, 0, UpdateInfo.pCopyTextureData);
+                CopyCallbackCalled = true;
+            }
+        }
+        else
+        {
+            if (UpdateInfo.CopyTexture != nullptr)
+            {
+                UpdateInfo.CopyTexture(nullptr, UpdateInfo.DstMipLevel, UpdateInfo.DstSlice, UpdateInfo.DstBox, TextureSubResData{}, UpdateInfo.pCopyTextureData);
+                CopyCallbackCalled = true;
+            }
+        }
+
+        if (!CopyCallbackCalled && UpdateInfo.UploadEnqueued != nullptr)
+        {
+            UpdateInfo.UploadEnqueued(nullptr, UpdateInfo.DstMipLevel, UpdateInfo.DstSlice, UpdateInfo.DstBox, UpdateInfo.pUploadEnqueuedData);
+        }
+    }
+
+    void Disarm() noexcept
+    {
+        m_pUpdateInfo = nullptr;
+    }
+
+private:
+    const ScheduleTextureUpdateInfo* m_pUpdateInfo             = nullptr;
+    const bool                       m_UseD3D11TextureCallback = false;
+};
+
+bool ValidateBufferUpdate(const ScheduleBufferUpdateInfo& UpdateInfo)
+{
+    if (UpdateInfo.NumBytes != 0 &&
+        UpdateInfo.pSrcData == nullptr &&
+        UpdateInfo.WriteDataCallback == nullptr)
+    {
+        LOG_ERROR_MESSAGE("ScheduleBufferUpdate() with non-zero NumBytes requires pSrcData or WriteDataCallback");
+        return false;
+    }
+
+    if (UpdateInfo.CopyBuffer == nullptr)
+    {
+        if (UpdateInfo.pDstBuffer == nullptr)
+        {
+            LOG_ERROR_MESSAGE("ScheduleBufferUpdate() requires pDstBuffer when CopyBuffer is not provided");
+            return false;
+        }
+
+        const Uint64 BufferSize = UpdateInfo.pDstBuffer->GetDesc().Size;
+        if (UpdateInfo.DstOffset > BufferSize ||
+            static_cast<Uint64>(UpdateInfo.NumBytes) > BufferSize - UpdateInfo.DstOffset)
+        {
+            LOG_ERROR_MESSAGE("ScheduleBufferUpdate() destination range is outside of the destination buffer");
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool ValidateTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo,
+                           TEXTURE_FORMAT                   Format,
+                           bool                             HasCopyCallback,
+                           RENDER_DEVICE_TYPE               DeviceType)
+{
+    if (!UpdateInfo.DstBox.IsValid())
+    {
+        LOG_ERROR_MESSAGE("ScheduleTextureUpdate() requires a valid destination box");
+        return false;
+    }
+
+    if (UpdateInfo.pSrcData == nullptr && UpdateInfo.WriteDataCallback == nullptr)
+    {
+        LOG_ERROR_MESSAGE("ScheduleTextureUpdate() requires pSrcData or WriteDataCallback");
+        return false;
+    }
+
+    if (!HasCopyCallback && UpdateInfo.pDstTexture == nullptr)
+    {
+        LOG_ERROR_MESSAGE("ScheduleTextureUpdate() requires pDstTexture when no copy callback is provided");
+        return false;
+    }
+
+    const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(Format);
+    if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+    {
+        if ((UpdateInfo.DstBox.MinX % FmtAttribs.BlockWidth) != 0 ||
+            (UpdateInfo.DstBox.MinY % FmtAttribs.BlockHeight) != 0)
+        {
+            LOG_ERROR_MESSAGE("ScheduleTextureUpdate() compressed texture update box origin must be block-aligned");
+            return false;
+        }
+    }
+    // If pDstTexture is null, a custom copy callback is required and the manager
+    // does not know logical mip dimensions, so edge-block validation belongs to the callback.
+
+    if (UpdateInfo.pDstTexture != nullptr)
+    {
+        const TextureDesc& TexDesc = UpdateInfo.pDstTexture->GetDesc();
+        if (UpdateInfo.DstMipLevel >= TexDesc.MipLevels)
+        {
+            LOG_ERROR_MESSAGE("ScheduleTextureUpdate() destination mip level is outside of the destination texture");
+            return false;
+        }
+
+        if (UpdateInfo.DstSlice >= TexDesc.GetArraySize())
+        {
+            LOG_ERROR_MESSAGE("ScheduleTextureUpdate() destination slice is outside of the destination texture");
+            return false;
+        }
+
+        const MipLevelProperties Mip = GetMipLevelProperties(TexDesc, UpdateInfo.DstMipLevel);
+        if (UpdateInfo.DstBox.MaxX > Mip.LogicalWidth ||
+            UpdateInfo.DstBox.MaxY > Mip.LogicalHeight ||
+            UpdateInfo.DstBox.MaxZ > Mip.Depth)
+        {
+            LOG_ERROR_MESSAGE("ScheduleTextureUpdate() destination box is outside of the destination texture subresource");
+            return false;
+        }
+
+        if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+        {
+            if (UpdateInfo.DstBox.MaxX != Mip.LogicalWidth &&
+                (UpdateInfo.DstBox.Width() % FmtAttribs.BlockWidth) != 0)
+            {
+                LOG_ERROR_MESSAGE("ScheduleTextureUpdate() compressed texture update box width must be block-aligned unless it ends at the mip edge");
+                return false;
+            }
+
+            if (UpdateInfo.DstBox.MaxY != Mip.LogicalHeight &&
+                (UpdateInfo.DstBox.Height() % FmtAttribs.BlockHeight) != 0)
+            {
+                LOG_ERROR_MESSAGE("ScheduleTextureUpdate() compressed texture update box height must be block-aligned unless it ends at the mip edge");
+                return false;
+            }
+        }
+
+        if (TexDesc.SampleCount != 1)
+        {
+            LOG_ERROR_MESSAGE("ScheduleTextureUpdate() does not support multisampled destination textures");
+            return false;
+        }
+
+        if (DeviceType == RENDER_DEVICE_TYPE_D3D11)
+        {
+            if (TexDesc.Type != RESOURCE_DIM_TEX_2D &&
+                TexDesc.Type != RESOURCE_DIM_TEX_2D_ARRAY)
+            {
+                LOG_ERROR_MESSAGE("ScheduleTextureUpdate() in D3D11 only supports 2D and 2D array destination textures");
+                return false;
+            }
+        }
+    }
+
+    if (DeviceType == RENDER_DEVICE_TYPE_D3D11)
+    {
+        if (UpdateInfo.DstBox.Depth() != 1)
+        {
+            LOG_ERROR_MESSAGE("ScheduleTextureUpdate() in D3D11 only supports single-slice texture updates");
+            return false;
+        }
+
+        if (GetTextureFormatAttribs(Format).IsDepthStencil())
+        {
+            LOG_ERROR_MESSAGE("ScheduleTextureUpdate() in D3D11 does not support depth-stencil texture updates");
+            return false;
+        }
+    }
+
+    if (UpdateInfo.pSrcData != nullptr &&
+        UpdateInfo.WriteDataCallback == nullptr)
+    {
+        const Uint64 RowSize =
+            static_cast<Uint64>(AlignUp(UpdateInfo.DstBox.Width(), FmtAttribs.BlockWidth) / FmtAttribs.BlockWidth) *
+            FmtAttribs.GetElementSize();
+        if (UpdateInfo.Stride < RowSize)
+        {
+            LOG_ERROR_MESSAGE("ScheduleTextureUpdate() source stride is too small");
+            return false;
+        }
+
+        const Uint32 NumRows = AlignUp(UpdateInfo.DstBox.Height(), FmtAttribs.BlockHeight) / FmtAttribs.BlockHeight;
+        if (UpdateInfo.DstBox.Depth() > 1)
+        {
+            const Uint64 MinDepthStride = UpdateInfo.Stride * (NumRows - 1) + RowSize;
+            if (UpdateInfo.DepthStride < MinDepthStride)
+            {
+                LOG_ERROR_MESSAGE("ScheduleTextureUpdate() source depth stride is too small");
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+} // namespace
+
 GPUUploadManagerImpl::Page::Writer::Writer(Writer&& Other) noexcept :
     m_pPage{Other.m_pPage}
 {
@@ -104,7 +359,10 @@ GPUUploadManagerImpl::Page::StagingTextureAtlas::StagingTextureAtlas(IRenderDevi
     TexDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
 
     pDevice->CreateTexture(TexDesc, nullptr, &pTex);
-    VERIFY_EXPR(pTex);
+    if (!pTex)
+    {
+        LOG_ERROR_MESSAGE("Failed to create GPU upload manager staging texture '", Name, "'");
+    }
 }
 
 GPUUploadManagerImpl::Page::StagingTextureAtlas::~StagingTextureAtlas()
@@ -114,6 +372,9 @@ GPUUploadManagerImpl::Page::StagingTextureAtlas::~StagingTextureAtlas()
 
 void* GPUUploadManagerImpl::Page::StagingTextureAtlas::Map(IDeviceContext* pContext)
 {
+    if (!pTex)
+        return nullptr;
+
     pContext->TransitionResourceState({pTex, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE});
     MappedTextureSubresource MappedData;
     pContext->MapTextureSubresource(pTex, 0, 0, MAP_WRITE, MAP_FLAG_NONE, nullptr, MappedData);
@@ -171,7 +432,10 @@ GPUUploadManagerImpl::Page::Page(UploadStream* pStream, IRenderDevice* pDevice, 
     Desc.Usage          = USAGE_STAGING;
     Desc.CPUAccessFlags = CPU_ACCESS_WRITE;
     pDevice->CreateBuffer(Desc, nullptr, &m_pStagingBuffer);
-    VERIFY_EXPR(m_pStagingBuffer != nullptr);
+    if (!m_pStagingBuffer)
+    {
+        LOG_ERROR_MESSAGE("Failed to create GPU upload manager staging buffer '", Name, "'");
+    }
 }
 
 GPUUploadManagerImpl::Page::Page(UploadStream* pStream, IRenderDevice* pDevice, Uint32 Size, TEXTURE_FORMAT Format) :
@@ -188,6 +452,11 @@ GPUUploadManagerImpl::Page::Page(UploadStream* pStream, IRenderDevice* pDevice, 
                 " (" + GetTextureFormatAttribs(Format).Name + ' ' + std::to_string(Size) + 'x' + std::to_string(Size) + ')'),
     }
 {
+}
+
+bool GPUUploadManagerImpl::Page::IsValid() const
+{
+    return (m_pStagingBuffer != nullptr) || (m_pStagingAtlas != nullptr && m_pStagingAtlas->IsValid());
 }
 
 GPUUploadManagerImpl::Page::~Page()
@@ -613,7 +882,7 @@ void GPUUploadManagerImpl::Page::ExecutePendingOps(IDeviceContext* pContext, Uin
     m_FenceValue = FenceValue;
 }
 
-void GPUUploadManagerImpl::Page::Reset(IDeviceContext* pContext)
+bool GPUUploadManagerImpl::Page::Reset(IDeviceContext* pContext)
 {
     VERIFY(DbgGetWriterCount() == 0, "All writers must finish before resetting the page");
     VERIFY(m_PendingOps.IsEmpty(), "All pending operations must be executed before resetting the page");
@@ -643,8 +912,14 @@ void GPUUploadManagerImpl::Page::Reset(IDeviceContext* pContext)
             m_pData = m_pStagingAtlas->Map(pContext);
         }
 
-        VERIFY_EXPR(m_pData != nullptr);
+        if (m_pData == nullptr)
+        {
+            LOG_ERROR_MESSAGE("Failed to map GPU upload manager staging page");
+            return false;
+        }
     }
+
+    return true;
 }
 
 bool GPUUploadManagerImpl::Page::TryEnqueue()
@@ -658,7 +933,7 @@ bool GPUUploadManagerImpl::Page::TryEnqueue()
 
 void GPUUploadManagerImpl::Page::Recycle()
 {
-    m_pStream->AddFreePage(this);
+    m_pStream->ReturnFreePage(this);
 }
 
 void GPUUploadManagerImpl::Page::ReleaseStagingBuffer(IDeviceContext* pContext)
@@ -695,11 +970,17 @@ void GPUUploadManagerImpl::FreePages::Push(Page** ppPages, size_t NumPages)
     m_Size.fetch_add(TotalAddedPages, std::memory_order_release);
 }
 
-GPUUploadManagerImpl::Page* GPUUploadManagerImpl::FreePages::Pop(Uint32 RequiredSize)
+GPUUploadManagerImpl::Page* GPUUploadManagerImpl::FreePages::Pop(Uint32 RequiredSize, const std::atomic<Uint32>* pScheduleAdmissionState)
 {
     Page* P = nullptr;
     {
         std::lock_guard<std::mutex> Guard{m_PagesMtx};
+        if (pScheduleAdmissionState != nullptr &&
+            (pScheduleAdmissionState->load(std::memory_order_acquire) & GPUUploadManagerImpl::SCHEDULE_COUNT_MASK) != 0)
+        {
+            return nullptr;
+        }
+
         // Find the first page that is large enough to accommodate the required size
         auto it = m_PagesBySize.lower_bound(RequiredSize);
         if (it != m_PagesBySize.end())
@@ -857,14 +1138,23 @@ GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, con
     TBase{pRefCounters},
     m_pDevice{CI.pDevice},
     m_pContext{CI.pContext},
+    m_DeviceType{CI.pDevice->GetDeviceInfo().Type},
     m_TextureUpdateOffsetAlignment{m_pDevice->GetAdapterInfo().Buffer.TextureUpdateOffsetAlignment},
     m_TextureUpdateStrideAlignment{m_pDevice->GetAdapterInfo().Buffer.TextureUpdateStrideAlignment}
 {
+    const Uint32 PageSize = CI.PageSize != 0 ? CI.PageSize : GPUUploadManagerCreateInfo{}.PageSize;
+    if (CI.PageSize == 0)
+        LOG_ERROR_MESSAGE("GPUUploadManagerCreateInfo::PageSize must not be zero; using the default value ", PageSize);
+
+    const Uint32 LargePageSize = CI.LargePageSize != 0 ? CI.LargePageSize : GPUUploadManagerCreateInfo{}.LargePageSize;
+    if (CI.LargePageSize == 0)
+        LOG_ERROR_MESSAGE("GPUUploadManagerCreateInfo::LargePageSize must not be zero; using the default value ", LargePageSize);
+
     m_Streams.reserve(2);
     m_Streams.push_back(std::make_unique<UploadStream>(
         *this,
         CI.pContext,
-        CI.PageSize,
+        PageSize,
         CI.MaxPageCount,
         CI.InitialPageCount));
     m_pNormalStream = m_Streams.back().get();
@@ -872,7 +1162,7 @@ GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, con
     m_Streams.push_back(std::make_unique<UploadStream>(
         *this,
         CI.pContext,
-        std::max(CI.LargePageSize, CI.PageSize * 2),
+        std::max(LargePageSize, PageSize * 2),
         CI.MaxLargePageCount,
         CI.InitialLargePageCount));
     m_pLargeStream = m_Streams.back().get();
@@ -881,9 +1171,12 @@ GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, con
     Desc.Name = "GPU upload manager fence";
     Desc.Type = FENCE_TYPE_CPU_WAIT_ONLY;
     m_pDevice->CreateFence(Desc, &m_pFence);
-    VERIFY_EXPR(m_pFence != nullptr);
+    if (!m_pFence)
+    {
+        LOG_ERROR_AND_THROW("Failed to create GPU upload manager fence");
+    }
 
-    if (CI.pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D11)
+    if (m_DeviceType == RENDER_DEVICE_TYPE_D3D11)
     {
         m_pTextureStreams = std::make_unique<TextureUploadStreams>(
             *this,
@@ -892,21 +1185,121 @@ GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, con
     }
 }
 
-void GPUUploadManagerImpl::UploadStream::ReleaseStagingBuffers()
+void GPUUploadManagerImpl::UploadStream::ReleaseStagingBuffers(IDeviceContext* pContext)
 {
     for (auto& it : m_Pages)
     {
-        it.second->ReleaseStagingBuffer(m_Mgr.m_pContext);
+        it.second->ReleaseStagingBuffer(pContext);
     }
 }
 
 void GPUUploadManagerImpl::UploadStream::SignalStop()
 {
-    m_PageRotatedSignal.RequestStop();
+    m_PagePoolChangedSignal.RequestStop();
 }
 
-GPUUploadManagerImpl::~GPUUploadManagerImpl()
+void GPUUploadManagerImpl::UploadStream::ReturnFreePage(Page* pPage)
 {
+    // Publish the page before waking schedulers so a waiter that observes the tick
+    // can immediately acquire the returned page.
+    m_FreePages.Push(pPage);
+    m_PagePoolChangedSignal.Tick();
+}
+
+bool GPUUploadManagerImpl::TryBeginScheduleUpdate() noexcept
+{
+    Uint32 State = m_ScheduleAdmissionState.load(std::memory_order_acquire);
+    for (;;)
+    {
+        if ((State & SCHEDULE_STOP_BIT) != 0)
+            return false;
+
+        VERIFY((State & SCHEDULE_COUNT_MASK) != SCHEDULE_COUNT_MASK, "Too many active GPU upload schedule calls");
+
+        // Atomically register this update only if Stop() has not claimed the stop bit.
+        // Splitting this into a load of m_Stopping followed by a separate counter increment
+        // would leave a window where Stop()/destruction can observe zero active updates while
+        // this thread is already on its way into stream scheduling.
+        if (m_ScheduleAdmissionState.compare_exchange_weak(
+                State,
+                State + 1,
+                std::memory_order_acq_rel,
+                std::memory_order_acquire))
+        {
+            return true;
+        }
+    }
+}
+
+void GPUUploadManagerImpl::EndScheduleUpdate() noexcept
+{
+    const Uint32 PrevState = m_ScheduleAdmissionState.fetch_sub(1, std::memory_order_acq_rel);
+    VERIFY((PrevState & SCHEDULE_COUNT_MASK) != 0, "GPU upload schedule-call count underflow");
+
+    if ((PrevState & SCHEDULE_STOP_BIT) != 0 &&
+        (PrevState & SCHEDULE_COUNT_MASK) == 1)
+    {
+        m_LastRunningThreadFinishedSignal.Trigger();
+    }
+}
+
+bool GPUUploadManagerImpl::SetStopping() noexcept
+{
+    // From this point on, new schedule calls fail admission. Calls that already incremented
+    // the counter are allowed to return through their normal path, and Stop() can wait
+    // for the last one using m_LastRunningThreadFinishedSignal.
+    const Uint32 PrevState = m_ScheduleAdmissionState.fetch_or(SCHEDULE_STOP_BIT, std::memory_order_acq_rel);
+    return (PrevState & SCHEDULE_STOP_BIT) == 0;
+}
+
+GPUUploadManagerImpl::ScheduleUpdateGuard::ScheduleUpdateGuard(GPUUploadManagerImpl& Mgr) noexcept
+{
+    if (Mgr.TryBeginScheduleUpdate())
+        m_pMgr = &Mgr;
+}
+
+GPUUploadManagerImpl::ScheduleUpdateGuard::~ScheduleUpdateGuard()
+{
+    if (m_pMgr != nullptr)
+        m_pMgr->EndScheduleUpdate();
+}
+
+bool GPUUploadManagerImpl::SetOrValidateContext(IDeviceContext* pContext, const char* MethodName)
+{
+    if (pContext == nullptr)
+    {
+        LOG_ERROR_MESSAGE("A valid context must be provided to ", MethodName, "()");
+        return false;
+    }
+
+    if (!m_pContext)
+    {
+        m_pContext = pContext;
+        return true;
+    }
+
+    if (pContext != m_pContext)
+    {
+        LOG_ERROR_MESSAGE("The context provided to ", MethodName, "() must be the same as the one already used by the GPUUploadManagerImpl");
+        return false;
+    }
+
+    return true;
+}
+
+void GPUUploadManagerImpl::Stop(IDeviceContext* pContext)
+{
+    if (!SetOrValidateContext(pContext, "Stop"))
+        return;
+
+    StopInternal(pContext);
+}
+
+void GPUUploadManagerImpl::StopInternal(IDeviceContext* pContext)
+{
+    if (!SetStopping())
+        return;
+
     m_Stopping.store(true, std::memory_order_release);
 
     if (m_pTextureStreams)
@@ -921,31 +1314,46 @@ GPUUploadManagerImpl::~GPUUploadManagerImpl()
         Stream->SignalStop();
     }
 
-    // Wait for any running updates to finish.
-    if (m_NumRunningUpdates.load(std::memory_order_acquire) > 0)
+    if ((m_ScheduleAdmissionState.load(std::memory_order_acquire) & SCHEDULE_COUNT_MASK) != 0)
     {
         m_LastRunningThreadFinishedSignal.Wait();
     }
 
-    for (UploadStreamUniquePtr& Stream : m_Streams)
+    // Once all admitted ScheduleBufferUpdate()/ScheduleTextureUpdate() calls have returned,
+    // it is safe to unmap and release staging resources here. Do this in Stop() instead of
+    // the destructor so the application controls the thread/phase where the manager's device
+    // context is touched. Keep streams and pages alive until destruction, because pending
+    // operations still own callback payloads that must be released during teardown.
+    if (pContext != nullptr)
     {
-        Stream->ReleaseStagingBuffers();
+        for (UploadStreamUniquePtr& Stream : m_Streams)
+        {
+            Stream->ReleaseStagingBuffers(pContext);
+        }
     }
+}
+
+GPUUploadManagerImpl::~GPUUploadManagerImpl()
+{
+    StopInternal(m_pContext);
+
+    // Pending page pointers are owned by the streams below. The manager is terminally
+    // destroyed, so discard the queue nodes before destroying the pages.
+    Page* pPage = nullptr;
+    while (m_PendingPages.Dequeue(pPage))
+    {}
 }
 
 void GPUUploadManagerImpl::RenderThreadUpdate(IDeviceContext* pContext)
 {
-    DEV_CHECK_ERR(pContext != nullptr, "A valid context must be provided to RenderThreadUpdate");
+    if (m_Stopping.load(std::memory_order_acquire))
+    {
+        DEV_ERROR("GPU upload manager has been stopped");
+        return;
+    }
 
-    if (!m_pContext)
-    {
-        // If no context was provided at creation, we can accept any context in RenderThreadUpdate, but it must be the same across calls.
-        m_pContext = pContext;
-    }
-    else
-    {
-        DEV_CHECK_ERR(pContext == m_pContext, "The context provided to RenderThreadUpdate must be the same as the one used to create the GPUUploadManagerImpl");
-    }
+    if (!SetOrValidateContext(pContext, "RenderThreadUpdate"))
+        return;
 
     if (m_pTextureStreams)
     {
@@ -991,51 +1399,26 @@ GPUUploadManagerImpl::UploadStream& GPUUploadManagerImpl::GetStreamForUpdateSize
     return UpdateSize > LargeUpdateThreshold ? *m_pLargeStream : *m_pNormalStream;
 }
 
-void GPUUploadManagerImpl::UploadStream::ScheduleUpdate(IDeviceContext* pContext,
+bool GPUUploadManagerImpl::UploadStream::ScheduleUpdate(IDeviceContext* pContext,
                                                         Uint32          UpdateSize,
                                                         const void*     pUpdateInfo,
                                                         bool            ScheduleUpdate(Page::Writer& Writer, const void* pUpdateInfo))
 {
-    DEV_CHECK_ERR(pContext == nullptr || pContext == m_Mgr.m_pContext,
-                  "If a context is provided to ScheduleBufferUpdate/ScheduleTextureUpdate, it must be the same as the "
-                  "one used to create the GPUUploadManagerImpl");
-
-    class RunningUpdatesGuard
-    {
-    public:
-        explicit RunningUpdatesGuard(UploadStream& Stream) noexcept :
-            m_Stream{Stream}
-        {
-            m_Stream.m_Mgr.m_NumRunningUpdates.fetch_add(1, std::memory_order_acq_rel);
-            m_Stream.m_NumRunningUpdates.fetch_add(1, std::memory_order_acq_rel);
-        }
-
-        ~RunningUpdatesGuard()
-        {
-            // Decrement the stream's counter first because if the manager is stopping, the
-            // stream can be destroyed after m_LastRunningThreadFinishedSignal is triggered.
-            m_Stream.m_NumRunningUpdates.fetch_sub(1, std::memory_order_acq_rel);
-            Uint32 NumRunningUpdates = m_Stream.m_Mgr.m_NumRunningUpdates.fetch_sub(1, std::memory_order_acq_rel);
-            if (m_Stream.m_Mgr.m_Stopping.load(std::memory_order_acquire) && NumRunningUpdates == 1)
-            {
-                m_Stream.m_Mgr.m_LastRunningThreadFinishedSignal.Trigger();
-            }
-        }
-
-    private:
-        UploadStream& m_Stream;
-    };
-    RunningUpdatesGuard Guard{*this};
-
-
-    bool IsFirstAttempt = true;
-    bool AbortUpdate    = false;
+    bool IsFirstAttempt  = true;
+    bool AbortUpdate     = false;
+    bool UpdateScheduled = false;
 
     auto UpdatePendingSizeAndTryRotate = [&](Page* P) {
-        Uint64 PageEpoch = m_PageRotatedSignal.CurrentEpoch();
+        Uint64 PageEpoch = m_PagePoolChangedSignal.CurrentEpoch();
         // Note that for texture pages, UpdateSize is the texture dimension.
         if (!TryRotatePage(pContext, P, UpdateSize))
         {
+            if (pContext != nullptr)
+            {
+                AbortUpdate = true;
+                return;
+            }
+
             // Atomically update the max pending update size to ensure the next page is large enough
             AtomicMax(m_MaxPendingUpdateSize, UpdateSize, std::memory_order_acq_rel);
             if (IsFirstAttempt)
@@ -1043,7 +1426,7 @@ void GPUUploadManagerImpl::UploadStream::ScheduleUpdate(IDeviceContext* pContext
                 m_TotalPendingUpdateSize.fetch_add(UpdateSize, std::memory_order_acq_rel);
                 IsFirstAttempt = false;
             }
-            AbortUpdate = m_PageRotatedSignal.WaitNext(PageEpoch) == 0;
+            AbortUpdate = m_PagePoolChangedSignal.WaitNext(PageEpoch) == 0;
         }
     };
 
@@ -1082,7 +1465,7 @@ void GPUUploadManagerImpl::UploadStream::ScheduleUpdate(IDeviceContext* pContext
             continue;
         }
 
-        const bool UpdateScheduled = ScheduleUpdate(Writer, pUpdateInfo);
+        UpdateScheduled = ScheduleUpdate(Writer, pUpdateInfo);
         EndWriting();
 
         if (UpdateScheduled)
@@ -1096,28 +1479,86 @@ void GPUUploadManagerImpl::UploadStream::ScheduleUpdate(IDeviceContext* pContext
     }
 
     AtomicMax(m_PeakUpdateSize, UpdateSize, std::memory_order_relaxed);
+    return UpdateScheduled;
 }
 
-void GPUUploadManagerImpl::ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& UpdateInfo)
+bool GPUUploadManagerImpl::ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& UpdateInfo)
 {
+    // Cancellation guard must be declared after ScheduleUpdateGuard, so abandoned-update
+    // callbacks run before the admission count is decremented. Stop() waits on this count
+    // and must not return while a cancellation callback is still using user data.
+    ScheduleUpdateGuard     ScheduleGuard{*this};
+    BufferUpdateCancelGuard CancelGuard{UpdateInfo};
+    if (!ScheduleGuard)
+    {
+        // Worker-thread scheduling may race with Stop(). Quietly cancel the update
+        // through the guard so callback-owned user data is released.
+        return false;
+    }
+
+    if (UpdateInfo.pContext != nullptr && !SetOrValidateContext(UpdateInfo.pContext, "ScheduleBufferUpdate"))
+        return false;
+
+    if (!ValidateBufferUpdate(UpdateInfo))
+        return false;
+
+    if (UpdateInfo.CopyBuffer != nullptr && UpdateInfo.UploadEnqueued != nullptr)
+    {
+        LOG_WARNING_MESSAGE("ScheduleBufferUpdateInfo::UploadEnqueued is ignored when CopyBuffer is provided.");
+    }
+
     UploadStream& Stream = GetStreamForUpdateSize(UpdateInfo.NumBytes);
-    Stream.ScheduleUpdate(UpdateInfo.pContext, UpdateInfo.NumBytes, &UpdateInfo,
-                          [](Page::Writer& Writer, const void* pUpdateData) {
-                              const ScheduleBufferUpdateInfo* pBufferUpdateInfo = static_cast<const ScheduleBufferUpdateInfo*>(pUpdateData);
-                              return Writer.ScheduleBufferUpdate(*pBufferUpdateInfo);
-                          });
+
+    const bool Scheduled = Stream.ScheduleUpdate(
+        UpdateInfo.pContext, UpdateInfo.NumBytes, &UpdateInfo,
+        [](Page::Writer& Writer, const void* pUpdateData) {
+            const ScheduleBufferUpdateInfo* pBufferUpdateInfo = static_cast<const ScheduleBufferUpdateInfo*>(pUpdateData);
+            return Writer.ScheduleBufferUpdate(*pBufferUpdateInfo);
+        });
+    if (Scheduled)
+    {
+        CancelGuard.Disarm();
+    }
+
+    return Scheduled;
 }
 
-void GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo)
+bool GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo)
 {
+    const bool UseD3D11TextureCallback = m_DeviceType == RENDER_DEVICE_TYPE_D3D11;
+    // See ScheduleBufferUpdate() for why the cancellation guard follows ScheduleUpdateGuard.
+    ScheduleUpdateGuard      ScheduleGuard{*this};
+    TextureUpdateCancelGuard CancelGuard{UpdateInfo, UseD3D11TextureCallback};
+    if (!ScheduleGuard)
+    {
+        // Worker-thread scheduling may race with Stop(). Quietly cancel the update
+        // through the guard so callback-owned user data is released.
+        return false;
+    }
+
+    if (UpdateInfo.pContext != nullptr && !SetOrValidateContext(UpdateInfo.pContext, "ScheduleTextureUpdate"))
+        return false;
+
+    const bool HasCopyCallback =
+        UseD3D11TextureCallback ?
+        UpdateInfo.CopyD3D11Texture != nullptr :
+        UpdateInfo.CopyTexture != nullptr;
+    if (HasCopyCallback && UpdateInfo.UploadEnqueued != nullptr)
+    {
+        LOG_WARNING_MESSAGE("ScheduleTextureUpdateInfo::UploadEnqueued is ignored when a copy callback is provided.");
+    }
+
     const TEXTURE_FORMAT Format = UpdateInfo.pDstTexture != nullptr ?
         UpdateInfo.pDstTexture->GetDesc().Format :
         UpdateInfo.Format;
     if (Format == TEX_FORMAT_UNKNOWN)
     {
-        DEV_ERROR("If pDstTexture is null, a valid format must be specified in ScheduleTextureUpdateInfo.Format");
-        return;
+        LOG_ERROR_MESSAGE("ScheduleTextureUpdate() requires pDstTexture or a valid ScheduleTextureUpdateInfo::Format");
+        return false;
     }
+
+    if (!ValidateTextureUpdate(UpdateInfo, Format, HasCopyCallback, m_DeviceType))
+        return false;
 
     struct ScheduleUpdateData
     {
@@ -1127,10 +1568,10 @@ void GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo
     };
     ScheduleUpdateData UpdateData{
         UpdateInfo,
-        !m_pTextureStreams ?
+        !UseD3D11TextureCallback ?
             GetBufferToTextureCopyInfo(Format, UpdateInfo.DstBox, m_TextureUpdateStrideAlignment) :
             BufferToTextureCopyInfo{},
-        !m_pTextureStreams ?
+        !UseD3D11TextureCallback ?
             m_TextureUpdateOffsetAlignment :
             0,
     };
@@ -1141,7 +1582,7 @@ void GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo
     if (pStream == nullptr)
     {
         // GetStreamForFormat can return null if the manager is stopping.
-        return;
+        return false;
     }
 
     // For texture updates, use the maximum upload region size as the update size.
@@ -1149,11 +1590,18 @@ void GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo
         std::max(UpdateInfo.DstBox.Width(), UpdateInfo.DstBox.Height()) :
         static_cast<Uint32>(UpdateData.CopyInfo.MemorySize);
 
-    pStream->ScheduleUpdate(UpdateInfo.pContext, UpdateSize, &UpdateData,
-                            [](Page::Writer& Writer, const void* pData) {
-                                const ScheduleUpdateData* pUpdateData = static_cast<const ScheduleUpdateData*>(pData);
-                                return Writer.ScheduleTextureUpdate(pUpdateData->UpdateInfo, pUpdateData->CopyInfo, pUpdateData->OffsetAlignment);
-                            });
+    const bool Scheduled = pStream->ScheduleUpdate(
+        UpdateInfo.pContext, UpdateSize, &UpdateData,
+        [](Page::Writer& Writer, const void* pData) {
+            const ScheduleUpdateData* pUpdateData = static_cast<const ScheduleUpdateData*>(pData);
+            return Writer.ScheduleTextureUpdate(pUpdateData->UpdateInfo, pUpdateData->CopyInfo, pUpdateData->OffsetAlignment);
+        });
+    if (Scheduled)
+    {
+        CancelGuard.Disarm();
+    }
+
+    return Scheduled;
 }
 
 GPUUploadManagerImpl::Page* GPUUploadManagerImpl::UploadStream::CreatePage(IDeviceContext* pContext, Uint32 RequiredSize, bool AllowOverLimit)
@@ -1175,11 +1623,18 @@ GPUUploadManagerImpl::Page* GPUUploadManagerImpl::UploadStream::CreatePage(IDevi
         std::make_unique<Page>(this, m_Mgr.m_pDevice, PageSize, m_Format) :
         std::make_unique<Page>(this, m_Mgr.m_pDevice, PageSize);
 
+    if (!NewPage->IsValid())
+        return nullptr;
+
     Page* P = NewPage.get();
     if (pContext != nullptr)
     {
-        P->Reset(pContext);
+        if (!P->Reset(pContext))
+        {
+            return nullptr;
+        }
     }
+
     m_Pages.emplace(P, std::move(NewPage));
     m_PageSizeToCount[PageSize]++;
     m_PeakPageCount = std::max(m_PeakPageCount, static_cast<Uint32>(m_Pages.size()));
@@ -1221,9 +1676,12 @@ bool GPUUploadManagerImpl::UploadStream::TryRotatePage(IDeviceContext* pContext,
     Page* Cur = ExpectedCurrent;
     if (!m_pCurrentPage.compare_exchange_strong(Cur, Fresh, std::memory_order_acq_rel))
     {
-        // Lost the race: put Fresh back
-        Fresh->Seal();
-        m_FreePages.Push(Fresh);
+        // Lost the race. Fresh was unsealed by AcquireFreePage(), so a stale
+        // writer may have acquired it before the CAS failed. Return it to the
+        // free list only if sealing observes no active writers; otherwise the
+        // last writer will recycle the empty page through TryEnqueuePage().
+        if (Fresh->TrySeal() == Page::SealStatus::Ready)
+            ReturnFreePage(Fresh);
         return true; // Rotation happened by someone else
     }
 
@@ -1231,7 +1689,7 @@ bool GPUUploadManagerImpl::UploadStream::TryRotatePage(IDeviceContext* pContext,
     if (ExpectedCurrent != nullptr && ExpectedCurrent->TrySeal() == Page::SealStatus::Ready)
         TryEnqueuePage(ExpectedCurrent);
 
-    m_PageRotatedSignal.Tick();
+    m_PagePoolChangedSignal.Tick();
     return true;
 }
 
@@ -1248,7 +1706,7 @@ bool GPUUploadManagerImpl::UploadStream::TryEnqueuePage(Page* P)
         else
         {
             P->Reset(nullptr);
-            m_FreePages.Push(P);
+            ReturnFreePage(P);
         }
         return true;
     }
@@ -1268,8 +1726,14 @@ void GPUUploadManagerImpl::ReclaimCompletedPages(IDeviceContext* pContext)
         Page* P = m_InFlightPages[i];
         if (P->GetFenceValue() <= CompletedFenceValue)
         {
-            P->Reset(pContext);
-            m_TmpPages.push_back(P);
+            if (P->Reset(pContext))
+            {
+                m_TmpPages.push_back(P);
+            }
+            else
+            {
+                m_InFlightPages[NewInFlightPageCount++] = P;
+            }
         }
         else
         {
@@ -1337,23 +1801,19 @@ void GPUUploadManagerImpl::UploadStream::ProcessPagesToRelease(IDeviceContext* p
     if (m_MaxPageCount == 0)
         return;
 
-    if (m_NumRunningUpdates.load(std::memory_order_acquire) > 0)
+    VERIFY_EXPR(pContext != nullptr);
+    while (m_Pages.size() > m_MaxPageCount)
     {
-        // Delay releasing pages until there are no running updates, to avoid ABA issue in ScheduleBufferUpdate:
+        // Pop the smallest free page and release it until we are within the limit.
+        // The running-update counter is checked under the free-list lock to avoid
+        // ABA issue in ScheduleBufferUpdate/ScheduleTextureUpdate:
         // * T1:
         //      Page* P = m_pCurrentPage.load(std::memory_order_acquire);
         // * T1 gets descheduled
         // * Render thread frees the page.
         // * T1 resumes and crashes at
         //      Page::Writer Writer = P->TryBeginWriting();
-        return;
-    }
-
-    VERIFY_EXPR(pContext != nullptr);
-    while (m_Pages.size() > m_MaxPageCount)
-    {
-        // Pop the smallest free page and release it until we are within the limit.
-        if (Page* pPage = m_FreePages.Pop())
+        if (Page* pPage = m_FreePages.Pop(0, &m_Mgr.m_ScheduleAdmissionState))
         {
             pPage->ReleaseStagingBuffer(pContext);
             auto it = m_PageSizeToCount.find(pPage->GetSize());
@@ -1450,6 +1910,13 @@ void GPUUploadManagerImpl::UploadStream::GetStats(GPUUploadManagerStreamStats& S
 
 void GPUUploadManagerImpl::GetStats(GPUUploadManagerStats& Stats)
 {
+    if (m_Stopping.load(std::memory_order_acquire))
+    {
+        DEV_ERROR("GPU upload manager has been stopped");
+        Stats = GPUUploadManagerStats{};
+        return;
+    }
+
     m_StreamStats.resize(m_Streams.size());
     for (size_t i = 0; i < m_Streams.size(); ++i)
     {

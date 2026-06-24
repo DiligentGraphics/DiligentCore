@@ -59,13 +59,17 @@ public:
     GPUUploadManagerImpl(IReferenceCounters* pRefCounters, const GPUUploadManagerCreateInfo& CI);
     ~GPUUploadManagerImpl();
 
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_GPUUploadManager, TBase);
+
     virtual void DILIGENT_CALL_TYPE RenderThreadUpdate(IDeviceContext* pContext) override final;
 
-    virtual void DILIGENT_CALL_TYPE ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& UpdateInfo) override final;
+    virtual bool DILIGENT_CALL_TYPE ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& UpdateInfo) override final;
 
-    virtual void DILIGENT_CALL_TYPE ScheduleTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo) override final;
+    virtual bool DILIGENT_CALL_TYPE ScheduleTextureUpdate(const ScheduleTextureUpdateInfo& UpdateInfo) override final;
 
     virtual void DILIGENT_CALL_TYPE GetStats(GPUUploadManagerStats& Stats) override final;
+
+    virtual void DILIGENT_CALL_TYPE Stop(IDeviceContext* pContext) override final;
 
 private:
     class UploadStream;
@@ -147,7 +151,8 @@ public:
         void       Seal();
 
         void ExecutePendingOps(IDeviceContext* pContext, Uint64 FenceValue);
-        void Reset(IDeviceContext* pContext);
+        bool Reset(IDeviceContext* pContext);
+        bool IsValid() const;
 
         // Tries to set the page as enqueued for execution.
         // Returns true if the page was not previously enqueued, false otherwise.
@@ -210,6 +215,7 @@ public:
             void* Map(IDeviceContext* pContext);
             void  Unmap(IDeviceContext* pContext);
             void  Reset();
+            bool  IsValid() const { return pTex != nullptr; }
 
             DynamicAtlasManager::Region Allocate(Uint32 Width, Uint32 Height);
 
@@ -299,6 +305,8 @@ private:
     RefCntAutoPtr<IRenderDevice>  m_pDevice;
     RefCntAutoPtr<IDeviceContext> m_pContext;
 
+    const RENDER_DEVICE_TYPE m_DeviceType;
+
     const Uint32 m_TextureUpdateOffsetAlignment;
     const Uint32 m_TextureUpdateStrideAlignment;
 
@@ -311,7 +319,7 @@ private:
     public:
         void   Push(Page** ppPages, size_t NumPages);
         void   Push(Page* pPage) { Push(&pPage, 1); }
-        Page*  Pop(Uint32 MinSize = 0);
+        Page*  Pop(Uint32 MinSize = 0, const std::atomic<Uint32>* pScheduleAdmissionState = nullptr);
         size_t Size() const { return m_Size.load(std::memory_order_acquire); }
 
     private:
@@ -344,14 +352,14 @@ private:
         bool  TryEnqueuePage(Page* P);
         void  ProcessPagesToRelease(IDeviceContext* pContext);
         void  AddFreePages(IDeviceContext* pContext);
-        void  AddFreePage(Page* pPage) { m_FreePages.Push(pPage); }
+        void  ReturnFreePage(Page* pPage);
 
-        void ScheduleUpdate(IDeviceContext* pContext,
+        bool ScheduleUpdate(IDeviceContext* pContext,
                             Uint32          UpdateSize,
                             const void*     pUpdateInfo,
                             bool            ScheduleUpdate(Page::Writer& Writer, const void* pUpdateInfo));
-        void ReleaseStagingBuffers();
-        void SignalPageRotated() { m_PageRotatedSignal.Tick(); }
+        void ReleaseStagingBuffers(IDeviceContext* pContext);
+        void SignalPageRotated() { m_PagePoolChangedSignal.Tick(); }
         void SignalStop();
 
         Uint32 GetPageSize() const { return m_PageSize; }
@@ -366,13 +374,12 @@ private:
 
         std::atomic<Page*> m_pCurrentPage{nullptr};
 
-        Threading::TickSignal m_PageRotatedSignal;
+        Threading::TickSignal m_PagePoolChangedSignal;
 
         std::unordered_map<Page*, std::unique_ptr<Page>> m_Pages;
         std::map<Uint32, Uint32>                         m_PageSizeToCount;
         mutable std::vector<GPUUploadManagerBucketInfo>  m_BucketInfo;
 
-        std::atomic<Uint32> m_NumRunningUpdates{0};
         std::atomic<Uint32> m_MaxPendingUpdateSize{0};
         std::atomic<Uint32> m_TotalPendingUpdateSize{0};
 
@@ -419,8 +426,42 @@ private:
     };
     std::unique_ptr<TextureUploadStreams> m_pTextureStreams;
 
-    // The number of running ScheduleBufferUpdate operations.
-    std::atomic<Uint32> m_NumRunningUpdates{0};
+    class ScheduleUpdateGuard
+    {
+    public:
+        explicit ScheduleUpdateGuard(GPUUploadManagerImpl& Mgr) noexcept;
+        ~ScheduleUpdateGuard();
+
+        explicit operator bool() const { return m_pMgr != nullptr; }
+
+        // clang-format off
+        ScheduleUpdateGuard           (const ScheduleUpdateGuard&) = delete;
+        ScheduleUpdateGuard& operator=(const ScheduleUpdateGuard&) = delete;
+        ScheduleUpdateGuard           (ScheduleUpdateGuard&&)      = delete;
+        ScheduleUpdateGuard& operator=(ScheduleUpdateGuard&&)      = delete;
+        // clang-format on
+
+    private:
+        GPUUploadManagerImpl* m_pMgr = nullptr;
+    };
+
+    bool TryBeginScheduleUpdate() noexcept;
+    void EndScheduleUpdate() noexcept;
+    bool SetStopping() noexcept;
+    // Only call from context-owning paths: RenderThreadUpdate(), Stop(), or Schedule*Update() with non-null pContext.
+    bool SetOrValidateContext(IDeviceContext* pContext, const char* MethodName);
+    void StopInternal(IDeviceContext* pContext);
+
+    static constexpr Uint32 SCHEDULE_STOP_BIT   = 0x80000000u;
+    static constexpr Uint32 SCHEDULE_COUNT_MASK = ~SCHEDULE_STOP_BIT;
+
+    // Low bits count active ScheduleBufferUpdate/ScheduleTextureUpdate calls; high bit marks Stop().
+    // Keeping the stop bit and the counter in one atomic value gives each update a single admission
+    // point. This avoids the race where a thread observes "not stopped", Stop() starts, and the
+    // thread registers itself as active only after the destructor has already observed zero active
+    // updates. An admitted update may finish after Stop(); a later update is rejected before it can
+    // touch stream state.
+    std::atomic<Uint32> m_ScheduleAdmissionState{0};
     std::atomic<bool>   m_Stopping{false};
     Threading::Signal   m_LastRunningThreadFinishedSignal;
 
