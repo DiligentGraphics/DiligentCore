@@ -160,6 +160,7 @@ std::vector<unsigned int> LoadSPIRVFromGLSL(const char* FilePath, SHADER_TYPE Sh
     GLSLangUtils::GLSLtoSPIRVAttribs Attribs;
     Attribs.ShaderType                 = ShaderType;
     Attribs.ShaderSource               = ShaderSource.data();
+    Attribs.SourceName                 = FilePath;
     Attribs.SourceCodeLen              = static_cast<int>(ShaderSourceSize);
     Attribs.pShaderSourceStreamFactory = pShaderSourceStreamFactory;
     Attribs.Version                    = Version;
@@ -644,6 +645,18 @@ TEST_F(SPIRVShaderResourcesTest, SpecializationConstants_GLSLang)
 TEST_F(SPIRVShaderResourcesTest, SpecializationConstants_DXC)
 {
     TestSpecializationConstants(SHADER_COMPILER_DXC);
+}
+
+TEST_F(SPIRVShaderResourcesTest, NestedParentRelativeIncludes_HLSL_GLSLang)
+{
+    auto SPIRV = LoadSPIRVFromHLSL("IncludeNestedParentRelative/Main.psh", SHADER_TYPE_PIXEL, SHADER_COMPILER_GLSLANG);
+    EXPECT_FALSE(SPIRV.empty());
+}
+
+TEST_F(SPIRVShaderResourcesTest, NestedParentRelativeIncludes_GLSL_GLSLang)
+{
+    auto SPIRV = LoadSPIRVFromGLSL("IncludeNestedParentRelative/Main.glsl");
+    EXPECT_FALSE(SPIRV.empty());
 }
 
 } // namespace
