@@ -1264,23 +1264,33 @@ GPUUploadManagerImpl::ScheduleUpdateGuard::~ScheduleUpdateGuard()
         m_pMgr->EndScheduleUpdate();
 }
 
-void GPUUploadManagerImpl::Stop(IDeviceContext* pContext)
+bool GPUUploadManagerImpl::SetOrValidateContext(IDeviceContext* pContext, const char* MethodName)
 {
     if (pContext == nullptr)
     {
-        LOG_ERROR_MESSAGE("A valid context must be provided to Stop()");
-        return;
+        LOG_ERROR_MESSAGE("A valid context must be provided to ", MethodName, "()");
+        return false;
     }
 
     if (!m_pContext)
     {
         m_pContext = pContext;
+        return true;
     }
-    else if (pContext != m_pContext)
+
+    if (pContext != m_pContext)
     {
-        LOG_ERROR_MESSAGE("The context provided to Stop() must be the same as the one already used by the GPUUploadManagerImpl");
-        return;
+        LOG_ERROR_MESSAGE("The context provided to ", MethodName, "() must be the same as the one already used by the GPUUploadManagerImpl");
+        return false;
     }
+
+    return true;
+}
+
+void GPUUploadManagerImpl::Stop(IDeviceContext* pContext)
+{
+    if (!SetOrValidateContext(pContext, "Stop"))
+        return;
 
     StopInternal(pContext);
 }
@@ -1336,22 +1346,14 @@ GPUUploadManagerImpl::~GPUUploadManagerImpl()
 
 void GPUUploadManagerImpl::RenderThreadUpdate(IDeviceContext* pContext)
 {
-    DEV_CHECK_ERR(pContext != nullptr, "A valid context must be provided to RenderThreadUpdate");
     if (m_Stopping.load(std::memory_order_acquire))
     {
         DEV_ERROR("GPU upload manager has been stopped");
         return;
     }
 
-    if (!m_pContext)
-    {
-        // If no context was provided at creation, we can accept any context in RenderThreadUpdate, but it must be the same across calls.
-        m_pContext = pContext;
-    }
-    else
-    {
-        DEV_CHECK_ERR(pContext == m_pContext, "The context provided to RenderThreadUpdate must be the same as the one used to create the GPUUploadManagerImpl");
-    }
+    if (!SetOrValidateContext(pContext, "RenderThreadUpdate"))
+        return;
 
     if (m_pTextureStreams)
     {
@@ -1402,10 +1404,6 @@ bool GPUUploadManagerImpl::UploadStream::ScheduleUpdate(IDeviceContext* pContext
                                                         const void*     pUpdateInfo,
                                                         bool            ScheduleUpdate(Page::Writer& Writer, const void* pUpdateInfo))
 {
-    DEV_CHECK_ERR(pContext == nullptr || pContext == m_Mgr.m_pContext,
-                  "If a context is provided to ScheduleBufferUpdate/ScheduleTextureUpdate, it must be the same as the "
-                  "one used to create the GPUUploadManagerImpl");
-
     bool IsFirstAttempt  = true;
     bool AbortUpdate     = false;
     bool UpdateScheduled = false;
@@ -1498,6 +1496,9 @@ bool GPUUploadManagerImpl::ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& 
         return false;
     }
 
+    if (UpdateInfo.pContext != nullptr && !SetOrValidateContext(UpdateInfo.pContext, "ScheduleBufferUpdate"))
+        return false;
+
     if (!ValidateBufferUpdate(UpdateInfo))
         return false;
 
@@ -1534,6 +1535,9 @@ bool GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo
         // through the guard so callback-owned user data is released.
         return false;
     }
+
+    if (UpdateInfo.pContext != nullptr && !SetOrValidateContext(UpdateInfo.pContext, "ScheduleTextureUpdate"))
+        return false;
 
     const bool HasCopyCallback =
         UseD3D11TextureCallback ?

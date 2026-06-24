@@ -448,6 +448,8 @@ private:
     bool TryBeginScheduleUpdate() noexcept;
     void EndScheduleUpdate() noexcept;
     bool SetStopping() noexcept;
+    // Only call from context-owning paths: RenderThreadUpdate(), Stop(), or Schedule*Update() with non-null pContext.
+    bool SetOrValidateContext(IDeviceContext* pContext, const char* MethodName);
     void StopInternal(IDeviceContext* pContext);
 
     static constexpr Uint32 SCHEDULE_STOP_BIT   = 0x80000000u;

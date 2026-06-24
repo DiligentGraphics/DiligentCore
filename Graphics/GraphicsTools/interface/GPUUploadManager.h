@@ -160,6 +160,8 @@ typedef void (*CopyStagingBufferCallbackType)(IDeviceContext* pContext,
 struct ScheduleBufferUpdateInfo
 {
     /// If calling ScheduleBufferUpdate() from the render thread, a pointer to the device context.
+    /// If no manager context has been set yet, this context becomes the manager context.
+    /// Otherwise, it must be the same as the manager context.
     /// If calling ScheduleBufferUpdate() from a worker thread, this parameter must be null.
     IDeviceContext* pContext DEFAULT_INITIALIZER(nullptr);
 
@@ -403,6 +405,8 @@ typedef void (*CopyStagingD3D11TextureCallbackType)(IDeviceContext* pContext,
 struct ScheduleTextureUpdateInfo
 {
     /// If calling ScheduleTextureUpdate() from the render thread, a pointer to the device context.
+    /// If no manager context has been set yet, this context becomes the manager context.
+    /// Otherwise, it must be the same as the manager context.
     /// If calling ScheduleTextureUpdate() from a worker thread, this parameter must be null.
     IDeviceContext* pContext DEFAULT_INITIALIZER(nullptr);
 
@@ -574,6 +578,9 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     /// from worker threads, but only one thread is allowed to call RenderThreadUpdate() at a time.
     /// RenderThreadUpdate() must not be called concurrently with Stop(), and the device context
     /// used by the manager must not be used concurrently by other threads.
+    /// pContext must not be null. If no context was provided at creation, the first context
+    /// passed to RenderThreadUpdate() becomes the manager context. Otherwise, it must be
+    /// the same as the manager context.
     ///
     /// The method must be called periodically to process pending updates. If the method is not called,
     /// ScheduleBufferUpdate() or ScheduleTextureUpdate() may block indefinitely when there are no free
@@ -589,8 +596,10 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     ///         due to invalid parameters, a stopped manager, or an internal scheduling failure.
     ///         If false is returned, any abandoned-scheduling callback is invoked before the method returns.
     ///
-    /// The method is thread-safe and can be called from multiple threads simultaneously with other calls to ScheduleBufferUpdate()
-    /// and RenderThreadUpdate().
+    /// The method is thread-safe for worker-thread calls that use a null pContext. These calls can be made from multiple threads
+    /// simultaneously with other worker-thread ScheduleBufferUpdate() calls and RenderThreadUpdate().
+    /// Calls that provide a non-null pContext use the device context and must be externally serialized with RenderThreadUpdate(),
+    /// Stop(), GetStats(), and other use of the same context.
     /// The caller must keep the upload manager alive for the entire duration of this call. Worker threads should
     /// hold their own strong reference to the manager if the manager may be stopped or released concurrently.
     /// Calls admitted before Stop() may complete; calls admitted after Stop() are ignored and return false.
@@ -606,8 +615,9 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     /// call RenderThreadUpdate() to process pending buffer updates. If RenderThreadUpdate() is not called, the method may block indefinitely
     /// when there are no free pages available for new updates.
     /// 
-    /// If the method is called from the render thread, the pContext parameter must be a pointer to the device context used to create the
-    /// GPU upload manager. If the method is called from the render thread with null pContext, it may never return.
+    /// If the method is called from the render thread, the pContext parameter must be a pointer
+    /// to the manager context. If no manager context has been set yet, pContext becomes the manager
+    /// context. If the method is called from the render thread with null pContext, it may never return.
     VIRTUAL bool METHOD(ScheduleBufferUpdate)(THIS_
                                               const ScheduleBufferUpdateInfo REF UpdateInfo) PURE;
 
@@ -620,8 +630,10 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     ///         due to invalid parameters, a stopped manager, or an internal scheduling failure.
     ///         If false is returned, any abandoned-scheduling callback is invoked before the method returns.
     /// 
-    /// The method is thread-safe and can be called from multiple threads simultaneously with other calls to ScheduleTextureUpdate()
-    /// and RenderThreadUpdate().
+    /// The method is thread-safe for worker-thread calls that use a null pContext. These calls can be made from multiple threads
+    /// simultaneously with other worker-thread ScheduleTextureUpdate() calls and RenderThreadUpdate().
+    /// Calls that provide a non-null pContext use the device context and must be externally serialized with RenderThreadUpdate(),
+    /// Stop(), GetStats(), and other use of the same context.
     /// The caller must keep the upload manager alive for the entire duration of this call. Worker threads should
     /// hold their own strong reference to the manager if the manager may be stopped or released concurrently.
     /// Calls admitted before Stop() may complete; calls admitted after Stop() are ignored and return false.
@@ -637,8 +649,9 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     /// call RenderThreadUpdate() to process pending texture updates. If RenderThreadUpdate() is not called, the method may block indefinitely
     /// when there are no free pages available for new updates.
     /// 
-    /// If the method is called from the render thread, the pContext parameter must be a pointer to the device context used to create the
-    /// GPU upload manager. If the method is called from the render thread with null pContext, it may never return.
+    /// If the method is called from the render thread, the pContext parameter must be a pointer
+    /// to the manager context. If no manager context has been set yet, pContext becomes the manager
+    /// context. If the method is called from the render thread with null pContext, it may never return.
     VIRTUAL bool METHOD(ScheduleTextureUpdate)(THIS_
                                                const ScheduleTextureUpdateInfo REF UpdateInfo) PURE;
 
