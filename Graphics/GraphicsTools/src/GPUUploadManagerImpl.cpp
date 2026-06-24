@@ -359,7 +359,10 @@ GPUUploadManagerImpl::Page::StagingTextureAtlas::StagingTextureAtlas(IRenderDevi
     TexDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
 
     pDevice->CreateTexture(TexDesc, nullptr, &pTex);
-    VERIFY_EXPR(pTex);
+    if (!pTex)
+    {
+        LOG_ERROR_MESSAGE("Failed to create GPU upload manager staging texture '", Name, "'");
+    }
 }
 
 GPUUploadManagerImpl::Page::StagingTextureAtlas::~StagingTextureAtlas()
@@ -369,6 +372,9 @@ GPUUploadManagerImpl::Page::StagingTextureAtlas::~StagingTextureAtlas()
 
 void* GPUUploadManagerImpl::Page::StagingTextureAtlas::Map(IDeviceContext* pContext)
 {
+    if (!pTex)
+        return nullptr;
+
     pContext->TransitionResourceState({pTex, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE});
     MappedTextureSubresource MappedData;
     pContext->MapTextureSubresource(pTex, 0, 0, MAP_WRITE, MAP_FLAG_NONE, nullptr, MappedData);
@@ -426,7 +432,10 @@ GPUUploadManagerImpl::Page::Page(UploadStream* pStream, IRenderDevice* pDevice, 
     Desc.Usage          = USAGE_STAGING;
     Desc.CPUAccessFlags = CPU_ACCESS_WRITE;
     pDevice->CreateBuffer(Desc, nullptr, &m_pStagingBuffer);
-    VERIFY_EXPR(m_pStagingBuffer != nullptr);
+    if (!m_pStagingBuffer)
+    {
+        LOG_ERROR_MESSAGE("Failed to create GPU upload manager staging buffer '", Name, "'");
+    }
 }
 
 GPUUploadManagerImpl::Page::Page(UploadStream* pStream, IRenderDevice* pDevice, Uint32 Size, TEXTURE_FORMAT Format) :
@@ -443,6 +452,11 @@ GPUUploadManagerImpl::Page::Page(UploadStream* pStream, IRenderDevice* pDevice, 
                 " (" + GetTextureFormatAttribs(Format).Name + ' ' + std::to_string(Size) + 'x' + std::to_string(Size) + ')'),
     }
 {
+}
+
+bool GPUUploadManagerImpl::Page::IsValid() const
+{
+    return (m_pStagingBuffer != nullptr) || (m_pStagingAtlas != nullptr && m_pStagingAtlas->IsValid());
 }
 
 GPUUploadManagerImpl::Page::~Page()
@@ -868,7 +882,7 @@ void GPUUploadManagerImpl::Page::ExecutePendingOps(IDeviceContext* pContext, Uin
     m_FenceValue = FenceValue;
 }
 
-void GPUUploadManagerImpl::Page::Reset(IDeviceContext* pContext)
+bool GPUUploadManagerImpl::Page::Reset(IDeviceContext* pContext)
 {
     VERIFY(DbgGetWriterCount() == 0, "All writers must finish before resetting the page");
     VERIFY(m_PendingOps.IsEmpty(), "All pending operations must be executed before resetting the page");
@@ -898,8 +912,14 @@ void GPUUploadManagerImpl::Page::Reset(IDeviceContext* pContext)
             m_pData = m_pStagingAtlas->Map(pContext);
         }
 
-        VERIFY_EXPR(m_pData != nullptr);
+        if (m_pData == nullptr)
+        {
+            LOG_ERROR_MESSAGE("Failed to map GPU upload manager staging page");
+            return false;
+        }
     }
+
+    return true;
 }
 
 bool GPUUploadManagerImpl::Page::TryEnqueue()
@@ -1151,7 +1171,10 @@ GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, con
     Desc.Name = "GPU upload manager fence";
     Desc.Type = FENCE_TYPE_CPU_WAIT_ONLY;
     m_pDevice->CreateFence(Desc, &m_pFence);
-    VERIFY_EXPR(m_pFence != nullptr);
+    if (!m_pFence)
+    {
+        LOG_ERROR_AND_THROW("Failed to create GPU upload manager fence");
+    }
 
     if (m_DeviceType == RENDER_DEVICE_TYPE_D3D11)
     {
@@ -1380,6 +1403,12 @@ bool GPUUploadManagerImpl::UploadStream::ScheduleUpdate(IDeviceContext* pContext
         // Note that for texture pages, UpdateSize is the texture dimension.
         if (!TryRotatePage(pContext, P, UpdateSize))
         {
+            if (pContext != nullptr)
+            {
+                AbortUpdate = true;
+                return;
+            }
+
             // Atomically update the max pending update size to ensure the next page is large enough
             AtomicMax(m_MaxPendingUpdateSize, UpdateSize, std::memory_order_acq_rel);
             if (IsFirstAttempt)
@@ -1578,11 +1607,18 @@ GPUUploadManagerImpl::Page* GPUUploadManagerImpl::UploadStream::CreatePage(IDevi
         std::make_unique<Page>(this, m_Mgr.m_pDevice, PageSize, m_Format) :
         std::make_unique<Page>(this, m_Mgr.m_pDevice, PageSize);
 
+    if (!NewPage->IsValid())
+        return nullptr;
+
     Page* P = NewPage.get();
     if (pContext != nullptr)
     {
-        P->Reset(pContext);
+        if (!P->Reset(pContext))
+        {
+            return nullptr;
+        }
     }
+
     m_Pages.emplace(P, std::move(NewPage));
     m_PageSizeToCount[PageSize]++;
     m_PeakPageCount = std::max(m_PeakPageCount, static_cast<Uint32>(m_Pages.size()));
@@ -1674,8 +1710,14 @@ void GPUUploadManagerImpl::ReclaimCompletedPages(IDeviceContext* pContext)
         Page* P = m_InFlightPages[i];
         if (P->GetFenceValue() <= CompletedFenceValue)
         {
-            P->Reset(pContext);
-            m_TmpPages.push_back(P);
+            if (P->Reset(pContext))
+            {
+                m_TmpPages.push_back(P);
+            }
+            else
+            {
+                m_InFlightPages[NewInFlightPageCount++] = P;
+            }
         }
         else
         {

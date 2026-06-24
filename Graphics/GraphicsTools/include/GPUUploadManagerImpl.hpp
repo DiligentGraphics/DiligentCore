@@ -149,7 +149,8 @@ public:
         void       Seal();
 
         void ExecutePendingOps(IDeviceContext* pContext, Uint64 FenceValue);
-        void Reset(IDeviceContext* pContext);
+        bool Reset(IDeviceContext* pContext);
+        bool IsValid() const;
 
         // Tries to set the page as enqueued for execution.
         // Returns true if the page was not previously enqueued, false otherwise.
@@ -212,6 +213,7 @@ public:
             void* Map(IDeviceContext* pContext);
             void  Unmap(IDeviceContext* pContext);
             void  Reset();
+            bool  IsValid() const { return pTex != nullptr; }
 
             DynamicAtlasManager::Region Allocate(Uint32 Width, Uint32 Height);
 
