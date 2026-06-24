@@ -556,9 +556,9 @@ std::vector<unsigned int> GLSLtoSPIRV(const GLSLtoSPIRVAttribs& Attribs)
 
     const char* ShaderStrings[] = {Attribs.ShaderSource};
     int         Lengths[]       = {Attribs.SourceCodeLen};
+    const char* Names[]         = {Attribs.SourceName};
     if (Attribs.SourceName != nullptr)
     {
-        const char* Names[] = {Attribs.SourceName};
         Shader.setStringsWithLengthsAndNames(ShaderStrings, Lengths, Names, 1);
     }
     else
