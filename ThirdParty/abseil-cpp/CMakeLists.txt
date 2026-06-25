@@ -12,8 +12,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(ABSL_PROPAGATE_CXX_STD ON CACHE BOOL "" FORCE)
 
-if(DILIGENT_ENABLE_ASAN)
-    add_compile_options(${DILIGENT_ASAN_COMPILE_OPTIONS})
+if(DILIGENT_SANITIZER_COMPILE_OPTIONS)
+    add_compile_options(${DILIGENT_SANITIZER_COMPILE_OPTIONS})
 endif()
 
 FetchContent_MakeAvailable(abseil-cpp)

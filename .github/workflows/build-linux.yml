@@ -65,7 +65,7 @@ jobs:
             build_type:      "RelWithDebInfo"
             cmake_generator: "Ninja"
             cmake_args:      "-DDILIGENT_BUILD_CORE_TESTS=ON"
-            enable_asan:     "true"
+            sanitizer:       "address"
             cc:              "clang-18"
             cxx:             "clang++-18"
 
@@ -93,7 +93,7 @@ jobs:
 
     - name: Set up build environment
       if:   success()
-      uses: DiligentGraphics/github-action/setup-build-env@v18
+      uses: DiligentGraphics/github-action/setup-build-env@v19
       with:
         platform:        Linux
         cmake-generator: ${{ matrix.cmake_generator }}
@@ -108,51 +108,51 @@ jobs:
 
     - name: Configure CMake
       if:   success()
-      uses: DiligentGraphics/github-action/configure-cmake@v18
+      uses: DiligentGraphics/github-action/configure-cmake@v19
       with:
         cc:         ${{ matrix.cc }}
         cxx:        ${{ matrix.cxx }}
         generator:  ${{ matrix.cmake_generator }}
         build-type: ${{ matrix.build_type }}
         cmake-args: ${{ matrix.cmake_args }}
-        enable-asan: ${{ matrix.enable_asan }}
+        sanitizer:  ${{ matrix.sanitizer }}
 
 
     - name: Build
       id:   build
       if:   success()
-      uses: DiligentGraphics/github-action/build@v18
+      uses: DiligentGraphics/github-action/build@v19
       with:
         target: install
 
     - name: DiligentCoreTest
       if:   success()
-      uses: DiligentGraphics/github-action/run-core-tests@v18
+      uses: DiligentGraphics/github-action/run-core-tests@v19
 
     - name: DiligentCoreAPITest VK
       # NB: it is essential to include failure() to override the default status check of success()
       #     that is automatically applied to if conditions that don't contain a status check function.
       if: ${{ (success() || failure() && steps.build.outcome == 'success') && (matrix.name == 'Clang' || matrix.name == 'GCC' || matrix.name == 'Clang-ASAN') }}
-      uses: DiligentGraphics/github-action/run-core-gpu-tests@v18
+      uses: DiligentGraphics/github-action/run-core-gpu-tests@v19
       with:
         mode: vk_sw
 
     - name: DiligentCoreAPITest VK Compatibility
       if: ${{ (success() || failure() && steps.build.outcome == 'success') && (matrix.name == 'Clang' || matrix.name == 'GCC' || matrix.name == 'Clang-ASAN') }}
-      uses: DiligentGraphics/github-action/run-core-gpu-tests@v18
+      uses: DiligentGraphics/github-action/run-core-gpu-tests@v19
       with:
         mode: vk_sw
         vk-compatibility: true
 
     - name: DiligentCoreAPITest GL
       if: ${{ (success() || failure() && steps.build.outcome == 'success') && (matrix.name == 'Clang' || matrix.name == 'GCC' || matrix.name == 'Clang-ASAN') }}
-      uses: DiligentGraphics/github-action/run-core-gpu-tests@v18
+      uses: DiligentGraphics/github-action/run-core-gpu-tests@v19
       with:
         mode: gl
 
     - name: DiligentCoreAPITest GL with Non-Separable Programs
       if: ${{ (success() || failure() && steps.build.outcome == 'success') && (matrix.name == 'Clang' || matrix.name == 'GCC' || matrix.name == 'Clang-ASAN') }}
-      uses: DiligentGraphics/github-action/run-core-gpu-tests@v18
+      uses: DiligentGraphics/github-action/run-core-gpu-tests@v19
       with:
         mode: gl
         non-separable-progs: true
