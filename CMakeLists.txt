@@ -393,18 +393,26 @@ endif()
 
 target_link_libraries(Diligent-BuildSettings INTERFACE Diligent-PublicBuildSettings)
 
+set(DILIGENT_ASAN_COMPILE_OPTIONS "" CACHE INTERNAL "Diligent AddressSanitizer compile options")
+set(DILIGENT_ASAN_LINK_OPTIONS "" CACHE INTERNAL "Diligent AddressSanitizer link options")
+
 if(DILIGENT_ENABLE_ASAN)
     message(STATUS "DILIGENT_ENABLE_ASAN is ON: AddressSanitizer is enabled")
     if(MSVC)
-        target_compile_options(Diligent-BuildSettings INTERFACE /fsanitize=address)
+        set(DILIGENT_ASAN_COMPILE_OPTIONS /fsanitize=address CACHE INTERNAL "Diligent AddressSanitizer compile options")
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-        target_compile_options(Diligent-BuildSettings INTERFACE
-            -fsanitize=address
-            -fno-omit-frame-pointer
-        )
-        target_link_libraries(Diligent-BuildSettings INTERFACE -fsanitize=address)
+        set(DILIGENT_ASAN_COMPILE_OPTIONS -fsanitize=address -fno-omit-frame-pointer CACHE INTERNAL "Diligent AddressSanitizer compile options")
+        set(DILIGENT_ASAN_LINK_OPTIONS -fsanitize=address CACHE INTERNAL "Diligent AddressSanitizer link options")
     else()
         message(FATAL_ERROR "DILIGENT_ENABLE_ASAN is not supported by ${CMAKE_CXX_COMPILER_ID}")
+    endif()
+
+    message(STATUS "  DILIGENT_ASAN_COMPILE_OPTIONS: ${DILIGENT_ASAN_COMPILE_OPTIONS}")
+    message(STATUS "  DILIGENT_ASAN_LINK_OPTIONS: ${DILIGENT_ASAN_LINK_OPTIONS}")
+
+    target_compile_options(Diligent-BuildSettings INTERFACE ${DILIGENT_ASAN_COMPILE_OPTIONS})
+    if(DILIGENT_ASAN_LINK_OPTIONS)
+        target_link_libraries(Diligent-BuildSettings INTERFACE ${DILIGENT_ASAN_LINK_OPTIONS})
     endif()
 endif()
 
