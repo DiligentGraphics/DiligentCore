@@ -136,11 +136,12 @@ NativeWindow GPUTestingEnvironment::CreateNativeWindow()
     // clang-format on
 
     GLXContext ctx = glXCreateContextAttribsARB(display, fbc[0], NULL, 1, context_attribs);
+    XFree(vi);
+    XFree(fbc);
     if (!ctx)
     {
         LOG_ERROR_AND_THROW("Failed to create GL context.");
     }
-    XFree(fbc);
 
     glXMakeCurrent(display, win, ctx);
 

@@ -2943,7 +2943,7 @@ TEST_F(DrawCommandTest, DynamicUniformBufferUpdatesWithSignatures)
     }
 
     const Uint32           Indices[]    = {0, 1, 2, 3, 4, 5};
-    RefCntAutoPtr<IBuffer> pIndexBuffer = CreateIndexBuffer(Indices, sizeof(Indices));
+    RefCntAutoPtr<IBuffer> pIndexBuffer = CreateIndexBuffer(Indices, _countof(Indices));
 
     TestDynamicBufferUpdatesWithSignaturesAttribs Attribs{
         pVS,

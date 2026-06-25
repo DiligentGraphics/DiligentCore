@@ -157,12 +157,14 @@ TEST(ShaderResourceLayout, VariableAccess)
     constexpr auto RTVFormat = TEX_FORMAT_RGBA8_UNORM;
     constexpr auto DSVFormat = TEX_FORMAT_D32_FLOAT;
 
+    TexDesc.Name      = "Render target";
     TexDesc.Format    = RTVFormat;
     TexDesc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
     RefCntAutoPtr<ITexture> pRenderTarget;
     pDevice->CreateTexture(TexDesc, nullptr, &pRenderTarget);
     auto* pRTV = pRenderTarget->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET);
 
+    TexDesc.Name      = "Depth texture";
     TexDesc.Format    = DSVFormat;
     TexDesc.BindFlags = BIND_DEPTH_STENCIL;
     RefCntAutoPtr<ITexture> pDepthTex;
