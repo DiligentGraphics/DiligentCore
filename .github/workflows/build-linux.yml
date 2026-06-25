@@ -61,6 +61,13 @@ jobs:
             cc:              "clang-18"
             cxx:             "clang++-18"
 
+          - name:            "Clang-ASAN"
+            build_type:      "RelWithDebInfo"
+            cmake_generator: "Ninja"
+            cmake_args:      "-DDILIGENT_BUILD_CORE_TESTS=ON -DDILIGENT_ENABLE_ASAN=ON"
+            cc:              "clang-18"
+            cxx:             "clang++-18"
+
           - name:            "Clang-NO_GLSLANG"
             build_type:      "Debug"
             cmake_generator: "Ninja"
@@ -150,7 +157,7 @@ jobs:
 
     - name: Upload artifact
       uses: actions/upload-artifact@v7
-      if: ${{ success() && matrix.build_type != 'Debug' }}
+      if: ${{ success() && matrix.build_type != 'Debug' && matrix.name != 'Clang-ASAN' }}
       with:
         name: DiligentCore-Linux-${{ matrix.name }}-x64-${{ matrix.build_type }}
         path: |

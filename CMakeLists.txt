@@ -316,6 +316,7 @@ endif()
 option(DILIGENT_NO_ARCHIVER          "Do not build archiver" OFF)
 option(DILIGENT_NO_SUPER_RESOLUTION  "Do not build super resolution" OFF)
 
+option(DILIGENT_ENABLE_ASAN "Enable AddressSanitizer" OFF)
 option(DILIGENT_EMSCRIPTEN_STRIP_DEBUG_INFO "Strip debug information from WebAsm binaries" OFF)
 
 
@@ -392,6 +393,21 @@ endif()
 
 target_link_libraries(Diligent-BuildSettings INTERFACE Diligent-PublicBuildSettings)
 
+if(DILIGENT_ENABLE_ASAN)
+    message(STATUS "DILIGENT_ENABLE_ASAN is ON: AddressSanitizer is enabled")
+    if(MSVC)
+        target_compile_options(Diligent-BuildSettings INTERFACE /fsanitize=address)
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        target_compile_options(Diligent-BuildSettings INTERFACE
+            -fsanitize=address
+            -fno-omit-frame-pointer
+        )
+        target_link_libraries(Diligent-BuildSettings INTERFACE -fsanitize=address)
+    else()
+        message(FATAL_ERROR "DILIGENT_ENABLE_ASAN is not supported by ${CMAKE_CXX_COMPILER_ID}")
+    endif()
+endif()
+
 foreach(DBG_CONFIG ${DEBUG_CONFIGURATIONS})
     target_compile_definitions(Diligent-BuildSettings INTERFACE "$<$<CONFIG:${DBG_CONFIG}>:_DEBUG;DEBUG>")
 endforeach()
@@ -413,12 +429,15 @@ if(MSVC)
     endif()
 
     # Enable whole program optimization
-    set(DEFAULT_DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS /GL)
+    set(DEFAULT_DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS "")
+    if(NOT DILIGENT_ENABLE_ASAN)
+        list(APPEND DEFAULT_DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS /GL)
+    endif()
     if("${TARGET_CPU}" STREQUAL "x86_64")
         # Enable AVX2
-        set(DEFAULT_DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS ${DEFAULT_DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS} /arch:AVX2)
+        list(APPEND DEFAULT_DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS /arch:AVX2)
     endif()
-    set(DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS ${DEFAULT_DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS} CACHE STRING "Additional MSVC compile options for release configurations")
+    set(DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS "${DEFAULT_DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS}" CACHE STRING "Additional MSVC compile options for release configurations")
     if (DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS)
         message("Additional MSVC compile options for release configurations: " ${DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS})
     endif()
