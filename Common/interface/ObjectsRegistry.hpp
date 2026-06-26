@@ -113,6 +113,11 @@ auto IsWeakPtrExpired(std::weak_ptr<T>& pWeakPtr)
 /// If the object is found, the initializer function is not called.
 ///
 /// It is guaranteed, that the Object will only be initialized once, even if multiple threads call Get() simultaneously.
+/// This guarantee does not apply to Get() calls that overlap with Clear(): such calls are safe, but an
+/// in-flight Get() may still return an object removed from the cache, and another Get() may initialize
+/// a different object for the same key after Clear().
+/// CreateObject may re-enter the registry for independent keys. Recursive creation of the same key, or
+/// cyclic creation dependencies between keys, may deadlock because each key is protected by a non-recursive mutex.
 ///
 template <typename KeyType,
           typename StrongPtrType,
@@ -150,6 +155,8 @@ public:
     /// CreateObject function may throw in case of an error.
     ///
     /// It is guaranteed, that the Object will only be initialized once, even if multiple threads call Get() simultaneously.
+    /// CreateObject may re-enter the registry for independent keys, but must not recursively request the same key
+    /// or form a cyclic dependency with another thread creating a different key.
     template <typename CreateObjectType>
     StrongPtrType Get(const KeyType&     Key,
                       CreateObjectType&& CreateObject // May throw
@@ -294,6 +301,8 @@ public:
     }
 
     /// Removes all objects from the cache.
+    /// This method is safe to call concurrently with Get(), but it does not synchronize with in-flight
+    /// object creation. The create-once guarantee does not apply to Get() calls that overlap with Clear().
     void Clear()
     {
         std::lock_guard<std::mutex> Guard{m_CacheMtx};
