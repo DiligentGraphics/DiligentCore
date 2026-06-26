@@ -22,6 +22,7 @@
 #include <memory>
 #include <algorithm>
 #include <atomic>
+#include <utility>
 
 #include "../../Platforms/Basic/interface/DebugUtilities.hpp"
 #include "RefCntAutoPtr.hpp"
@@ -29,47 +30,52 @@
 namespace Diligent
 {
 
-template <typename StongPtrType>
-struct _StrongPtrHelper;
+namespace Details
+{
 
-// _StrongPtrHelper specialization for RefCntAutoPtr<T>
+template <typename StrongPtrType>
+struct StrongPtrHelper;
+
+// StrongPtrHelper specialization for RefCntAutoPtr<T>
 template <typename T>
-struct _StrongPtrHelper<typename Diligent::RefCntAutoPtr<T>>
+struct StrongPtrHelper<RefCntAutoPtr<T>>
 {
     using WeakPtrType = RefCntWeakPtr<T>;
 };
 
-// _StrongPtrHelper specialization for std::shared_ptr<T>
+// StrongPtrHelper specialization for std::shared_ptr<T>
 template <typename T>
-struct _StrongPtrHelper<std::shared_ptr<T>>
+struct StrongPtrHelper<std::shared_ptr<T>>
 {
     using WeakPtrType = std::weak_ptr<T>;
 };
 
 template <typename T>
-auto _LockWeakPtr(RefCntWeakPtr<T>& pWeakPtr)
+auto LockWeakPtr(RefCntWeakPtr<T>& pWeakPtr)
 {
     return pWeakPtr.Lock();
 }
 
 template <typename T>
-auto _LockWeakPtr(std::weak_ptr<T>& pWeakPtr)
+auto LockWeakPtr(std::weak_ptr<T>& pWeakPtr)
 {
     return pWeakPtr.lock();
 }
 
 
 template <typename T>
-auto _IsWeakPtrExpired(RefCntWeakPtr<T>& pWeakPtr)
+auto IsWeakPtrExpired(RefCntWeakPtr<T>& pWeakPtr)
 {
     return !pWeakPtr.IsValid();
 }
 
 template <typename T>
-auto _IsWeakPtrExpired(std::weak_ptr<T>& pWeakPtr)
+auto IsWeakPtrExpired(std::weak_ptr<T>& pWeakPtr)
 {
     return pWeakPtr.expired();
 }
+
+} // namespace Details
 
 /// A thread-safe and exception-safe object registry that works with std::shared_ptr or RefCntAutoPtr.
 /// The registry keeps weak pointers to the objects and returns strong pointers if the requested object exits.
@@ -114,11 +120,21 @@ template <typename KeyType,
 class ObjectsRegistry
 {
 public:
-    using WeakPtrType = typename _StrongPtrHelper<StrongPtrType>::WeakPtrType;
+    using WeakPtrType = typename Details::StrongPtrHelper<StrongPtrType>::WeakPtrType;
 
     explicit ObjectsRegistry(Uint32 NumRequestsToPurge = 1024) noexcept :
         m_NumRequestsToPurge{NumRequestsToPurge}
     {}
+
+#ifdef DILIGENT_OBJECTS_REGISTRY_TEST_HOOKS
+    using BeforeGetObjectCallbackType = void (*)(void* pUserData);
+
+    void SetBeforeGetObjectCallback(BeforeGetObjectCallbackType Callback, void* pUserData = nullptr)
+    {
+        m_BeforeGetObjectCallback     = Callback;
+        m_pBeforeGetObjectCallbackCtx = pUserData;
+    }
+#endif
 
     /// Finds the object in the registry and returns strong pointer to it (std::shared_ptr or RefCntAutoPtr).
     /// If the object is not found, it is atomically created using the provided initializer.
@@ -132,9 +148,6 @@ public:
     /// CreateObject function may throw in case of an error.
     ///
     /// It is guaranteed, that the Object will only be initialized once, even if multiple threads call Get() simultaneously.
-    /// However, if another thread runs an overloaded Get() without the initializer function with the same key, it may
-    /// remove the entry from the registry, and the object will be initialized multiple times.
-    /// This is OK as only one object will be added to the registry.
     template <typename CreateObjectType>
     StrongPtrType Get(const KeyType&     Key,
                       CreateObjectType&& CreateObject // May throw
@@ -157,6 +170,10 @@ public:
         StrongPtrType pObject;
         try
         {
+#ifdef DILIGENT_OBJECTS_REGISTRY_TEST_HOOKS
+            if (m_BeforeGetObjectCallback != nullptr)
+                m_BeforeGetObjectCallback(m_pBeforeGetObjectCallbackCtx);
+#endif
             pObject = pObjectWrpr->Get(std::forward<CreateObjectType>(CreateObject));
         }
         catch (...)
@@ -172,7 +189,7 @@ public:
                     // The object was created by another thread while we were waiting for the lock
                     return pObject;
                 }
-                else
+                else if (!IsObjectWrapperInUse(it->second, pObjectWrpr.get()))
                 {
                     m_Cache.erase(it);
                 }
@@ -200,7 +217,7 @@ public:
                 {
                     pObject = it->second->Lock();
                     // Note that the object may have been created by another thread while we were waiting for the lock
-                    if (!pObject)
+                    if (!pObject && !IsObjectWrapperInUse(it->second, pObjectWrpr.get()))
                         m_Cache.erase(it);
                 }
             }
@@ -230,10 +247,10 @@ public:
         if (it != m_Cache.end())
         {
             auto pObject = it->second->Lock();
-            if (!pObject)
+            if (!pObject && !IsObjectWrapperInUse(it->second))
             {
-                // Note that we may remove the entry from the cache while another thread is creating the object.
-                // This is OK as it will be added back to the cache.
+                // An empty wrapper may still be used by Get(Key, CreateObject) after it
+                // copies the wrapper from m_Cache and before it enters ObjectWrapper::Get().
                 m_Cache.erase(it);
             }
 
@@ -277,12 +294,12 @@ private:
     {
     public:
         template <typename CreateObjectType>
-        const StrongPtrType Get(CreateObjectType&& CreateObject) noexcept(false)
+        StrongPtrType Get(CreateObjectType&& CreateObject) noexcept(false)
         {
             StrongPtrType pObject;
 
             std::lock_guard<std::mutex> Guard{m_CreateObjectMtx};
-            pObject = _LockWeakPtr(m_wpObject);
+            pObject = Details::LockWeakPtr(m_wpObject);
             if (!pObject)
             {
                 pObject    = CreateObject(); // May throw
@@ -295,13 +312,13 @@ private:
         StrongPtrType Lock()
         {
             std::lock_guard<std::mutex> Guard{m_CreateObjectMtx};
-            return _LockWeakPtr(m_wpObject);
+            return Details::LockWeakPtr(m_wpObject);
         }
 
         bool IsExpired()
         {
             std::lock_guard<std::mutex> Guard{m_CreateObjectMtx};
-            return _IsWeakPtrExpired(m_wpObject);
+            return Details::IsWeakPtrExpired(m_wpObject);
         }
 
     private:
@@ -313,7 +330,9 @@ private:
     {
         for (auto it = m_Cache.begin(); it != m_Cache.end();)
         {
-            if (it->second->IsExpired())
+            // Skip empty wrappers that are still referenced by Get(Key, CreateObject):
+            // removing them would allow another wrapper to be inserted for the same key.
+            if (!IsObjectWrapperInUse(it->second) && it->second->IsExpired())
             {
                 it = m_Cache.erase(it);
             }
@@ -326,6 +345,19 @@ private:
         m_NumRequestsSinceLastPurge.store(0);
     }
 
+    static bool IsObjectWrapperInUse(const std::shared_ptr<ObjectWrapper>& pObjectWrpr,
+                                     const ObjectWrapper*                  pCurrentObjectWrpr = nullptr)
+    {
+        // m_CacheMtx must be held: ObjectWrapper references are copied from m_Cache under this mutex,
+        // so use_count() cannot grow while we make the erase decision.
+        // With no current Get(Key, CreateObject) call, m_Cache should be the only owner.
+        // When that call checks its own wrapper, it also holds pObjectWrpr locally, so the
+        // expected use count is 2. Any larger count means another thread may be using or
+        // initializing the wrapper, and erasing it could break the create-once guarantee.
+        const auto ExpectedUseCount = pObjectWrpr.get() == pCurrentObjectWrpr ? 2 : 1;
+        return pObjectWrpr.use_count() > ExpectedUseCount;
+    }
+
 private:
     using CacheType = std::unordered_map<KeyType, std::shared_ptr<ObjectWrapper>, KeyHasher, KeyEqual>;
 
@@ -335,6 +367,11 @@ private:
 
     std::mutex m_CacheMtx;
     CacheType  m_Cache;
+
+#ifdef DILIGENT_OBJECTS_REGISTRY_TEST_HOOKS
+    BeforeGetObjectCallbackType m_BeforeGetObjectCallback     = nullptr;
+    void*                       m_pBeforeGetObjectCallbackCtx = nullptr;
+#endif
 };
 
 } // namespace Diligent

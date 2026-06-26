@@ -24,12 +24,17 @@
  *  of the possibility of such damages.
  */
 
+#define DILIGENT_OBJECTS_REGISTRY_TEST_HOOKS 1
 #include "ObjectsRegistry.hpp"
+#undef DILIGENT_OBJECTS_REGISTRY_TEST_HOOKS
 
 #include "gtest/gtest.h"
 
+#include <atomic>
 #include <thread>
 #include <functional>
+#include <vector>
+#include <stdexcept>
 
 #include "ObjectBase.hpp"
 #include "ThreadSignal.hpp"
@@ -166,6 +171,111 @@ TEST(Common_ObjectsRegistry, CreateDestroyRace_SharedPtr)
 TEST(Common_ObjectsRegistry, CreateDestroyRace_RefCntAutoPtr)
 {
     TestObjectRegistryCreateDestroyRace<RefCntAutoPtr, RegistryDataObj>();
+}
+
+enum class ObjectWrapperRemovalType
+{
+    Purge,
+    EmptyGet,
+};
+
+struct BeforeGetObjectHook
+{
+    Threading::Signal   FirstCallStarted;
+    Threading::Signal   ReleaseFirstCall;
+    std::atomic<Uint32> CallCount{0};
+};
+
+template <template <typename T> class StrongPtrType, typename DataType>
+void TestObjectRegistryDoesNotRemoveWrapperInUse(ObjectWrapperRemovalType RemovalType)
+{
+    constexpr int    Key         = 1;
+    constexpr Uint32 NumAttempts = 64;
+
+    for (Uint32 Attempt = 0; Attempt < NumAttempts; ++Attempt)
+    {
+        ObjectsRegistry<int, StrongPtrType<DataType>> Registry{1};
+
+        BeforeGetObjectHook Hook;
+        Registry.SetBeforeGetObjectCallback(
+            [](void* pUserData) //
+            {
+                auto& Hook = *static_cast<BeforeGetObjectHook*>(pUserData);
+                if (Hook.CallCount.fetch_add(1) == 0)
+                {
+                    Hook.FirstCallStarted.Trigger();
+                    Hook.ReleaseFirstCall.Wait(true, 1);
+                }
+            },
+            &Hook);
+
+        std::atomic<Uint32> FirstFactoryCallCount{0};
+        std::atomic<Uint32> SecondFactoryCallCount{0};
+
+        StrongPtrType<DataType> pFirstData;
+        StrongPtrType<DataType> pSecondData;
+
+        std::thread FirstThread{
+            [&]() {
+                pFirstData = Registry.Get(Key,
+                                          [&]() //
+                                          {
+                                              FirstFactoryCallCount.fetch_add(1);
+                                              return DataType::Create(1);
+                                          });
+            }};
+
+        Hook.FirstCallStarted.Wait(true, 1);
+
+        switch (RemovalType)
+        {
+            case ObjectWrapperRemovalType::Purge:
+                Registry.Purge();
+                break;
+
+            case ObjectWrapperRemovalType::EmptyGet:
+                EXPECT_EQ(Registry.Get(Key), nullptr) << "Attempt " << Attempt;
+                break;
+        }
+
+        pSecondData = Registry.Get(Key,
+                                   [&]() //
+                                   {
+                                       SecondFactoryCallCount.fetch_add(1);
+                                       return DataType::Create(2);
+                                   });
+
+        Hook.ReleaseFirstCall.Trigger();
+
+        FirstThread.join();
+
+        EXPECT_EQ(FirstFactoryCallCount.load(), 0u) << "Attempt " << Attempt;
+        EXPECT_EQ(SecondFactoryCallCount.load(), 1u) << "Attempt " << Attempt;
+        ASSERT_NE(pFirstData, nullptr) << "Attempt " << Attempt;
+        ASSERT_NE(pSecondData, nullptr) << "Attempt " << Attempt;
+        EXPECT_EQ(pFirstData, pSecondData) << "Attempt " << Attempt;
+        EXPECT_EQ(pFirstData->Value, 2u) << "Attempt " << Attempt;
+    }
+}
+
+TEST(Common_ObjectsRegistry, DoesNotPurgeWrapperInUse_SharedPtr)
+{
+    TestObjectRegistryDoesNotRemoveWrapperInUse<std::shared_ptr, RegistryData>(ObjectWrapperRemovalType::Purge);
+}
+
+TEST(Common_ObjectsRegistry, DoesNotPurgeWrapperInUse_RefCntAutoPtr)
+{
+    TestObjectRegistryDoesNotRemoveWrapperInUse<RefCntAutoPtr, RegistryDataObj>(ObjectWrapperRemovalType::Purge);
+}
+
+TEST(Common_ObjectsRegistry, DoesNotEraseWrapperInUse_SharedPtr)
+{
+    TestObjectRegistryDoesNotRemoveWrapperInUse<std::shared_ptr, RegistryData>(ObjectWrapperRemovalType::EmptyGet);
+}
+
+TEST(Common_ObjectsRegistry, DoesNotEraseWrapperInUse_RefCntAutoPtr)
+{
+    TestObjectRegistryDoesNotRemoveWrapperInUse<RefCntAutoPtr, RegistryDataObj>(ObjectWrapperRemovalType::EmptyGet);
 }
 
 
