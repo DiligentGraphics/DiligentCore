@@ -27,9 +27,9 @@
 #include <deque>
 
 #include "ShaderToolsCommon.hpp"
-#include "BasicFileSystem.hpp"
 #include "DefaultShaderSourceStreamFactory.h"
 #include "RenderDevice.h"
+#include "ShaderSourceFactoryUtils.hpp"
 #include "TestingEnvironment.hpp"
 
 #include "gtest/gtest.h"
@@ -142,12 +142,9 @@ TEST(ShaderPreprocessTest, IncludeNestedParentRelative)
     CreateDefaultShaderSourceStreamFactory("shaders/ShaderPreprocessor", &pShaderSourceFactory);
     ASSERT_NE(pShaderSourceFactory, nullptr);
 
-    const auto NestedTypesPath  = std::string{"Nested/Types.hlsl"};
-    const auto NestedConfigPath = std::string{"Nested"} + BasicFileSystem::SlashSymbol + "Config.hlsl";
-
     std::deque<std::string> Includes{
-        NestedConfigPath,
-        NestedTypesPath,
+        "Nested/Config.hlsl",
+        "Nested/Types.hlsl",
         "IncludeNestedParentRelativeTest.hlsl"};
 
     ShaderCreateInfo ShaderCI{};
@@ -163,6 +160,78 @@ TEST(ShaderPreprocessTest, IncludeNestedParentRelative)
 
     EXPECT_EQ(Result, true);
     EXPECT_TRUE(Includes.empty());
+}
+
+TEST(ShaderPreprocessTest, IncludeNestedLocalAndSystemFromMemory)
+{
+    auto pShaderSourceFactory = CreateMemoryShaderSourceFactory(
+        {
+            {"Main.hlsl",
+             "// Start Main.hlsl\n"
+             "#include \"Nested/LocalTypes.hlsl\"\n"
+             "#include \"Nested/SystemTypes.hlsl\"\n"
+             "// End Main.hlsl\n"},
+            {"Nested/LocalTypes.hlsl",
+             "// Start Nested/LocalTypes.hlsl\n"
+             "#include \"Config.hlsl\"\n"
+             "// End Nested/LocalTypes.hlsl\n"},
+            {"Nested/SystemTypes.hlsl",
+             "// Start Nested/SystemTypes.hlsl\n"
+             "#include <Config.hlsl>\n"
+             "// End Nested/SystemTypes.hlsl\n"},
+            {"Nested/Config.hlsl",
+             "// Start Nested/Config.hlsl\n"
+             "#define CONFIG_SOURCE 2\n"
+             "// End Nested/Config.hlsl\n"},
+            {"Config.hlsl",
+             "// Start Config.hlsl\n"
+             "#define CONFIG_SOURCE 1\n"
+             "// End Config.hlsl\n"},
+        },
+        false);
+    ASSERT_NE(pShaderSourceFactory, nullptr);
+
+    std::deque<const char*> Includes{
+        "Nested/Config.hlsl",
+        "Nested/LocalTypes.hlsl",
+        "Config.hlsl",
+        "Nested/SystemTypes.hlsl",
+        "Main.hlsl"};
+
+    ShaderCreateInfo ShaderCI{};
+    ShaderCI.Desc.Name                  = "TestShader";
+    ShaderCI.FilePath                   = "Main.hlsl";
+    ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+
+    const auto Result = ProcessShaderIncludes(ShaderCI, [&](const ShaderIncludePreprocessInfo& ProcessInfo) {
+        ASSERT_FALSE(Includes.empty());
+        EXPECT_EQ(ProcessInfo.FilePath, Includes.front());
+        Includes.pop_front();
+    });
+
+    EXPECT_EQ(Result, true);
+    EXPECT_TRUE(Includes.empty());
+
+    constexpr char RefString[] =
+        "// Start Main.hlsl\n"
+        "// Start Nested/LocalTypes.hlsl\n"
+        "// Start Nested/Config.hlsl\n"
+        "#define CONFIG_SOURCE 2\n"
+        "// End Nested/Config.hlsl\n"
+        "\n"
+        "// End Nested/LocalTypes.hlsl\n"
+        "\n"
+        "// Start Nested/SystemTypes.hlsl\n"
+        "// Start Config.hlsl\n"
+        "#define CONFIG_SOURCE 1\n"
+        "// End Config.hlsl\n"
+        "\n"
+        "// End Nested/SystemTypes.hlsl\n"
+        "\n"
+        "// End Main.hlsl\n";
+
+    auto UnrolledStr = UnrollShaderIncludes(ShaderCI);
+    ASSERT_EQ(RefString, UnrolledStr);
 }
 
 TEST(ShaderPreprocessTest, InvalidInclude)
