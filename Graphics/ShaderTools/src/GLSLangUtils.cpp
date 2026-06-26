@@ -296,6 +296,38 @@ std::vector<unsigned int> CompileShaderInternal(::glslang::TShader&           Sh
     return spirv;
 }
 
+static Char GetFirstSlash(const char* Path)
+{
+    if (Path == nullptr)
+        return 0;
+
+    for (const char* c = Path; *c != '\0'; ++c)
+    {
+        if (BasicFileSystem::IsSlash(*c))
+            return *c;
+    }
+
+    return 0;
+}
+
+static Char GetPreferredIncludePathSlash(const char* IncluderName, const char* HeaderName)
+{
+    if (const Char HeaderSlash = GetFirstSlash(HeaderName))
+        return HeaderSlash;
+
+    if (const Char IncluderSlash = GetFirstSlash(IncluderName))
+        return IncluderSlash;
+
+    return BasicFileSystem::SlashSymbol;
+}
+
+static std::string MakeParentRelativeIncludePath(const String& ParentDir, const char* HeaderName, Char Slash)
+{
+    return BasicFileSystem::SimplifyPath(
+        (ParentDir + Slash + HeaderName).c_str(),
+        Slash);
+}
+
 
 class IncluderImpl : public ::glslang::TShader::Includer
 {
@@ -326,21 +358,31 @@ public:
                                         const char* includerName,
                                         size_t /*inclusionDepth*/)
     {
-        if (m_pInputStreamFactory == nullptr)
+        if (m_pInputStreamFactory == nullptr || headerName == nullptr || *headerName == '\0')
             return nullptr;
 
         if (BasicFileSystem::IsPathAbsolute(headerName))
             return ReadIncludeFile(headerName, CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT);
+
+        if (includerName == nullptr || *includerName == '\0')
+            return nullptr;
 
         String ParentDir;
         BasicFileSystem::GetPathComponents(includerName, &ParentDir, nullptr);
         if (ParentDir.empty())
             return nullptr;
 
-        const std::string LocalPath = BasicFileSystem::SimplifyPath(
-            (ParentDir + BasicFileSystem::SlashSymbol + headerName).c_str(),
-            BasicFileSystem::SlashSymbol);
-        return ReadIncludeFile(LocalPath.c_str(), CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT);
+        const Char        PreferredSlash = GetPreferredIncludePathSlash(includerName, headerName);
+        const std::string LocalPath      = MakeParentRelativeIncludePath(ParentDir, headerName, PreferredSlash);
+        if (IncludeResult* pInclude = ReadIncludeFile(LocalPath.c_str(), CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT))
+            return pInclude;
+
+        const Char        AlternateSlash = PreferredSlash == BasicFileSystem::UnixSlash ? BasicFileSystem::WinSlash : BasicFileSystem::UnixSlash;
+        const std::string AlternatePath  = MakeParentRelativeIncludePath(ParentDir, headerName, AlternateSlash);
+        if (AlternatePath != LocalPath)
+            return ReadIncludeFile(AlternatePath.c_str(), CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT);
+
+        return nullptr;
     }
 
     // Signals that the parser will no longer use the contents of the
