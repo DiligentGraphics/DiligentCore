@@ -22,6 +22,7 @@
 #include <memory>
 #include <algorithm>
 #include <atomic>
+#include <vector>
 #include <utility>
 
 #include "../../Platforms/Basic/interface/DebugUtilities.hpp"
@@ -275,13 +276,20 @@ public:
     template <typename HandlerType>
     void ProcessElements(HandlerType&& Handler)
     {
-        std::lock_guard<std::mutex> Guard{m_CacheMtx};
-        for (auto& Entry : m_Cache)
+        std::vector<std::pair<KeyType, std::shared_ptr<ObjectWrapper>>> Snapshot;
+
+        {
+            std::lock_guard<std::mutex> Guard{m_CacheMtx};
+
+            Snapshot.reserve(m_Cache.size());
+            for (auto& Entry : m_Cache)
+                Snapshot.emplace_back(Entry.first, Entry.second);
+        }
+
+        for (auto& Entry : Snapshot)
         {
             if (auto pObject = Entry.second->Lock())
-            {
                 Handler(Entry.first, *pObject);
-            }
         }
     }
 

@@ -354,6 +354,54 @@ TEST(Common_ObjectsRegistry, GetReentry_RefCntAutoPtr)
     TestObjectRegistryGetReentry<RefCntAutoPtr, RegistryDataObj>();
 }
 
+template <template <typename T> class StrongPtrType, typename DataType>
+void TestObjectRegistryProcessElementsReentry()
+{
+    constexpr int Key          = 1;
+    constexpr int ReenteredKey = 2;
+
+    ObjectsRegistry<int, StrongPtrType<DataType>> Registry;
+
+    auto pInitialData = Registry.Get(Key,
+                                     []() //
+                                     {
+                                         return DataType::Create(1);
+                                     });
+    ASSERT_NE(pInitialData, nullptr);
+
+    Uint32                  NumElements = 0;
+    StrongPtrType<DataType> pReenteredData;
+
+    Registry.ProcessElements(
+        [&](const int& ProcessedKey, DataType& Data) //
+        {
+            ++NumElements;
+            EXPECT_EQ(ProcessedKey, Key);
+            EXPECT_EQ(Data.Value, 1u);
+
+            pReenteredData = Registry.Get(ReenteredKey,
+                                          []() //
+                                          {
+                                              return DataType::Create(2);
+                                          });
+            ASSERT_NE(pReenteredData, nullptr);
+            EXPECT_EQ(pReenteredData->Value, 2u);
+        });
+
+    EXPECT_EQ(NumElements, 1u);
+    EXPECT_EQ(Registry.Get(ReenteredKey), pReenteredData);
+}
+
+TEST(Common_ObjectsRegistry, ProcessElementsReentry_SharedPtr)
+{
+    TestObjectRegistryProcessElementsReentry<std::shared_ptr, RegistryData>();
+}
+
+TEST(Common_ObjectsRegistry, ProcessElementsReentry_RefCntAutoPtr)
+{
+    TestObjectRegistryProcessElementsReentry<RefCntAutoPtr, RegistryDataObj>();
+}
+
 
 template <template <typename T> class StrongPtrType, typename DataType>
 void TestObjectRegistryExceptions()
