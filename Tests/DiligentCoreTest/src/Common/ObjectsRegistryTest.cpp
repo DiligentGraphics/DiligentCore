@@ -278,6 +278,82 @@ TEST(Common_ObjectsRegistry, DoesNotEraseWrapperInUse_RefCntAutoPtr)
     TestObjectRegistryDoesNotRemoveWrapperInUse<RefCntAutoPtr, RegistryDataObj>(ObjectWrapperRemovalType::EmptyGet);
 }
 
+struct ReentrantGetHook
+{
+    Threading::Signal   WaitingGetReady;
+    Threading::Signal   ReleaseWaitingGet;
+    std::atomic<Uint32> CallCount{0};
+};
+
+template <template <typename T> class StrongPtrType, typename DataType>
+void TestObjectRegistryGetReentry()
+{
+    constexpr int Key          = 1;
+    constexpr int ReenteredKey = 2;
+
+    ObjectsRegistry<int, StrongPtrType<DataType>> Registry;
+
+    ReentrantGetHook Hook;
+    Registry.SetBeforeGetObjectCallback(
+        [](void* pUserData) //
+        {
+            auto& Hook = *static_cast<ReentrantGetHook*>(pUserData);
+            if (Hook.CallCount.fetch_add(1) == 1)
+            {
+                Hook.WaitingGetReady.Trigger();
+                Hook.ReleaseWaitingGet.Wait(true, 1);
+            }
+        },
+        &Hook);
+
+    Threading::Signal FactoryStarted;
+    Threading::Signal ReentrantGetFinished;
+
+    StrongPtrType<DataType> pCreatedData;
+    StrongPtrType<DataType> pExistingData;
+
+    std::thread CreatorThread{
+        [&]() {
+            pCreatedData = Registry.Get(Key,
+                                        [&]() //
+                                        {
+                                            FactoryStarted.Trigger();
+                                            Hook.WaitingGetReady.Wait(true, 1);
+                                            EXPECT_EQ(Registry.Get(ReenteredKey), nullptr);
+                                            ReentrantGetFinished.Trigger();
+                                            return DataType::Create(1);
+                                        });
+        }};
+
+    FactoryStarted.Wait(true, 1);
+
+    std::thread WaitingGetThread{
+        [&]() {
+            pExistingData = Registry.Get(Key);
+        }};
+
+    ReentrantGetFinished.Wait(true, 1);
+    Hook.ReleaseWaitingGet.Trigger();
+
+    CreatorThread.join();
+    WaitingGetThread.join();
+
+    ASSERT_NE(pCreatedData, nullptr);
+    ASSERT_NE(pExistingData, nullptr);
+    EXPECT_EQ(pCreatedData, pExistingData);
+    EXPECT_EQ(pCreatedData->Value, 1u);
+}
+
+TEST(Common_ObjectsRegistry, GetReentry_SharedPtr)
+{
+    TestObjectRegistryGetReentry<std::shared_ptr, RegistryData>();
+}
+
+TEST(Common_ObjectsRegistry, GetReentry_RefCntAutoPtr)
+{
+    TestObjectRegistryGetReentry<RefCntAutoPtr, RegistryDataObj>();
+}
+
 
 template <template <typename T> class StrongPtrType, typename DataType>
 void TestObjectRegistryExceptions()

@@ -129,6 +129,7 @@ public:
 #ifdef DILIGENT_OBJECTS_REGISTRY_TEST_HOOKS
     using BeforeGetObjectCallbackType = void (*)(void* pUserData);
 
+    // Invoked after an ObjectWrapper has been copied from m_Cache and before locking it.
     void SetBeforeGetObjectCallback(BeforeGetObjectCallbackType Callback, void* pUserData = nullptr)
     {
         m_BeforeGetObjectCallback     = Callback;
@@ -178,24 +179,25 @@ public:
         }
         catch (...)
         {
-            std::lock_guard<std::mutex> Guard{m_CacheMtx};
+            // Do not take ObjectWrapper's mutex while holding m_CacheMtx: CreateObject may re-enter
+            // the registry while another thread is waiting on this wrapper.
+            pObject = pObjectWrpr->Lock();
+            if (pObject)
+                return pObject;
 
-            auto it = m_Cache.find(Key);
-            if (it != m_Cache.end())
             {
-                pObject = it->second->Lock();
-                if (pObject)
-                {
-                    // The object was created by another thread while we were waiting for the lock
-                    return pObject;
-                }
-                else if (!IsObjectWrapperInUse(it->second, pObjectWrpr.get()))
-                {
-                    m_Cache.erase(it);
-                }
+                std::lock_guard<std::mutex> Guard{m_CacheMtx};
+                EraseObjectWrapperIfExpired(Key, pObjectWrpr);
             }
 
             throw;
+        }
+
+        if (!pObject)
+        {
+            // The initializer may have returned an empty pointer, but another thread may create
+            // the same object before we clean up the wrapper.
+            pObject = pObjectWrpr->Lock();
         }
 
         {
@@ -213,13 +215,7 @@ public:
             }
             else
             {
-                if (it != m_Cache.end())
-                {
-                    pObject = it->second->Lock();
-                    // Note that the object may have been created by another thread while we were waiting for the lock
-                    if (!pObject && !IsObjectWrapperInUse(it->second, pObjectWrpr.get()))
-                        m_Cache.erase(it);
-                }
+                EraseObjectWrapperIfExpired(Key, pObjectWrpr);
             }
 
             if (m_NumRequestsSinceLastPurge.fetch_add(1) + 1 >= m_NumRequestsToPurge)
@@ -238,26 +234,34 @@ public:
     /// or empty pointer otherwise.
     StrongPtrType Get(const KeyType& Key)
     {
-        std::lock_guard<std::mutex> Guard{m_CacheMtx};
-
-        if (m_NumRequestsSinceLastPurge.fetch_add(1) + 1 >= m_NumRequestsToPurge)
-            PurgeUnguarded();
-
-        auto it = m_Cache.find(Key);
-        if (it != m_Cache.end())
+        std::shared_ptr<ObjectWrapper> pObjectWrpr;
         {
-            auto pObject = it->second->Lock();
-            if (!pObject && !IsObjectWrapperInUse(it->second))
-            {
-                // An empty wrapper may still be used by Get(Key, CreateObject) after it
-                // copies the wrapper from m_Cache and before it enters ObjectWrapper::Get().
-                m_Cache.erase(it);
-            }
+            std::lock_guard<std::mutex> Guard{m_CacheMtx};
 
-            return pObject;
+            if (m_NumRequestsSinceLastPurge.fetch_add(1) + 1 >= m_NumRequestsToPurge)
+                PurgeUnguarded();
+
+            auto it = m_Cache.find(Key);
+            if (it == m_Cache.end())
+                return {};
+
+            pObjectWrpr = it->second;
         }
 
-        return {};
+#ifdef DILIGENT_OBJECTS_REGISTRY_TEST_HOOKS
+        if (m_BeforeGetObjectCallback != nullptr)
+            m_BeforeGetObjectCallback(m_pBeforeGetObjectCallbackCtx);
+#endif
+        auto pObject = pObjectWrpr->Lock();
+        if (!pObject)
+        {
+            std::lock_guard<std::mutex> Guard{m_CacheMtx};
+            // An empty wrapper may still be used by Get(Key, CreateObject) after it
+            // copies the wrapper from m_Cache and before it enters ObjectWrapper::Get().
+            EraseObjectWrapperIfExpired(Key, pObjectWrpr);
+        }
+
+        return pObject;
     }
 
     /// Removes all expired pointers from the cache
@@ -343,6 +347,21 @@ private:
         }
 
         m_NumRequestsSinceLastPurge.store(0);
+    }
+
+    bool EraseObjectWrapperIfExpired(const KeyType& Key, const std::shared_ptr<ObjectWrapper>& pObjectWrpr)
+    {
+        auto it = m_Cache.find(Key);
+        if (it != m_Cache.end() &&
+            it->second == pObjectWrpr &&
+            !IsObjectWrapperInUse(it->second, pObjectWrpr.get()) &&
+            it->second->IsExpired())
+        {
+            m_Cache.erase(it);
+            return true;
+        }
+
+        return false;
     }
 
     static bool IsObjectWrapperInUse(const std::shared_ptr<ObjectWrapper>& pObjectWrpr,
