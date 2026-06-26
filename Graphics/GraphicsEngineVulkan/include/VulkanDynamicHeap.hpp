@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,6 +27,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <mutex>
 #include "VulkanUtilities/VulkanHeaders.h"
 #include "VulkanUtilities/MemoryManager.hpp"
@@ -158,7 +159,8 @@ private:
     Uint8*                               m_CPUAddress;
     const VkDeviceSize                   m_DefaultAlignment;
     const Uint64                         m_CommandQueueMask;
-    OffsetType                           m_TotalPeakSize = 0;
+    // Updated by dynamic heaps from multiple device contexts when they allocate master blocks.
+    std::atomic<OffsetType> m_TotalPeakSize{0};
 };
 
 

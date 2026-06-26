@@ -32,6 +32,7 @@
 #include <chrono>
 #include <thread>
 
+#include "Atomics.hpp"
 #include "RenderDeviceVkImpl.hpp"
 
 namespace Diligent
@@ -128,13 +129,14 @@ void VulkanDynamicMemoryManager::Destroy()
 VulkanDynamicMemoryManager::~VulkanDynamicMemoryManager()
 {
     VERIFY(m_BufferMemory == VK_NULL_HANDLE && m_VkBuffer == VK_NULL_HANDLE, "Vulkan resources must be explicitly released with Destroy()");
-    OffsetType Size = GetSize();
+    OffsetType Size          = GetSize();
+    OffsetType TotalPeakSize = m_TotalPeakSize.load(std::memory_order_relaxed);
     LOG_INFO_MESSAGE("Dynamic memory manager usage stats:\n"
                      "                       Total size: ",
                      FormatMemorySize(Size, 2),
-                     ". Peak allocated size: ", FormatMemorySize(m_TotalPeakSize, 2, Size),
+                     ". Peak allocated size: ", FormatMemorySize(TotalPeakSize, 2, Size),
                      ". Peak utilization: ",
-                     std::fixed, std::setprecision(1), static_cast<double>(m_TotalPeakSize) / static_cast<double>(std::max(Size, size_t{1})) * 100.0, '%');
+                     std::fixed, std::setprecision(1), static_cast<double>(TotalPeakSize) / static_cast<double>(std::max(Size, size_t{1})) * 100.0, '%');
 }
 
 
@@ -213,7 +215,7 @@ VulkanDynamicMemoryManager::MasterBlock VulkanDynamicMemoryManager::AllocateMast
 
     if (Block.IsValid())
     {
-        m_TotalPeakSize = std::max(m_TotalPeakSize, GetUsedSize());
+        AtomicMax(m_TotalPeakSize, GetUsedSize(), std::memory_order_relaxed);
     }
 
     return Block;

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -154,11 +154,7 @@ public:
             {
                 if (Mgr != nullptr)
                 {
-                    std::lock_guard<std::mutex> Lock{Mgr->m_AllocationsMgrMtx};
-#ifdef DILIGENT_DEVELOPMENT
-                    --Mgr->m_MasterBlockCounter;
-#endif
-                    Mgr->m_AllocationsMgr.Free(std::move(Block));
+                    Mgr->FreeMasterBlock(std::move(Block));
                 }
             }
         };
@@ -169,10 +165,9 @@ public:
         }
     }
 
-    // clang-format off
-    OffsetType GetSize()     const { return m_AllocationsMgr.GetMaxSize(); }
-    OffsetType GetUsedSize() const { return m_AllocationsMgr.GetUsedSize();}
-    // clang-format on
+    OffsetType GetSize() const { return m_AllocationsMgr.GetMaxSize(); }
+
+    OffsetType GetUsedSize() const { return m_UsedSize.load(std::memory_order_relaxed); }
 
 #ifdef DILIGENT_DEVELOPMENT
     Int32 GetMasterBlockCounter() const
@@ -186,18 +181,33 @@ protected:
     {
         std::lock_guard<std::mutex> Lock{m_AllocationsMgrMtx};
         MasterBlock                 NewBlock = m_AllocationsMgr.Allocate(SizeInBytes, Alignment);
-#ifdef DILIGENT_DEVELOPMENT
         if (NewBlock.IsValid())
         {
+#ifdef DILIGENT_DEVELOPMENT
             ++m_MasterBlockCounter;
-        }
 #endif
+            m_UsedSize.store(m_AllocationsMgr.GetUsedSize(), std::memory_order_relaxed);
+        }
         return NewBlock;
     }
 
 private:
+    void FreeMasterBlock(MasterBlock&& Block)
+    {
+        std::lock_guard<std::mutex> Lock{m_AllocationsMgrMtx};
+#ifdef DILIGENT_DEVELOPMENT
+        --m_MasterBlockCounter;
+#endif
+        m_AllocationsMgr.Free(std::move(Block));
+        m_UsedSize.store(m_AllocationsMgr.GetUsedSize(), std::memory_order_relaxed);
+    }
+
     std::mutex                     m_AllocationsMgrMtx;
     VariableSizeAllocationsManager m_AllocationsMgr;
+
+    // Mirrors m_AllocationsMgr.GetUsedSize() and is updated under m_AllocationsMgrMtx.
+    // This lets statistics queries read the current value without locking the allocation manager.
+    std::atomic<OffsetType> m_UsedSize{0};
 
 #ifdef DILIGENT_DEVELOPMENT
     std::atomic<Int32> m_MasterBlockCounter;
