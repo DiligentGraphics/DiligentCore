@@ -1,6 +1,9 @@
 # Mesa lavapipe/llvmpipe internal synchronization during Vulkan teardown.
 race:libvulkan_lvp.so
 
+# Mesa lavapipe LLVM internals during Vulkan shader compilation.
+race:libLLVM.so
+
 # Mesa Gallium/llvmpipe internal synchronization during OpenGL readback/present.
 race:libgallium
 
