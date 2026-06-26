@@ -36,8 +36,8 @@ namespace Diligent
 template <typename T>
 T AtomicMax(std::atomic<T>&   Val,
             T                 Candidate,
-            std::memory_order Success = std::memory_order_seq_cst,
-            std::memory_order Failure = std::memory_order_relaxed)
+            std::memory_order SuccessOrder = std::memory_order_seq_cst,
+            std::memory_order FailureOrder = std::memory_order_relaxed)
 {
     static_assert(std::atomic<T>::is_always_lock_free,
                   "AtomicMax requires a lock-free atomic type for performance.");
@@ -45,7 +45,7 @@ T AtomicMax(std::atomic<T>&   Val,
                   "AtomicMax only supports arithmetic or pointer types.");
 
     T Cur = Val.load(std::memory_order_relaxed);
-    while (Cur < Candidate && !Val.compare_exchange_weak(Cur, Candidate, Success, Failure))
+    while (Cur < Candidate && !Val.compare_exchange_weak(Cur, Candidate, SuccessOrder, FailureOrder))
     {
         // Cur is updated to the latest value by compare_exchange_weak on failure
     }
@@ -57,8 +57,8 @@ T AtomicMax(std::atomic<T>&   Val,
 template <typename T>
 T AtomicMin(std::atomic<T>&   Val,
             T                 Candidate,
-            std::memory_order Success = std::memory_order_seq_cst,
-            std::memory_order Failure = std::memory_order_relaxed)
+            std::memory_order SuccessOrder = std::memory_order_seq_cst,
+            std::memory_order FailureOrder = std::memory_order_relaxed)
 {
     static_assert(std::atomic<T>::is_always_lock_free,
                   "AtomicMax requires a lock-free atomic type for performance.");
@@ -66,7 +66,7 @@ T AtomicMin(std::atomic<T>&   Val,
                   "AtomicMax only supports arithmetic or pointer types.");
 
     T Cur = Val.load(std::memory_order_relaxed);
-    while (Cur > Candidate && !Val.compare_exchange_weak(Cur, Candidate, Success, Failure))
+    while (Cur > Candidate && !Val.compare_exchange_weak(Cur, Candidate, SuccessOrder, FailureOrder))
     {
         // Cur is updated to the latest value by compare_exchange_weak on failure
     }
