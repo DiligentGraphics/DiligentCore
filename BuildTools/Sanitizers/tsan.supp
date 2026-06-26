@@ -1,0 +1,11 @@
+# Mesa lavapipe/llvmpipe internal synchronization during Vulkan teardown.
+race:libvulkan_lvp.so
+
+# Mesa Gallium/llvmpipe internal synchronization during OpenGL readback/present.
+race:libgallium
+
+# Vulkan validation layer object lifetime tracking may trigger lock-order-inversion reports.
+deadlock:libVkLayer_khronos_validation.so
+
+# DXC/glibc locale conversion internals during parallel shader compilation.
+race:DXCompilerImpl::Compile
