@@ -174,6 +174,14 @@ if(ENABLE_SPIRV)
     PRIVATE
         spirv-cross-core
     )
+    if(TARGET spirv-cross-glsl)
+        target_link_libraries(Diligent-ShaderTools
+        PRIVATE
+            spirv-cross-glsl
+        )
+        target_compile_definitions(Diligent-ShaderTools PRIVATE DILIGENT_USE_SPIRV_CROSS_GLSL=1)
+    endif()
+
     if(SPIRV_CROSS_NAMESPACE_OVERRIDE)
         target_compile_definitions(Diligent-ShaderTools PUBLIC DILIGENT_SPIRV_CROSS_NAMESPACE=${SPIRV_CROSS_NAMESPACE_OVERRIDE})
     endif()

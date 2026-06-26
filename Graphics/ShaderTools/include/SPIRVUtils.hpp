@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -43,5 +43,8 @@ namespace Diligent
 /// \return Patched SPIRV code.
 std::vector<uint32_t> PatchImageFormats(const std::vector<uint32_t>&                                SPIRV,
                                         const std::unordered_map<HashMapStringKey, TEXTURE_FORMAT>& ImageFormats);
+
+/// Warms up SPIRV-Cross GLSL compiler to initialize internal static data before concurrent use.
+void WarmUpSPIRVCrossGLSLCompiler();
 
 } // namespace Diligent

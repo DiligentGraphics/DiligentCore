@@ -31,6 +31,7 @@
 #include "SerializedRenderPassImpl.hpp"
 #include "SerializedResourceSignatureImpl.hpp"
 #include "SerializedPipelineStateImpl.hpp"
+#include "SPIRVUtils.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent
@@ -91,6 +92,11 @@ SerializationDeviceImpl::SerializationDeviceImpl(IReferenceCounters* pRefCounter
     {
         m_GLProps.OptimizeShaders = CreateInfo.GL.OptimizeShaders;
         m_GLProps.ZeroToOneClipZ  = CreateInfo.GL.ZeroToOneClipZ;
+
+#if !DILIGENT_NO_GLSLANG
+        if (m_GLProps.OptimizeShaders)
+            WarmUpSPIRVCrossGLSLCompiler();
+#endif
     }
 
     if (m_ValidDeviceFlags & ARCHIVE_DEVICE_DATA_FLAG_VULKAN)
