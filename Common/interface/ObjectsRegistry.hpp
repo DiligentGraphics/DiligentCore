@@ -1,4 +1,4 @@
-/*  Copyright 2023-2025 Diligent Graphics LLC
+/*  Copyright 2023-2026 Diligent Graphics LLC
 
  *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -294,11 +294,13 @@ private:
 
         StrongPtrType Lock()
         {
+            std::lock_guard<std::mutex> Guard{m_CreateObjectMtx};
             return _LockWeakPtr(m_wpObject);
         }
 
         bool IsExpired()
         {
+            std::lock_guard<std::mutex> Guard{m_CreateObjectMtx};
             return _IsWeakPtrExpired(m_wpObject);
         }
 

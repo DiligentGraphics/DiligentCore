@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,6 +31,7 @@
 #include <string>
 #include <iostream>
 #include <cstdint>
+#include <atomic>
 
 #include "DebugOutput.h"
 #include "FormatString.hpp"
@@ -87,15 +88,14 @@ void LogError(bool IsFatal, const char* Function, const char* FullFilePath, int 
         Diligent::LogError<false>(/*IsFatal=*/true, __FUNCTION__, __FILE__, __LINE__, ##__VA_ARGS__); \
     } while (false)
 
-#define LOG_ERROR_ONCE(...)             \
-    do                                  \
-    {                                   \
-        static bool IsFirstTime = true; \
-        if (IsFirstTime)                \
-        {                               \
-            LOG_ERROR(##__VA_ARGS__);   \
-            IsFirstTime = false;        \
-        }                               \
+#define LOG_ERROR_ONCE(...)                                         \
+    do                                                              \
+    {                                                               \
+        static std::atomic_bool IsFirstTime{true};                  \
+        if (IsFirstTime.exchange(false, std::memory_order_relaxed)) \
+        {                                                           \
+            LOG_ERROR(##__VA_ARGS__);                               \
+        }                                                           \
     } while (false)
 
 
@@ -148,15 +148,14 @@ void LogError(bool IsFatal, const char* Function, const char* FullFilePath, int 
 #    define LOG_DVP_INFO_MESSAGE(...)
 #endif
 
-#define LOG_DEBUG_MESSAGE_ONCE(Severity, ...)           \
-    do                                                  \
-    {                                                   \
-        static bool IsFirstTime = true;                 \
-        if (IsFirstTime)                                \
-        {                                               \
-            LOG_DEBUG_MESSAGE(Severity, ##__VA_ARGS__); \
-            IsFirstTime = false;                        \
-        }                                               \
+#define LOG_DEBUG_MESSAGE_ONCE(Severity, ...)                       \
+    do                                                              \
+    {                                                               \
+        static std::atomic_bool IsFirstTime{true};                  \
+        if (IsFirstTime.exchange(false, std::memory_order_relaxed)) \
+        {                                                           \
+            LOG_DEBUG_MESSAGE(Severity, ##__VA_ARGS__);             \
+        }                                                           \
     } while (false)
 
 #define LOG_FATAL_ERROR_MESSAGE_ONCE(...) LOG_DEBUG_MESSAGE_ONCE(Diligent::DEBUG_MESSAGE_SEVERITY_FATAL_ERROR, ##__VA_ARGS__)
