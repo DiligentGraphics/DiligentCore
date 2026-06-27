@@ -165,6 +165,40 @@ private:
     bool m_HasEverHadRefs = false;
 };
 
+class SharedOwnerObject final : public RefCountedObject<IObject>
+{
+public:
+    SharedOwnerObject(IReferenceCounters* pRefCounters) :
+        RefCountedObject<IObject>{pRefCounters},
+        Obj0{NEW_RC_OBJ(DefaultRawMemoryAllocator::GetAllocator(), "Test object", Object, this)()},
+        Obj1{NEW_RC_OBJ(DefaultRawMemoryAllocator::GetAllocator(), "Test object", Object, this)()}
+    {}
+
+    ~SharedOwnerObject()
+    {
+        Obj0->~Object();
+        Obj1->~Object();
+        DefaultRawMemoryAllocator::GetAllocator().Free(Obj0);
+        DefaultRawMemoryAllocator::GetAllocator().Free(Obj1);
+    }
+
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final
+    {
+        if (ppInterface == nullptr)
+            return;
+
+        *ppInterface = nullptr;
+        if (IID == IID_Unknown)
+        {
+            *ppInterface = this;
+            AddRef();
+        }
+    }
+
+    Object* const Obj0;
+    Object* const Obj1;
+};
+
 using SmartPtr = Diligent::RefCntAutoPtr<Object>;
 using WeakPtr  = Diligent::RefCntWeakPtr<Object>;
 
@@ -435,6 +469,35 @@ TEST(Common_RefCntWeakPtr, OperatorEqual)
         WP1 = WP0;
         WP0 = SP1;
         WP2 = std::move(WP1);
+    }
+}
+
+TEST(Common_RefCntWeakPtr, AssignmentWithSharedOwnerCounters)
+{
+    RefCntAutoPtr<SharedOwnerObject> Owner{MakeNewObj<SharedOwnerObject>()};
+
+    EXPECT_NE(Owner->Obj0, Owner->Obj1);
+    EXPECT_EQ(Owner->Obj0->GetReferenceCounters(), Owner->Obj1->GetReferenceCounters());
+
+    {
+        RefCntWeakPtr<Object> WP0{Owner->Obj0};
+        RefCntWeakPtr<Object> WP1{Owner->Obj1};
+
+        EXPECT_NE(WP0, WP1);
+        EXPECT_EQ(WP0.UnsafeRawPtr(), Owner->Obj0);
+        EXPECT_EQ(WP1.UnsafeRawPtr(), Owner->Obj1);
+
+        WP0 = WP1;
+
+        EXPECT_EQ(WP0, WP1);
+        EXPECT_EQ(WP0.UnsafeRawPtr(), Owner->Obj1);
+
+        RefCntWeakPtr<Object> WP2{Owner->Obj0};
+        WP1 = std::move(WP2);
+
+        EXPECT_EQ(WP1.UnsafeRawPtr(), Owner->Obj0);
+        EXPECT_EQ(WP2.UnsafeRawPtr(), nullptr);
+        EXPECT_NE(WP0, WP1);
     }
 }
 

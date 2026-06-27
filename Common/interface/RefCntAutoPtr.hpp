@@ -361,14 +361,19 @@ public:
 
     RefCntWeakPtr& operator=(const RefCntWeakPtr& WeakPtr) noexcept
     {
-        if (*this == WeakPtr)
+        if (this == std::addressof(WeakPtr))
             return *this;
 
+        RefCountersImpl* pNewRefCounters = WeakPtr.m_pRefCounters;
+        T*               pNewObject      = WeakPtr.m_pObject;
+
+        if (pNewRefCounters)
+            pNewRefCounters->AddWeakRef();
+
         Release();
-        m_pObject      = WeakPtr.m_pObject;
-        m_pRefCounters = WeakPtr.m_pRefCounters;
-        if (m_pRefCounters)
-            m_pRefCounters->AddWeakRef();
+
+        m_pRefCounters = pNewRefCounters;
+        m_pObject      = pNewObject;
         return *this;
     }
 
@@ -379,7 +384,7 @@ public:
 
     RefCntWeakPtr& operator=(RefCntWeakPtr&& WeakPtr) noexcept
     {
-        if (*this == WeakPtr)
+        if (this == std::addressof(WeakPtr))
             return *this;
 
         Release();
@@ -450,8 +455,8 @@ public:
         return spObj;
     }
 
-    bool operator==(const RefCntWeakPtr& Ptr) const noexcept { return m_pRefCounters == Ptr.m_pRefCounters; }
-    bool operator!=(const RefCntWeakPtr& Ptr) const noexcept { return m_pRefCounters != Ptr.m_pRefCounters; }
+    bool operator==(const RefCntWeakPtr& Ptr) const noexcept { return m_pRefCounters == Ptr.m_pRefCounters && m_pObject == Ptr.m_pObject; }
+    bool operator!=(const RefCntWeakPtr& Ptr) const noexcept { return !(*this == Ptr); }
 
 protected:
     RefCountersImpl* m_pRefCounters = nullptr;
