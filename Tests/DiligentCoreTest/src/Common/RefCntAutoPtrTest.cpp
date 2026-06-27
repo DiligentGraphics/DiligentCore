@@ -28,8 +28,8 @@
 #include <thread>
 #include <atomic>
 #include <mutex>
-#include <condition_variable>
 #include <algorithm>
+#include <chrono>
 #include <cstring>
 
 #include "DefaultRawMemoryAllocator.hpp"
@@ -197,6 +197,96 @@ public:
 
     Object* const Obj0;
     Object* const Obj1;
+};
+
+class ThrowingQueryInterfaceObject final : public RefCountedObject<IObject>
+{
+public:
+    ThrowingQueryInterfaceObject(IReferenceCounters* pRefCounters) :
+        RefCountedObject<IObject>{pRefCounters}
+    {}
+
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final
+    {
+        if (ppInterface != nullptr)
+            *ppInterface = nullptr;
+
+        if (IID == IID_Unknown)
+            throw std::runtime_error{"QueryInterface failure"};
+    }
+};
+
+class QueryInterfaceWeakRefReleaseObject final : public RefCountedObject<IObject>
+{
+public:
+    QueryInterfaceWeakRefReleaseObject(IReferenceCounters* pRefCounters) :
+        RefCountedObject<IObject>{pRefCounters}
+    {}
+
+    ~QueryInterfaceWeakRefReleaseObject()
+    {
+        JoinReleaseWeakRefThread();
+    }
+
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final
+    {
+        if (ppInterface == nullptr)
+            return;
+
+        *ppInterface = nullptr;
+        if (IID != IID_Unknown)
+            return;
+
+        JoinReleaseWeakRefThread();
+
+        IReferenceCounters* const pRefCounters = GetReferenceCounters();
+        pRefCounters->AddWeakRef();
+
+        m_ReleaseWeakRefFinishedBeforeQueryInterfaceReturned = false;
+        m_ReleaseWeakRefFinishedSignal.Reset();
+
+        // QueryObject() used to call QueryInterface() while holding the reference
+        // counters lock. ReleaseWeakRef() also takes that lock, so this thread
+        // would be blocked until QueryInterface() returned.
+        m_ReleaseWeakRefThread = std::thread{
+            [this, pRefCounters] //
+            {
+                pRefCounters->ReleaseWeakRef();
+
+                m_ReleaseWeakRefFinishedSignal.Trigger();
+            }};
+
+        // The expected behavior is that QueryObject() releases the lock before
+        // calling QueryInterface(), so ReleaseWeakRef() can complete before this
+        // QueryInterface() returns. Keep this wait bounded so the old behavior
+        // fails the test instead of hanging.
+        const auto WaitStart = std::chrono::steady_clock::now();
+        while (!m_ReleaseWeakRefFinishedSignal.IsTriggered() &&
+               std::chrono::steady_clock::now() - WaitStart < std::chrono::seconds{5})
+        {
+            std::this_thread::yield();
+        }
+        m_ReleaseWeakRefFinishedBeforeQueryInterfaceReturned = m_ReleaseWeakRefFinishedSignal.IsTriggered();
+
+        *ppInterface = this;
+        AddRef();
+    }
+
+    void JoinReleaseWeakRefThread()
+    {
+        if (m_ReleaseWeakRefThread.joinable())
+            m_ReleaseWeakRefThread.join();
+    }
+
+    bool ReleaseWeakRefFinishedBeforeQueryInterfaceReturned() const
+    {
+        return m_ReleaseWeakRefFinishedBeforeQueryInterfaceReturned;
+    }
+
+private:
+    std::thread       m_ReleaseWeakRefThread;
+    Threading::Signal m_ReleaseWeakRefFinishedSignal;
+    bool              m_ReleaseWeakRefFinishedBeforeQueryInterfaceReturned = false;
 };
 
 using SmartPtr = Diligent::RefCntAutoPtr<Object>;
@@ -563,6 +653,33 @@ TEST(Common_RefCntWeakPtr, QueryObjectInitializesDestroyedObjectOutput)
     EXPECT_EQ(pObject, nullptr);
 
     pRefCounters->ReleaseWeakRef();
+}
+
+TEST(Common_RefCntWeakPtr, QueryObjectReleasesTemporaryStrongRefOnException)
+{
+    RefCntAutoPtr<ThrowingQueryInterfaceObject> SP{MakeNewObj<ThrowingQueryInterfaceObject>()};
+    RefCntWeakPtr<ThrowingQueryInterfaceObject> WP{SP};
+    IReferenceCounters* const                   pRefCounters = SP->GetReferenceCounters();
+
+    EXPECT_EQ(pRefCounters->GetNumStrongRefs(), 1);
+
+    EXPECT_THROW(WP.Lock(), std::runtime_error);
+
+    EXPECT_EQ(pRefCounters->GetNumStrongRefs(), 1);
+}
+
+TEST(Common_RefCntWeakPtr, QueryObjectDoesNotHoldLockDuringQueryInterface)
+{
+    RefCntAutoPtr<QueryInterfaceWeakRefReleaseObject> SP{MakeNewObj<QueryInterfaceWeakRefReleaseObject>()};
+    RefCntWeakPtr<QueryInterfaceWeakRefReleaseObject> WP{SP};
+
+    // Lock() calls QueryObject(), which calls QueryInterface().
+    // The test QueryInterface() starts a ReleaseWeakRef() thread and waits for it.
+    auto LockedSP = WP.Lock();
+    SP->JoinReleaseWeakRefThread();
+
+    EXPECT_TRUE(LockedSP);
+    EXPECT_TRUE(SP->ReleaseWeakRefFinishedBeforeQueryInterfaceReturned());
 }
 
 TEST(Common_RefCntWeakPtr, Lock)

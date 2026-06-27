@@ -183,34 +183,57 @@ public:
         //    Destroy the object               |                                   | -Return reference to the soon
         //                                     |                                   |  to expire object
         //
-        Threading::SpinLockGuard Guard{m_Lock};
+        ObjectWrapperBase* pWrapper = nullptr;
 
-        const ReferenceCounterValueType StrongRefCnt = m_NumStrongReferences.fetch_add(+1) + 1;
-
-        // Checking if m_ObjectState == ObjectState::Alive only is not reliable:
-        //
-        //           This thread                    |          Another thread
-        //                                          |
-        //   1. Acquire the lock                    |
-        //                                          |    1. Decrement m_NumStrongReferences
-        //   2. Increment m_NumStrongReferences     |    2. Test RefCount==0
-        //   3. Read StrongRefCnt == 1              |    3. Start destroying the object
-        //      m_ObjectState == ObjectState::Alive |
-        //   4. DO NOT return the reference to      |    4. Wait for the lock, m_ObjectState == ObjectState::Alive
-        //      the object                          |
-        //   5. Decrement m_NumStrongReferences     |
-        //                                          |    5. Destroy the object
-
-        if (m_ObjectState == ObjectState::Alive && StrongRefCnt > 1)
         {
-            VERIFY(m_ObjectWrapperBuffer[0] != 0 && m_ObjectWrapperBuffer[1] != 0, "Object wrapper is not initialized");
-            // QueryInterface() must not lock the object, or a deadlock happens.
-            // The only other two methods that lock the object are ReleaseStrongRef()
-            // and ReleaseWeakRef(), which are never called by QueryInterface()
-            ObjectWrapperBase* pWrapper = reinterpret_cast<ObjectWrapperBase*>(m_ObjectWrapperBuffer);
+            Threading::SpinLockGuard Guard{m_Lock};
+
+            const ReferenceCounterValueType StrongRefCnt = m_NumStrongReferences.fetch_add(+1) + 1;
+
+            // Checking if m_ObjectState == ObjectState::Alive only is not reliable:
+            //
+            //           This thread                    |          Another thread
+            //                                          |
+            //   1. Acquire the lock                    |
+            //                                          |    1. Decrement m_NumStrongReferences
+            //   2. Increment m_NumStrongReferences     |    2. Test RefCount==0
+            //   3. Read StrongRefCnt == 1              |    3. Start destroying the object
+            //      m_ObjectState == ObjectState::Alive |
+            //   4. DO NOT return the reference to      |    4. Wait for the lock, m_ObjectState == ObjectState::Alive
+            //      the object                          |
+            //   5. Decrement m_NumStrongReferences     |
+            //                                          |    5. Destroy the object
+
+            if (m_ObjectState == ObjectState::Alive && StrongRefCnt > 1)
+            {
+                VERIFY(m_ObjectWrapperBuffer[0] != 0 && m_ObjectWrapperBuffer[1] != 0, "Object wrapper is not initialized");
+                pWrapper = reinterpret_cast<ObjectWrapperBase*>(m_ObjectWrapperBuffer);
+            }
+            else
+            {
+                m_NumStrongReferences.fetch_add(-1);
+            }
+        }
+
+        if (pWrapper != nullptr)
+        {
+            struct TemporaryStrongRefGuard
+            {
+                RefCountersImpl& RefCounters;
+
+                ~TemporaryStrongRefGuard()
+                {
+                    // QueryInterface() runs outside m_Lock, so this temporary reference
+                    // may become the last strong reference if all real references are
+                    // released before QueryInterface() adds a new one or if it throws.
+                    RefCounters.ReleaseStrongRef();
+                }
+            } TempStrongRef{*this};
+
+            // The temporary strong reference keeps the object wrapper alive.
+            // QueryInterface() is virtual object code and must run outside m_Lock.
             pWrapper->QueryInterface(IID_Unknown, ppObject);
         }
-        m_NumStrongReferences.fetch_add(-1);
     }
 
     inline virtual ReferenceCounterValueType GetNumStrongRefs() const override final
