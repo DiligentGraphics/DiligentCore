@@ -342,6 +342,53 @@ TEST(Common_RefCntAutoPtr, RawPointerAssignmentFromAliasedInterface)
     EXPECT_EQ(Obj.NumZeroTransitions, 1);
 }
 
+TEST(Common_RefCntAutoPtr, GetAddressOfEmpty)
+{
+    {
+        SmartPtr SP;
+        Object::Create(SP.GetAddressOfEmpty());
+
+        EXPECT_TRUE(SP);
+        EXPECT_EQ(SP->GetReferenceCounters()->GetNumStrongRefs(), 1);
+    }
+
+    {
+        RefCntAutoPtr<DerivedObject> SP;
+        {
+            auto ppObject = SP.GetAddressOfEmpty<IObject>();
+            *ppObject     = MakeNewObj<DerivedObject>();
+            (*ppObject)->AddRef();
+        }
+
+        EXPECT_TRUE(SP);
+        EXPECT_EQ(SP->GetReferenceCounters()->GetNumStrongRefs(), 1);
+    }
+}
+
+TEST(Common_RefCntAutoPtr, ReleaseAndGetAddressOf)
+{
+    {
+        SmartPtr SP{MakeNewObj<Object>()};
+
+        Object::Create(SP.ReleaseAndGetAddressOf());
+
+        EXPECT_TRUE(SP);
+        EXPECT_EQ(SP->GetReferenceCounters()->GetNumStrongRefs(), 1);
+    }
+
+    {
+        RefCntAutoPtr<DerivedObject> SP{MakeNewObj<DerivedObject>()};
+        {
+            auto ppObject = SP.ReleaseAndGetAddressOf<IObject>();
+            *ppObject     = MakeNewObj<DerivedObject>();
+            (*ppObject)->AddRef();
+        }
+
+        EXPECT_TRUE(SP);
+        EXPECT_EQ(SP->GetReferenceCounters()->GetNumStrongRefs(), 1);
+    }
+}
+
 TEST(Common_RefCntAutoPtr, MoveAssignmentFromSharedObject)
 {
     {

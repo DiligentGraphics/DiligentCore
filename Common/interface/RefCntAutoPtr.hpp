@@ -282,6 +282,32 @@ private:
     };
 
 public:
+    T** ReleaseAndGetAddressOf() noexcept
+    {
+        Release();
+        return &m_pObject;
+    }
+
+    template <typename DstType, typename = typename std::enable_if<std::is_convertible<T*, DstType*>::value>::type>
+    DoublePtrHelper<DstType> ReleaseAndGetAddressOf() noexcept
+    {
+        Release();
+        return DblPtr<DstType>();
+    }
+
+    T** GetAddressOfEmpty() noexcept
+    {
+        VERIFY(m_pObject == nullptr, "Output pointer must be empty");
+        return &m_pObject;
+    }
+
+    template <typename DstType, typename = typename std::enable_if<std::is_convertible<T*, DstType*>::value>::type>
+    DoublePtrHelper<DstType> GetAddressOfEmpty() noexcept
+    {
+        VERIFY(m_pObject == nullptr, "Output pointer must be empty");
+        return DblPtr<DstType>();
+    }
+
     template <typename DstType, typename = typename std::enable_if<std::is_convertible<T*, DstType*>::value>::type>
     DoublePtrHelper<DstType> DblPtr() noexcept { return DoublePtrHelper<DstType>(*this); }
     template <typename DstType, typename = typename std::enable_if<std::is_convertible<T*, DstType*>::value>::type>
