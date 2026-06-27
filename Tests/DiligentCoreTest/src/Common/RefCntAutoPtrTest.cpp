@@ -679,6 +679,10 @@ TEST(Common_RefCntWeakPtr, AssignmentWithSharedOwnerCounters)
         EXPECT_EQ(WP0.UnsafeRawPtr(), Owner->Obj0);
         EXPECT_EQ(WP1.UnsafeRawPtr(), Owner->Obj1);
 
+        auto LockedObj0 = WP0.Lock();
+        EXPECT_EQ(LockedObj0.RawPtr(), Owner->Obj0);
+        LockedObj0.Release();
+
         WP0 = WP1;
 
         EXPECT_EQ(WP0, WP1);
@@ -713,27 +717,44 @@ TEST(Common_RefCntWeakPtr, QueryObjectInitializesDestroyedObjectOutput)
 TEST(Common_RefCntWeakPtr, QueryObjectReleasesTemporaryStrongRefOnException)
 {
     RefCntAutoPtr<ThrowingQueryInterfaceObject> SP{MakeNewObj<ThrowingQueryInterfaceObject>()};
+    IReferenceCounters* const                   pRefCounters = SP->GetReferenceCounters();
+
+    EXPECT_EQ(pRefCounters->GetNumStrongRefs(), 1);
+
+    RefCntAutoPtr<IObject> QueriedObject;
+    EXPECT_THROW(pRefCounters->QueryObject(QueriedObject.GetAddressOfEmpty()), std::runtime_error);
+
+    EXPECT_FALSE(QueriedObject);
+    EXPECT_EQ(pRefCounters->GetNumStrongRefs(), 1);
+}
+
+TEST(Common_RefCntWeakPtr, LockDoesNotCallQueryInterface)
+{
+    RefCntAutoPtr<ThrowingQueryInterfaceObject> SP{MakeNewObj<ThrowingQueryInterfaceObject>()};
     RefCntWeakPtr<ThrowingQueryInterfaceObject> WP{SP};
     IReferenceCounters* const                   pRefCounters = SP->GetReferenceCounters();
 
     EXPECT_EQ(pRefCounters->GetNumStrongRefs(), 1);
 
-    EXPECT_THROW(WP.Lock(), std::runtime_error);
+    RefCntAutoPtr<ThrowingQueryInterfaceObject> LockedSP;
+    EXPECT_NO_THROW(LockedSP = WP.Lock());
 
-    EXPECT_EQ(pRefCounters->GetNumStrongRefs(), 1);
+    EXPECT_EQ(LockedSP, SP);
+    EXPECT_EQ(pRefCounters->GetNumStrongRefs(), 2);
 }
 
 TEST(Common_RefCntWeakPtr, QueryObjectDoesNotHoldLockDuringQueryInterface)
 {
     RefCntAutoPtr<QueryInterfaceWeakRefReleaseObject> SP{MakeNewObj<QueryInterfaceWeakRefReleaseObject>()};
-    RefCntWeakPtr<QueryInterfaceWeakRefReleaseObject> WP{SP};
+    IReferenceCounters* const                         pRefCounters = SP->GetReferenceCounters();
 
-    // Lock() calls QueryObject(), which calls QueryInterface().
-    // The test QueryInterface() starts a ReleaseWeakRef() thread and waits for it.
-    auto LockedSP = WP.Lock();
+    // QueryObject() calls QueryInterface(). The test QueryInterface() starts a
+    // ReleaseWeakRef() thread and waits for it.
+    RefCntAutoPtr<IObject> QueriedObject;
+    pRefCounters->QueryObject(QueriedObject.GetAddressOfEmpty());
     SP->JoinReleaseWeakRefThread();
 
-    EXPECT_TRUE(LockedSP);
+    EXPECT_TRUE(QueriedObject);
     EXPECT_TRUE(SP->ReleaseWeakRefFinishedBeforeQueryInterfaceReturned());
 }
 
@@ -1272,9 +1293,9 @@ void RefCntAutoPtrThreadingTest::WorkerThreadFunc(RefCntAutoPtrThreadingTest* Th
             }
 
             {
-                // Test interferences of ReleaseStrongRef() and QueryObject()
+                // Test interferences of ReleaseStrongRef() and weak promotion
 
-                // Goal: catch scenario when QueryObject() runs between
+                // Goal: catch scenario when weak promotion runs between
                 // AtomicDecrement() and acquiring the lock in ReleaseStrongRef():
 
                 //                       m_lNumStrongReferences == 1

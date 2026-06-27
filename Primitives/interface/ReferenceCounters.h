@@ -51,8 +51,8 @@ public:
     ///         own a strong reference or otherwise externally guarantee object
     ///         lifetime. AddStrongRef() must not be used to promote a weak
     ///         reference because another thread may be releasing the final strong
-    ///         reference at the same time. Use QueryObject() for weak-to-strong
-    ///         promotion.
+    ///         reference at the same time. Use QueryObject() or RefCntWeakPtr::Lock()
+    ///         for weak-to-strong promotion.
     /// \note   In a multithreaded environment, the returned number may not be reliable
     ///         as other threads may simultaneously change the actual value of the counter.
     virtual ReferenceCounterValueType AddStrongRef() = 0;
@@ -104,7 +104,7 @@ public:
     ///         If the object was not released, the pointer to the object's IUnknown interface
     ///         will be stored. In this case, the number of strong references to the object
     ///         will be incremented by 1.\n
-    ///         This method is the safe way to promote a weak reference to a strong reference.
+    ///         This method is a safe way to promote a weak reference to a strong reference.
     ///         Direct AddStrongRef() on a raw pointer does not provide the required lifetime
     ///         synchronization.\n
     ///         The method is thread-safe and does not require explicit synchronization.

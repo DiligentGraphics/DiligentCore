@@ -45,6 +45,9 @@
 namespace Diligent
 {
 
+template <typename T>
+class RefCntWeakPtr;
+
 // This class controls the lifetime of a refcounted object
 // NB: RefCountersImpl can't be final, see https://github.com/DiligentGraphics/DiligentCore/issues/704.
 class RefCountersImpl : public IReferenceCounters
@@ -161,37 +164,7 @@ public:
         //
         ObjectRecord ObjRecord;
 
-        {
-            Threading::SpinLockGuard Guard{m_Lock};
-
-            const ReferenceCounterValueType StrongRefCnt = m_NumStrongReferences.fetch_add(+1) + 1;
-
-            // Checking if m_ObjectState == ObjectState::Alive only is not reliable:
-            //
-            //           This thread                    |          Another thread
-            //                                          |
-            //   1. Acquire the lock                    |
-            //                                          |    1. Decrement m_NumStrongReferences
-            //   2. Increment m_NumStrongReferences     |    2. Test RefCount==0
-            //   3. Read StrongRefCnt == 1              |    3. Start destroying the object
-            //      m_ObjectState == ObjectState::Alive |
-            //   4. DO NOT return the reference to      |    4. Wait for the lock, m_ObjectState == ObjectState::Alive
-            //      the object                          |
-            //   5. Decrement m_NumStrongReferences     |
-            //                                          |    5. Destroy the object
-
-            if (m_ObjectState == ObjectState::Alive && StrongRefCnt > 1)
-            {
-                VERIFY(m_ObjectRecord, "Object record is not initialized");
-                ObjRecord = m_ObjectRecord;
-            }
-            else
-            {
-                m_NumStrongReferences.fetch_add(-1);
-            }
-        }
-
-        if (ObjRecord)
+        if (TryAddStrongRefFromWeak(&ObjRecord))
         {
             struct TemporaryStrongRefGuard
             {
@@ -225,9 +198,53 @@ public:
 private:
     template <typename AllocatorType, typename ObjectType>
     friend class MakeNewRCObj;
+    template <typename T>
+    friend class RefCntWeakPtr;
 
     RefCountersImpl() noexcept
     {
+    }
+
+    // Attempts to obtain a strong reference while the caller only owns a weak
+    // reference. This uses the same serialized speculative increment rule as
+    // QueryObject(): increment first, then require the new count to be greater
+    // than one while the object is still alive.
+    bool TryAddStrongRefFromWeak() noexcept
+    {
+        return TryAddStrongRefFromWeak(nullptr);
+    }
+
+    bool TryAddStrongRefFromWeak(ObjectRecord* pObjectRecord) noexcept
+    {
+        Threading::SpinLockGuard Guard{m_Lock};
+
+        const ReferenceCounterValueType StrongRefCnt = m_NumStrongReferences.fetch_add(+1) + 1;
+
+        // Checking if m_ObjectState == ObjectState::Alive only is not reliable:
+        //
+        //           This thread                    |          Another thread
+        //                                          |
+        //   1. Acquire the lock                    |
+        //                                          |    1. Decrement m_NumStrongReferences
+        //   2. Increment m_NumStrongReferences     |    2. Test RefCount==0
+        //   3. Read StrongRefCnt == 1              |    3. Start destroying the object
+        //      m_ObjectState == ObjectState::Alive |
+        //   4. DO NOT return the reference to      |    4. Wait for the lock, m_ObjectState == ObjectState::Alive
+        //      the object                          |
+        //   5. Decrement m_NumStrongReferences     |
+        //                                          |    5. Destroy the object
+        if (m_ObjectState.load() == ObjectState::Alive && StrongRefCnt > 1)
+        {
+            if (pObjectRecord != nullptr)
+            {
+                VERIFY(m_ObjectRecord, "Object record is not initialized");
+                *pObjectRecord = m_ObjectRecord;
+            }
+            return true;
+        }
+
+        m_NumStrongReferences.fetch_add(-1);
+        return false;
     }
 
     template <typename ObjectType, typename AllocatorType>
@@ -281,7 +298,8 @@ private:
     void TryDestroyObject()
     {
         // Since RefCount==0, there are no more strong references and the only place
-        // where strong ref counter can be incremented is from QueryObject().
+        // where strong ref counter can be incremented without an existing strong
+        // reference is the weak-promotion path.
 
         // If several threads were allowed to get to this point, there would
         // be serious risk that <this> had already been destroyed and m_LockFlag expired.
@@ -294,7 +312,7 @@ private:
         //                                      |
         // 1. Decrement m_NumStrongReferences   |
         //    Read RefCount==0, no lock acquired|
-        //                                      |   1. Run QueryObject()
+        //                                      |   1. Run weak promotion
         //                                      |      - acquire the lock
         //                                      |      - increment m_NumStrongReferences
         //                                      |      - release the lock
@@ -312,13 +330,13 @@ private:
         //  IT IS CRUCIALLY IMPORTANT TO ASSURE THAT ONLY ONE THREAD WILL EVER
         //  EXECUTE THIS CODE
 
-        // The solution is to atomically increment strong ref counter in QueryObject().
+        // The solution is to atomically increment strong ref counter in weak promotion.
         // There are two possible scenarios depending on who first increments the counter:
 
 
         //                                                     Scenario I
         //
-        //             This thread              |     Another thread - QueryObject()        |  One more thread - QueryObject()
+        //             This thread              |   Another thread - weak promotion         | One more thread - weak promotion
         //                                      |                                           |
         //                        m_NumStrongReferences == 1                                |
         //                                      |                                           |
@@ -342,12 +360,12 @@ private:
         // 6. DESTROY the object                |                                           |
         //                                      |                                           |
 
-        //  QueryObject() MUST BE SERIALIZED for this to work properly!
+        //  Weak promotion MUST BE SERIALIZED for this to work properly!
 
 
         //                                   Scenario II
         //
-        //             This thread              |     Another thread - QueryObject()
+        //             This thread              |     Another thread - weak promotion
         //                                      |
         //                       m_NumStrongReferences == 1
         //                                      |
@@ -370,10 +388,10 @@ private:
         // Acquire the lock.
         std::unique_lock<Threading::SpinLock> Guard{m_Lock};
 
-        // QueryObject() first acquires the lock, and only then increments and
+        // Weak promotion first acquires the lock, and only then increments and
         // decrements the ref counter. If it reads 1 after incrementing the counter,
         // it does not return the reference to the object and decrements the counter.
-        // If we acquired the lock, QueryObject() will not start until we are done
+        // If we acquired the lock, weak promotion will not start until we are done
         VERIFY_EXPR(m_NumStrongReferences.load() == 0 && m_ObjectState.load() == ObjectState::Alive);
 
         // Extra caution

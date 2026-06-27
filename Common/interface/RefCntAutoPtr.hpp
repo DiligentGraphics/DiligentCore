@@ -459,21 +459,15 @@ public:
     ///       explicitly to clear the weak pointer when needed.
     RefCntAutoPtr<T> Lock() const
     {
+        RefCountersImpl* const pRefCounters = m_pRefCounters;
+        T* const               pObject      = m_pObject;
+
         RefCntAutoPtr<T> spObj;
-        if (m_pRefCounters)
+        if (pRefCounters != nullptr && pObject != nullptr && pRefCounters->TryAddStrongRefFromWeak())
         {
-            // Try to obtain a pointer to the owner object.
-            // spOwner is only used to keep the object
-            // alive while obtaining strong reference from
-            // the raw pointer m_pObject
-            RefCntAutoPtr<IObject> spOwner;
-            m_pRefCounters->QueryObject(&spOwner);
-            if (spOwner)
-            {
-                // If owner is alive, we can use our RAW pointer to
-                // create strong reference
-                spObj = m_pObject;
-            }
+            // TryAddStrongRefFromWeak() obtained one strong reference to the
+            // owner counters. Adopt it for this object's raw pointer.
+            spObj.Attach(pObject);
         }
         return spObj;
     }
