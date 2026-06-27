@@ -136,6 +136,14 @@ endif()
 
 if (NOT PLATFORM_WEB)
     list(APPEND PRIVATE_DEPENDENCIES dawn_native dawn_proc)
+
+    # dawn_version's generated header propagates here as a source; re-mark it GENERATED in this scope (CMP0118 is OLD).
+    if (TARGET dawn_version)
+        get_target_property(DAWN_VERSION_HEADERS dawn_version INTERFACE_SOURCES)
+        if (DAWN_VERSION_HEADERS)
+            set_source_files_properties(${DAWN_VERSION_HEADERS} PROPERTIES GENERATED TRUE)
+        endif()
+    endif()
 endif()
 
 target_link_libraries(Diligent-GraphicsEngineWebGPU-static

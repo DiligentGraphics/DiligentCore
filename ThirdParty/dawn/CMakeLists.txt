@@ -12,7 +12,7 @@ set(DAWN_SUBMODULES
 FetchContent_DeclareShallowGit(
     dawn
     GIT_REPOSITORY  https://dawn.googlesource.com/dawn
-    GIT_TAG         958dff171579e885fcfd02ec86fd6e0f5081a35f
+    GIT_TAG         a1d768eb6b371d557f6f4de330015bd2468237c6
     GIT_SUBMODULES  "${DAWN_SUBMODULES}"
 )
 

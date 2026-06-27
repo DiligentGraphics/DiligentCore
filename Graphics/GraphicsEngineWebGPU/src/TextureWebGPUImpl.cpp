@@ -227,7 +227,7 @@ WGPUTextureViewDescriptor TextureViewDescToWGPUTextureViewDescriptor(const Textu
             wgpuTextureViewDesc.aspect = WGPUTextureAspect_All;
     }
 
-    if (ViewDesc.Format != TexDesc.Format || (TexDesc.MiscFlags & TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION))
+    if (ViewDesc.Format != TexDesc.Format || (static_cast<Uint32>(TexDesc.MiscFlags) & static_cast<Uint32>(TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION)))
     {
         wgpuTextureViewDesc.usage = TextureViewTypeToWGPUTextureUsage(ViewDesc.ViewType);
     }
