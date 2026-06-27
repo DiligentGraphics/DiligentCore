@@ -47,7 +47,12 @@ public:
     /// Increments the number of strong references by 1.
 
     /// \return The number of strong references after incrementing the counter.
-    /// \remark The method is thread-safe and does not require explicit synchronization.
+    /// \remark The counter update is thread-safe, but the caller must already
+    ///         own a strong reference or otherwise externally guarantee object
+    ///         lifetime. AddStrongRef() must not be used to promote a weak
+    ///         reference because another thread may be releasing the final strong
+    ///         reference at the same time. Use QueryObject() for weak-to-strong
+    ///         promotion.
     /// \note   In a multithreaded environment, the returned number may not be reliable
     ///         as other threads may simultaneously change the actual value of the counter.
     virtual ReferenceCounterValueType AddStrongRef() = 0;
@@ -58,9 +63,12 @@ public:
     /// reference counters object itself.
 
     /// \return The number of strong references after decrementing the counter.
-    /// \remark The referenced object is destroyed when the last strong reference is released.\n
-    ///         If there are no more weak references, the reference counters object itself is
-    ///         also destroyed.\n
+    /// \remark The referenced object is destroyed when the last strong reference is released.
+    ///         RefCountedObject keeps an implicit weak reference while the object is alive,
+    ///         so the reference counters object remains alive until after the object
+    ///         destructor returns.\n
+    ///         If there are no more weak references after that, the reference counters
+    ///         object itself is also destroyed.\n
     ///         The method is thread-safe and does not require explicit synchronization.
     /// \note   In a multithreaded environment, the returned number may not be reliable
     ///         as other threads may simultaneously change the actual value of the counter.
@@ -96,6 +104,9 @@ public:
     ///         If the object was not released, the pointer to the object's IUnknown interface
     ///         will be stored. In this case, the number of strong references to the object
     ///         will be incremented by 1.\n
+    ///         This method is the safe way to promote a weak reference to a strong reference.
+    ///         Direct AddStrongRef() on a raw pointer does not provide the required lifetime
+    ///         synchronization.\n
     ///         The method is thread-safe and does not require explicit synchronization.
     virtual void QueryObject(struct IObject** ppObject) = 0;
 
@@ -115,7 +126,8 @@ public:
     /// \return The number of weak references.
     /// \remark Diligent's RefCountedObject implementation keeps one implicit
     ///         weak reference while the referenced object is alive. The returned
-    ///         value includes this implicit weak reference.
+    ///         value includes this implicit weak reference, so one external weak
+    ///         pointer to a live object is reported as two weak references.
     /// \note   In a multithreaded environment, the returned number may not be reliable
     ///         as other threads may simultaneously change the actual value of the counter.
     virtual ReferenceCounterValueType GetNumWeakRefs() const = 0;

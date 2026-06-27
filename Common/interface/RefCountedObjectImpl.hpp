@@ -272,8 +272,8 @@ private:
             DestroyObject<ObjectType, AllocatorType>,
             QueryObjectInterface<ObjectType>};
         // Keep the reference counters alive until after the object destructor
-        // returns, even when all external weak references are released during
-        // destruction.
+        // returns. The destructor may release the last external weak reference,
+        // but GetReferenceCounters() must remain valid until destruction completes.
         m_NumWeakReferences.fetch_add(+1);
         m_ObjectState.store(ObjectState::Alive);
     }

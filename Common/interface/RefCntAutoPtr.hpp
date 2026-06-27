@@ -448,7 +448,9 @@ public:
 
     /// Returns a raw pointer to the managed object.
     /// \note The object may or may not be alive.
-    ///       Use Lock() to atomically obtain a strong reference.
+    ///       The returned pointer must not be AddRef()'d unless object lifetime
+    ///       is externally guaranteed. Use Lock() to atomically obtain a strong
+    ///       reference from this weak pointer.
     T*       UnsafeRawPtr() noexcept { return m_pObject; }
     const T* UnsafeRawPtr() const noexcept { return m_pObject; }
 
