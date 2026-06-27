@@ -1,17 +1,17 @@
-RWTexture1D<float4>     g_WOTex1D;
-RWTexture2D<int4>       g_WOTex2D;
-RWTexture2DArray<uint4> g_WOTex2DArr;
-RWTexture3D<float4>     g_WOTex3D;
+RWTexture1D<float4 /*access=write*/>     g_WOTex1D;
+RWTexture2D<int4 /*access=write*/>       g_WOTex2D;
+RWTexture2DArray<uint4 /*access=write*/> g_WOTex2DArr;
+RWTexture3D<float4 /*access=write*/>     g_WOTex3D;
 
-RWTexture1D<int2>       g_ROTex1D;
-RWTexture2D<float2>     g_ROTex2D;
-RWTexture2DArray<uint2> g_ROTex2DArr;
-RWTexture3D<float2>     g_ROTex3D;
+RWTexture1D<int2 /*access=read*/>       g_ROTex1D;
+RWTexture2D<float2 /*access=read*/>     g_ROTex2D;
+RWTexture2DArray<uint2 /*access=read*/> g_ROTex2DArr;
+RWTexture3D<float2 /*access=read*/>     g_ROTex3D;
 
-RWTexture1D<int>       g_RWTex1D;
-RWTexture2D<float>     g_RWTex2D;
-RWTexture2DArray<uint> g_RWTex2DArr;
-RWTexture3D<float>     g_RWTex3D;
+RWTexture1D<int /*access=read_write*/> g_RWTex1D;
+RWTexture2D<float>                     g_RWTex2D;
+RWTexture2DArray<uint>                 g_RWTex2DArr;
+RWTexture3D<float>                     g_RWTex3D;
 
 float4 main() : SV_Target
 {

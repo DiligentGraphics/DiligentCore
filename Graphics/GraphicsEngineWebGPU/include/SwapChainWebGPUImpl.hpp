@@ -81,22 +81,23 @@ private:
 
     void ConfigureSurface();
 
-    void CreateBuffersAndViews();
-
-    void ReleaseSwapChainResources();
+    void CreateDepthBufferView();
 
     void RecreateSwapChain();
 
-private:
-    class PresentCommand;
+    void ReleaseSwapChainResources();
 
+    void RequestAnimationFrame(Uint32 SyncInterval);
+
+    WGPUSurfaceGetCurrentTextureStatus AcquireSurfaceTexture();
+
+private:
     NativeWindow                      m_NativeWindow;
     WebGPUSurfaceWrapper              m_wgpuSurface;
     RefCntAutoPtr<ITextureViewWebGPU> m_pBackBufferRTV;
-    RefCntAutoPtr<ITextureViewWebGPU> m_pBackBufferSRV;
     RefCntAutoPtr<ITextureViewWebGPU> m_pDepthBufferDSV;
-    std::unique_ptr<PresentCommand>   m_pCmdPresent;
-    bool                              m_VSyncEnabled = true;
+    bool                              m_VSyncEnabled          = false;
+    Uint32                            m_RequestedSyncInterval = 0;
 };
 
 } // namespace Diligent

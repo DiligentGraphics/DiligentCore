@@ -34,40 +34,79 @@ namespace Diligent
 namespace Parsing
 {
 
-static std::pair<std::string, TEXTURE_FORMAT> ParseRWTextureDefinition(HLSLTokenizer::TokenListType::const_iterator& Token,
-                                                                       HLSLTokenizer::TokenListType::const_iterator  End)
+
+static void ExtractAnnotationsFromDelimiter(const std::string& Delim, ImageFormatAndAccess& Info)
 {
-    // RWTexture2D<unorm  /*format=rg8*/ float4>  g_RWTex;
-    // ^
+    size_t Pos = 0;
+    while (Pos < Delim.size())
+    {
+        size_t Begin = Delim.find("/*", Pos);
+        if (Begin == std::string::npos)
+            break;
+
+        size_t End = Delim.find("*/", Begin + 2);
+        if (End == std::string::npos)
+            break;
+
+        auto CmtBeg = Delim.begin() + Begin;
+        auto CmtEnd = Delim.begin() + End + 2;
+
+
+        // Try to extract image format from a comment like:
+        //     /*format=rg8*/
+        if (Info.Format == TEX_FORMAT_UNKNOWN)
+        {
+            std::string Format = ExtractGLSLImageFormatFromComment(CmtBeg, CmtEnd);
+            if (!Format.empty())
+                Info.Format = ParseGLSLImageFormat(Format);
+        }
+
+
+        // Try to extract access mode from a comment like:
+        //     /*access=read*/
+        //     /*access=write*/
+        //     /*access=read_write*/
+        std::string Access = ExtractGLSLAccessModeFromComment(CmtBeg, CmtEnd);
+        if (!Access.empty())
+            Info.AccessMode = ParseGLSLImageAccessMode(Access);
+
+        Pos = End + 2;
+    }
+}
+
+static std::pair<std::string, ImageFormatAndAccess> ParseRWTextureDefinition(
+    HLSLTokenizer::TokenListType::const_iterator& Token,
+    HLSLTokenizer::TokenListType::const_iterator  End)
+{
+    // RWTexture2D<unorm /*format=rg8*/ /*access=write*/ float4> g_RWTex;
+    // ^ - RWTexture* keyword
 
     ++Token;
-    // RWTexture2D<unorm  /*format=rg8*/ float4>  g_RWTex;
-    //            ^
+    // RWTexture2D<unorm /*format=rg8*/ /*access=write*/ float4> g_RWTex;
+    //            ^ - '<' after RWTexture*
     if (Token == End || Token->Literal != "<")
         return {};
 
-    TEXTURE_FORMAT Fmt = TEX_FORMAT_UNKNOWN;
+    ImageFormatAndAccess Info; /// Format = UNKNOWN, AccessMode = UNKNOWN by default
+
+    // Walk through all tokens inside the '<' ... '>' list and look for
+    // comments that annotate format and access mode.
     while (Token != End && Token->Literal != ">")
     {
         ++Token;
         if (Token != End)
         {
-            // RWTexture2D< /*format=rg8*/ unorm float4> g_RWTex;
-            //                             ^
-            // RWTexture2D< unorm /*format=rg8*/ float4> g_RWTex;
-            //                                   ^
-            // RWTexture2D< unorm float4 /*format=rg8*/> g_RWTex;
-            //                                         ^
-            std::string FormatStr = ExtractGLSLImageFormatFromComment(Token->Delimiter.begin(), Token->Delimiter.end());
-            if (!FormatStr.empty())
+            /// Any comments preceding the current token are stored in Delimiter.
+            if (!Token->Delimiter.empty())
             {
-                Fmt = ParseGLSLImageFormat(FormatStr);
+                ExtractAnnotationsFromDelimiter(Token->Delimiter, Info);
             }
         }
     }
 
-    // RWTexture2D<unorm  /*format=rg8*/ float4>  g_RWTex;
-    //                                         ^
+    // RWTexture2D<unorm /*format=rg8*/ /*access=write*/ float4> g_RWTex;
+    //                                                          ^ - '>' reached
+
     if (Token == End)
         return {};
 
@@ -75,20 +114,21 @@ static std::pair<std::string, TEXTURE_FORMAT> ParseRWTextureDefinition(HLSLToken
     if (Token == End)
         return {};
 
-    // RWTexture2D<unorm  /*format=rg8*/ float4>  g_RWTex;
-    //                                            ^
+    // RWTexture2D<unorm /*format=rg8*/ /*access=write*/ float4> g_RWTex;
+    //                                                           ^ - texture variable identifier
     if (Token->Type != HLSLTokenType::Identifier)
         return {};
 
-    return {Token->Literal, Fmt};
+    return {Token->Literal, Info};
 }
 
-std::unordered_map<HashMapStringKey, TEXTURE_FORMAT> ExtractGLSLImageFormatsFromHLSL(const std::string& HLSLSource)
+
+std::unordered_map<HashMapStringKey, ImageFormatAndAccess> ExtractGLSLImageFormatsAndAccessModeFromHLSL(const std::string& HLSLSource)
 {
     HLSLTokenizer                      Tokenizer;
     const HLSLTokenizer::TokenListType Tokens = Tokenizer.Tokenize(HLSLSource);
 
-    std::unordered_map<HashMapStringKey, TEXTURE_FORMAT> ImageFormats;
+    std::unordered_map<HashMapStringKey, ImageFormatAndAccess> ImageFormats;
 
     auto Token      = Tokens.begin();
     int  ScopeLevel = 0;
@@ -119,13 +159,29 @@ std::unordered_map<HashMapStringKey, TEXTURE_FORMAT> ExtractGLSLImageFormatsFrom
              Token->Type == HLSLTokenType::kw_RWTexture2DArray ||
              Token->Type == HLSLTokenType::kw_RWTexture3D))
         {
-            auto NameAndFmt = ParseRWTextureDefinition(Token, Tokens.end());
-            if (NameAndFmt.second != TEX_FORMAT_UNKNOWN)
+            auto        NameAndInfo = ParseRWTextureDefinition(Token, Tokens.end());
+            const auto& Name        = NameAndInfo.first;
+            const auto& Info        = NameAndInfo.second;
+
+            const bool HasFormat           = (Info.Format != TEX_FORMAT_UNKNOWN);
+            const bool HasNonDefaultAccess = (Info.AccessMode != IMAGE_ACCESS_MODE_UNKNOWN);
+
+            if (HasFormat || HasNonDefaultAccess)
             {
-                auto it_inserted = ImageFormats.emplace(NameAndFmt);
-                if (!it_inserted.second && it_inserted.first->second != NameAndFmt.second)
+                auto InsertedIt = ImageFormats.emplace(Name, Info);
+                if (!InsertedIt.second)
                 {
-                    LOG_WARNING_MESSAGE("Different formats are specified for the same RWTexture '", NameAndFmt.first, "'. Note that the parser does not support preprocessing.");
+                    const auto& Existing = InsertedIt.first->second;
+
+                    if (Existing.Format != Info.Format)
+                    {
+                        LOG_WARNING_MESSAGE("Different formats are specified for the same RWTexture '", Name, "'. Note that the parser does not support preprocessing.");
+                    }
+
+                    if (Existing.AccessMode != Info.AccessMode)
+                    {
+                        LOG_WARNING_MESSAGE("Different access modes are specified for the same RWTexture '", Name, "'. Note that the parser does not support preprocessing.");
+                    }
                 }
             }
         }

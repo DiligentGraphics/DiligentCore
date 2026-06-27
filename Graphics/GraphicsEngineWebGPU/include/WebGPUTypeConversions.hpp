@@ -35,6 +35,7 @@
 #include "DepthStencilState.h"
 #include "RasterizerState.h"
 #include "InputLayout.h"
+#include "TextureView.h"
 
 namespace Diligent
 {
@@ -80,6 +81,10 @@ WGPUCullMode CullModeToWGPUCullMode(CULL_MODE CullMode);
 WGPUShaderStage ShaderStagesToWGPUShaderStageFlags(SHADER_TYPE Stages);
 
 WGPUVertexStepMode InputElementFrequencyToWGPUVertexStepMode(INPUT_ELEMENT_FREQUENCY StepRate);
+
+WGPUComponentSwizzle TextureComponentSwizzleToWGPUComponentSwizzle(TEXTURE_COMPONENT_SWIZZLE Swizzle);
+
+WGPUTextureComponentSwizzle TextureComponentMappingToWGPUTextureComponentSwizzle(const TextureComponentMapping& Mapping);
 
 inline WGPUOptionalBool BoolToWGPUOptionalBool(bool Value)
 {

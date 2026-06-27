@@ -29,16 +29,5 @@
 #if PLATFORM_WEB
 
 inline constexpr WGPUFeatureName WGPUFeatureName_ChromiumExperimentalTimestampQueryInsidePasses = static_cast<WGPUFeatureName>(0x000003EE);
-inline constexpr WGPUFeatureName WGPUFeatureName_Unorm16TextureFormats                          = static_cast<WGPUFeatureName>(0x000003FB);
-inline constexpr WGPUFeatureName WGPUFeatureName_Snorm16TextureFormats                          = static_cast<WGPUFeatureName>(0x000003FC);
-
-inline constexpr WGPUTextureFormat WGPUTextureFormat_R16Unorm    = static_cast<WGPUTextureFormat>(0x00000060);
-inline constexpr WGPUTextureFormat WGPUTextureFormat_R16Snorm    = static_cast<WGPUTextureFormat>(0x00000063);
-inline constexpr WGPUTextureFormat WGPUTextureFormat_RG16Unorm   = static_cast<WGPUTextureFormat>(0x00000061);
-inline constexpr WGPUTextureFormat WGPUTextureFormat_RG16Snorm   = static_cast<WGPUTextureFormat>(0x00000064);
-inline constexpr WGPUTextureFormat WGPUTextureFormat_RGBA16Unorm = static_cast<WGPUTextureFormat>(0x00000062);
-inline constexpr WGPUTextureFormat WGPUTextureFormat_RGBA16Snorm = static_cast<WGPUTextureFormat>(0x00000065);
-
-inline constexpr WGPUSurfaceGetCurrentTextureStatus WGPUSurfaceGetCurrentTextureStatus_Error = static_cast<WGPUSurfaceGetCurrentTextureStatus>(0x00000007);
 
 #endif

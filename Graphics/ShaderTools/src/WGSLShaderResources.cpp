@@ -25,6 +25,10 @@
  */
 
 #include "WGSLShaderResources.hpp"
+
+#include <algorithm>
+#include <cstring>
+
 #include "Align.hpp"
 #include "StringPool.hpp"
 #include "WGSLUtils.hpp"
@@ -82,10 +86,11 @@ SHADER_TYPE TintPipelineStageToShaderType(tint::inspector::PipelineStage Stage)
     }
 }
 
-WGSLShaderResourceAttribs::ResourceType TintResourceTypeToWGSLShaderAttribsResourceType(tint::inspector::ResourceBinding::ResourceType TintResType)
+WGSLShaderResourceAttribs::ResourceType TintResourceTypeToWGSLShaderAttribsResourceType(const tint::inspector::ResourceBinding& TintBinding)
 {
     using TintResourceType = tint::inspector::ResourceBinding::ResourceType;
-    switch (TintResType)
+    using TintSamplerType  = tint::inspector::ResourceBinding::SamplerType;
+    switch (TintBinding.resource_type)
     {
         case TintResourceType::kUniformBuffer:
             return WGSLShaderResourceAttribs::ResourceType::UniformBuffer;
@@ -97,10 +102,9 @@ WGSLShaderResourceAttribs::ResourceType TintResourceTypeToWGSLShaderAttribsResou
             return WGSLShaderResourceAttribs::ResourceType::ROStorageBuffer;
 
         case TintResourceType::kSampler:
-            return WGSLShaderResourceAttribs::ResourceType::Sampler;
-
-        case TintResourceType::kComparisonSampler:
-            return WGSLShaderResourceAttribs::ResourceType::ComparisonSampler;
+            return TintBinding.sampler_type == TintSamplerType::kComparison ?
+                WGSLShaderResourceAttribs::ResourceType::ComparisonSampler :
+                WGSLShaderResourceAttribs::ResourceType::Sampler;
 
         case TintResourceType::kSampledTexture:
             return WGSLShaderResourceAttribs::ResourceType::Texture;
@@ -151,6 +155,8 @@ WGSLShaderResourceAttribs::TextureSampleType TintSampleKindToWGSLShaderAttribsSa
         switch (TintBinding.sampled_kind)
         {
             case TintSampledKind::kFloat:
+            case TintSampledKind::kFilterable:
+            case TintSampledKind::kUnknownFilterable:
                 return WGSLShaderResourceAttribs::TextureSampleType::Float;
 
             case TintSampledKind::kSInt:
@@ -159,8 +165,8 @@ WGSLShaderResourceAttribs::TextureSampleType TintSampleKindToWGSLShaderAttribsSa
             case TintSampledKind::kUInt:
                 return WGSLShaderResourceAttribs::TextureSampleType::UInt;
 
-            case TintSampledKind::kUnknown:
-                return WGSLShaderResourceAttribs::TextureSampleType::Unknown;
+            case TintSampledKind::kUnfilterable:
+                return WGSLShaderResourceAttribs::TextureSampleType::UnfilterableFloat;
 
             default:
                 UNEXPECTED("Unexpected sample kind");
@@ -221,7 +227,6 @@ RESOURCE_DIMENSION TintBindingToResourceDimension(const tint::inspector::Resourc
             return RESOURCE_DIM_BUFFER;
 
         case TintResourceType::kSampler:
-        case TintResourceType::kComparisonSampler:
             return RESOURCE_DIM_UNDEFINED;
 
         case TintResourceType::kSampledTexture:
@@ -259,25 +264,47 @@ TEXTURE_FORMAT TintTexelFormatToTextureFormat(const tint::inspector::ResourceBin
     switch (TintBinding.image_format)
     {
             // clang-format off
-        case TintTexelFormat::kBgra8Unorm:  return TEX_FORMAT_BGRA8_UNORM;
-        case TintTexelFormat::kRgba8Unorm:  return TEX_FORMAT_RGBA8_UNORM;
-        case TintTexelFormat::kRgba8Snorm:  return TEX_FORMAT_RGBA8_SNORM;
-        case TintTexelFormat::kRgba8Uint:   return TEX_FORMAT_RGBA8_UINT;
-        case TintTexelFormat::kRgba8Sint:   return TEX_FORMAT_RGBA8_SINT;
-        case TintTexelFormat::kRgba16Uint:  return TEX_FORMAT_RGBA16_UINT;
-        case TintTexelFormat::kRgba16Sint:  return TEX_FORMAT_RGBA16_SINT;
-        case TintTexelFormat::kRgba16Float: return TEX_FORMAT_RGBA16_FLOAT;
-        case TintTexelFormat::kR32Uint:     return TEX_FORMAT_R32_UINT;
-        case TintTexelFormat::kR32Sint:     return TEX_FORMAT_R32_SINT;
-        case TintTexelFormat::kR32Float:    return TEX_FORMAT_R32_FLOAT;
-        case TintTexelFormat::kRg32Uint:    return TEX_FORMAT_RG32_UINT;
-        case TintTexelFormat::kRg32Sint:    return TEX_FORMAT_RG32_SINT;
-        case TintTexelFormat::kRg32Float:   return TEX_FORMAT_RG32_FLOAT;
-        case TintTexelFormat::kRgba32Uint:  return TEX_FORMAT_RGBA32_UINT;
-        case TintTexelFormat::kRgba32Sint:  return TEX_FORMAT_RGBA32_SINT;
-        case TintTexelFormat::kRgba32Float: return TEX_FORMAT_RGBA32_FLOAT;
-        case TintTexelFormat::kR8Unorm:     return TEX_FORMAT_R8_UNORM;
-        case TintTexelFormat::kNone:        return TEX_FORMAT_UNKNOWN;
+        case TintTexelFormat::kBgra8Unorm:    return TEX_FORMAT_BGRA8_UNORM;
+        case TintTexelFormat::kRgba8Unorm:    return TEX_FORMAT_RGBA8_UNORM;
+        case TintTexelFormat::kRgba8Snorm:    return TEX_FORMAT_RGBA8_SNORM;
+        case TintTexelFormat::kRgba8Uint:     return TEX_FORMAT_RGBA8_UINT;
+        case TintTexelFormat::kRgba8Sint:     return TEX_FORMAT_RGBA8_SINT;
+        case TintTexelFormat::kRgba16Uint:    return TEX_FORMAT_RGBA16_UINT;
+        case TintTexelFormat::kRgba16Sint:    return TEX_FORMAT_RGBA16_SINT;
+        case TintTexelFormat::kRgba16Float:   return TEX_FORMAT_RGBA16_FLOAT;
+        case TintTexelFormat::kRgba16Unorm:   return TEX_FORMAT_RGBA16_UNORM;
+        case TintTexelFormat::kRgba16Snorm:   return TEX_FORMAT_RGBA16_SNORM;
+        case TintTexelFormat::kR32Uint:       return TEX_FORMAT_R32_UINT;
+        case TintTexelFormat::kR32Sint:       return TEX_FORMAT_R32_SINT;
+        case TintTexelFormat::kR32Float:      return TEX_FORMAT_R32_FLOAT;
+        case TintTexelFormat::kRg32Uint:      return TEX_FORMAT_RG32_UINT;
+        case TintTexelFormat::kRg32Sint:      return TEX_FORMAT_RG32_SINT;
+        case TintTexelFormat::kRg32Float:     return TEX_FORMAT_RG32_FLOAT;
+        case TintTexelFormat::kRgba32Uint:    return TEX_FORMAT_RGBA32_UINT;
+        case TintTexelFormat::kRgba32Sint:    return TEX_FORMAT_RGBA32_SINT;
+        case TintTexelFormat::kRgba32Float:   return TEX_FORMAT_RGBA32_FLOAT;
+        case TintTexelFormat::kR8Unorm:       return TEX_FORMAT_R8_UNORM;
+        case TintTexelFormat::kR8Snorm:       return TEX_FORMAT_R8_SNORM;
+        case TintTexelFormat::kR8Uint:        return TEX_FORMAT_R8_UINT;
+        case TintTexelFormat::kR8Sint:        return TEX_FORMAT_R8_SINT;
+        case TintTexelFormat::kRg8Unorm:      return TEX_FORMAT_RG8_UNORM;
+        case TintTexelFormat::kRg8Snorm:      return TEX_FORMAT_RG8_SNORM;
+        case TintTexelFormat::kRg8Uint:       return TEX_FORMAT_RG8_UINT;
+        case TintTexelFormat::kRg8Sint:       return TEX_FORMAT_RG8_SINT;
+        case TintTexelFormat::kR16Uint:       return TEX_FORMAT_R16_UINT;
+        case TintTexelFormat::kR16Sint:       return TEX_FORMAT_R16_SINT;
+        case TintTexelFormat::kR16Float:      return TEX_FORMAT_R16_FLOAT;
+        case TintTexelFormat::kR16Unorm:      return TEX_FORMAT_R16_UNORM;
+        case TintTexelFormat::kR16Snorm:      return TEX_FORMAT_R16_SNORM;
+        case TintTexelFormat::kRg16Uint:      return TEX_FORMAT_RG16_UINT;
+        case TintTexelFormat::kRg16Sint:      return TEX_FORMAT_RG16_SINT;
+        case TintTexelFormat::kRg16Float:     return TEX_FORMAT_RG16_FLOAT;
+        case TintTexelFormat::kRg16Unorm:     return TEX_FORMAT_RG16_UNORM;
+        case TintTexelFormat::kRg16Snorm:     return TEX_FORMAT_RG16_SNORM;
+        case TintTexelFormat::kRg11B10Ufloat: return TEX_FORMAT_R11G11B10_FLOAT;
+        case TintTexelFormat::kRgb10A2Uint:   return TEX_FORMAT_RGB10A2_UINT;
+        case TintTexelFormat::kRgb10A2Unorm:  return TEX_FORMAT_RGB10A2_UNORM;
+        case TintTexelFormat::kNone:          return TEX_FORMAT_UNKNOWN;
         // clang-format on
         default:
             UNEXPECTED("Unexpected texel format");
@@ -347,7 +374,7 @@ WGSLShaderResourceAttribs::WGSLShaderResourceAttribs(const char*                
     // clang-format off
     Name             {_Name},
     ArraySize        {static_cast<Uint16>(_ArraySize)},
-    Type             {TintResourceTypeToWGSLShaderAttribsResourceType(TintBinding.resource_type)},
+    Type             {TintResourceTypeToWGSLShaderAttribsResourceType(TintBinding)},
     ResourceDim      {TintBindingToResourceDimension(TintBinding)},
     Format			 {TintTexelFormatToTextureFormat(TintBinding)},
     BindGroup        {static_cast<Uint16>(TintBinding.bind_group)},
@@ -875,7 +902,6 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
                 break;
 
             case TintResourceType::kSampler:
-            case TintResourceType::kComparisonSampler:
                 ++ResCounters.NumSamplers;
                 break;
 
@@ -898,6 +924,11 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
 
             case TintResourceType::kInputAttachment:
                 UNSUPPORTED("Input attachments are not currently supported");
+                break;
+
+            case TintResourceType::kReadOnlyTexelBuffer:
+            case TintResourceType::kReadWriteTexelBuffer:
+                UNSUPPORTED("Texel buffers are not currently supported");
                 break;
 
             default:
@@ -960,7 +991,6 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
             break;
 
             case TintResourceType::kSampler:
-            case TintResourceType::kComparisonSampler:
             {
                 new (&GetSampler(CurrRes.NumSamplers++)) WGSLShaderResourceAttribs{Name, Binding, ArraySize};
             }
@@ -991,6 +1021,11 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
 
             case TintResourceType::kInputAttachment:
                 UNSUPPORTED("Input attachments are not currently supported");
+                break;
+
+            case TintResourceType::kReadOnlyTexelBuffer:
+            case TintResourceType::kReadWriteTexelBuffer:
+                UNSUPPORTED("Texel buffers are not currently supported");
                 break;
 
             default:
