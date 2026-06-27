@@ -237,6 +237,7 @@ WebGPUDeviceWrapper CreateDeviceForAdapter(const DeviceFeatures& Features, WGPUI
         AddWGPUFeature(Features.TextureCompressionBC, WGPUFeatureName_TextureCompressionBC);
         AddWGPUFeature(Features.TextureCompressionETC2, WGPUFeatureName_TextureCompressionETC2);
         AddWGPUFeature(Features.ShaderFloat16, WGPUFeatureName_ShaderF16);
+        AddWGPUFeature(Features.TextureComponentSwizzle, WGPUFeatureName_TextureComponentSwizzle);
 
         if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_Depth32FloatStencil8))
             wgpuFeatures.push_back(WGPUFeatureName_Depth32FloatStencil8);
@@ -389,7 +390,7 @@ DeviceFeatures GetSupportedFeatures(WGPUAdapter wgpuAdapter, WGPUDevice wgpuDevi
     Features.VariableRateShading               = DEVICE_FEATURE_STATE_DISABLED;
     Features.SparseResources                   = DEVICE_FEATURE_STATE_DISABLED;
     Features.SubpassFramebufferFetch           = DEVICE_FEATURE_STATE_DISABLED;
-    Features.TextureComponentSwizzle           = DEVICE_FEATURE_STATE_DISABLED;
+    Features.TextureComponentSwizzle           = CheckFeature(WGPUFeatureName_TextureComponentSwizzle);
     Features.TextureSubresourceViews           = DEVICE_FEATURE_STATE_ENABLED;
     Features.NativeMultiDraw                   = DEVICE_FEATURE_STATE_DISABLED;
     Features.AsyncShaderCompilation            = DEVICE_FEATURE_STATE_ENABLED;
