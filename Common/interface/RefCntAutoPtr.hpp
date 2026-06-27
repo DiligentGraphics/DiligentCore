@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,6 +29,8 @@
 
 /// \file
 /// RefCntAutoPtr and RefCntWeakPtr class definitions
+
+#include <memory>
 
 #include "../../Primitives/interface/Object.h"
 #include "Cast.hpp"
@@ -134,8 +136,10 @@ public:
 
     void Attach(T* pObj) noexcept
     {
-        Release();
-        m_pObject = pObj;
+        T* pOldObject = m_pObject;
+        m_pObject     = pObj;
+        if (pOldObject)
+            pOldObject->Release();
     }
 
     T* Detach() noexcept
@@ -180,7 +184,7 @@ public:
 
     RefCntAutoPtr& operator=(RefCntAutoPtr&& AutoPtr) noexcept
     {
-        if (m_pObject != AutoPtr.m_pObject)
+        if (this != std::addressof(AutoPtr))
             Attach(AutoPtr.Detach());
 
         return *this;
@@ -189,7 +193,7 @@ public:
     template <typename DerivedType, typename = typename std::enable_if<std::is_base_of<T, DerivedType>::value>::type>
     RefCntAutoPtr& operator=(RefCntAutoPtr<DerivedType>&& AutoPtr) noexcept
     {
-        if (m_pObject != AutoPtr.m_pObject)
+        if (static_cast<const void*>(this) != static_cast<const void*>(std::addressof(AutoPtr)))
             Attach(AutoPtr.Detach());
 
         return *this;

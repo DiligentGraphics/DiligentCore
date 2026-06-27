@@ -213,6 +213,37 @@ TEST(Common_RefCntAutoPtr, OperatorEqual)
     }
 }
 
+TEST(Common_RefCntAutoPtr, MoveAssignmentFromSharedObject)
+{
+    {
+        auto*    pRawPtr = MakeNewObj<Object>();
+        SmartPtr SP0{pRawPtr};
+        SmartPtr SP1{pRawPtr};
+
+        EXPECT_EQ(pRawPtr->GetReferenceCounters()->GetNumStrongRefs(), 2);
+
+        SP0 = std::move(SP1);
+
+        EXPECT_EQ(SP0, pRawPtr);
+        EXPECT_TRUE(!SP1);
+        EXPECT_EQ(pRawPtr->GetReferenceCounters()->GetNumStrongRefs(), 1);
+    }
+
+    {
+        auto*                        pRawPtr = MakeNewObj<DerivedObject>();
+        SmartPtr                     SP0{pRawPtr};
+        RefCntAutoPtr<DerivedObject> SP1{pRawPtr};
+
+        EXPECT_EQ(pRawPtr->GetReferenceCounters()->GetNumStrongRefs(), 2);
+
+        SP0 = std::move(SP1);
+
+        EXPECT_EQ(SP0, pRawPtr);
+        EXPECT_TRUE(!SP1);
+        EXPECT_EQ(pRawPtr->GetReferenceCounters()->GetNumStrongRefs(), 1);
+    }
+}
+
 TEST(Common_RefCntAutoPtr, LogicalOperators)
 {
     {
