@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@
 #include <deque>
 
 #include "ShaderToolsCommon.hpp"
+#include "BasicFileSystem.hpp"
 #include "DefaultShaderSourceStreamFactory.h"
 #include "RenderDevice.h"
 #include "TestingEnvironment.hpp"
@@ -135,6 +136,35 @@ TEST(ShaderPreprocessTest, Include)
     }
 }
 
+TEST(ShaderPreprocessTest, IncludeNestedParentRelative)
+{
+    RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
+    CreateDefaultShaderSourceStreamFactory("shaders/ShaderPreprocessor", &pShaderSourceFactory);
+    ASSERT_NE(pShaderSourceFactory, nullptr);
+
+    const auto NestedTypesPath  = std::string{"Nested/Types.hlsl"};
+    const auto NestedConfigPath = std::string{"Nested"} + BasicFileSystem::SlashSymbol + "Config.hlsl";
+
+    std::deque<std::string> Includes{
+        NestedConfigPath,
+        NestedTypesPath,
+        "IncludeNestedParentRelativeTest.hlsl"};
+
+    ShaderCreateInfo ShaderCI{};
+    ShaderCI.Desc.Name                  = "TestShader";
+    ShaderCI.FilePath                   = "IncludeNestedParentRelativeTest.hlsl";
+    ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+
+    const auto Result = ProcessShaderIncludes(ShaderCI, [&](const ShaderIncludePreprocessInfo& ProcessInfo) {
+        ASSERT_FALSE(Includes.empty());
+        EXPECT_EQ(ProcessInfo.FilePath, Includes.front());
+        Includes.pop_front();
+    });
+
+    EXPECT_EQ(Result, true);
+    EXPECT_TRUE(Includes.empty());
+}
+
 TEST(ShaderPreprocessTest, InvalidInclude)
 {
     RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
@@ -188,6 +218,27 @@ TEST(ShaderPreprocessTest, UnrollIncludes)
             "\n"
             "\n"
             "// End InlineIncludeShaderTest.hlsl\n";
+
+        auto UnrolledStr = UnrollShaderIncludes(ShaderCI);
+        ASSERT_EQ(RefString, UnrolledStr);
+    }
+
+    {
+        ShaderCreateInfo ShaderCI{};
+        ShaderCI.Desc.Name                  = "TestShader";
+        ShaderCI.FilePath                   = "IncludeNestedParentRelativeTest.hlsl";
+        ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+
+        constexpr char RefString[] =
+            "// Start IncludeNestedParentRelativeTest.hlsl\n"
+            "// Start Nested/Types.hlsl\n"
+            "// Start Nested/Config.hlsl\n"
+            "#define NESTED_CONFIG_VALUE 1\n"
+            "// End Nested/Config.hlsl\n"
+            "\n"
+            "// End Nested/Types.hlsl\n"
+            "\n"
+            "// End IncludeNestedParentRelativeTest.hlsl\n";
 
         auto UnrolledStr = UnrollShaderIncludes(ShaderCI);
         ASSERT_EQ(RefString, UnrolledStr);

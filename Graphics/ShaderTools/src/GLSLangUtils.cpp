@@ -47,6 +47,7 @@
 #include "DataBlobImpl.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "ShaderToolsCommon.hpp"
+#include "BasicFileSystem.hpp"
 #ifdef USE_SPIRV_TOOLS
 #    include "SPIRVTools.hpp"
 #    include "spirv-tools/libspirv.h"
@@ -295,6 +296,38 @@ std::vector<unsigned int> CompileShaderInternal(::glslang::TShader&           Sh
     return spirv;
 }
 
+static Char GetFirstSlash(const char* Path)
+{
+    if (Path == nullptr)
+        return 0;
+
+    for (const char* c = Path; *c != '\0'; ++c)
+    {
+        if (BasicFileSystem::IsSlash(*c))
+            return *c;
+    }
+
+    return 0;
+}
+
+static Char GetPreferredIncludePathSlash(const char* IncluderName, const char* HeaderName)
+{
+    if (const Char HeaderSlash = GetFirstSlash(HeaderName))
+        return HeaderSlash;
+
+    if (const Char IncluderSlash = GetFirstSlash(IncluderName))
+        return IncluderSlash;
+
+    return BasicFileSystem::SlashSymbol;
+}
+
+static std::string MakeParentRelativeIncludePath(const String& ParentDir, const char* HeaderName, Char Slash)
+{
+    return BasicFileSystem::SimplifyPath(
+        (ParentDir + Slash + HeaderName).c_str(),
+        Slash);
+}
+
 
 class IncluderImpl : public ::glslang::TShader::Includer
 {
@@ -308,27 +341,14 @@ public:
                                          const char* /*includerName*/,
                                          size_t /*inclusionDepth*/)
     {
-        DEV_CHECK_ERR(m_pInputStreamFactory != nullptr, "The shader source contains #include directives, but no input stream factory was provided");
-        RefCntAutoPtr<IFileStream> pSourceStream;
-        m_pInputStreamFactory->CreateInputStream(headerName, &pSourceStream);
-        if (pSourceStream == nullptr)
+        IncludeResult* pInclude = ReadIncludeFile(headerName, CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_NONE);
+        if (pInclude == nullptr)
         {
             LOG_ERROR("Failed to open shader include file '", headerName, "'. Check that the file exists");
             return nullptr;
         }
 
-        RefCntAutoPtr<DataBlobImpl> pFileData = DataBlobImpl::Create();
-        pSourceStream->ReadBlob(pFileData);
-        IncludeResult* pNewInclude =
-            new IncludeResult{
-                headerName,
-                pFileData->GetConstDataPtr<char>(),
-                pFileData->GetSize(),
-                nullptr};
-
-        m_IncludeRes.emplace(pNewInclude);
-        m_DataBlobs.emplace(pNewInclude, std::move(pFileData));
-        return pNewInclude;
+        return pInclude;
     }
 
     // For the "local"-only aspect of a "" include. Should not search in the
@@ -336,8 +356,32 @@ public:
     // call includeSystem() to look in the "system" locations.
     virtual IncludeResult* includeLocal(const char* headerName,
                                         const char* includerName,
-                                        size_t      inclusionDepth)
+                                        size_t /*inclusionDepth*/)
     {
+        if (m_pInputStreamFactory == nullptr || headerName == nullptr || *headerName == '\0')
+            return nullptr;
+
+        if (BasicFileSystem::IsPathAbsolute(headerName))
+            return ReadIncludeFile(headerName, CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT);
+
+        if (includerName == nullptr || *includerName == '\0')
+            return nullptr;
+
+        String ParentDir;
+        BasicFileSystem::GetPathComponents(includerName, &ParentDir, nullptr);
+        if (ParentDir.empty())
+            return nullptr;
+
+        const Char        PreferredSlash = GetPreferredIncludePathSlash(includerName, headerName);
+        const std::string LocalPath      = MakeParentRelativeIncludePath(ParentDir, headerName, PreferredSlash);
+        if (IncludeResult* pInclude = ReadIncludeFile(LocalPath.c_str(), CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT))
+            return pInclude;
+
+        const Char        AlternateSlash = PreferredSlash == BasicFileSystem::UnixSlash ? BasicFileSystem::WinSlash : BasicFileSystem::UnixSlash;
+        const std::string AlternatePath  = MakeParentRelativeIncludePath(ParentDir, headerName, AlternateSlash);
+        if (AlternatePath != LocalPath)
+            return ReadIncludeFile(AlternatePath.c_str(), CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT);
+
         return nullptr;
     }
 
@@ -349,6 +393,29 @@ public:
     }
 
 private:
+    IncludeResult* ReadIncludeFile(const char* IncludePath, CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS Flags)
+    {
+        DEV_CHECK_ERR(m_pInputStreamFactory != nullptr, "The shader source contains #include directives, but no input stream factory was provided");
+
+        RefCntAutoPtr<IFileStream> pSourceStream;
+        m_pInputStreamFactory->CreateInputStream2(IncludePath, Flags, &pSourceStream);
+        if (pSourceStream == nullptr)
+            return nullptr;
+
+        RefCntAutoPtr<DataBlobImpl> pFileData = DataBlobImpl::Create();
+        pSourceStream->ReadBlob(pFileData);
+        IncludeResult* pNewInclude =
+            new IncludeResult{
+                IncludePath,
+                pFileData->GetConstDataPtr<char>(),
+                pFileData->GetSize(),
+                nullptr};
+
+        m_IncludeRes.emplace(pNewInclude);
+        m_DataBlobs.emplace(pNewInclude, std::move(pFileData));
+        return pNewInclude;
+    }
+
     IShaderSourceInputStreamFactory* const                       m_pInputStreamFactory;
     std::unordered_set<std::unique_ptr<IncludeResult>>           m_IncludeRes;
     std::unordered_map<IncludeResult*, RefCntAutoPtr<IDataBlob>> m_DataBlobs;
@@ -531,7 +598,15 @@ std::vector<unsigned int> GLSLtoSPIRV(const GLSLtoSPIRVAttribs& Attribs)
 
     const char* ShaderStrings[] = {Attribs.ShaderSource};
     int         Lengths[]       = {Attribs.SourceCodeLen};
-    Shader.setStringsWithLengths(ShaderStrings, Lengths, 1);
+    const char* Names[]         = {Attribs.SourceName};
+    if (Attribs.SourceName != nullptr)
+    {
+        Shader.setStringsWithLengthsAndNames(ShaderStrings, Lengths, Names, 1);
+    }
+    else
+    {
+        Shader.setStringsWithLengths(ShaderStrings, Lengths, 1);
+    }
 
     std::string Preamble;
     if (Attribs.UseRowMajorMatrices)

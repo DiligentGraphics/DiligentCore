@@ -57,6 +57,7 @@ struct GLSLtoSPIRVAttribs
 {
     SHADER_TYPE                      ShaderType    = SHADER_TYPE_UNKNOWN;
     const char*                      ShaderSource  = nullptr;
+    const char*                      SourceName    = nullptr;
     int                              SourceCodeLen = 0;
     ShaderMacroArray                 Macros;
     IShaderSourceInputStreamFactory* pShaderSourceStreamFactory = nullptr;
