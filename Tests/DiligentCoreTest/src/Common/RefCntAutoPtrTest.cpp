@@ -501,6 +501,23 @@ TEST(Common_RefCntWeakPtr, AssignmentWithSharedOwnerCounters)
     }
 }
 
+TEST(Common_RefCntWeakPtr, QueryObjectInitializesDestroyedObjectOutput)
+{
+    RefCntAutoPtr<Object> SP{MakeNewObj<Object>()};
+
+    auto*    pRefCounters = SP->GetReferenceCounters();
+    IObject* pObject      = SP.RawPtr();
+    pRefCounters->AddWeakRef();
+
+    SP.Release();
+
+    pRefCounters->QueryObject(&pObject);
+
+    EXPECT_EQ(pObject, nullptr);
+
+    pRefCounters->ReleaseWeakRef();
+}
+
 TEST(Common_RefCntWeakPtr, Lock)
 {
     {

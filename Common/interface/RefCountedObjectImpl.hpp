@@ -159,6 +159,11 @@ public:
 
     inline virtual void QueryObject(struct IObject** ppObject) override final
     {
+        if (ppObject == nullptr)
+            return;
+
+        *ppObject = nullptr;
+
         if (m_ObjectState.load() != ObjectState::Alive)
             return; // Early exit
 
