@@ -162,12 +162,16 @@ public:
     {
         if (m_pObject != pObj)
         {
-            if (m_pObject)
-                m_pObject->Release();
-            m_pObject = pObj;
-            if (m_pObject)
-                m_pObject->AddRef();
+            if (pObj)
+                pObj->AddRef();
+
+            T* pOldObject = m_pObject;
+            m_pObject     = pObj;
+
+            if (pOldObject)
+                pOldObject->Release();
         }
+
         return *this;
     }
 

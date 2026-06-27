@@ -90,6 +90,81 @@ public:
     int m_Value2;
 };
 
+class AliasedObject final
+{
+public:
+    class Interface final : public IObject
+    {
+    public:
+        explicit Interface(AliasedObject& Owner) noexcept :
+            m_Owner{Owner}
+        {}
+
+        virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final
+        {
+            if (ppInterface == nullptr)
+                return;
+
+            *ppInterface = nullptr;
+            if (IID == IID_Unknown)
+            {
+                *ppInterface = this;
+                AddRef();
+            }
+        }
+
+        virtual ReferenceCounterValueType DILIGENT_CALL_TYPE AddRef() override final
+        {
+            return m_Owner.AddRef();
+        }
+
+        virtual ReferenceCounterValueType DILIGENT_CALL_TYPE Release() override final
+        {
+            return m_Owner.Release();
+        }
+
+        virtual IReferenceCounters* DILIGENT_CALL_TYPE GetReferenceCounters() const override final
+        {
+            return nullptr;
+        }
+
+    private:
+        AliasedObject& m_Owner;
+    };
+
+    AliasedObject() noexcept :
+        Primary{*this},
+        Alias{*this}
+    {}
+
+    Interface Primary;
+    Interface Alias;
+
+    ReferenceCounterValueType RefCount           = 0;
+    ReferenceCounterValueType NumZeroTransitions = 0;
+    bool                      AddRefAfterZero    = false;
+
+private:
+    ReferenceCounterValueType AddRef() noexcept
+    {
+        if (RefCount == 0 && m_HasEverHadRefs)
+            AddRefAfterZero = true;
+
+        m_HasEverHadRefs = true;
+        return ++RefCount;
+    }
+
+    ReferenceCounterValueType Release() noexcept
+    {
+        const auto NewRefCount = --RefCount;
+        if (NewRefCount == 0)
+            ++NumZeroTransitions;
+        return NewRefCount;
+    }
+
+    bool m_HasEverHadRefs = false;
+};
+
 using SmartPtr = Diligent::RefCntAutoPtr<Object>;
 using WeakPtr  = Diligent::RefCntWeakPtr<Object>;
 
@@ -211,6 +286,26 @@ TEST(Common_RefCntAutoPtr, OperatorEqual)
         SP2 = std::move(DerivedSP);
         EXPECT_TRUE(!DerivedSP);
     }
+}
+
+TEST(Common_RefCntAutoPtr, RawPointerAssignmentFromAliasedInterface)
+{
+    AliasedObject Obj;
+
+    {
+        RefCntAutoPtr<IObject> Ptr{&Obj.Primary};
+        EXPECT_EQ(Obj.RefCount, 1);
+
+        Ptr = &Obj.Alias;
+
+        EXPECT_EQ(Ptr.RawPtr(), &Obj.Alias);
+        EXPECT_EQ(Obj.RefCount, 1);
+        EXPECT_EQ(Obj.NumZeroTransitions, 0);
+        EXPECT_FALSE(Obj.AddRefAfterZero);
+    }
+
+    EXPECT_EQ(Obj.RefCount, 0);
+    EXPECT_EQ(Obj.NumZeroTransitions, 1);
 }
 
 TEST(Common_RefCntAutoPtr, MoveAssignmentFromSharedObject)
