@@ -771,7 +771,7 @@ TEST(Common_RefCntWeakPtr, ExternalWeakRefCanBeReleasedBeforeObjectDestroy)
     bool          WeakRefReleasedBeforeDestroy = false;
 
     pRawObject->Release(
-        [&] //
+        [&]() noexcept //
         {
             // This simulates ReleaseWeakRef() running after the final strong
             // reference has been released but before TryDestroyObject() marks
@@ -1090,7 +1090,7 @@ TEST(Common_RefCntAutoPtr, Misc)
             inline virtual ReferenceCounterValueType DILIGENT_CALL_TYPE Release() override final
             {
                 return RefCountedObject<IObject>::Release(
-                    [&]() //
+                    [&]() noexcept //
                     {
                         *pReentrantReleaseCalled = true;
                         pAutoPtr->Release();
@@ -1128,7 +1128,7 @@ TEST(Common_RefCntAutoPtr, Misc)
             inline virtual ReferenceCounterValueType DILIGENT_CALL_TYPE Release() override final
             {
                 return RefCountedObject<IObject>::Release(
-                    [&]() //
+                    [&]() noexcept //
                     {
                         ppWeakPtr->Release();
                     } //

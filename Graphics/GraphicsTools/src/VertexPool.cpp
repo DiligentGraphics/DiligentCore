@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -73,7 +73,7 @@ public:
     {
         RefCntAutoPtr<VertexPoolImpl> pParent;
         return TBase::Release(
-            [&]() //
+            [&]() noexcept //
             {
                 // We must keep the pool alive while this object is being destroyed because
                 // the pool keeps the memory allocator for this object.

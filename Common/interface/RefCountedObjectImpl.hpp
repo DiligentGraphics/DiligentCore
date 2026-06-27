@@ -85,6 +85,8 @@ public:
     template <class TPreObjectDestroy>
     inline ReferenceCounterValueType ReleaseStrongRef(TPreObjectDestroy&& PreObjectDestroy)
     {
+        static_assert(noexcept(PreObjectDestroy()), "PreObjectDestroy must be noexcept");
+
         VERIFY(m_ObjectState.load() == ObjectState::Alive, "Attempting to decrement strong reference counter for an object that is not alive");
         VERIFY(m_ObjectRecord, "Object record is not initialized");
 
@@ -102,7 +104,7 @@ public:
 
     inline virtual ReferenceCounterValueType ReleaseStrongRef() override final
     {
-        return ReleaseStrongRef([]() {});
+        return ReleaseStrongRef([]() noexcept {});
     }
 
     inline virtual ReferenceCounterValueType AddWeakRef() override final

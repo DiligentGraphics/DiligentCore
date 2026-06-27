@@ -80,7 +80,7 @@ public:
     {
         RefCntAutoPtr<DynamicTextureAtlasImpl> pAtlas;
         return TBase::Release(
-            [&]() //
+            [&]() noexcept //
             {
                 // We must keep parent alive while this object is being destroyed because
                 // the parent keeps the memory allocator for the object.

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -73,7 +73,7 @@ public:
     {
         RefCntAutoPtr<BufferSuballocatorImpl> pParent;
         return TBase::Release(
-            [&]() //
+            [&]() noexcept //
             {
                 // We must keep parent alive while this object is being destroyed because
                 // the parent keeps the memory allocator for the object.

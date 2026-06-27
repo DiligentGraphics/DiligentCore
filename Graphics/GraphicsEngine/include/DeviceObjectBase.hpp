@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -127,8 +127,7 @@ public:
 
         RefCntAutoPtr<RenderDeviceImplType> pDevice;
         return TBase::Release(
-            [&]() //
-            {
+            [&]() noexcept {
                 // We must keep the device alive while the object is being destroyed
                 // Note that internal device objects do not keep strong reference to the device
                 if (!m_bIsDeviceInternal)
