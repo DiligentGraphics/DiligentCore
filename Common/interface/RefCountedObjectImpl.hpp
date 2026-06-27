@@ -115,68 +115,16 @@ public:
         // The method must be serialized!
         std::unique_lock<Threading::SpinLock> Guard{m_Lock};
 
-        // It is essentially important to check the number of weak references
-        // while holding the lock. Otherwise reference counters object
-        // may be destroyed twice if ReleaseStrongRef() is executed by other
-        // thread.
         const ReferenceCounterValueType NumWeakReferences = m_NumWeakReferences.fetch_add(-1) - 1;
         VERIFY(NumWeakReferences >= 0, "Inconsistent call to ReleaseWeakRef()");
 
-        // There are two special case when we must not destroy the ref counters object even
-        // when NumWeakReferences == 0 && m_NumStrongReferences == 0 :
-        //
-        //             This thread             |    Another thread - ReleaseStrongRef()
-        //                                     |
-        // 1. Lock the object                  |
-        //                                     |
-        // 2. Decrement m_NumWeakReferences,   |   1. Decrement m_NumStrongReferences,
-        //    m_NumWeakReferences==0           |      RefCount == 0
-        //                                     |
-        //                                     |   2. Start waiting for the lock to destroy
-        //                                     |      the object, m_ObjectState != ObjectState::Destroyed
-        // 3. Do not destroy reference         |
-        //    counters, unlock                 |
-        //                                     |   3. Acquire the lock,
-        //                                     |      destroy the object,
-        //                                     |      read m_NumWeakReferences==0
-        //                                     |      destroy the reference counters
-        //
-
-        // If an exception is thrown during the object construction and there is a weak pointer to the object itself,
-        // we may get to this point, but should not destroy the reference counters, because it will be destroyed by MakeNewRCObj
-        // Consider this example:
-        //
-        //   A ==sp==> B ---wp---> A
-        //
-        //   MakeNewRCObj::operator()
-        //    try
-        //    {
-        //     A.ctor()
-        //       B.ctor()
-        //        wp.ctor m_NumWeakReferences==1
-        //        throw
-        //        wp.dtor m_NumWeakReferences==0, destroy this
-        //    }
-        //    catch(...)
-        //    {
-        //       Destroy ref counters second time
-        //    }
-        //
-        if (NumWeakReferences == 0 && /*m_NumStrongReferences == 0 &&*/ m_ObjectState.load() == ObjectState::Destroyed)
+        // The object owns an implicit weak reference between Attach() and the end
+        // of object destruction. Before Attach(), MakeNewRCObj owns the counters;
+        // after object destruction, the last weak release owns deleting them.
+        if (NumWeakReferences == 0 && m_ObjectState.load() == ObjectState::Destroyed)
         {
             VERIFY_EXPR(m_NumStrongReferences.load() == 0);
             VERIFY(!m_ObjectRecord, "Object record must be null");
-            // m_ObjectState is set to ObjectState::Destroyed under the lock. If the state is not Destroyed,
-            // ReleaseStrongRef() will take care of it.
-            // Access to the object record and decrementing m_NumWeakReferences is atomic. Since we acquired the lock,
-            // no other thread can access either of them.
-            // Access to m_NumStrongReferences is NOT PROTECTED by lock.
-
-            // There are no more references to the ref counters object and the object itself
-            // is already destroyed.
-            // We can safely unlock it and destroy.
-            // If we do not unlock it, this->m_LockFlag will expire,
-            // which will cause Lock.~LockHelper() to crash.
             Guard.unlock();
             SelfDestroy();
         }
@@ -321,6 +269,10 @@ private:
             pAllocator,
             DestroyObject<ObjectType, AllocatorType>,
             QueryObjectInterface<ObjectType>};
+        // Keep the reference counters alive until after the object destructor
+        // returns, even when all external weak references are released during
+        // destruction.
+        m_NumWeakReferences.fetch_add(+1);
         m_ObjectState.store(ObjectState::Alive);
     }
 
@@ -352,8 +304,8 @@ private:
         //                                      |      - decrement m_NumStrongReferences
         //                                      |      - read RefCount==0
         //
-        //         Both threads will get to this point. The first one will destroy <this>
-        //         The second one will read expired m_LockFlag
+        //         Both threads will get to this point. The first one will destroy
+        //         the object. The second one will read expired m_LockFlag.
 
         //  IT IS CRUCIALLY IMPORTANT TO ASSURE THAT ONLY ONE THREAD WILL EVER
         //  EXECUTE THIS CODE
@@ -444,56 +396,22 @@ private:
             ObjectRecord ObjRecord = m_ObjectRecord;
             m_ObjectRecord         = {};
 
-            // In a multithreaded environment, reference counters object may
-            // be destroyed at any time while m_pObject->~dtor() is running.
-            // NOTE: m_pObject may not be the only object referencing m_pRefCounters.
-            //       All objects that are owned by m_pObject will point to the same
-            //       reference counters object.
-
             // Note that this is the only place where m_ObjectState is
             // modified after the ref counters object has been created
             m_ObjectState.store(ObjectState::Destroyed);
-            // The object is now detached from the reference counters, and it is if
-            // it was destroyed since no one can obtain access to it.
+            // The object is now detached from the reference counters and is treated
+            // as destroyed since no one can obtain access to it.
 
 
-            // It is essentially important to check the number of weak references
-            // while the object is locked. Otherwise reference counters object
-            // may be destroyed twice if ReleaseWeakRef() is executed by other thread:
-            //
-            //             This thread             |    Another thread - ReleaseWeakRef()
-            //                                     |
-            // 1. Decrement m_NumStrongReferences, |
-            //    m_NumStrongReferences==0,        |
-            //    acquire the lock, destroy        |
-            //    the obj, release the lock        |
-            //    m_NumWeakReferences == 1         |
-            //                                     |   1. Acquire the lock,
-            //                                     |      decrement m_NumWeakReferences,
-            //                                     |      m_NumWeakReferences == 0,
-            //                                     |      m_ObjectState == ObjectState::Destroyed
-            //                                     |
-            // 2. Read m_NumWeakReferences == 0    |
-            // 3. Destroy the ref counters obj     |   2. Destroy the ref counters obj
-            //
-            const bool bDestroyThis = m_NumWeakReferences.load() == 0;
-            // ReleaseWeakRef() decrements m_NumWeakReferences, and checks it for
-            // zero only after acquiring the lock. So if m_NumWeakReferences==0, no
-            // weak reference-related code may be running
-
-
-            // We must explicitly unlock the object now to avoid deadlocks. Also,
-            // if this is deleted, this->m_LockFlag will expire, which will cause
-            // Lock.~LockHelper() to crash
+            // We must explicitly unlock the object now to avoid deadlocks.
             Guard.unlock();
 
             // Destroy referenced object
             ObjRecord.DestroyObject();
 
-            // Note that <this> may be destroyed here already,
-            // see comments in ~ControlledObjectType()
-            if (bDestroyThis)
-                SelfDestroy();
+            // Release the implicit weak reference that kept this control block alive
+            // while the object destructor was running. This may destroy <this>.
+            ReleaseWeakRef();
         }
     }
 
@@ -521,6 +439,9 @@ private:
     ObjectRecord m_ObjectRecord;
 
     std::atomic<ReferenceCounterValueType> m_NumStrongReferences{0};
+    // Counts external weak references plus one implicit weak reference while
+    // the object is alive. The implicit weak reference is added in Attach()
+    // and released after the object destructor returns.
     std::atomic<ReferenceCounterValueType> m_NumWeakReferences{0};
 
     Threading::SpinLock m_Lock;
@@ -555,25 +476,9 @@ public:
     // through the pointer to the base class
     virtual ~RefCountedObject()
     {
-        // WARNING! m_pRefCounters may be expired in scenarios like this:
-        //
-        //    A ==sp==> B ---wp---> A
-        //
-        //    RefCounters_A.ReleaseStrongRef(){ // NumStrongRef == 0, NumWeakRef == 1
-        //      bDestroyThis = (m_NumWeakReferences == 0) == false;
-        //      delete A{
-        //        A.~dtor(){
-        //            B.~dtor(){
-        //                wpA.ReleaseWeakRef(){ // NumStrongRef == 0, NumWeakRef == 0, m_pObject==nullptr
-        //                    delete RefCounters_A;
-        //        ...
-        //        VERIFY( m_pRefCounters->GetNumStrongRefs() == 0 // Access violation!
-
-        // This also may happen if one thread is executing ReleaseStrongRef(), while
-        // another one is simultaneously running ReleaseWeakRef().
-
-        //VERIFY( m_pRefCounters->GetNumStrongRefs() == 0,
-        //        "There remain strong references to the object being destroyed" );
+        // RefCountersImpl keeps an implicit weak reference while the object is alive.
+        // The implicit weak reference is released after the object destructor returns,
+        // so m_pRefCounters remains valid during destruction.
     }
 
     inline virtual IReferenceCounters* DILIGENT_CALL_TYPE GetReferenceCounters() const override final

@@ -290,6 +290,54 @@ private:
     bool              m_ReleaseWeakRefFinishedBeforeQueryInterfaceReturned = false;
 };
 
+class DestructorReleasesWeakPtrObject final : public RefCountedObject<IObject>
+{
+public:
+    DestructorReleasesWeakPtrObject(IReferenceCounters* pRefCounters,
+                                    bool&               RefCountersAliveInDestructor) :
+        RefCountedObject<IObject>{pRefCounters},
+        m_wpSelf{this},
+        m_RefCountersAliveInDestructor{RefCountersAliveInDestructor}
+    {}
+
+    ~DestructorReleasesWeakPtrObject()
+    {
+        // Releasing the last external weak reference from the destructor used
+        // to be able to destroy the reference counters before the destructor
+        // returned. The implicit weak reference must keep them alive here.
+        m_wpSelf.Release();
+
+        IReferenceCounters* const pRefCounters = GetReferenceCounters();
+        m_RefCountersAliveInDestructor         = pRefCounters != nullptr && pRefCounters->GetNumWeakRefs() == 1;
+    }
+
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final {}
+
+private:
+    RefCntWeakPtr<DestructorReleasesWeakPtrObject> m_wpSelf;
+    bool&                                          m_RefCountersAliveInDestructor;
+};
+
+class ConstructorThrowsAfterSelfWeakPtrObject final : public RefCountedObject<IObject>
+{
+public:
+    ConstructorThrowsAfterSelfWeakPtrObject(IReferenceCounters* pRefCounters,
+                                            bool&               WeakPtrCreated) :
+        RefCountedObject<IObject>{pRefCounters},
+        m_WeakPtrCreated{WeakPtrCreated},
+        m_wpSelf{this}
+    {
+        m_WeakPtrCreated = true;
+        throw std::runtime_error{"test exception"};
+    }
+
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final {}
+
+private:
+    bool&                                                  m_WeakPtrCreated;
+    RefCntWeakPtr<ConstructorThrowsAfterSelfWeakPtrObject> m_wpSelf;
+};
+
 using SmartPtr = Diligent::RefCntAutoPtr<Object>;
 using WeakPtr  = Diligent::RefCntWeakPtr<Object>;
 
@@ -681,6 +729,56 @@ TEST(Common_RefCntWeakPtr, QueryObjectDoesNotHoldLockDuringQueryInterface)
 
     EXPECT_TRUE(LockedSP);
     EXPECT_TRUE(SP->ReleaseWeakRefFinishedBeforeQueryInterfaceReturned());
+}
+
+TEST(Common_RefCntWeakPtr, RefCountersStayAliveDuringObjectDestructor)
+{
+    bool RefCountersAliveInDestructor = false;
+    {
+        RefCntAutoPtr<DestructorReleasesWeakPtrObject> SP{
+            MakeNewRCObj<DestructorReleasesWeakPtrObject>{}(RefCountersAliveInDestructor)};
+    }
+    EXPECT_TRUE(RefCountersAliveInDestructor);
+}
+
+TEST(Common_RefCntWeakPtr, ConstructorExceptionWithSelfWeakPtrDoesNotDestroyCounters)
+{
+    bool WeakPtrCreated = false;
+
+    // The weak pointer is constructed before Attach() adds the implicit weak
+    // reference. During constructor unwind, releasing that weak pointer must
+    // not destroy the reference counters because MakeNewRCObj still owns them.
+    EXPECT_THROW((void)MakeNewRCObj<ConstructorThrowsAfterSelfWeakPtrObject>{}(WeakPtrCreated), std::runtime_error);
+    EXPECT_TRUE(WeakPtrCreated);
+}
+
+TEST(Common_RefCntWeakPtr, ExternalWeakRefCanBeReleasedBeforeObjectDestroy)
+{
+    RefCntAutoPtr<Object> SP{MakeNewObj<Object>()};
+    RefCntWeakPtr<Object> WP{SP};
+
+    IReferenceCounters* const pRefCounters = SP->GetReferenceCounters();
+    EXPECT_EQ(pRefCounters->GetNumStrongRefs(), 1);
+    EXPECT_EQ(pRefCounters->GetNumWeakRefs(), 2);
+
+    Object* const pRawObject                   = SP.Detach();
+    bool          WeakRefReleasedBeforeDestroy = false;
+
+    pRawObject->Release(
+        [&] //
+        {
+            // This simulates ReleaseWeakRef() running after the final strong
+            // reference has been released but before TryDestroyObject() marks
+            // the object destroyed. The implicit weak reference must keep the
+            // control block alive for the rest of object destruction.
+            WP.Release();
+            WeakRefReleasedBeforeDestroy = true;
+
+            EXPECT_EQ(pRefCounters->GetNumStrongRefs(), 0);
+            EXPECT_EQ(pRefCounters->GetNumWeakRefs(), 1);
+        });
+
+    EXPECT_TRUE(WeakRefReleasedBeforeDestroy);
 }
 
 TEST(Common_RefCntWeakPtr, Lock)
