@@ -86,6 +86,20 @@ double ConvertSpecConstantToDouble(const void* pData, Uint32 DataSize, SHADER_CO
     }
 }
 
+std::vector<WGPUConstantEntry> GetWGPUConstantEntries(const std::vector<std::pair<std::string, double>>& SpecConsts)
+{
+    std::vector<WGPUConstantEntry> Entries;
+    Entries.reserve(SpecConsts.size());
+    for (const std::pair<std::string, double>& SpecConst : SpecConsts)
+    {
+        WGPUConstantEntry Entry{};
+        Entry.key   = GetWGPUStringView(SpecConst.first);
+        Entry.value = SpecConst.second;
+        Entries.push_back(Entry);
+    }
+    return Entries;
+}
+
 void BuildSpecializationDataWebGPU(PipelineStateWebGPUImpl::TShaderStages& ShaderStages,
                                    Uint32                                  NumSpecializationConstants,
                                    const SpecializationConstant*           pSpecializationConstants,
@@ -102,6 +116,8 @@ void BuildSpecializationDataWebGPU(PipelineStateWebGPUImpl::TShaderStages& Shade
 
         if (!pShaderResources)
             continue;
+
+        Stage.SpecConstEntries.reserve(pShaderResources->GetNumSpecConstants());
 
         for (Uint32 r = 0; r < pShaderResources->GetNumSpecConstants(); ++r)
         {
@@ -140,11 +156,8 @@ void BuildSpecializationDataWebGPU(PipelineStateWebGPUImpl::TShaderStages& Shade
                                     " (", ReflectedSize, " bytes).");
             }
 
-            WGPUConstantEntry Entry{};
-            Entry.key   = GetWGPUStringView(ReflectedSC.Name);
-            Entry.value = ConvertSpecConstantToDouble(pUserConst->pData, pUserConst->Size, ReflectedType);
-
-            Stage.SpecConstEntries.push_back(Entry);
+            Stage.SpecConstEntries.emplace_back(std::to_string(ReflectedSC.OverrideId),
+                                                ConvertSpecConstantToDouble(pUserConst->pData, pUserConst->Size, ReflectedType));
         }
     }
 }
@@ -498,7 +511,9 @@ void PipelineStateWebGPUImpl::InitializeWebGPURenderPipeline(const TShaderStages
 
     WGPUFragmentState wgpuFragmentState{};
 
-    std::vector<WebGPUShaderModuleWrapper> wgpuShaderModules{ShaderStages.size()};
+    std::vector<WebGPUShaderModuleWrapper>      wgpuShaderModules{ShaderStages.size()};
+    std::vector<std::vector<WGPUConstantEntry>> wgpuStageConstants(ShaderStages.size());
+
     for (size_t ShaderIdx = 0; ShaderIdx < ShaderStages.size(); ++ShaderIdx)
     {
         const ShaderStageInfo& Stage = ShaderStages[ShaderIdx];
@@ -517,18 +532,20 @@ void PipelineStateWebGPUImpl::InitializeWebGPURenderPipeline(const TShaderStages
         {
             case SHADER_TYPE_VERTEX:
                 VERIFY(wgpuRenderPipelineDesc.vertex.module == nullptr, "Only one vertex shader is allowed");
+                wgpuStageConstants[ShaderIdx]               = GetWGPUConstantEntries(Stage.SpecConstEntries);
                 wgpuRenderPipelineDesc.vertex.module        = wgpuShaderModules[ShaderIdx].Get();
                 wgpuRenderPipelineDesc.vertex.entryPoint    = GetWGPUStringView(Stage.pShader->GetEntryPoint());
-                wgpuRenderPipelineDesc.vertex.constantCount = Stage.SpecConstEntries.size();
-                wgpuRenderPipelineDesc.vertex.constants     = Stage.SpecConstEntries.empty() ? nullptr : Stage.SpecConstEntries.data();
+                wgpuRenderPipelineDesc.vertex.constantCount = wgpuStageConstants[ShaderIdx].size();
+                wgpuRenderPipelineDesc.vertex.constants     = wgpuStageConstants[ShaderIdx].empty() ? nullptr : wgpuStageConstants[ShaderIdx].data();
                 break;
 
             case SHADER_TYPE_PIXEL:
                 VERIFY(wgpuFragmentState.module == nullptr, "Only one vertex shader is allowed");
+                wgpuStageConstants[ShaderIdx]   = GetWGPUConstantEntries(Stage.SpecConstEntries);
                 wgpuFragmentState.module        = wgpuShaderModules[ShaderIdx].Get();
                 wgpuFragmentState.entryPoint    = GetWGPUStringView(Stage.pShader->GetEntryPoint());
-                wgpuFragmentState.constantCount = Stage.SpecConstEntries.size();
-                wgpuFragmentState.constants     = Stage.SpecConstEntries.empty() ? nullptr : Stage.SpecConstEntries.data();
+                wgpuFragmentState.constantCount = wgpuStageConstants[ShaderIdx].size();
+                wgpuFragmentState.constants     = wgpuStageConstants[ShaderIdx].empty() ? nullptr : wgpuStageConstants[ShaderIdx].data();
                 wgpuRenderPipelineDesc.fragment = &wgpuFragmentState;
                 break;
 
@@ -721,9 +738,9 @@ void PipelineStateWebGPUImpl::InitializeWebGPUComputePipeline(const TShaderStage
     wgpuComputePipelineDesc.compute.entryPoint = GetWGPUStringView(pShaderWebGPU->GetEntryPoint());
     wgpuComputePipelineDesc.layout             = m_PipelineLayout.GetWebGPUPipelineLayout();
 
-    const std::vector<WGPUConstantEntry>& SpecConstEntries = ShaderStages[0].SpecConstEntries;
-    wgpuComputePipelineDesc.compute.constantCount          = SpecConstEntries.size();
-    wgpuComputePipelineDesc.compute.constants              = SpecConstEntries.empty() ? nullptr : SpecConstEntries.data();
+    const std::vector<WGPUConstantEntry> wgpuConstants = GetWGPUConstantEntries(ShaderStages[0].SpecConstEntries);
+    wgpuComputePipelineDesc.compute.constantCount      = wgpuConstants.size();
+    wgpuComputePipelineDesc.compute.constants          = wgpuConstants.empty() ? nullptr : wgpuConstants.data();
 
     if (AsyncBuilder)
     {

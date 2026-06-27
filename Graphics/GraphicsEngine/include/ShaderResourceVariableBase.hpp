@@ -840,7 +840,7 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
         const PipelineResourceDesc& ResDesc = pThis->GetDesc();
 
         const SHADER_RESOURCE_VARIABLE_TYPE_FLAGS VarTypeFlag = static_cast<SHADER_RESOURCE_VARIABLE_TYPE_FLAGS>(1u << ResDesc.VarType);
-        if ((Flags & VarTypeFlag) == 0)
+        if ((static_cast<Uint32>(Flags) & static_cast<Uint32>(VarTypeFlag)) == 0)
             return; // This variable type is not being processed
 
         if ((StaleVarTypes & VarTypeFlag) != 0)

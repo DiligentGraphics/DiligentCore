@@ -86,10 +86,11 @@ SHADER_TYPE TintPipelineStageToShaderType(tint::inspector::PipelineStage Stage)
     }
 }
 
-WGSLShaderResourceAttribs::ResourceType TintResourceTypeToWGSLShaderAttribsResourceType(tint::inspector::ResourceBinding::ResourceType TintResType)
+WGSLShaderResourceAttribs::ResourceType TintResourceTypeToWGSLShaderAttribsResourceType(const tint::inspector::ResourceBinding& TintBinding)
 {
     using TintResourceType = tint::inspector::ResourceBinding::ResourceType;
-    switch (TintResType)
+    using TintSamplerType  = tint::inspector::ResourceBinding::SamplerType;
+    switch (TintBinding.resource_type)
     {
         case TintResourceType::kUniformBuffer:
             return WGSLShaderResourceAttribs::ResourceType::UniformBuffer;
@@ -101,10 +102,9 @@ WGSLShaderResourceAttribs::ResourceType TintResourceTypeToWGSLShaderAttribsResou
             return WGSLShaderResourceAttribs::ResourceType::ROStorageBuffer;
 
         case TintResourceType::kSampler:
-            return WGSLShaderResourceAttribs::ResourceType::Sampler;
-
-        case TintResourceType::kComparisonSampler:
-            return WGSLShaderResourceAttribs::ResourceType::ComparisonSampler;
+            return TintBinding.sampler_type == TintSamplerType::kComparison ?
+                WGSLShaderResourceAttribs::ResourceType::ComparisonSampler :
+                WGSLShaderResourceAttribs::ResourceType::Sampler;
 
         case TintResourceType::kSampledTexture:
             return WGSLShaderResourceAttribs::ResourceType::Texture;
@@ -155,6 +155,8 @@ WGSLShaderResourceAttribs::TextureSampleType TintSampleKindToWGSLShaderAttribsSa
         switch (TintBinding.sampled_kind)
         {
             case TintSampledKind::kFloat:
+            case TintSampledKind::kFilterable:
+            case TintSampledKind::kUnknownFilterable:
                 return WGSLShaderResourceAttribs::TextureSampleType::Float;
 
             case TintSampledKind::kSInt:
@@ -163,8 +165,8 @@ WGSLShaderResourceAttribs::TextureSampleType TintSampleKindToWGSLShaderAttribsSa
             case TintSampledKind::kUInt:
                 return WGSLShaderResourceAttribs::TextureSampleType::UInt;
 
-            case TintSampledKind::kUnknown:
-                return WGSLShaderResourceAttribs::TextureSampleType::Unknown;
+            case TintSampledKind::kUnfilterable:
+                return WGSLShaderResourceAttribs::TextureSampleType::UnfilterableFloat;
 
             default:
                 UNEXPECTED("Unexpected sample kind");
@@ -225,7 +227,6 @@ RESOURCE_DIMENSION TintBindingToResourceDimension(const tint::inspector::Resourc
             return RESOURCE_DIM_BUFFER;
 
         case TintResourceType::kSampler:
-        case TintResourceType::kComparisonSampler:
             return RESOURCE_DIM_UNDEFINED;
 
         case TintResourceType::kSampledTexture:
@@ -373,7 +374,7 @@ WGSLShaderResourceAttribs::WGSLShaderResourceAttribs(const char*                
     // clang-format off
     Name             {_Name},
     ArraySize        {static_cast<Uint16>(_ArraySize)},
-    Type             {TintResourceTypeToWGSLShaderAttribsResourceType(TintBinding.resource_type)},
+    Type             {TintResourceTypeToWGSLShaderAttribsResourceType(TintBinding)},
     ResourceDim      {TintBindingToResourceDimension(TintBinding)},
     Format			 {TintTexelFormatToTextureFormat(TintBinding)},
     BindGroup        {static_cast<Uint16>(TintBinding.bind_group)},
@@ -901,7 +902,6 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
                 break;
 
             case TintResourceType::kSampler:
-            case TintResourceType::kComparisonSampler:
                 ++ResCounters.NumSamplers;
                 break;
 
@@ -924,6 +924,11 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
 
             case TintResourceType::kInputAttachment:
                 UNSUPPORTED("Input attachments are not currently supported");
+                break;
+
+            case TintResourceType::kReadOnlyTexelBuffer:
+            case TintResourceType::kReadWriteTexelBuffer:
+                UNSUPPORTED("Texel buffers are not currently supported");
                 break;
 
             default:
@@ -986,7 +991,6 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
             break;
 
             case TintResourceType::kSampler:
-            case TintResourceType::kComparisonSampler:
             {
                 new (&GetSampler(CurrRes.NumSamplers++)) WGSLShaderResourceAttribs{Name, Binding, ArraySize};
             }
@@ -1017,6 +1021,11 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
 
             case TintResourceType::kInputAttachment:
                 UNSUPPORTED("Input attachments are not currently supported");
+                break;
+
+            case TintResourceType::kReadOnlyTexelBuffer:
+            case TintResourceType::kReadWriteTexelBuffer:
+                UNSUPPORTED("Texel buffers are not currently supported");
                 break;
 
             default:
