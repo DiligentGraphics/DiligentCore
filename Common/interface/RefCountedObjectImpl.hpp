@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <atomic>
 #include <new>
+#include <type_traits>
 
 #include "../../Primitives/interface/Object.h"
 #include "../../Primitives/interface/MemoryAllocator.h"
@@ -48,11 +49,36 @@ namespace Diligent
 // NB: RefCountersImpl can't be final, see https://github.com/DiligentGraphics/DiligentCore/issues/704.
 class RefCountersImpl : public IReferenceCounters
 {
+    struct ObjectRecord
+    {
+        void* pObject    = nullptr;
+        void* pAllocator = nullptr;
+
+        void (*Destroy)(void* pObject, void* pAllocator)                             = nullptr;
+        void (*Query)(void* pObject, const INTERFACE_ID& iid, IObject** ppInterface) = nullptr;
+
+        explicit operator bool() const noexcept
+        {
+            return pObject != nullptr && Destroy != nullptr && Query != nullptr;
+        }
+
+        void DestroyObject() const
+        {
+            Destroy(pObject, pAllocator);
+        }
+
+        void QueryInterface(const INTERFACE_ID& iid, IObject** ppInterface) const
+        {
+            Query(pObject, iid, ppInterface);
+        }
+    };
+    static_assert(std::is_trivially_copyable<ObjectRecord>::value, "ObjectRecord must be trivially copyable");
+
 public:
     inline virtual ReferenceCounterValueType AddStrongRef() override final
     {
         VERIFY(m_ObjectState.load() == ObjectState::Alive, "Attempting to increment strong reference counter for a destroyed or not initialized object!");
-        VERIFY(m_ObjectWrapperBuffer[0] != 0 && m_ObjectWrapperBuffer[1] != 0, "Object wrapper is not initialized");
+        VERIFY(m_ObjectRecord, "Object record is not initialized");
         return m_NumStrongReferences.fetch_add(+1) + 1;
     }
 
@@ -60,7 +86,7 @@ public:
     inline ReferenceCounterValueType ReleaseStrongRef(TPreObjectDestroy&& PreObjectDestroy)
     {
         VERIFY(m_ObjectState.load() == ObjectState::Alive, "Attempting to decrement strong reference counter for an object that is not alive");
-        VERIFY(m_ObjectWrapperBuffer[0] != 0 && m_ObjectWrapperBuffer[1] != 0, "Object wrapper is not initialized");
+        VERIFY(m_ObjectRecord, "Object record is not initialized");
 
         // Decrement strong reference counter without acquiring the lock.
         const ReferenceCounterValueType RefCount = m_NumStrongReferences.fetch_add(-1) - 1;
@@ -139,10 +165,10 @@ public:
         if (NumWeakReferences == 0 && /*m_NumStrongReferences == 0 &&*/ m_ObjectState.load() == ObjectState::Destroyed)
         {
             VERIFY_EXPR(m_NumStrongReferences.load() == 0);
-            VERIFY(m_ObjectWrapperBuffer[0] == 0 && m_ObjectWrapperBuffer[1] == 0, "Object wrapper must be null");
+            VERIFY(!m_ObjectRecord, "Object record must be null");
             // m_ObjectState is set to ObjectState::Destroyed under the lock. If the state is not Destroyed,
             // ReleaseStrongRef() will take care of it.
-            // Access to Object wrapper and decrementing m_NumWeakReferences is atomic. Since we acquired the lock,
+            // Access to the object record and decrementing m_NumWeakReferences is atomic. Since we acquired the lock,
             // no other thread can access either of them.
             // Access to m_NumStrongReferences is NOT PROTECTED by lock.
 
@@ -183,7 +209,7 @@ public:
         //    Destroy the object               |                                   | -Return reference to the soon
         //                                     |                                   |  to expire object
         //
-        ObjectWrapperBase* pWrapper = nullptr;
+        ObjectRecord ObjRecord;
 
         {
             Threading::SpinLockGuard Guard{m_Lock};
@@ -206,8 +232,8 @@ public:
 
             if (m_ObjectState == ObjectState::Alive && StrongRefCnt > 1)
             {
-                VERIFY(m_ObjectWrapperBuffer[0] != 0 && m_ObjectWrapperBuffer[1] != 0, "Object wrapper is not initialized");
-                pWrapper = reinterpret_cast<ObjectWrapperBase*>(m_ObjectWrapperBuffer);
+                VERIFY(m_ObjectRecord, "Object record is not initialized");
+                ObjRecord = m_ObjectRecord;
             }
             else
             {
@@ -215,7 +241,7 @@ public:
             }
         }
 
-        if (pWrapper != nullptr)
+        if (ObjRecord)
         {
             struct TemporaryStrongRefGuard
             {
@@ -230,9 +256,9 @@ public:
                 }
             } TempStrongRef{*this};
 
-            // The temporary strong reference keeps the object wrapper alive.
+            // The temporary strong reference keeps the object record alive.
             // QueryInterface() is virtual object code and must run outside m_Lock.
-            pWrapper->QueryInterface(IID_Unknown, ppObject);
+            ObjRecord.QueryInterface(IID_Unknown, ppObject);
         }
     }
 
@@ -254,59 +280,47 @@ private:
     {
     }
 
-    class ObjectWrapperBase
-    {
-    public:
-        virtual void DestroyObject()                                                = 0;
-        virtual void QueryInterface(const INTERFACE_ID& iid, IObject** ppInterface) = 0;
-    };
-
     template <typename ObjectType, typename AllocatorType>
-    class ObjectWrapper : public ObjectWrapperBase
+    static void DestroyObject(void* pObject, void* pAllocator)
     {
-    public:
-        ObjectWrapper(ObjectType* pObject, AllocatorType* pAllocator) noexcept :
-            m_pObject{pObject},
-            m_pAllocator{pAllocator}
-        {}
-        virtual void DestroyObject() override final
+        ObjectType*    pTypedObject    = static_cast<ObjectType*>(pObject);
+        AllocatorType* pTypedAllocator = static_cast<AllocatorType*>(pAllocator);
+
+        if (pTypedAllocator)
         {
-            if (m_pAllocator)
+            pTypedObject->~ObjectType();
+            if constexpr (alignof(ObjectType) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
             {
-                m_pObject->~ObjectType();
-                if constexpr (alignof(ObjectType) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
-                {
-                    m_pAllocator->FreeAligned(m_pObject);
-                }
-                else
-                {
-                    m_pAllocator->Free(m_pObject);
-                }
+                pTypedAllocator->FreeAligned(pTypedObject);
             }
             else
             {
-                delete m_pObject;
+                pTypedAllocator->Free(pTypedObject);
             }
         }
-        virtual void QueryInterface(const INTERFACE_ID& iid, IObject** ppInterface) override final
+        else
         {
-            return m_pObject->QueryInterface(iid, ppInterface);
+            delete pTypedObject;
         }
+    }
 
-    private:
-        // It is crucially important that the type of the pointer
-        // is ObjectType and not IObject, since the latter
-        // does not have virtual dtor.
-        ObjectType* const    m_pObject;
-        AllocatorType* const m_pAllocator;
-    };
+    template <typename ObjectType>
+    static void QueryObjectInterface(void* pObject, const INTERFACE_ID& iid, IObject** ppInterface)
+    {
+        static_cast<ObjectType*>(pObject)->QueryInterface(iid, ppInterface);
+    }
 
     template <typename ObjectType, typename AllocatorType>
     void Attach(ObjectType* pObject, AllocatorType* pAllocator)
     {
         VERIFY(m_ObjectState.load() == ObjectState::NotInitialized, "Object has already been attached");
-        static_assert(sizeof(ObjectWrapper<ObjectType, AllocatorType>) == sizeof(m_ObjectWrapperBuffer), "Unexpected object wrapper size");
-        new (m_ObjectWrapperBuffer) ObjectWrapper<ObjectType, AllocatorType>{pObject, pAllocator};
+        // It is crucially important that pObject has ObjectType, not IObject:
+        // IObject does not have a virtual destructor.
+        m_ObjectRecord = ObjectRecord{
+            pObject,
+            pAllocator,
+            DestroyObject<ObjectType, AllocatorType>,
+            QueryObjectInterface<ObjectType>};
         m_ObjectState.store(ObjectState::Alive);
     }
 
@@ -411,7 +425,7 @@ private:
         // Extra caution
         if (m_NumStrongReferences.load() == 0 && m_ObjectState.load() == ObjectState::Alive)
         {
-            VERIFY(m_ObjectWrapperBuffer[0] != 0 && m_ObjectWrapperBuffer[1] != 0, "Object wrapper is not initialized");
+            VERIFY(m_ObjectRecord, "Object record is not initialized");
             // We cannot destroy the object while reference counters are locked as this will
             // cause a deadlock in cases like this:
             //
@@ -425,13 +439,10 @@ private:
             //                  RefCounters_A.Lock(); // Deadlock
             //
 
-            // So we copy the object wrapper and destroy the object after unlocking the
+            // So we copy the object record and destroy the object after unlocking the
             // reference counters
-            alignas(ObjectWrapper<IObjectStub, IMemoryAllocator>) size_t ObjectWrapperBufferCopy[ObjectWrapperBufferSize];
-            memcpy(ObjectWrapperBufferCopy, m_ObjectWrapperBuffer, sizeof(m_ObjectWrapperBuffer));
-            memset(m_ObjectWrapperBuffer, 0, sizeof(m_ObjectWrapperBuffer));
-
-            ObjectWrapperBase* pWrapper = reinterpret_cast<ObjectWrapperBase*>(ObjectWrapperBufferCopy);
+            ObjectRecord ObjRecord = m_ObjectRecord;
+            m_ObjectRecord         = {};
 
             // In a multithreaded environment, reference counters object may
             // be destroyed at any time while m_pObject->~dtor() is running.
@@ -477,7 +488,7 @@ private:
             Guard.unlock();
 
             // Destroy referenced object
-            pWrapper->DestroyObject();
+            ObjRecord.DestroyObject();
 
             // Note that <this> may be destroyed here already,
             // see comments in ~ControlledObjectType()
@@ -507,16 +518,7 @@ private:
     RefCountersImpl& operator = (      RefCountersImpl&&) = delete;
     // clang-format on
 
-    struct IObjectStub : public IObject
-    {
-        virtual ~IObjectStub() = 0;
-    };
-    // MSVC starting with 19.25.28610.4 fails to compile sizeof(ObjectWrapper<IObject, IMemoryAllocator>) because
-    // IObject does not have virtual destructor. The compiler is technically right, so we use IObjectStub,
-    // which does have virtual destructor.
-    static constexpr size_t ObjectWrapperBufferSize = sizeof(ObjectWrapper<IObjectStub, IMemoryAllocator>) / sizeof(size_t);
-
-    alignas(ObjectWrapper<IObjectStub, IMemoryAllocator>) size_t m_ObjectWrapperBuffer[ObjectWrapperBufferSize]{};
+    ObjectRecord m_ObjectRecord;
 
     std::atomic<ReferenceCounterValueType> m_NumStrongReferences{0};
     std::atomic<ReferenceCounterValueType> m_NumWeakReferences{0};
