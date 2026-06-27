@@ -74,6 +74,12 @@ class RefCntWeakPtr;
 ///
 ///     RefCntWeakPtr<ObjectBase> pWeakPtr(pRawPtr);
 ///
+/// Reference counters are thread-safe, so different RefCntAutoPtr or RefCntWeakPtr
+/// instances may safely reference the same object from different threads. Individual
+/// smart pointer instances are not thread-safe: concurrent access to the same
+/// RefCntAutoPtr or RefCntWeakPtr object must be externally synchronized if any
+/// operation may read or modify the pointer state.
+///
 template <typename T>
 class RefCntAutoPtr
 {
@@ -87,7 +93,7 @@ public:
             m_pObject->AddRef();
     }
 
-    RefCntAutoPtr(IObject* pObj, const INTERFACE_ID& IID) noexcept :
+    RefCntAutoPtr(IObject* pObj, const INTERFACE_ID& IID) :
         m_pObject{nullptr}
     {
         if (pObj)
@@ -310,26 +316,16 @@ public:
 
     template <typename DstType, typename = typename std::enable_if<std::is_convertible<T*, DstType*>::value>::type>
     DoublePtrHelper<DstType> DblPtr() noexcept { return DoublePtrHelper<DstType>(*this); }
-    template <typename DstType, typename = typename std::enable_if<std::is_convertible<T*, DstType*>::value>::type>
-    DoublePtrHelper<DstType> DblPtr() const noexcept { return DoublePtrHelper<DstType>(*this); }
 
     DoublePtrHelper<T> operator&()
     {
         return DblPtr<T>();
     }
 
-    const DoublePtrHelper<T> operator&() const
-    {
-        return DblPtr<T>();
-    }
-
-    T**       RawDblPtr() noexcept { return &m_pObject; }
-    const T** RawDblPtr() const noexcept { return &m_pObject; }
+    T** RawDblPtr() noexcept { return &m_pObject; }
 
     template <typename DstType, typename = typename std::enable_if<std::is_convertible<T*, DstType*>::value>::type>
     DstType** RawDblPtr() noexcept { return reinterpret_cast<DstType**>(&m_pObject); }
-    template <typename DstType, typename = typename std::enable_if<std::is_convertible<T*, DstType*>::value>::type>
-    DstType** RawDblPtr() const noexcept { return reinterpret_cast<DstType**>(&m_pObject); }
 
 private:
     template <typename OtherType>
@@ -455,7 +451,10 @@ public:
     T*       UnsafeRawPtr() noexcept { return m_pObject; }
     const T* UnsafeRawPtr() const noexcept { return m_pObject; }
 
-    /// Obtains a strong reference to the object
+    /// Obtains a strong reference to the object.
+    /// \note This method mutates this weak pointer when the referenced object has
+    ///       expired by clearing the weak reference. Concurrent Lock() calls on
+    ///       the same RefCntWeakPtr instance therefore require external synchronization.
     RefCntAutoPtr<T> Lock()
     {
         RefCntAutoPtr<T> spObj;
