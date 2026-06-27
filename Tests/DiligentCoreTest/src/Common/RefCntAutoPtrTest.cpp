@@ -821,8 +821,11 @@ TEST(Common_RefCntWeakPtr, Lock)
 
         pRawPtr->Release();
 
-        L1 = WP3.Lock();
+        const WeakPtr& ConstWP3 = WP3;
+        L1                      = ConstWP3.Lock();
         assert(!L1);
+        EXPECT_EQ(ConstWP3.UnsafeRawPtr(), pRawPtr);
+        EXPECT_FALSE(ConstWP3.IsValid());
     }
 }
 

@@ -79,7 +79,7 @@ class RefCntWeakPtr;
 /// instances may safely reference the same object from different threads. Individual
 /// smart pointer instances are not thread-safe: concurrent access to the same
 /// RefCntAutoPtr or RefCntWeakPtr object must be externally synchronized if any
-/// operation may read or modify the pointer state.
+/// operation may modify the pointer state.
 ///
 template <typename T>
 class RefCntAutoPtr
@@ -453,10 +453,9 @@ public:
     const T* UnsafeRawPtr() const noexcept { return m_pObject; }
 
     /// Obtains a strong reference to the object.
-    /// \note This method mutates this weak pointer when the referenced object has
-    ///       expired by clearing the weak reference. Concurrent Lock() calls on
-    ///       the same RefCntWeakPtr instance therefore require external synchronization.
-    RefCntAutoPtr<T> Lock()
+    /// \note This method does not reset expired weak pointers. Call Release()
+    ///       explicitly to clear the weak pointer when needed.
+    RefCntAutoPtr<T> Lock() const
     {
         RefCntAutoPtr<T> spObj;
         if (m_pRefCounters)
@@ -472,12 +471,6 @@ public:
                 // If owner is alive, we can use our RAW pointer to
                 // create strong reference
                 spObj = m_pObject;
-            }
-            else
-            {
-                // Owner object has been destroyed. There is no reason
-                // to keep this weak reference anymore
-                Release();
             }
         }
         return spObj;
