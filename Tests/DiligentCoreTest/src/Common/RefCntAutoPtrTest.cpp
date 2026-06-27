@@ -627,9 +627,12 @@ TEST(Common_RefCntWeakPtr, Constructors)
         WeakPtr  WP5(std::move(WP0));
         WeakPtr  WP6(std::move(WP4));
 
+        const SmartPtr& ConstSP1 = SP1;
+        WeakPtr         WP7(ConstSP1);
+
         auto* pRawPtr = MakeNewObj<Object>();
         pRawPtr->AddRef();
-        WeakPtr WP7(pRawPtr);
+        WeakPtr WP8(pRawPtr);
         pRawPtr->Release();
     }
 }
@@ -651,6 +654,9 @@ TEST(Common_RefCntWeakPtr, OperatorEqual)
         WP0 = pRawPtr;
         WP0.Release();
         WP0 = WP2;
+
+        const SmartPtr& ConstSP1 = SP1;
+        WP0                      = ConstSP1;
 
         WP1 = WP0;
         WP0 = SP1;

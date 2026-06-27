@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -113,6 +113,9 @@ public:
     /// Returns the number of outstanding weak references.
 
     /// \return The number of weak references.
+    /// \remark Diligent's RefCountedObject implementation keeps one implicit
+    ///         weak reference while the referenced object is alive. The returned
+    ///         value includes this implicit weak reference.
     /// \note   In a multithreaded environment, the returned number may not be reliable
     ///         as other threads may simultaneously change the actual value of the counter.
     virtual ReferenceCounterValueType GetNumWeakRefs() const = 0;

@@ -30,6 +30,7 @@
 /// \file
 /// RefCntAutoPtr and RefCntWeakPtr class definitions
 
+#include <functional>
 #include <memory>
 
 #include "../../Primitives/interface/Object.h"
@@ -216,7 +217,7 @@ public:
     explicit operator bool() const noexcept { return m_pObject != nullptr; }
     bool     operator==(const RefCntAutoPtr& Ptr) const noexcept { return m_pObject == Ptr.m_pObject; }
     bool     operator!=(const RefCntAutoPtr& Ptr) const noexcept { return m_pObject != Ptr.m_pObject; }
-    bool     operator<(const RefCntAutoPtr& Ptr) const noexcept { return static_cast<const T*>(*this) < static_cast<const T*>(Ptr); }
+    bool     operator<(const RefCntAutoPtr& Ptr) const noexcept { return std::less<T*>{}(m_pObject, Ptr.m_pObject); }
 
     T& operator*() const noexcept { return *m_pObject; }
 
@@ -373,7 +374,7 @@ public:
         WeakPtr.m_pObject      = nullptr;
     }
 
-    explicit RefCntWeakPtr(RefCntAutoPtr<T>& AutoPtr) noexcept :
+    explicit RefCntWeakPtr(const RefCntAutoPtr<T>& AutoPtr) noexcept :
         m_pRefCounters{AutoPtr ? ClassPtrCast<RefCountersImpl>(AutoPtr->GetReferenceCounters()) : nullptr},
         m_pObject{static_cast<T*>(AutoPtr)}
     {
@@ -417,7 +418,7 @@ public:
         return *this;
     }
 
-    RefCntWeakPtr& operator=(RefCntAutoPtr<T>& AutoPtr) noexcept
+    RefCntWeakPtr& operator=(const RefCntAutoPtr<T>& AutoPtr) noexcept
     {
         Release();
         m_pObject      = static_cast<T*>(AutoPtr);
