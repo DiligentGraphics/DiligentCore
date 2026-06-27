@@ -31,6 +31,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstring>
+#include <memory>
 
 #include "DefaultRawMemoryAllocator.hpp"
 #include "RefCntAutoPtr.hpp"
@@ -987,6 +988,44 @@ TEST(Common_RefCntAutoPtr, Misc)
                 return RefCountedObject<IObject>::Release(
                     [&]() //
                     {
+                        *pReentrantReleaseCalled = true;
+                        pAutoPtr->Release();
+                    } //
+                );
+            }
+
+            RefCntAutoPtr<TestObject>* pAutoPtr                = nullptr;
+            bool*                      pReentrantReleaseCalled = nullptr;
+        };
+
+        bool                      ReentrantReleaseCalled = false;
+        RefCntAutoPtr<TestObject> pObj(NEW_RC_OBJ(DefaultRawMemoryAllocator::GetAllocator(), "Test object", TestObject)());
+
+        pObj->pAutoPtr                = std::addressof(pObj);
+        pObj->pReentrantReleaseCalled = &ReentrantReleaseCalled;
+
+        pObj.Release();
+
+        EXPECT_TRUE(ReentrantReleaseCalled);
+        EXPECT_FALSE(pObj);
+    }
+
+    {
+        class TestObject : public RefCountedObject<IObject>
+        {
+        public:
+            TestObject(IReferenceCounters* pRefCounters) :
+                RefCountedObject<IObject>(pRefCounters)
+            {
+            }
+
+            virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final {}
+
+            inline virtual ReferenceCounterValueType DILIGENT_CALL_TYPE Release() override final
+            {
+                return RefCountedObject<IObject>::Release(
+                    [&]() //
+                    {
                         ppWeakPtr->Release();
                     } //
                 );
@@ -999,6 +1038,8 @@ TEST(Common_RefCntAutoPtr, Misc)
 
         pObj->ppWeakPtr = &pWeakPtr;
         pObj.Release();
+
+        EXPECT_EQ(pWeakPtr.UnsafeRawPtr(), nullptr);
     }
 }
 

@@ -151,11 +151,11 @@ public:
 
     void Release() noexcept
     {
-        if (m_pObject)
-        {
-            m_pObject->Release();
-            m_pObject = nullptr;
-        }
+        T* const pObject = m_pObject;
+        m_pObject        = nullptr;
+
+        if (pObject)
+            pObject->Release();
     }
 
     RefCntAutoPtr& operator=(T* pObj) noexcept
@@ -433,10 +433,12 @@ public:
 
     void Release() noexcept
     {
-        if (m_pRefCounters)
-            m_pRefCounters->ReleaseWeakRef();
-        m_pRefCounters = nullptr;
-        m_pObject      = nullptr;
+        RefCountersImpl* const pRefCounters = m_pRefCounters;
+        m_pRefCounters                      = nullptr;
+        m_pObject                           = nullptr;
+
+        if (pRefCounters)
+            pRefCounters->ReleaseWeakRef();
     }
 
     /// \note This method may not be reliable in a multithreaded environment.
