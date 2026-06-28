@@ -317,6 +317,11 @@ public:
         return DblPtr<DstType>();
     }
 
+    // DblPtr() and operator&() preserve legacy out-parameter behavior, but
+    // they cannot distinguish "the callee did not write anything" from "the
+    // callee wrote the same pointer and added a reference" (for example,
+    // QueryInterface() into the same smart pointer). Use GetAddressOfEmpty()
+    // or ReleaseAndGetAddressOf() when the API may return the current pointer.
     template <typename DstType, typename = typename std::enable_if<std::is_convertible<T*, DstType*>::value>::type>
     DoublePtrHelper<DstType> DblPtr() noexcept { return DoublePtrHelper<DstType>(*this); }
 
