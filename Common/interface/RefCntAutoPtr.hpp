@@ -32,6 +32,8 @@
 
 #include <functional>
 #include <memory>
+#include <type_traits>
+#include <utility>
 
 #include "../../Primitives/interface/Object.h"
 #include "Cast.hpp"

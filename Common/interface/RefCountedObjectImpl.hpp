@@ -32,6 +32,7 @@
 
 #include <stdlib.h>
 #include <atomic>
+#include <mutex>
 #include <new>
 #include <type_traits>
 
@@ -85,6 +86,12 @@ public:
         return m_NumStrongReferences.fetch_add(+1) + 1;
     }
 
+    // Internal lifetime hook used after the strong reference count reaches zero,
+    // but before TryDestroyObject() marks the object destroyed.
+    // PreObjectDestroy must be noexcept and must not AddRef(), Lock() this object
+    // through weak references, publish the raw object, or otherwise attempt object
+    // resurrection. It is only intended for cleanup that must run before the
+    // object record is detached.
     template <class TPreObjectDestroy>
     inline ReferenceCounterValueType ReleaseStrongRef(TPreObjectDestroy&& PreObjectDestroy)
     {
@@ -523,6 +530,12 @@ public:
         return m_pRefCounters->ReleaseStrongRef();
     }
 
+    /// Internal lifetime hook used by implementations that must run cleanup after
+    /// the strong reference count reaches zero but before the object is detached
+    /// from its reference counters.
+    /// \note The callback must be noexcept and must not AddRef(), Lock() this object
+    ///       through weak references, publish the raw object, or otherwise attempt
+    ///       object resurrection.
     template <class TPreObjectDestroy>
     inline ReferenceCounterValueType Release(TPreObjectDestroy&& PreObjectDestroy)
     {

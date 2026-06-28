@@ -80,7 +80,9 @@ public:
     /// Increments the number of weak references by 1.
 
     /// \return The number of weak references after incrementing the counter.
-    /// \remark The method is thread-safe and does not require explicit synchronization.
+    /// \remark The counter update is thread-safe, but the caller must already
+    ///         own a strong reference, own a weak reference, or otherwise
+    ///         externally guarantee that the reference counters object is still alive.
     /// \note   In a multithreaded environment, the returned number may not be reliable
     ///         as other threads may simultaneously change the actual value of the counter.
     virtual ReferenceCounterValueType AddWeakRef() = 0;
