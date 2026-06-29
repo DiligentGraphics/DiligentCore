@@ -1199,9 +1199,16 @@ TEST_F(SparseResourceTest, SparseResidentAliasedBuffer)
         }
         else
         {
-            // aliased buffer ranges
-            StateTransitionDesc Barrier{pBuffer, pBuffer};
-            pContext->TransitionResourceState(Barrier);
+            // Logical ranges 0 and 2 are mapped to the same physical tile.
+            // Order the previous UAV writes before switching to the other aliased range.
+            const StateTransitionDesc Barriers[] =
+                {
+                    // Complete UAV writes to the physical tile through logical range 2.
+                    {pBuffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_UNORDERED_ACCESS},
+                    // Switch access to logical range 0 mapped to the same physical tile.
+                    {pBuffer, pBuffer},
+                };
+            pContext->TransitionResourceStates(_countof(Barriers), Barriers);
 
             FillBuffer(pContext, pBuffer, BlockSize * 0, BlockSize, Col1); // aliased
         }
