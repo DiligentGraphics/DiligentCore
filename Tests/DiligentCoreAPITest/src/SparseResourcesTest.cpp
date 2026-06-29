@@ -1022,6 +1022,12 @@ TEST_F(SparseResourceTest, SparseResidentBuffer)
     {
         GTEST_SKIP() << "Sparse buffer is not supported by this device";
     }
+    // The reference image assumes that reads from unbound sparse buffer ranges return zero.
+    // Without NON_RESIDENT_STRICT, such reads are safe but return undefined values.
+    if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_NON_RESIDENT_STRICT) == 0)
+    {
+        GTEST_SKIP() << "Reads from non-resident sparse buffer regions are not guaranteed to return zero on this device";
+    }
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -1156,6 +1162,12 @@ TEST_F(SparseResourceTest, SparseResidentAliasedBuffer)
     {
         GTEST_SKIP() << "Sparse aliased resources is not supported by this device";
     }
+    // The reference image assumes that reads from unbound sparse buffer ranges return zero.
+    // Without NON_RESIDENT_STRICT, such reads are safe but return undefined values.
+    if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_NON_RESIDENT_STRICT) == 0)
+    {
+        GTEST_SKIP() << "Reads from non-resident sparse buffer regions are not guaranteed to return zero on this device";
+    }
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -1199,16 +1211,9 @@ TEST_F(SparseResourceTest, SparseResidentAliasedBuffer)
         }
         else
         {
-            // Logical ranges 0 and 2 are mapped to the same physical tile.
-            // Order the previous UAV writes before switching to the other aliased range.
-            const StateTransitionDesc Barriers[] =
-                {
-                    // Complete UAV writes to the physical tile through logical range 2.
-                    {pBuffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_UNORDERED_ACCESS},
-                    // Switch access to logical range 0 mapped to the same physical tile.
-                    {pBuffer, pBuffer},
-                };
-            pContext->TransitionResourceStates(_countof(Barriers), Barriers);
+            // Aliased buffer ranges
+            StateTransitionDesc Barrier{pBuffer, pBuffer};
+            pContext->TransitionResourceState(Barrier);
 
             FillBuffer(pContext, pBuffer, BlockSize * 0, BlockSize, Col1); // aliased
         }
