@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -74,6 +74,12 @@ TEST(XXH128HasherTest, Struct)
     Hasher2(Ver2);
 
     EXPECT_EQ(Hasher1.Digest(), Hasher2.Digest());
+}
+
+TEST(XXH128HasherTest, ToString)
+{
+    const XXH128Hash Hash{0x0123456789ABCDEFull, 0xFEDCBA9876543210ull};
+    EXPECT_EQ(Hash.ToString(), "FEDCBA98765432100123456789ABCDEF");
 }
 
 } // namespace

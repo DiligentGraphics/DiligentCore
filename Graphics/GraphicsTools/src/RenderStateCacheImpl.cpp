@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -121,23 +121,9 @@ RefCntAutoPtr<IShader> RenderStateCacheImpl::FindReloadableShader(IShader* pShad
     return pReloadableShader;
 }
 
-std::string RenderStateCacheImpl::HashToStr(Uint64 Low, Uint64 High)
-{
-    static constexpr std::array<char, 16> Symbols = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
-
-    std::string Str;
-    for (Uint64 Part : {High, Low})
-    {
-        for (Uint64 i = 0; i < 16; ++i)
-            Str += Symbols[(Part >> (Uint64{60} - i * 4)) & 0xFu];
-    }
-
-    return Str;
-}
-
 std::string RenderStateCacheImpl::MakeHashStr(const char* Name, const XXH128Hash& Hash)
 {
-    std::string HashStr = HashToStr(Hash.LowPart, Hash.HighPart);
+    std::string HashStr = Hash.ToString();
     if (Name != nullptr)
         HashStr = std::string{Name} + " [" + HashStr + ']';
     return HashStr;

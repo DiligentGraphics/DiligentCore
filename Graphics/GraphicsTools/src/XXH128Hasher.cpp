@@ -35,6 +35,22 @@
 namespace Diligent
 {
 
+std::string XXH128Hash::ToString() const
+{
+    static constexpr char Symbols[] = "0123456789ABCDEF";
+
+    std::string Str;
+    Str.reserve(32);
+
+    for (Uint64 Part : {HighPart, LowPart})
+    {
+        for (Uint64 i = 0; i < 16; ++i)
+            Str += Symbols[(Part >> (Uint64{60} - i * 4)) & 0xFu];
+    }
+
+    return Str;
+}
+
 XXH128State::XXH128State() :
     m_State{XXH3_createState()}
 {

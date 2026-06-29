@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024-2025 Diligent Graphics LLC
+ *  Copyright 2024-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -120,8 +120,6 @@ public:
     RefCntAutoPtr<IShader> FindReloadableShader(IShader* pShader);
 
 private:
-    static std::string HashToStr(Uint64 Low, Uint64 High);
-
     static std::string MakeHashStr(const char* Name, const XXH128Hash& Hash);
 
     template <typename CreateInfoType>

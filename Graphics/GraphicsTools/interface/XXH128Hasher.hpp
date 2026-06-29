@@ -27,6 +27,7 @@
 #pragma once
 
 #include <cstring>
+#include <string>
 
 #include "../../../Primitives/interface/BasicTypes.h"
 #include "../../../Graphics/GraphicsEngine/interface/Shader.h"
@@ -42,6 +43,8 @@ struct XXH128Hash
 {
     Uint64 LowPart  = {};
     Uint64 HighPart = {};
+
+    std::string ToString() const;
 
     constexpr bool operator==(const XXH128Hash& RHS) const noexcept
     {
