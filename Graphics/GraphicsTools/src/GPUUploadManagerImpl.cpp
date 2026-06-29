@@ -1068,14 +1068,14 @@ GPUUploadManagerImpl::UploadStream* GPUUploadManagerImpl::TextureUploadStreams::
     Format = FormatToTypeless(Format);
 
     {
-        std::shared_lock<std::shared_mutex> Lock{m_Mtx};
+        std::shared_lock<Threading::SharedMutex> Lock{m_Mtx};
 
         auto it = m_StreamsByFormat.find(Format);
         if (it != m_StreamsByFormat.end())
             return it->second;
     }
 
-    std::unique_lock<std::shared_mutex> Lock{m_Mtx};
+    std::unique_lock<Threading::SharedMutex> Lock{m_Mtx};
     if (m_Stopping.load(std::memory_order_acquire))
         return nullptr;
 
@@ -1130,7 +1130,7 @@ void GPUUploadManagerImpl::TextureUploadStreams::SetStopping()
 {
     // Set the stop flag while holding the mutex to ensure that
     // no new streams are added after we set the flag.
-    std::unique_lock<std::shared_mutex> Lock{m_Mtx};
+    std::unique_lock<Threading::SharedMutex> Lock{m_Mtx};
     m_Stopping.store(true, std::memory_order_release);
 }
 

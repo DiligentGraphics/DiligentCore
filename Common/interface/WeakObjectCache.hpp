@@ -32,6 +32,7 @@
 #include "DebugUtilities.hpp"
 #include "HashUtils.hpp"
 #include "RefCntAutoPtr.hpp"
+#include "SharedMutex.hpp"
 #include "SpinLock.hpp"
 
 #include <algorithm>
@@ -40,7 +41,6 @@
 #include <memory>
 #include <mutex>
 #include <new>
-#include <shared_mutex>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -285,8 +285,8 @@ private:
 
     struct alignas(CacheLineSize) Shard
     {
-        mutable std::shared_mutex Mutex;
-        ObjectMapType             Objects;
+        mutable Threading::SharedMutex Mutex;
+        ObjectMapType                  Objects;
     };
 
 #ifdef _MSC_VER
@@ -343,7 +343,7 @@ public:
         {
             Shard& CacheShard = m_Shards[ShardIdx];
 
-            std::unique_lock<std::shared_mutex> Lock{CacheShard.Mutex};
+            std::unique_lock<Threading::SharedMutex> Lock{CacheShard.Mutex};
             CacheShard.Objects.reserve(PerShard);
         }
     }
@@ -404,7 +404,7 @@ public:
         std::shared_ptr<ObjectEntry> pEntry;
 
         {
-            std::shared_lock<std::shared_mutex> Lock{CacheShard.Mutex};
+            std::shared_lock<Threading::SharedMutex> Lock{CacheShard.Mutex};
 
             const auto It = CacheShard.Objects.find(Key);
             if (It != CacheShard.Objects.end())
@@ -418,7 +418,7 @@ public:
             // inserted the entry after our shared-lock miss.
             std::shared_ptr<ObjectEntry> pNewEntry = std::make_shared<ObjectEntry>();
 
-            std::unique_lock<std::shared_mutex> Lock{CacheShard.Mutex};
+            std::unique_lock<Threading::SharedMutex> Lock{CacheShard.Mutex};
 
             const auto It = CacheShard.Objects.find(Key);
             if (It != CacheShard.Objects.end())
@@ -537,7 +537,7 @@ public:
         bool                         Erased = false;
 
         {
-            std::unique_lock<std::shared_mutex> Lock{CacheShard.Mutex};
+            std::unique_lock<Threading::SharedMutex> Lock{CacheShard.Mutex};
 
             const auto It = CacheShard.Objects.find(Key);
             if (It == CacheShard.Objects.end())
@@ -586,7 +586,7 @@ public:
 
             size_t RemovedFromShard = 0;
             {
-                std::unique_lock<std::shared_mutex> Lock{CacheShard.Mutex};
+                std::unique_lock<Threading::SharedMutex> Lock{CacheShard.Mutex};
 
                 for (auto It = CacheShard.Objects.begin(); It != CacheShard.Objects.end();)
                 {

@@ -39,6 +39,7 @@ set(INTERFACE
     interface/RefCntContainer.hpp
     interface/RefCountedObjectImpl.hpp
     interface/Serializer.hpp
+    interface/SharedMutex.hpp
     interface/SpinLock.hpp
     interface/STDAllocator.hpp
     interface/StringDataBlobImpl.hpp

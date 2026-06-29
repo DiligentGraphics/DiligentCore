@@ -34,13 +34,13 @@
 #include "ObjectBase.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "MPSCQueue.hpp"
+#include "SharedMutex.hpp"
 #include "ThreadSignal.hpp"
 #include "DynamicAtlasManager.hpp"
 
 #include <memory>
 #include <vector>
 #include <mutex>
-#include <shared_mutex>
 #include <map>
 #include <unordered_map>
 #include <variant>
@@ -415,7 +415,7 @@ private:
         const Uint32          m_PageSizeInBytes;
         const Uint32          m_MaxPageCount;
 
-        std::shared_mutex                                 m_Mtx;
+        Threading::SharedMutex                            m_Mtx;
         std::unordered_map<TEXTURE_FORMAT, UploadStream*> m_StreamsByFormat;
 
         // New streams created by worker threads that are not yet added to parent m_Streams vector.
