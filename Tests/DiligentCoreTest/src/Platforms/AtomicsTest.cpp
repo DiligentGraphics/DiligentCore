@@ -28,8 +28,9 @@
 
 #include "gtest/gtest.h"
 
-#include <thread>
 #include <algorithm>
+#include <cmath>
+#include <thread>
 
 #include "ThreadSignal.hpp"
 
@@ -83,6 +84,35 @@ TEST(Platforms_Atomics, AtomicMin)
     for (auto& Thread : Threads)
         Thread.join();
     EXPECT_EQ(Val.load(), 0);
+}
+
+
+TEST(Platforms_Atomics, AtomicFloat)
+{
+    static_assert(AtomicFloat::is_always_lock_free, "AtomicFloat is expected to be lock-free.");
+
+    AtomicFloat Val;
+    EXPECT_FLOAT_EQ(Val.load(), 0.f);
+    EXPECT_TRUE(Val.is_lock_free());
+
+    Val.store(1.25f, std::memory_order_release);
+    EXPECT_FLOAT_EQ(Val.load(std::memory_order_acquire), 1.25f);
+
+    EXPECT_FLOAT_EQ(Val.exchange(-2.5f), 1.25f);
+    EXPECT_FLOAT_EQ(Val.load(), -2.5f);
+
+    float Expected = -2.5f;
+    EXPECT_TRUE(Val.compare_exchange_strong(Expected, 3.5f));
+    EXPECT_FLOAT_EQ(Expected, -2.5f);
+    EXPECT_FLOAT_EQ(Val.load(), 3.5f);
+
+    Expected = -2.5f;
+    EXPECT_FALSE(Val.compare_exchange_strong(Expected, 4.5f));
+    EXPECT_FLOAT_EQ(Expected, 3.5f);
+    EXPECT_FLOAT_EQ(Val.load(), 3.5f);
+
+    Val = -0.f;
+    EXPECT_TRUE(std::signbit(Val.load()));
 }
 
 } // namespace

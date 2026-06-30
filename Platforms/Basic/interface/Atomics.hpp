@@ -27,9 +27,128 @@
 #pragma once
 
 #include <atomic>
+#include <cstdint>
+#include <cstring>
+#include <type_traits>
 
 namespace Diligent
 {
+
+class AtomicFloat
+{
+public:
+    using value_type   = float;
+    using storage_type = std::uint32_t;
+
+    static_assert(sizeof(value_type) == sizeof(storage_type),
+                  "AtomicFloat requires 32-bit float and uint32_t types.");
+    static_assert(std::atomic<storage_type>::is_always_lock_free,
+                  "AtomicFloat requires lock-free uint32_t atomics.");
+
+    static constexpr bool is_always_lock_free = std::atomic<storage_type>::is_always_lock_free;
+
+    AtomicFloat() noexcept = default;
+
+    explicit AtomicFloat(value_type Value) noexcept :
+        m_Value{FloatToBits(Value)}
+    {
+    }
+
+    AtomicFloat(const AtomicFloat&) = delete;
+    AtomicFloat& operator=(const AtomicFloat&) = delete;
+
+    AtomicFloat& operator=(value_type Value) noexcept
+    {
+        store(Value);
+        return *this;
+    }
+
+    bool is_lock_free() const noexcept
+    {
+        static_assert(is_always_lock_free, "AtomicFloat is expected to be lock-free.");
+        return true;
+    }
+
+    void store(value_type        Value,
+               std::memory_order Order = std::memory_order_seq_cst) noexcept
+    {
+        m_Value.store(FloatToBits(Value), Order);
+    }
+
+    value_type load(std::memory_order Order = std::memory_order_seq_cst) const noexcept
+    {
+        return BitsToFloat(m_Value.load(Order));
+    }
+
+    value_type exchange(value_type        Value,
+                        std::memory_order Order = std::memory_order_seq_cst) noexcept
+    {
+        return BitsToFloat(m_Value.exchange(FloatToBits(Value), Order));
+    }
+
+    bool compare_exchange_weak(value_type&       Expected,
+                               value_type        Desired,
+                               std::memory_order SuccessOrder,
+                               std::memory_order FailureOrder) noexcept
+    {
+        storage_type ExpectedBits = FloatToBits(Expected);
+        const bool   Exchanged    = m_Value.compare_exchange_weak(ExpectedBits, FloatToBits(Desired), SuccessOrder, FailureOrder);
+        if (!Exchanged)
+            Expected = BitsToFloat(ExpectedBits);
+        return Exchanged;
+    }
+
+    bool compare_exchange_weak(value_type&       Expected,
+                               value_type        Desired,
+                               std::memory_order Order = std::memory_order_seq_cst) noexcept
+    {
+        storage_type ExpectedBits = FloatToBits(Expected);
+        const bool   Exchanged    = m_Value.compare_exchange_weak(ExpectedBits, FloatToBits(Desired), Order);
+        if (!Exchanged)
+            Expected = BitsToFloat(ExpectedBits);
+        return Exchanged;
+    }
+
+    bool compare_exchange_strong(value_type&       Expected,
+                                 value_type        Desired,
+                                 std::memory_order SuccessOrder,
+                                 std::memory_order FailureOrder) noexcept
+    {
+        storage_type ExpectedBits = FloatToBits(Expected);
+        const bool   Exchanged    = m_Value.compare_exchange_strong(ExpectedBits, FloatToBits(Desired), SuccessOrder, FailureOrder);
+        if (!Exchanged)
+            Expected = BitsToFloat(ExpectedBits);
+        return Exchanged;
+    }
+
+    bool compare_exchange_strong(value_type&       Expected,
+                                 value_type        Desired,
+                                 std::memory_order Order = std::memory_order_seq_cst) noexcept
+    {
+        storage_type ExpectedBits = FloatToBits(Expected);
+        const bool   Exchanged    = m_Value.compare_exchange_strong(ExpectedBits, FloatToBits(Desired), Order);
+        if (!Exchanged)
+            Expected = BitsToFloat(ExpectedBits);
+        return Exchanged;
+    }
+
+private:
+    static storage_type FloatToBits(value_type Value) noexcept
+    {
+        storage_type Bits = {};
+        std::memcpy(&Bits, &Value, sizeof(Value));
+        return Bits;
+    }
+
+    static value_type BitsToFloat(storage_type Bits) noexcept
+    {
+        value_type Value = {};
+        std::memcpy(&Value, &Bits, sizeof(Bits));
+        return Value;
+    }
+
+    std::atomic<storage_type> m_Value{FloatToBits(0.0f)};
+};
 
 /// Atomically updates Val to Candidate if Candidate is greater than the current value of Val.
 /// Returns the value observed before the update (which may be greater than or equal to Candidate).
