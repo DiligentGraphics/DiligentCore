@@ -47,6 +47,8 @@
 namespace Diligent
 {
 
+constexpr Uint32 MaxDynamicTextureAtlasSliceCount = 2048;
+
 class DynamicTextureAtlasImpl;
 
 class TextureAtlasSuballocationImpl final : public ObjectBase<ITextureAtlasSuballocation>
@@ -390,9 +392,9 @@ public:
         },
         // clang-format off
         m_MinAlignment    {CreateInfo.MinAlignment},
-        m_ExtraSliceCount {CreateInfo.ExtraSliceCount},
+        m_MaxSliceCount   {CreateInfo.Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY ? std::min(CreateInfo.MaxSliceCount, MaxDynamicTextureAtlasSliceCount) : 1},
+        m_ExtraSliceCount {std::min(CreateInfo.ExtraSliceCount, m_MaxSliceCount)},
         m_ExtraSliceFactor{clamp(CreateInfo.GrowthFactor, 1.f, 2.f) - 1.f},
-        m_MaxSliceCount   {CreateInfo.Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY ? std::min(CreateInfo.MaxSliceCount, Uint32{2048}) : 1},
         m_Silent          {CreateInfo.Silent},
         m_SuballocationsAllocator
         {
@@ -736,7 +738,8 @@ private:
                 m_ExtraSliceCount :
                 std::max(static_cast<Uint32>(static_cast<float>(CurrSize) * m_ExtraSliceFactor), 1u);
 
-            const Uint32 RequiredSize = std::min(CurrSize + ExtraSliceCount, m_MaxSliceCount);
+            const Uint32 Remaining    = m_MaxSliceCount > CurrSize ? m_MaxSliceCount - CurrSize : 0;
+            const Uint32 RequiredSize = CurrSize + std::min(ExtraSliceCount, Remaining);
             AtomicMax(m_TexArraySize, RequiredSize);
 
             CurrSize = m_TexArraySize.load();
@@ -769,9 +772,9 @@ private:
     const TextureDesc m_Desc;
 
     const Uint32 m_MinAlignment;
+    const Uint32 m_MaxSliceCount;
     const Uint32 m_ExtraSliceCount;
     const float  m_ExtraSliceFactor;
-    const Uint32 m_MaxSliceCount;
     const bool   m_Silent;
 
     std::unique_ptr<DynamicTextureArray> m_DynamicTexArray;

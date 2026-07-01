@@ -168,6 +168,39 @@ TEST(DynamicTextureAtlas, GetUsageStatsForUncommittedArrayAllocation)
     EXPECT_EQ(Stats.UsedArea, Uint64{AtlasDim} * Uint64{AtlasDim});
 }
 
+TEST(DynamicTextureAtlas, HugeExtraSliceCountDoesNotOverflowGrowth)
+{
+    DynamicTextureAtlasCreateInfo CI;
+    CI.ExtraSliceCount = ~Uint32{0};
+    CI.MaxSliceCount   = 4;
+    CI.MinAlignment    = 1;
+    CI.Desc.Format     = TEX_FORMAT_RGBA8_UNORM;
+    CI.Desc.Name       = "Dynamic Texture Atlas Extra Slice Count Test";
+    CI.Desc.Type       = RESOURCE_DIM_TEX_2D_ARRAY;
+    CI.Desc.BindFlags  = BIND_SHADER_RESOURCE;
+    CI.Desc.Width      = 1;
+    CI.Desc.Height     = 1;
+    CI.Desc.ArraySize  = 3;
+
+    RefCntAutoPtr<IDynamicTextureAtlas> pAtlas;
+    CreateDynamicTextureAtlas(nullptr, CI, &pAtlas);
+    ASSERT_TRUE(pAtlas);
+
+    std::vector<RefCntAutoPtr<ITextureAtlasSuballocation>> Allocations(CI.MaxSliceCount);
+    for (RefCntAutoPtr<ITextureAtlasSuballocation>& Allocation : Allocations)
+    {
+        pAtlas->Allocate(1, 1, &Allocation);
+        ASSERT_TRUE(Allocation);
+    }
+
+    DynamicTextureAtlasUsageStats Stats;
+    pAtlas->GetUsageStats(Stats);
+    EXPECT_EQ(Stats.TotalArea, CI.MaxSliceCount);
+    EXPECT_EQ(Stats.AllocationCount, CI.MaxSliceCount);
+    EXPECT_EQ(Stats.AllocatedArea, CI.MaxSliceCount);
+    EXPECT_EQ(Stats.UsedArea, CI.MaxSliceCount);
+}
+
 TEST(DynamicTextureAtlas, CreateArray)
 {
     auto* const pEnv     = GPUTestingEnvironment::GetInstance();
