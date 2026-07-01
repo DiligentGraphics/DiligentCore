@@ -695,8 +695,11 @@ public:
     {
         if (m_DynamicTexArray)
         {
+            const Uint32 CommittedArraySize = m_DynamicTexArray->GetArraySize();
+            const Uint32 LogicalArraySize   = std::max(m_TexArraySize.load(std::memory_order_acquire), CommittedArraySize);
+
             Stats.CommittedSize = m_DynamicTexArray->GetMemoryUsage();
-            Stats.TotalArea     = Uint64{m_Desc.Width} * Uint64{m_Desc.Height} * Uint64{m_DynamicTexArray->GetArraySize()};
+            Stats.TotalArea     = Uint64{m_Desc.Width} * Uint64{m_Desc.Height} * Uint64{LogicalArraySize};
         }
         else
         {

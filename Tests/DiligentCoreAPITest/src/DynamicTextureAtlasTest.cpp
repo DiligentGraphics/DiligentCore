@@ -138,6 +138,36 @@ TEST(DynamicTextureAtlas, GetUsageStatsFor2DAtlasCommittedSize)
     EXPECT_EQ(Stats.TotalArea, CI.Desc.Width * CI.Desc.Height);
 }
 
+TEST(DynamicTextureAtlas, GetUsageStatsForUncommittedArrayAllocation)
+{
+    constexpr Uint32 AtlasDim = 128;
+
+    DynamicTextureAtlasCreateInfo CI;
+    CI.MinAlignment   = 16;
+    CI.Desc.Format    = TEX_FORMAT_RGBA8_UNORM;
+    CI.Desc.Name      = "Dynamic Texture Atlas Uncommitted Allocation Test";
+    CI.Desc.Type      = RESOURCE_DIM_TEX_2D_ARRAY;
+    CI.Desc.BindFlags = BIND_SHADER_RESOURCE;
+    CI.Desc.Width     = AtlasDim;
+    CI.Desc.Height    = AtlasDim;
+    CI.Desc.ArraySize = 0;
+
+    RefCntAutoPtr<IDynamicTextureAtlas> pAtlas;
+    CreateDynamicTextureAtlas(nullptr, CI, &pAtlas);
+    ASSERT_TRUE(pAtlas);
+
+    RefCntAutoPtr<ITextureAtlasSuballocation> pSuballocation;
+    pAtlas->Allocate(AtlasDim, AtlasDim, &pSuballocation);
+    ASSERT_TRUE(pSuballocation);
+
+    DynamicTextureAtlasUsageStats Stats;
+    pAtlas->GetUsageStats(Stats);
+    EXPECT_EQ(Stats.CommittedSize, 0u);
+    EXPECT_EQ(Stats.TotalArea, Uint64{AtlasDim} * Uint64{AtlasDim});
+    EXPECT_EQ(Stats.AllocatedArea, Uint64{AtlasDim} * Uint64{AtlasDim});
+    EXPECT_EQ(Stats.UsedArea, Uint64{AtlasDim} * Uint64{AtlasDim});
+}
+
 TEST(DynamicTextureAtlas, CreateArray)
 {
     auto* const pEnv     = GPUTestingEnvironment::GetInstance();
