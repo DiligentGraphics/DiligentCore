@@ -520,7 +520,10 @@ public:
 
         if (Width > m_Desc.Width || Height > m_Desc.Height)
         {
-            LOG_ERROR_MESSAGE("Requested region size ", Width, " x ", Height, " exceeds atlas dimensions ", m_Desc.Width, " x ", m_Desc.Height);
+            if (!m_Silent)
+            {
+                LOG_ERROR_MESSAGE("Requested region size ", Width, " x ", Height, " exceeds atlas dimensions ", m_Desc.Width, " x ", m_Desc.Height);
+            }
             return;
         }
 
