@@ -214,6 +214,7 @@ void DynamicTextureArray::CreateSparseTexture(IRenderDevice* pDevice)
         VERIFY_EXPR(DeviceInfo.IsMetalDevice());
         m_pMemory->Resize(m_MemoryPageSize);
     }
+    m_SparseMemoryUsage.store(m_pMemory ? m_pMemory->GetCapacity() : 0, std::memory_order_release);
 
     // Create fences
     // Note: D3D11 does not support general fences
@@ -387,6 +388,8 @@ void DynamicTextureArray::ResizeSparseTexture(IDeviceContext* pContext)
 
     if (RequiredMemSize < m_pMemory->GetCapacity())
         m_pMemory->Resize(RequiredMemSize); // Release unused memory
+
+    m_SparseMemoryUsage.store(m_pMemory->GetCapacity(), std::memory_order_release);
 }
 
 void DynamicTextureArray::CopyStaleTextureContents(IDeviceContext* pContext)
@@ -538,7 +541,7 @@ Uint64 DynamicTextureArray::GetMemoryUsage() const
     Uint64 MemUsage = 0;
     if (GetUsage() == USAGE_SPARSE)
     {
-        MemUsage = m_pMemory ? m_pMemory->GetCapacity() : 0;
+        MemUsage = m_SparseMemoryUsage.load(std::memory_order_acquire);
     }
     else
     {

@@ -24,6 +24,7 @@
  *  of the possibility of such damages.
  */
 
+#include <cstring>
 #include <vector>
 
 #include "DynamicTextureArray.hpp"

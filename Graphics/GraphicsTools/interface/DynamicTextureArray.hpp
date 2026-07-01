@@ -30,6 +30,7 @@
 /// Declaration of DynamicTextureArray class
 
 #include <atomic>
+#include <string>
 
 #include "../../GraphicsEngine/interface/RenderDevice.h"
 #include "../../GraphicsEngine/interface/DeviceContext.h"
@@ -59,6 +60,15 @@ struct DynamicTextureArrayCreateInfo
 };
 
 /// Dynamically resizable texture 2D array
+///
+/// \remarks GetDesc(), GetArraySize(), GetVersion(), and GetMemoryUsage()
+///          are thread-safe and may be called from worker threads. If these
+///          methods race with Update() or Resize(), the returned value is a
+///          snapshot and may become stale immediately.
+///
+///          All other methods are not thread-safe and must be externally
+///          synchronized: they must not race with each other or with Update()
+///          or Resize().
 class DynamicTextureArray
 {
 public:
@@ -139,6 +149,9 @@ public:
     ///
     /// If the texture may need to be updated (initialized or resized),
     /// use the Update() method.
+    ///
+    /// \remarks The method is not thread-safe and must not race with other
+    ///          methods that may update the texture array.
     ITexture* GetTexture() const
     {
         return m_pTexture;
@@ -147,12 +160,19 @@ public:
     /// Returns true if the texture must be updated before use (e.g. it has been resized,
     /// but internal texture has not been initialized or updated).
     /// When update is not pending, Update() may be called with null device and context.
+    ///
+    /// \remarks The method is not thread-safe and must not race with other
+    ///          methods that may update the texture array.
     bool PendingUpdate() const
     {
         return m_PendingSize != GetArraySize();
     }
 
     /// Returns a snapshot of the texture description.
+    ///
+    /// \remarks The method is thread-safe and may be called from worker threads.
+    ///          If it races with Update() or Resize(), the returned value may
+    ///          become stale immediately.
     TextureDesc GetDesc() const
     {
         TextureDesc Desc = m_Desc;
@@ -162,6 +182,10 @@ public:
     }
 
     /// Returns the current number of slices in the texture array.
+    ///
+    /// \remarks The method is thread-safe and may be called from worker threads.
+    ///          If it races with Update() or Resize(), the returned value may
+    ///          become stale immediately.
     Uint32 GetArraySize() const noexcept
     {
         return m_ArraySize.load(std::memory_order_acquire);
@@ -170,12 +194,20 @@ public:
     /// Returns dynamic texture version.
 
     /// The version is incremented every time a new internal texture is created.
+    ///
+    /// \remarks The method is thread-safe and may be called from worker threads.
+    ///          If it races with Update() or Resize(), the returned value may
+    ///          become stale immediately.
     Uint32 GetVersion() const
     {
-        return m_Version;
+        return m_Version.load(std::memory_order_acquire);
     }
 
     /// Returns the amount of memory currently used by the dynamic array, in bytes.
+    ///
+    /// \remarks The method is thread-safe and may be called from worker threads.
+    ///          If it races with Update() or Resize(), the returned value may
+    ///          become stale immediately.
     Uint64 GetMemoryUsage() const;
 
 private:
@@ -211,6 +243,7 @@ private:
     std::atomic<Uint32> m_ArraySize{0};
     std::atomic<Uint32> m_Usage{USAGE_DEFAULT};
     std::atomic<Uint32> m_Version{0};
+    std::atomic<Uint64> m_SparseMemoryUsage{0};
 
     Uint32 m_PendingSize = 0;
 
