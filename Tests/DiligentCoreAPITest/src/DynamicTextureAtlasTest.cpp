@@ -363,6 +363,54 @@ TEST(DynamicTextureAtlas, Allocate)
 }
 
 
+TEST(DynamicTextureAtlas, AlignedRequestTooLargeDoesNotConsumeSlice)
+{
+    auto* const pEnv    = GPUTestingEnvironment::GetInstance();
+    auto* const pDevice = pEnv->GetDevice();
+
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
+    DynamicTextureAtlasCreateInfo CI;
+    CI.MaxSliceCount  = 1;
+    CI.Silent         = true;
+    CI.MinAlignment   = 64;
+    CI.Desc.Format    = TEX_FORMAT_RGBA8_UNORM;
+    CI.Desc.Name      = "Dynamic Texture Atlas Aligned Request Test";
+    CI.Desc.Type      = RESOURCE_DIM_TEX_2D_ARRAY;
+    CI.Desc.BindFlags = BIND_SHADER_RESOURCE;
+    CI.Desc.Width     = 384;
+    CI.Desc.Height    = 384;
+    CI.Desc.ArraySize = 1;
+
+    RefCntAutoPtr<IDynamicTextureAtlas> pAtlas;
+    CreateDynamicTextureAtlas(pDevice, CI, &pAtlas);
+
+    RefCntAutoPtr<ITextureAtlasSuballocation> pTmpSuballocation;
+    pAtlas->Allocate(64, 64, &pTmpSuballocation);
+    ASSERT_TRUE(pTmpSuballocation);
+
+    pTmpSuballocation.Release();
+    // The next allocation will fail because it requires a 512 x 512 aligned region
+    pAtlas->Allocate(257, 257, &pTmpSuballocation);
+    EXPECT_EQ(pTmpSuballocation, nullptr);
+
+    // The failed allocation requires a 512 x 512 aligned region and must not
+    // consume the only atlas slice. A subsequent valid allocation must succeed.
+    RefCntAutoPtr<ITextureAtlasSuballocation> pSuballocation;
+    pAtlas->Allocate(64, 64, &pSuballocation);
+    ASSERT_TRUE(pSuballocation);
+    EXPECT_EQ(pSuballocation->GetSlice(), 0u);
+    EXPECT_EQ(pSuballocation->GetOrigin(), uint2(0, 0));
+    EXPECT_EQ(pSuballocation->GetSize(), uint2(64, 64));
+
+    DynamicTextureAtlasUsageStats Stats;
+    pAtlas->GetUsageStats(Stats);
+    EXPECT_EQ(Stats.AllocationCount, 1u);
+    EXPECT_EQ(Stats.AllocatedArea, 64u * 64u);
+    EXPECT_EQ(Stats.UsedArea, 64u * 64u);
+}
+
+
 // Allocate more regions than the atlas can hold
 TEST(DynamicTextureAtlas, Overflow)
 {

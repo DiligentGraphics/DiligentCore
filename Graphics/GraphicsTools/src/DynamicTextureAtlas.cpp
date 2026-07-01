@@ -497,6 +497,15 @@ public:
                           Uint32                       Height,
                           ITextureAtlasSuballocation** ppSuballocation) override final
     {
+        if (ppSuballocation == nullptr)
+        {
+            UNEXPECTED("ppSuballocation must not be null");
+            return;
+        }
+        DEV_CHECK_ERR(*ppSuballocation == nullptr, "ppSuballocation is not null. This may result in memory leak.");
+
+        *ppSuballocation = nullptr;
+
         if (Width == 0 || Height == 0)
         {
             UNEXPECTED("Subregion size must not be zero");
@@ -512,6 +521,17 @@ public:
         const Uint32 Alignment     = GetAllocationAlignment(Width, Height);
         const Uint32 AlignedWidth  = AlignUp(Width, Alignment);
         const Uint32 AlignedHeight = AlignUp(Height, Alignment);
+
+        if (AlignedWidth > m_Desc.Width || AlignedHeight > m_Desc.Height)
+        {
+            if (!m_Silent)
+            {
+                LOG_ERROR_MESSAGE("Requested region size ", Width, " x ", Height,
+                                  " requires aligned size ", AlignedWidth, " x ", AlignedHeight,
+                                  ", which exceeds atlas dimensions ", m_Desc.Width, " x ", m_Desc.Height);
+            }
+            return;
+        }
 
         SliceBatch* pBatch = GetSliceBatch(Alignment, m_Desc.Width / Alignment, m_Desc.Height / Alignment);
         VERIFY_EXPR(pBatch != nullptr);
