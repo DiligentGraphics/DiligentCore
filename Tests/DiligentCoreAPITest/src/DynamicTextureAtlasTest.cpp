@@ -35,6 +35,7 @@
 #include "GPUTestingEnvironment.hpp"
 #include "gtest/gtest.h"
 #include "FastRand.hpp"
+#include "GraphicsAccessories.hpp"
 #include "ThreadSignal.hpp"
 
 using namespace Diligent;
@@ -95,6 +96,46 @@ TEST(DynamicTextureAtlas, Create)
     EXPECT_EQ(Stats.AllocatedArea, 128u * 128u);
     EXPECT_EQ(Stats.UsedArea, 128u * 128u);
     EXPECT_GE(Stats.CommittedSize, 0u);
+}
+
+TEST(DynamicTextureAtlas, GetUsageStatsFor2DAtlasCommittedSize)
+{
+    auto* const pEnv    = GPUTestingEnvironment::GetInstance();
+    auto* const pDevice = pEnv->GetDevice();
+
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
+    DynamicTextureAtlasCreateInfo CI;
+    CI.MinAlignment   = 16;
+    CI.Desc.Format    = TEX_FORMAT_RGBA8_UNORM;
+    CI.Desc.Name      = "Dynamic Texture Atlas Committed Size Test";
+    CI.Desc.Type      = RESOURCE_DIM_TEX_2D;
+    CI.Desc.BindFlags = BIND_SHADER_RESOURCE;
+    CI.Desc.Width     = 256;
+    CI.Desc.Height    = 128;
+    CI.Desc.MipLevels = 0;
+
+    RefCntAutoPtr<IDynamicTextureAtlas> pAtlas;
+    CreateDynamicTextureAtlas(nullptr, CI, &pAtlas);
+    ASSERT_TRUE(pAtlas);
+
+    const TextureDesc AtlasDesc = pAtlas->GetAtlasDesc();
+    EXPECT_EQ(AtlasDesc.MipLevels, ComputeMipLevelsCount(AtlasDesc));
+
+    DynamicTextureAtlasUsageStats Stats;
+    pAtlas->GetUsageStats(Stats);
+    EXPECT_EQ(Stats.CommittedSize, 0u);
+    EXPECT_EQ(Stats.TotalArea, CI.Desc.Width * CI.Desc.Height);
+
+    ASSERT_NE(pAtlas->Update(pDevice, nullptr), nullptr);
+
+    Uint64 ExpectedCommittedSize = 0;
+    for (Uint32 Mip = 0; Mip < AtlasDesc.MipLevels; ++Mip)
+        ExpectedCommittedSize += GetMipLevelProperties(AtlasDesc, Mip).MipSize;
+
+    pAtlas->GetUsageStats(Stats);
+    EXPECT_EQ(Stats.CommittedSize, ExpectedCommittedSize);
+    EXPECT_EQ(Stats.TotalArea, CI.Desc.Width * CI.Desc.Height);
 }
 
 TEST(DynamicTextureAtlas, CreateArray)

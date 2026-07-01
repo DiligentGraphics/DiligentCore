@@ -383,6 +383,8 @@ public:
             [this](TextureDesc TexDesc) //
             {
                 TexDesc.Name = m_Name.c_str();
+                if (TexDesc.MipLevels == 0)
+                    TexDesc.MipLevels = ComputeMipLevelsCount(TexDesc);
                 return TexDesc;
             }(CreateInfo.Desc) //
         },
@@ -697,8 +699,11 @@ public:
         {
             VERIFY_EXPR(m_Desc.Type == RESOURCE_DIM_TEX_2D);
             Stats.CommittedSize = 0;
-            for (Uint32 mip = 0; mip < m_Desc.MipLevels; ++mip)
-                Stats.CommittedSize += GetMipLevelProperties(m_Desc, mip).MipSize;
+            if (m_pTexture)
+            {
+                for (Uint32 mip = 0; mip < m_Desc.MipLevels; ++mip)
+                    Stats.CommittedSize += GetMipLevelProperties(m_Desc, mip).MipSize;
+            }
             Stats.TotalArea = Uint64{m_Desc.Width} * Uint64{m_Desc.Height};
         }
 
