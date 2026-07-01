@@ -129,8 +129,11 @@ struct IDynamicTextureAtlas : public IObject
     /// If the internal texture needs to be resized, `pDevice` and `pContext` will
     /// be used to create a new texture and copy existing contents to it.
     ///
-    /// The method is not thread safe. An application must externally synchronize
-    /// the access.
+    /// The method may race with Allocate(). If an allocation happens concurrently,
+    /// the returned texture is not guaranteed to include storage for that allocation;
+    /// it will be committed by a subsequent Update() call.
+    ///
+    /// Concurrent calls to Update() must be externally synchronized.
     virtual ITexture* Update(IRenderDevice* pDevice, IDeviceContext* pContext) = 0;
 
 
@@ -139,6 +142,8 @@ struct IDynamicTextureAtlas : public IObject
     /// If the texture has not been created yet, the method returns null.
     /// If the texture may need to be updated (initialized or resized), use
     /// the Update() method.
+    ///
+    /// The method must not race with Update().
     virtual ITexture* GetTexture() const = 0;
 
 
@@ -153,7 +158,9 @@ struct IDynamicTextureAtlas : public IObject
     ///
     /// Internal texture array may need to be extended after the allocation happened.
     /// An application may call the Update() to ensure that the texture is resized and old
-    /// contents is copied.
+    /// contents is copied. Allocate() may race with Update(), but the allocation is not
+    /// guaranteed to be reflected in the texture returned by a concurrent Update() call;
+    /// it will be committed by a subsequent Update().
     virtual void Allocate(Uint32                       Width,
                           Uint32                       Height,
                           ITextureAtlasSuballocation** ppSuballocation) = 0;
@@ -170,6 +177,8 @@ struct IDynamicTextureAtlas : public IObject
     virtual Uint32 GetVersion() const = 0;
 
     /// Returns the usage stats, see Diligent::DynamicTextureAtlasUsageStats.
+    ///
+    /// The method must not race with Update().
     virtual void GetUsageStats(DynamicTextureAtlasUsageStats& Stats) const = 0;
 
 
