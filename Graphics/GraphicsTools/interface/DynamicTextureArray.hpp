@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -149,13 +149,22 @@ public:
     /// When update is not pending, Update() may be called with null device and context.
     bool PendingUpdate() const
     {
-        return m_PendingSize != m_Desc.ArraySize;
+        return m_PendingSize != GetArraySize();
     }
 
-    /// Returns the texture description.
-    const TextureDesc& GetDesc() const
+    /// Returns a snapshot of the texture description.
+    TextureDesc GetDesc() const
     {
-        return m_Desc;
+        TextureDesc Desc = m_Desc;
+        Desc.ArraySize   = GetArraySize();
+        Desc.Usage       = GetUsage();
+        return Desc;
+    }
+
+    /// Returns the current number of slices in the texture array.
+    Uint32 GetArraySize() const noexcept
+    {
+        return m_ArraySize.load(std::memory_order_acquire);
     }
 
     /// Returns dynamic texture version.
@@ -180,10 +189,27 @@ private:
     void CreateSparseTexture(IRenderDevice* pDevice);
     void CreateResources(IRenderDevice* pDevice);
 
+    void StoreArraySize(Uint32 ArraySize) noexcept
+    {
+        m_ArraySize.store(ArraySize, std::memory_order_release);
+    }
+
+    USAGE GetUsage() const noexcept
+    {
+        return static_cast<USAGE>(m_Usage.load(std::memory_order_acquire));
+    }
+
+    void StoreUsage(USAGE Usage) noexcept
+    {
+        m_Usage.store(static_cast<Uint32>(Usage), std::memory_order_release);
+    }
+
     const std::string m_Name;
     TextureDesc       m_Desc;
     const Uint32      m_NumSlicesInPage;
 
+    std::atomic<Uint32> m_ArraySize{0};
+    std::atomic<Uint32> m_Usage{USAGE_DEFAULT};
     std::atomic<Uint32> m_Version{0};
 
     Uint32 m_PendingSize = 0;

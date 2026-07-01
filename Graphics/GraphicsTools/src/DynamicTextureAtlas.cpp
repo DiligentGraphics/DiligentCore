@@ -456,11 +456,11 @@ public:
         if (m_DynamicTexArray)
         {
             Uint32 ArraySize = m_TexArraySize.load();
-            if (m_DynamicTexArray->GetDesc().ArraySize != ArraySize)
+            if (m_DynamicTexArray->GetArraySize() != ArraySize)
             {
                 m_DynamicTexArray->Resize(pDevice, pContext, ArraySize);
                 // Get the actual array size after the resize.
-                ArraySize = m_DynamicTexArray->GetDesc().ArraySize;
+                ArraySize = m_DynamicTexArray->GetArraySize();
                 // Atomically update the array size to the actual value after resizing.
                 AtomicMax(m_TexArraySize, ArraySize);
             }
@@ -642,9 +642,14 @@ public:
         m_AllocationCount.fetch_add(-1);
     }
 
-    virtual const TextureDesc& GetAtlasDesc() const override final
+    virtual TextureDesc GetAtlasDesc() const override final
     {
         return m_DynamicTexArray ? m_DynamicTexArray->GetDesc() : m_Desc;
+    }
+
+    virtual uint2 GetAtlasSize() const override final
+    {
+        return uint2{m_Desc.Width, m_Desc.Height};
     }
 
     virtual Uint32 GetVersion() const override final
@@ -662,8 +667,7 @@ public:
         if (m_DynamicTexArray)
         {
             Stats.CommittedSize = m_DynamicTexArray->GetMemoryUsage();
-            const TextureDesc& Desc{m_DynamicTexArray->GetDesc()};
-            Stats.TotalArea = Uint64{Desc.Width} * Uint64{Desc.Height} * Uint64{Desc.ArraySize};
+            Stats.TotalArea     = Uint64{m_Desc.Width} * Uint64{m_Desc.Height} * Uint64{m_DynamicTexArray->GetArraySize()};
         }
         else
         {
@@ -769,16 +773,15 @@ IDynamicTextureAtlas* TextureAtlasSuballocationImpl::GetAtlas()
 
 float4 TextureAtlasSuballocationImpl::GetUVScaleBias() const
 {
-    const float2       Origin    = GetOrigin().Recast<float>();
-    const float2       Size      = GetSize().Recast<float>();
-    const TextureDesc& AtlasDesc = m_pParentAtlas->GetAtlasDesc();
-    return float4 //
-        {
-            Size.x / static_cast<float>(AtlasDesc.Width),
-            Size.y / static_cast<float>(AtlasDesc.Height),
-            Origin.x / static_cast<float>(AtlasDesc.Width),
-            Origin.y / static_cast<float>(AtlasDesc.Height) //
-        };
+    const float2 Origin    = GetOrigin().Recast<float>();
+    const float2 Size      = GetSize().Recast<float>();
+    const float2 AtlasSize = m_pParentAtlas->GetAtlasSize().Recast<float>();
+    return float4{
+        Size.x / AtlasSize.x,
+        Size.y / AtlasSize.y,
+        Origin.x / AtlasSize.x,
+        Origin.y / AtlasSize.y,
+    };
 }
 
 Uint32 ComputeTextureAtlasSuballocationAlignment(Uint32 Width, Uint32 Height, Uint32 MinAlignment)

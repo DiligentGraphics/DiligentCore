@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -159,8 +159,11 @@ struct IDynamicTextureAtlas : public IObject
                           ITextureAtlasSuballocation** ppSuballocation) = 0;
 
 
-    /// Returns the texture atlas description
-    virtual const TextureDesc& GetAtlasDesc() const = 0;
+    /// Returns a snapshot of the texture atlas description.
+    virtual TextureDesc GetAtlasDesc() const = 0;
+
+    /// Returns the constant atlas dimensions.
+    virtual uint2 GetAtlasSize() const = 0;
 
     /// Returns internal texture array version. The version is incremented every time
     /// the array is expanded.

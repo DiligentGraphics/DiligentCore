@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,7 +27,10 @@
 
 #include "DynamicTextureAtlas.h"
 
+#include <atomic>
 #include <thread>
+#include <utility>
+#include <vector>
 
 #include "GPUTestingEnvironment.hpp"
 #include "gtest/gtest.h"
@@ -164,6 +167,109 @@ TEST(DynamicTextureAtlas, CreateArray)
         pAtlas.Release();
         pSuballoc.Release();
     }
+}
+
+
+TEST(DynamicTextureAtlas, GetAtlasDescWhileUpdatingArray)
+{
+    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
+    auto* const pDevice  = pEnv->GetDevice();
+    auto* const pContext = pEnv->GetDeviceContext();
+
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
+    constexpr Uint32 AtlasDim      = 64;
+    constexpr Uint32 MaxSliceCount = 8;
+
+    DynamicTextureAtlasCreateInfo CI;
+    CI.ExtraSliceCount = 1;
+    CI.MaxSliceCount   = MaxSliceCount;
+    CI.Silent          = true;
+    CI.MinAlignment    = 1;
+    CI.Desc.Format     = TEX_FORMAT_RGBA8_UNORM;
+    CI.Desc.Name       = "Dynamic Texture Atlas Desc Snapshot Test";
+    CI.Desc.Type       = RESOURCE_DIM_TEX_2D_ARRAY;
+    CI.Desc.BindFlags  = BIND_SHADER_RESOURCE;
+    CI.Desc.Width      = AtlasDim;
+    CI.Desc.Height     = AtlasDim;
+    CI.Desc.ArraySize  = 1;
+
+    RefCntAutoPtr<IDynamicTextureAtlas> pAtlas;
+    CreateDynamicTextureAtlas(pDevice, CI, &pAtlas);
+
+    IDynamicTextureAtlas* const pAtlasRaw = pAtlas;
+
+    constexpr Uint32    NumReaders = 8;
+    Threading::Signal   StartReaders;
+    Threading::Signal   AllReadersStarted;
+    Threading::Signal   StopReaders;
+    std::atomic<Uint32> ReadersStarted{0};
+    std::atomic<Uint32> DescMismatchCount{0};
+
+    std::vector<std::thread> Readers;
+    Readers.reserve(NumReaders);
+    for (Uint32 ReaderInd = 0; ReaderInd < NumReaders; ++ReaderInd)
+    {
+        Readers.emplace_back //
+            (
+                [&]() //
+                {
+                    StartReaders.Wait(true, NumReaders);
+                    if (ReadersStarted.fetch_add(1, std::memory_order_release) + 1 == NumReaders)
+                        AllReadersStarted.Trigger();
+
+                    while (!StopReaders.IsTriggered())
+                    {
+                        // GetAtlasDesc() returns a snapshot. It must be safe to call
+                        // from multiple readers while Update() commits dynamic array size changes.
+                        const TextureDesc Desc = pAtlasRaw->GetAtlasDesc();
+                        if (Desc.Type != RESOURCE_DIM_TEX_2D_ARRAY ||
+                            Desc.Format != TEX_FORMAT_RGBA8_UNORM ||
+                            Desc.Width != AtlasDim ||
+                            Desc.Height != AtlasDim ||
+                            Desc.ArraySize == 0 ||
+                            Desc.ArraySize > MaxSliceCount)
+                        {
+                            DescMismatchCount.fetch_add(1, std::memory_order_release);
+                            break;
+                        }
+                    }
+                } //
+            );
+    }
+
+    StartReaders.Trigger(true, NumReaders);
+    AllReadersStarted.Wait(true, 1);
+
+    std::vector<RefCntAutoPtr<ITextureAtlasSuballocation>> pAllocations;
+    pAllocations.reserve(MaxSliceCount);
+
+    bool UpdateOk = true;
+    for (Uint32 i = 0; i < MaxSliceCount; ++i)
+    {
+        RefCntAutoPtr<ITextureAtlasSuballocation> pSuballoc;
+        pAtlas->Allocate(AtlasDim, AtlasDim, &pSuballoc);
+        if (!pSuballoc)
+        {
+            UpdateOk = false;
+            break;
+        }
+        pAllocations.emplace_back(std::move(pSuballoc));
+
+        if (pAtlas->Update(pDevice, pContext) == nullptr)
+        {
+            UpdateOk = false;
+            break;
+        }
+    }
+
+    StopReaders.Trigger(true);
+    for (std::thread& Reader : Readers)
+        Reader.join();
+
+    EXPECT_TRUE(UpdateOk);
+    EXPECT_EQ(DescMismatchCount.load(std::memory_order_acquire), 0u);
+    EXPECT_EQ(pAtlas->GetAtlasDesc().ArraySize, MaxSliceCount);
 }
 
 TEST(DynamicTextureAtlas, Allocate)
