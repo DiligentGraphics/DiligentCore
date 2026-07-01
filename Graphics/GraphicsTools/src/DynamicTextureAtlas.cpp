@@ -173,8 +173,12 @@ public:
 
         ManagerGuard& operator=(ManagerGuard&& Other) noexcept
         {
-            pAtlasMgr       = Other.pAtlasMgr;
-            Other.pAtlasMgr = nullptr;
+            if (this != &Other)
+            {
+                Release();
+                pAtlasMgr       = Other.pAtlasMgr;
+                Other.pAtlasMgr = nullptr;
+            }
             return *this;
         }
 
@@ -823,6 +827,15 @@ void CreateDynamicTextureAtlas(IRenderDevice*                       pDevice,
                                const DynamicTextureAtlasCreateInfo& CreateInfo,
                                IDynamicTextureAtlas**               ppAtlas)
 {
+    if (ppAtlas == nullptr)
+    {
+        UNEXPECTED("ppAtlas must not be null");
+        return;
+    }
+    DEV_CHECK_ERR(*ppAtlas == nullptr, "ppAtlas is not null. This may result in memory leak.");
+
+    *ppAtlas = nullptr;
+
     try
     {
         DynamicTextureAtlasImpl* pAllocator = MakeNewRCObj<DynamicTextureAtlasImpl>()(pDevice, CreateInfo);
@@ -830,7 +843,7 @@ void CreateDynamicTextureAtlas(IRenderDevice*                       pDevice,
     }
     catch (...)
     {
-        LOG_ERROR_MESSAGE("Failed to create buffer suballocator");
+        LOG_ERROR_MESSAGE("Failed to create dynamic texture atlas");
     }
 }
 
