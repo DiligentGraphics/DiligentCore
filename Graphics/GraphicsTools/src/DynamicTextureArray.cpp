@@ -253,7 +253,14 @@ void DynamicTextureArray::CreateResources(IRenderDevice* pDevice)
             StoreArraySize(m_PendingSize);
         }
     }
-    DEV_CHECK_ERR(m_pTexture, "Failed to create texture for a dynamic texture array");
+    if (!m_pTexture)
+    {
+        // Sparse creation may fall back to USAGE_DEFAULT while the requested
+        // array size is zero. In this case, having no texture yet is valid.
+        DEV_CHECK_ERR(GetUsage() == USAGE_DEFAULT && m_PendingSize == 0,
+                      "Failed to create texture for a dynamic texture array");
+        return;
+    }
 
     m_Version.fetch_add(1);
 }
