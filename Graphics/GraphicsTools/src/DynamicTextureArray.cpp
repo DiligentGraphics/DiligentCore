@@ -259,7 +259,7 @@ void DynamicTextureArray::CreateResources(IRenderDevice* pDevice)
 }
 
 
-void DynamicTextureArray::ResizeSparseTexture(IDeviceContext* pContext)
+bool DynamicTextureArray::ResizeSparseTexture(IDeviceContext* pContext)
 {
     const Uint32 CurrArraySize = GetArraySize();
     VERIFY_EXPR(m_PendingSize != CurrArraySize);
@@ -269,7 +269,20 @@ void DynamicTextureArray::ResizeSparseTexture(IDeviceContext* pContext)
 
     const Uint64 RequiredMemSize = (m_PendingSize / m_NumSlicesInPage) * m_MemoryPageSize;
     if (RequiredMemSize > m_pMemory->GetCapacity())
-        m_pMemory->Resize(RequiredMemSize); // Allocate additional memory
+    {
+        if (!m_pMemory->Resize(RequiredMemSize))
+        {
+            LOG_ERROR_MESSAGE("Failed to resize sparse dynamic texture memory pool to ", RequiredMemSize, " bytes");
+            return false;
+        }
+        const Uint64 MemoryCapacity = m_pMemory->GetCapacity();
+        m_SparseMemoryUsage.store(MemoryCapacity, std::memory_order_release);
+        if (MemoryCapacity < RequiredMemSize)
+        {
+            LOG_ERROR_MESSAGE("Failed to resize sparse dynamic texture memory pool to ", RequiredMemSize, " bytes. Actual capacity is ", MemoryCapacity, " bytes");
+            return false;
+        }
+    }
 
     const Uint32 NumSlicesToBind = m_PendingSize > CurrArraySize ?
         m_PendingSize - CurrArraySize :
@@ -390,6 +403,7 @@ void DynamicTextureArray::ResizeSparseTexture(IDeviceContext* pContext)
         m_pMemory->Resize(RequiredMemSize); // Release unused memory
 
     m_SparseMemoryUsage.store(m_pMemory->GetCapacity(), std::memory_order_release);
+    return true;
 }
 
 void DynamicTextureArray::CopyStaleTextureContents(IDeviceContext* pContext)
@@ -442,8 +456,7 @@ void DynamicTextureArray::CommitResize(IRenderDevice*  pDevice,
         {
             if (pContext != nullptr)
             {
-                ResizeSparseTexture(pContext);
-                ResizeCommitted = true;
+                ResizeCommitted = ResizeSparseTexture(pContext);
             }
             else
             {

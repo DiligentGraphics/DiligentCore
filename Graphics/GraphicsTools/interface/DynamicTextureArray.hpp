@@ -215,7 +215,7 @@ private:
                       IDeviceContext* pContext,
                       bool            AllowNull);
 
-    void ResizeSparseTexture(IDeviceContext* pContext);
+    bool ResizeSparseTexture(IDeviceContext* pContext);
     void CopyStaleTextureContents(IDeviceContext* pContext);
 
     void CreateSparseTexture(IRenderDevice* pDevice);
