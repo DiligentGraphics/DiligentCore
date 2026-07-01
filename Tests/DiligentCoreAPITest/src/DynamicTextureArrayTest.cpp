@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -304,6 +304,53 @@ TEST_P(DynamicTextureArrayResizeTest, Run)
     EXPECT_EQ(pTexture, pDynTexArray->GetTexture());
     if (Desc.Usage != USAGE_SPARSE)
         EXPECT_EQ(pTexture, nullptr);
+}
+
+
+TEST(DynamicTextureArray, ResizeDiscardContentDoesNotRequireCopy)
+{
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
+    auto* pDevice  = pEnv->GetDevice();
+    auto* pContext = pEnv->GetDeviceContext();
+
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
+    DynamicTextureArrayCreateInfo DynTexArrCI;
+
+    auto& Desc{DynTexArrCI.Desc};
+    Desc.Name      = "Dynamic texture array discard resize test";
+    Desc.Type      = RESOURCE_DIM_TEX_2D_ARRAY;
+    Desc.BindFlags = BIND_SHADER_RESOURCE;
+    Desc.Width     = 64;
+    Desc.Height    = 64;
+    Desc.MipLevels = 1;
+    Desc.Usage     = USAGE_DEFAULT;
+    Desc.Format    = TEX_FORMAT_RGBA8_UNORM;
+    Desc.ArraySize = 1;
+
+    auto pDynTexArray = std::make_unique<DynamicTextureArray>(pDevice, DynTexArrCI);
+    ASSERT_NE(pDynTexArray, nullptr);
+    ASSERT_FALSE(pDynTexArray->PendingUpdate());
+    ASSERT_NE(pDynTexArray->GetTexture(), nullptr);
+    EXPECT_EQ(pDynTexArray->GetArraySize(), 1u);
+
+    // Discarding content releases the stale source texture. The resize must not
+    // try to copy from it even when a context is available.
+    auto* pTexture = pDynTexArray->Resize(pDevice, pContext, 2, true);
+    ASSERT_NE(pTexture, nullptr);
+    EXPECT_EQ(pTexture, pDynTexArray->GetTexture());
+    EXPECT_FALSE(pDynTexArray->PendingUpdate());
+    EXPECT_EQ(pDynTexArray->GetArraySize(), 2u);
+    EXPECT_EQ(pTexture->GetDesc().ArraySize, 2u);
+
+    // No copy is required when content is discarded, so a default-texture resize
+    // can be committed without a context.
+    pTexture = pDynTexArray->Resize(pDevice, nullptr, 3, true);
+    ASSERT_NE(pTexture, nullptr);
+    EXPECT_EQ(pTexture, pDynTexArray->GetTexture());
+    EXPECT_FALSE(pDynTexArray->PendingUpdate());
+    EXPECT_EQ(pDynTexArray->GetArraySize(), 3u);
+    EXPECT_EQ(pTexture->GetDesc().ArraySize, 3u);
 }
 
 

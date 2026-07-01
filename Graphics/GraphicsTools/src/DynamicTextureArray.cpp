@@ -389,9 +389,10 @@ void DynamicTextureArray::ResizeSparseTexture(IDeviceContext* pContext)
         m_pMemory->Resize(RequiredMemSize); // Release unused memory
 }
 
-void DynamicTextureArray::ResizeDefaultTexture(IDeviceContext* pContext)
+void DynamicTextureArray::CopyStaleTextureContents(IDeviceContext* pContext)
 {
     VERIFY_EXPR(m_PendingSize != GetArraySize());
+    VERIFY_EXPR(pContext != nullptr);
     VERIFY_EXPR(m_pTexture && m_pStaleTexture);
     const TextureDesc& SrcTexDesc = m_pStaleTexture->GetDesc();
     const TextureDesc& DstTexDesc = m_pTexture->GetDesc();
@@ -433,23 +434,46 @@ void DynamicTextureArray::CommitResize(IRenderDevice*  pDevice,
     const Uint32 CurrArraySize = GetArraySize();
     if (m_pTexture && CurrArraySize != m_PendingSize)
     {
-        if (pContext != nullptr)
+        bool ResizeCommitted = false;
+        if (GetUsage() == USAGE_SPARSE)
         {
-            if (GetUsage() == USAGE_SPARSE)
+            if (pContext != nullptr)
+            {
                 ResizeSparseTexture(pContext);
+                ResizeCommitted = true;
+            }
             else
-                ResizeDefaultTexture(pContext);
+            {
+                DEV_CHECK_ERR(AllowNull, "Dynamic texture must be resized, but pContext is null. Use PendingUpdate() to check if the Texture must be updated.");
+            }
+        }
+        else if (m_pStaleTexture)
+        {
+            if (pContext != nullptr)
+            {
+                CopyStaleTextureContents(pContext);
+                ResizeCommitted = true;
+            }
+            else
+            {
+                DEV_CHECK_ERR(AllowNull, "Dynamic texture must be resized, but pContext is null. Use PendingUpdate() to check if the Texture must be updated.");
+            }
+        }
+        else
+        {
+            // The old contents were discarded, or there was no previous texture.
+            // No GPU copy is required, so the resize can be committed without a context.
+            ResizeCommitted = true;
+        }
 
+        if (ResizeCommitted)
+        {
             StoreArraySize(m_PendingSize);
 
             LOG_INFO_MESSAGE("Dynamic texture array: expanding texture '", m_Desc.Name,
                              "' (", m_Desc.Width, " x ", m_Desc.Height, " ", m_Desc.MipLevels, "-mip ",
                              GetTextureFormatAttribs(m_Desc.Format).Name, ") to ",
                              m_PendingSize, " slices. Version: ", GetVersion());
-        }
-        else
-        {
-            DEV_CHECK_ERR(AllowNull, "Dynamic texture must be resized, but pContext is null. Use PendingUpdate() to check if the Texture must be updated.");
         }
     }
 }

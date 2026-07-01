@@ -184,7 +184,7 @@ private:
                       bool            AllowNull);
 
     void ResizeSparseTexture(IDeviceContext* pContext);
-    void ResizeDefaultTexture(IDeviceContext* pContext);
+    void CopyStaleTextureContents(IDeviceContext* pContext);
 
     void CreateSparseTexture(IRenderDevice* pDevice);
     void CreateResources(IRenderDevice* pDevice);
