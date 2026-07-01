@@ -2103,12 +2103,17 @@ if ( (State & ExclusiveState) != 0 && (State & ~ExclusiveState) != 0 )\
 
 MipLevelProperties GetMipLevelProperties(const TextureDesc& TexDesc, Uint32 MipLevel)
 {
-    MipLevelProperties          MipProps;
-    const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
+    return GetMipLevelProperties(TexDesc.GetWidth(), TexDesc.GetHeight(), TexDesc.GetDepth(), TexDesc.Format, MipLevel);
+}
 
-    MipProps.LogicalWidth  = std::max(TexDesc.GetWidth() >> MipLevel, 1u);
-    MipProps.LogicalHeight = std::max(TexDesc.GetHeight() >> MipLevel, 1u);
-    MipProps.Depth         = std::max(TexDesc.GetDepth() >> MipLevel, 1u);
+MipLevelProperties GetMipLevelProperties(Uint32 Width, Uint32 Height, Uint32 Depth, TEXTURE_FORMAT Format, Uint32 MipLevel)
+{
+    MipLevelProperties          MipProps;
+    const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(Format);
+
+    MipProps.LogicalWidth  = std::max(Width >> MipLevel, 1u);
+    MipProps.LogicalHeight = std::max(Height >> MipLevel, 1u);
+    MipProps.Depth         = std::max(Depth >> MipLevel, 1u);
     if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
     {
         VERIFY_EXPR(FmtAttribs.BlockWidth > 1 && FmtAttribs.BlockHeight > 1);

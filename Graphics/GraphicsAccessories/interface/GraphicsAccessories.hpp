@@ -598,6 +598,10 @@ struct MipLevelProperties
 /// Returns mip level properties for the specified texture description and mip level
 MipLevelProperties GetMipLevelProperties(const TextureDesc& TexDesc, Uint32 MipLevel);
 
+/// Returns mip level properties for the specified texture dimensions, format and mip level
+MipLevelProperties GetMipLevelProperties(Uint32 Width, Uint32 Height, Uint32 Depth, TEXTURE_FORMAT Format, Uint32 MipLevel);
+
+
 ADAPTER_VENDOR VendorIdToAdapterVendor(Uint32 VendorId);
 Uint32         AdapterVendorToVendorId(ADAPTER_VENDOR Vendor);
 
