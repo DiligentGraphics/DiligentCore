@@ -181,22 +181,17 @@ private:
 };
 
 
-/// Enqueues a function to be executed asynchronously by the thread pool.
-/// For the list of parameters, see Diligent::IThreadPool::EnqueueTask() method.
 /// The handler function must return the task status, see Diligent::IAsyncTask::Run() method.
-template <typename HanlderType>
-RefCntAutoPtr<IAsyncTask> EnqueueAsyncWork(IThreadPool* pThreadPool,
-                                           IAsyncTask** ppPrerequisites,
-                                           Uint32       NumPrerequisites,
-                                           HanlderType  Handler,
-                                           float        fPriority = 0)
+template <typename HandlerType>
+RefCntAutoPtr<IAsyncTask> CreateAsyncWorkTask(HandlerType Handler,
+                                              float       fPriority = 0)
 {
     class TaskImpl final : public AsyncTaskBase
     {
     public:
         TaskImpl(IReferenceCounters* pRefCounters,
                  float               fPriority,
-                 HanlderType&&       Handler) :
+                 HandlerType&&       Handler) :
             AsyncTaskBase{pRefCounters, fPriority},
             m_Handler{std::move(Handler)}
         {}
@@ -209,10 +204,23 @@ RefCntAutoPtr<IAsyncTask> EnqueueAsyncWork(IThreadPool* pThreadPool,
         }
 
     private:
-        HanlderType m_Handler;
+        HandlerType m_Handler;
     };
 
-    RefCntAutoPtr<TaskImpl> pTask{MakeNewRCObj<TaskImpl>()(fPriority, std::move(Handler))};
+    return RefCntAutoPtr<IAsyncTask>{MakeNewRCObj<TaskImpl>()(fPriority, std::move(Handler))};
+}
+
+/// Enqueues a function to be executed asynchronously by the thread pool.
+/// For the list of parameters, see Diligent::IThreadPool::EnqueueTask() method.
+/// The handler function must return the task status, see Diligent::IAsyncTask::Run() method.
+template <typename HanlderType>
+RefCntAutoPtr<IAsyncTask> EnqueueAsyncWork(IThreadPool* pThreadPool,
+                                           IAsyncTask** ppPrerequisites,
+                                           Uint32       NumPrerequisites,
+                                           HanlderType  Handler,
+                                           float        fPriority = 0)
+{
+    RefCntAutoPtr<IAsyncTask> pTask = CreateAsyncWorkTask(std::move(Handler), fPriority);
     pThreadPool->EnqueueTask(pTask, ppPrerequisites, NumPrerequisites);
 
     return pTask;
