@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -29,7 +29,11 @@
 #include "gtest/gtest.h"
 
 #include <array>
+#include <chrono>
 #include <cmath>
+#include <future>
+#include <memory>
+#include <vector>
 
 #include "ThreadSignal.hpp"
 
@@ -222,6 +226,19 @@ public:
     }
 };
 
+bool WaitForFutures(std::vector<std::future<void>>& Futures,
+                    std::chrono::milliseconds       Timeout)
+{
+    const auto EndTime = std::chrono::steady_clock::now() + Timeout;
+    for (auto& Future : Futures)
+    {
+        const auto Now = std::chrono::steady_clock::now();
+        if (Now >= EndTime || Future.wait_for(EndTime - Now) != std::future_status::ready)
+            return false;
+    }
+    return true;
+}
+
 TEST(Common_ThreadPool, RemoveTask)
 {
     constexpr Uint32 NumThreads = 4;
@@ -273,6 +290,205 @@ TEST(Common_ThreadPool, RemoveTask)
 
     pThreadPool->WaitForAllTasks();
     EXPECT_EQ(pThreadPool->GetQueueSize(), 0u);
+}
+
+TEST(Common_ThreadPool, WaitForAllTasksNotifiedAfterRemoveTask)
+{
+    auto pThreadPool = CreateThreadPool(ThreadPoolCreateInfo{0});
+    ASSERT_NE(pThreadPool, nullptr);
+
+    // With no worker threads, removing this task is the only operation that
+    // can make WaitForAllTasks() observe an idle pool.
+    auto pTask = MakeNewRCObj<DummyTask>()();
+    pThreadPool->EnqueueTask(pTask);
+
+    auto pWaiterStarted  = std::make_shared<std::promise<void>>();
+    auto pWaiterFinished = std::make_shared<std::promise<void>>();
+
+    auto WaiterStarted  = pWaiterStarted->get_future();
+    auto WaiterFinished = pWaiterFinished->get_future();
+
+    std::thread Waiter{
+        [pThreadPool, pWaiterStarted, pWaiterFinished]() //
+        {
+            pWaiterStarted->set_value();
+            pThreadPool->WaitForAllTasks();
+            pWaiterFinished->set_value();
+        }};
+
+    if (WaiterStarted.wait_for(std::chrono::seconds{5}) != std::future_status::ready)
+    {
+        ADD_FAILURE() << "WaitForAllTasks waiter did not start";
+        EXPECT_TRUE(pThreadPool->RemoveTask(pTask));
+
+        auto pCleanupTask = EnqueueAsyncWork(
+            pThreadPool,
+            [](Uint32 ThreadId) //
+            {
+                return ASYNC_TASK_STATUS_COMPLETE;
+            });
+        EXPECT_TRUE(pThreadPool->ProcessTask(0, false));
+        pCleanupTask->WaitForCompletion();
+
+        if (WaiterFinished.wait_for(std::chrono::seconds{5}) != std::future_status::ready)
+        {
+            Waiter.detach();
+            return;
+        }
+
+        Waiter.join();
+        return;
+    }
+
+    if (WaiterFinished.wait_for(std::chrono::milliseconds{50}) != std::future_status::timeout)
+    {
+        ADD_FAILURE() << "WaitForAllTasks returned before the queued task was removed";
+        Waiter.join();
+        return;
+    }
+
+    // Expected behavior: removing the last queued task wakes the waiter because
+    // the queue is empty and there are no running tasks.
+    EXPECT_TRUE(pThreadPool->RemoveTask(pTask));
+
+    if (WaiterFinished.wait_for(std::chrono::seconds{5}) != std::future_status::ready)
+    {
+        ADD_FAILURE() << "WaitForAllTasks was not notified after RemoveTask made the pool idle";
+
+        // Give the waiter another completion notification so the test can
+        // report the failure and still clean up instead of hanging.
+        auto pCleanupTask = EnqueueAsyncWork(
+            pThreadPool,
+            [](Uint32 ThreadId) //
+            {
+                return ASYNC_TASK_STATUS_COMPLETE;
+            });
+        EXPECT_TRUE(pThreadPool->ProcessTask(0, false));
+        pCleanupTask->WaitForCompletion();
+
+        if (WaiterFinished.wait_for(std::chrono::seconds{5}) != std::future_status::ready)
+        {
+            Waiter.detach();
+            return;
+        }
+    }
+
+    Waiter.join();
+}
+
+TEST(Common_ThreadPool, WaitForAllTasksNotifiesAllWaiters)
+{
+    constexpr Uint32 NumWaiters = 4;
+
+    auto pThreadPool = CreateThreadPool(ThreadPoolCreateInfo{1});
+    ASSERT_NE(pThreadPool, nullptr);
+
+    Threading::Signal       Signal;
+    RefCntAutoPtr<WaitTask> pWaitTask;
+    pWaitTask = MakeNewRCObj<WaitTask>()(Signal);
+    pThreadPool->EnqueueTask(pWaitTask);
+    pWaitTask->WaitUntilRunning();
+
+    // All waiters block on the same running task. When it finishes, the idle
+    // state is global, so every WaitForAllTasks() caller must wake.
+    std::vector<std::thread>       Waiters;
+    std::vector<std::future<void>> WaiterStarted;
+    std::vector<std::future<void>> WaiterFinished;
+    Waiters.reserve(NumWaiters);
+    WaiterStarted.reserve(NumWaiters);
+    WaiterFinished.reserve(NumWaiters);
+
+    for (Uint32 i = 0; i < NumWaiters; ++i)
+    {
+        auto pStarted  = std::make_shared<std::promise<void>>();
+        auto pFinished = std::make_shared<std::promise<void>>();
+
+        WaiterStarted.emplace_back(pStarted->get_future());
+        WaiterFinished.emplace_back(pFinished->get_future());
+        Waiters.emplace_back(
+            [pThreadPool, pStarted, pFinished]() //
+            {
+                pStarted->set_value();
+                pThreadPool->WaitForAllTasks();
+                pFinished->set_value();
+            });
+    }
+
+    bool AllWaitersStarted = true;
+    for (auto& Future : WaiterStarted)
+    {
+        if (Future.wait_for(std::chrono::seconds{5}) != std::future_status::ready)
+        {
+            AllWaitersStarted = false;
+            ADD_FAILURE() << "WaitForAllTasks waiter did not start";
+        }
+    }
+
+    if (!AllWaitersStarted)
+    {
+        Signal.Trigger(true, 1);
+
+        for (Uint32 i = 0; i < NumWaiters && !WaitForFutures(WaiterFinished, std::chrono::milliseconds{0}); ++i)
+        {
+            auto pCleanupTask = EnqueueAsyncWork(
+                pThreadPool,
+                [](Uint32 ThreadId) //
+                {
+                    return ASYNC_TASK_STATUS_COMPLETE;
+                });
+            pCleanupTask->WaitForCompletion();
+        }
+
+        if (!WaitForFutures(WaiterFinished, std::chrono::seconds{5}))
+        {
+            for (auto& Waiter : Waiters)
+                Waiter.detach();
+            return;
+        }
+
+        for (auto& Waiter : Waiters)
+            Waiter.join();
+        return;
+    }
+
+    // Give waiter threads a chance to enter WaitForAllTasks() before the task
+    // completes. The bounded wait below is the correctness check; this delay
+    // makes the old notify_one() behavior more likely to be observed.
+    std::this_thread::sleep_for(std::chrono::milliseconds{50});
+    for (auto& Future : WaiterFinished)
+        EXPECT_EQ(Future.wait_for(std::chrono::milliseconds{0}), std::future_status::timeout);
+
+    // Expected behavior: task completion broadcasts to all waiters, not just
+    // one of them.
+    Signal.Trigger(true, 1);
+
+    if (!WaitForFutures(WaiterFinished, std::chrono::seconds{5}))
+    {
+        ADD_FAILURE() << "WaitForAllTasks did not notify all waiters when the pool became idle";
+
+        // Under the old notify_one() behavior, extra completions wake remaining
+        // waiters so the regression is reported without leaving threads behind.
+        for (Uint32 i = 0; i < NumWaiters && !WaitForFutures(WaiterFinished, std::chrono::milliseconds{0}); ++i)
+        {
+            auto pCleanupTask = EnqueueAsyncWork(
+                pThreadPool,
+                [](Uint32 ThreadId) //
+                {
+                    return ASYNC_TASK_STATUS_COMPLETE;
+                });
+            pCleanupTask->WaitForCompletion();
+        }
+
+        if (!WaitForFutures(WaiterFinished, std::chrono::seconds{5}))
+        {
+            for (auto& Waiter : Waiters)
+                Waiter.detach();
+            return;
+        }
+    }
+
+    for (auto& Waiter : Waiters)
+        Waiter.join();
 }
 
 

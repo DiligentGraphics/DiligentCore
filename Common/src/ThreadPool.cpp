@@ -153,7 +153,9 @@ public:
                 {
                     if (m_TasksQueue.empty() && NumRunningTasks == 0)
                     {
-                        m_TasksFinishedCond.notify_one();
+                        // The pool became idle; wake every WaitForAllTasks() caller
+                        // because they all observe the same global queue state.
+                        m_TasksFinishedCond.notify_all();
                     }
                 }
                 else
@@ -254,6 +256,12 @@ public:
         if (it != m_TasksQueue.end())
         {
             m_TasksQueue.erase(it);
+            if (m_TasksQueue.empty() && m_NumRunningTasks.load() == 0)
+            {
+                // Removing the last queued task can satisfy WaitForAllTasks()
+                // without any worker thread completing a task.
+                m_TasksFinishedCond.notify_all();
+            }
             return true;
         }
 
