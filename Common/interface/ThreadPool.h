@@ -90,10 +90,16 @@ DILIGENT_BEGIN_INTERFACE(IAsyncTask, IObject)
     VIRTUAL ASYNC_TASK_STATUS METHOD(Run)(THIS_
                                      Uint32 ThreadId) PURE;
 
-    /// Cancel the task, if possible.
-    
-    /// If the task is running, the task implementation should
-    /// abort the task execution, if possible.
+    /// Requests task cancellation, if possible.
+
+    /// This is a cooperative cancellation request. If the task is running, the
+    /// task implementation should observe the request and abort execution, if
+    /// possible. Calling this method does not remove the task from a thread
+    /// pool queue and does not guarantee that a task in the
+    /// Diligent::ASYNC_TASK_STATUS_NOT_STARTED state immediately transitions to
+    /// Diligent::ASYNC_TASK_STATUS_CANCELLED.
+    ///
+    /// To cancel a queued task that has not started, use IThreadPool::RemoveTask().
     VIRTUAL void METHOD(Cancel)(THIS) PURE;
 
     /// Sets the task status, see Diligent::ASYNC_TASK_STATUS.
@@ -103,11 +109,14 @@ DILIGENT_BEGIN_INTERFACE(IAsyncTask, IObject)
     /// Gets the task status, see Diligent::ASYNC_TASK_STATUS.
     VIRTUAL ASYNC_TASK_STATUS METHOD(GetStatus)(THIS) CONST PURE;
 
-    /// Sets the task priorirty.
+    /// Sets the task priority.
+
+    /// NaN priority is invalid. Implementations will report an error and use
+    /// the default priority 0 instead.
     VIRTUAL void METHOD(SetPriority)(THIS_
                                     float fPriority) PURE;
 
-    /// Returns the task priorirty.
+    /// Returns the task priority.
     VIRTUAL float METHOD(GetPriority)(THIS) CONST PURE;
 
     /// Checks if the task is finished (i.e. cancelled or complete).
@@ -175,6 +184,9 @@ DILIGENT_BEGIN_INTERFACE(IThreadPool, IObject)
     ///
     /// Thread pool will keep a strong reference to the task,
     /// so an application is free to release it after enqueuing.
+    /// A task object represents one scheduled execution and must not be
+    /// enqueued again until that execution has finished or the task has been
+    /// removed from the queue.
     ///
     /// The thread pool does not keep strong references to prerequisite tasks.
     /// Prerequisites are tracked weakly; if a prerequisite object expires before
@@ -220,6 +232,11 @@ DILIGENT_BEGIN_INTERFACE(IThreadPool, IObject)
     ///
     /// \return    true if the task was successfully removed from the queue,
     ///            and false otherwise.
+    ///
+    /// If the task is found in the queue, it is marked as
+    /// Diligent::ASYNC_TASK_STATUS_CANCELLED. This unblocks callers waiting in
+    /// IAsyncTask::WaitForCompletion(). Running tasks are not removed; call
+    /// IAsyncTask::Cancel() to request cooperative cancellation of a running task.
     VIRTUAL bool METHOD(RemoveTask)(THIS_
                                     IAsyncTask* pTask) PURE;
 
@@ -230,6 +247,13 @@ DILIGENT_BEGIN_INTERFACE(IThreadPool, IObject)
     /// tasks in the quque are finished and the queue is empty.
     /// An application is responsible to make sure that all tasks
     /// will finish eventually.
+    ///
+    /// \warning This method must not be called from a task running in this
+    ///          thread pool: the task is counted as running until it returns,
+    ///          while this method waits for all running tasks to finish.
+    ///
+    /// \warning Deadlock may also occur if all worker threads block waiting for
+    ///          work that requires those same worker threads to make progress.
     VIRTUAL void METHOD(WaitForAllTasks)(THIS) PURE;
 
 
@@ -246,6 +270,9 @@ DILIGENT_BEGIN_INTERFACE(IThreadPool, IObject)
     /// have stopped. Tasks that were already queued are processed before the
     /// threads exit, so this is a graceful drain-and-stop operation rather than
     /// an immediate cancellation of queued work.
+    ///
+    /// \warning This method must not be called from a worker thread of this
+    ///          pool because it joins all worker threads, including the caller.
     ///
     /// Enqueuing tasks after calling this method is an error.
     VIRTUAL void METHOD(StopThreads)(THIS) PURE;
@@ -278,7 +305,7 @@ DILIGENT_BEGIN_INTERFACE(IThreadPool, IObject)
     ///     auto pThreadPool = CreateThreadPool(ThreadPoolCreateInfo{0});
     ///
     ///     std::vector<std::thread> WorkerThreads(4);
-    ///     for (Uint32 i PURE; i < WorkerThreads.size(); ++i)
+    ///     for (Uint32 i = 0; i < WorkerThreads.size(); ++i)
     ///     {
     ///         WorkerThreads[i] = std::thread{
     ///             [&ThreadPool = *pThreadPool, i] //

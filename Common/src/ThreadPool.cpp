@@ -28,6 +28,7 @@
 
 #include <algorithm>
 #include <mutex>
+#include <string>
 #include <thread>
 #include <map>
 #include <vector>
@@ -411,7 +412,7 @@ Uint64 PinWorkerThread(Uint32 ThreadId, Uint64 AllowedCoresMask)
     VERIFY_EXPR(AffinityMask != 0);
     Uint32 WorkerCore = PlatformMisc::GetLSB(AffinityMask);
     VERIFY_EXPR(WorkerCore < NumCores);
-    Uint64 PrevMask = PlatformMisc::SetCurrentThreadAffinity(Uint64{1} << WorkerCore) != 0;
+    Uint64 PrevMask = PlatformMisc::SetCurrentThreadAffinity(Uint64{1} << WorkerCore);
     if (PrevMask == 0)
     {
         LOG_WARNING_MESSAGE("Failed to pin worker thread ", ThreadId, " to core ", WorkerCore);

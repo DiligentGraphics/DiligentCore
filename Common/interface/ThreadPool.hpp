@@ -32,6 +32,7 @@
 #include "ThreadPool.h"
 
 #include <atomic>
+#include <cmath>
 #include <condition_variable>
 #include <functional>
 #include <mutex>
@@ -87,7 +88,7 @@ public:
     explicit AsyncTaskBase(IReferenceCounters* pRefCounters,
                            float               fPriority = 0) noexcept :
         TBase{pRefCounters},
-        m_fPriority{fPriority}
+        m_fPriority{ValidatePriority(fPriority)}
     {
     }
     virtual ~AsyncTaskBase() = 0;
@@ -156,7 +157,7 @@ public:
 
     virtual void DILIGENT_CALL_TYPE SetPriority(float fPriority) override final
     {
-        m_fPriority.store(fPriority);
+        m_fPriority.store(ValidatePriority(fPriority));
     }
 
     virtual float DILIGENT_CALL_TYPE GetPriority() const override final
@@ -195,6 +196,16 @@ protected:
     std::atomic<bool> m_bSafelyCancel{false};
 
 private:
+    static float ValidatePriority(float fPriority) noexcept
+    {
+        if (std::isnan(fPriority))
+        {
+            LOG_ERROR_MESSAGE("Task priority must not be NaN. Using the default priority 0.");
+            return 0;
+        }
+        return fPriority;
+    }
+
     mutable std::mutex              m_StatusMtx;
     mutable std::condition_variable m_StatusChangedCond;
     std::atomic<float>              m_fPriority{0};

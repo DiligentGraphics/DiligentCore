@@ -32,6 +32,7 @@
 #include <chrono>
 #include <cmath>
 #include <future>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <thread>
@@ -424,6 +425,33 @@ TEST(Common_ThreadPool, WaitUntilRunningNotifiesAllWaitersWhenCancelled)
         },
         "WaitUntilRunning",
         "WaitUntilRunning did not wake all waiters when the task was cancelled");
+}
+
+TEST(Common_ThreadPool, NaNTaskPriorityUsesDefault)
+{
+    const float NaN = std::numeric_limits<float>::quiet_NaN();
+
+    // Expected behavior: NaN priority supplied at construction is rejected
+    // because NaN cannot be used as a strict weak ordering key in the queue.
+    {
+        Testing::TestingEnvironment::ErrorScope ExpectedErrors{"Task priority must not be NaN"};
+        RefCntAutoPtr<DummyTask>                pTask;
+        pTask = MakeNewRCObj<DummyTask>()(NaN);
+        EXPECT_EQ(pTask->GetPriority(), 0.f);
+    }
+
+    RefCntAutoPtr<DummyTask> pTask;
+    pTask = MakeNewRCObj<DummyTask>()();
+    pTask->SetPriority(10.f);
+    EXPECT_EQ(pTask->GetPriority(), 10.f);
+
+    // Expected behavior: NaN priority supplied through SetPriority() is
+    // rejected and the task falls back to the default priority.
+    {
+        Testing::TestingEnvironment::ErrorScope ExpectedErrors{"Task priority must not be NaN"};
+        pTask->SetPriority(NaN);
+    }
+    EXPECT_EQ(pTask->GetPriority(), 0.f);
 }
 
 TEST(Common_ThreadPool, RemoveTask)
