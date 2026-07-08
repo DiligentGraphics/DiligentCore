@@ -119,11 +119,16 @@ DILIGENT_BEGIN_INTERFACE(IAsyncTask, IObject)
     ///         running the task or a deadlock will occur.
     VIRTUAL void METHOD(WaitForCompletion)(THIS) CONST PURE;
 
-    /// Waits until the tasks is running.
+    /// Waits until the task leaves the Diligent::ASYNC_TASK_STATUS_NOT_STARTED state.
+
+    /// When this method returns, the task may be running, complete, or cancelled.
+    /// A fast task may reach Diligent::ASYNC_TASK_STATUS_COMPLETE before the
+    /// waiting thread wakes up, so this method does not guarantee that the task
+    /// is still running when it returns.
 
     /// \warning  An application is responsible to make sure that
     ///           tasks currently in the queue will eventually finish
-    ///           allowing the task to start.
+    ///           or otherwise leave the Diligent::ASYNC_TASK_STATUS_NOT_STARTED state.
     ///
     /// This method must not be called from the worker thread.
     VIRTUAL void METHOD(WaitUntilRunning)(THIS) CONST PURE;

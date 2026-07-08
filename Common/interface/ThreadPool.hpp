@@ -32,8 +32,9 @@
 #include "ThreadPool.h"
 
 #include <atomic>
+#include <condition_variable>
 #include <functional>
-#include <thread>
+#include <mutex>
 
 #include "../../Platforms/Basic/interface/DebugUtilities.hpp"
 
@@ -100,42 +101,52 @@ public:
 
     virtual void DILIGENT_CALL_TYPE SetStatus(ASYNC_TASK_STATUS TaskStatus) override final
     {
-#ifdef DILIGENT_DEVELOPMENT
-        if (TaskStatus != m_TaskStatus)
+        bool StatusChanged = false;
         {
-            switch (TaskStatus)
+            std::lock_guard<std::mutex> Lock{m_StatusMtx};
+            const ASYNC_TASK_STATUS     CurrStatus = m_TaskStatus.load();
+            StatusChanged                          = (TaskStatus != CurrStatus);
+
+#ifdef DILIGENT_DEVELOPMENT
+            if (StatusChanged)
             {
-                case ASYNC_TASK_STATUS_UNKNOWN:
-                    DEV_ERROR("UNKNOWN is invalid status.");
-                    break;
+                switch (TaskStatus)
+                {
+                    case ASYNC_TASK_STATUS_UNKNOWN:
+                        DEV_ERROR("UNKNOWN is invalid status.");
+                        break;
 
-                case ASYNC_TASK_STATUS_NOT_STARTED:
-                    DEV_CHECK_ERR(m_TaskStatus == ASYNC_TASK_STATUS_RUNNING,
-                                  "A task should only be moved to NOT_STARTED state from RUNNING state.");
-                    break;
+                    case ASYNC_TASK_STATUS_NOT_STARTED:
+                        DEV_CHECK_ERR(CurrStatus == ASYNC_TASK_STATUS_RUNNING,
+                                      "A task should only be moved to NOT_STARTED state from RUNNING state.");
+                        break;
 
-                case ASYNC_TASK_STATUS_RUNNING:
-                    DEV_CHECK_ERR(m_TaskStatus == ASYNC_TASK_STATUS_NOT_STARTED,
-                                  "A task should be moved to RUNNING state from NOT_STARTED state.");
-                    break;
+                    case ASYNC_TASK_STATUS_RUNNING:
+                        DEV_CHECK_ERR(CurrStatus == ASYNC_TASK_STATUS_NOT_STARTED,
+                                      "A task should be moved to RUNNING state from NOT_STARTED state.");
+                        break;
 
-                case ASYNC_TASK_STATUS_CANCELLED:
-                    DEV_CHECK_ERR((m_TaskStatus == ASYNC_TASK_STATUS_NOT_STARTED ||
-                                   m_TaskStatus == ASYNC_TASK_STATUS_RUNNING),
-                                  "A task should be moved to CANCELLED state from either NOT_STARTED or RUNNING states.");
-                    break;
+                    case ASYNC_TASK_STATUS_CANCELLED:
+                        DEV_CHECK_ERR((CurrStatus == ASYNC_TASK_STATUS_NOT_STARTED ||
+                                       CurrStatus == ASYNC_TASK_STATUS_RUNNING),
+                                      "A task should be moved to CANCELLED state from either NOT_STARTED or RUNNING states.");
+                        break;
 
-                case ASYNC_TASK_STATUS_COMPLETE:
-                    DEV_CHECK_ERR(m_TaskStatus == ASYNC_TASK_STATUS_RUNNING,
-                                  "A task should be moved to COMPLETE state from RUNNING state.");
-                    break;
+                    case ASYNC_TASK_STATUS_COMPLETE:
+                        DEV_CHECK_ERR(CurrStatus == ASYNC_TASK_STATUS_RUNNING,
+                                      "A task should be moved to COMPLETE state from RUNNING state.");
+                        break;
 
-                default:
-                    UNEXPECTED("Unexpected task status");
+                    default:
+                        UNEXPECTED("Unexpected task status");
+                }
             }
-        }
 #endif
-        m_TaskStatus.store(TaskStatus);
+            m_TaskStatus.store(TaskStatus);
+        }
+
+        if (StatusChanged)
+            m_StatusChangedCond.notify_all();
     }
 
     virtual ASYNC_TASK_STATUS DILIGENT_CALL_TYPE GetStatus() const override final
@@ -162,22 +173,32 @@ public:
 
     virtual void DILIGENT_CALL_TYPE WaitForCompletion() const override final
     {
-        while (!IsFinished())
-            std::this_thread::yield();
+        std::unique_lock<std::mutex> Lock{m_StatusMtx};
+        m_StatusChangedCond.wait(Lock,
+                                 [this] //
+                                 {
+                                     return IsFinished();
+                                 });
     }
 
     virtual void DILIGENT_CALL_TYPE WaitUntilRunning() const override final
     {
-        while (GetStatus() == ASYNC_TASK_STATUS_NOT_STARTED)
-            std::this_thread::yield();
+        std::unique_lock<std::mutex> Lock{m_StatusMtx};
+        m_StatusChangedCond.wait(Lock,
+                                 [this] //
+                                 {
+                                     return GetStatus() != ASYNC_TASK_STATUS_NOT_STARTED;
+                                 });
     }
 
 protected:
     std::atomic<bool> m_bSafelyCancel{false};
 
 private:
-    std::atomic<float>             m_fPriority{0};
-    std::atomic<ASYNC_TASK_STATUS> m_TaskStatus{ASYNC_TASK_STATUS_NOT_STARTED};
+    mutable std::mutex              m_StatusMtx;
+    mutable std::condition_variable m_StatusChangedCond;
+    std::atomic<float>              m_fPriority{0};
+    std::atomic<ASYNC_TASK_STATUS>  m_TaskStatus{ASYNC_TASK_STATUS_NOT_STARTED};
 };
 
 

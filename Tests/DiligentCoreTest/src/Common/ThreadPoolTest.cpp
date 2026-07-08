@@ -34,6 +34,7 @@
 #include <future>
 #include <memory>
 #include <stdexcept>
+#include <thread>
 #include <vector>
 
 #include "ThreadSignal.hpp"
@@ -298,6 +299,131 @@ bool WaitForFutures(std::vector<std::future<void>>& Futures,
             return false;
     }
     return true;
+}
+
+template <typename WaitFuncType, typename SignalFuncType>
+void TestAsyncTaskWaitNotifiesAllWaiters(WaitFuncType&&   WaitFunc,
+                                         SignalFuncType&& SignalFunc,
+                                         const char*      WaiterName,
+                                         const char*      FailureMessage)
+{
+    constexpr Uint32 NumWaiters = 4;
+
+    RefCntAutoPtr<DummyTask> pTask;
+    pTask = MakeNewRCObj<DummyTask>()();
+
+    std::vector<std::thread>       Waiters;
+    std::vector<std::future<void>> WaiterStarted;
+    std::vector<std::future<void>> WaiterFinished;
+    Waiters.reserve(NumWaiters);
+    WaiterStarted.reserve(NumWaiters);
+    WaiterFinished.reserve(NumWaiters);
+
+    for (Uint32 i = 0; i < NumWaiters; ++i)
+    {
+        auto pStarted  = std::make_shared<std::promise<void>>();
+        auto pFinished = std::make_shared<std::promise<void>>();
+
+        WaiterStarted.emplace_back(pStarted->get_future());
+        WaiterFinished.emplace_back(pFinished->get_future());
+        Waiters.emplace_back(
+            [pTask, pStarted, pFinished, WaitFunc]() //
+            {
+                pStarted->set_value();
+                WaitFunc(pTask);
+                pFinished->set_value();
+            });
+    }
+
+    const auto Cleanup = [&]() {
+        pTask->SetStatus(ASYNC_TASK_STATUS_CANCELLED);
+        if (WaitForFutures(WaiterFinished, std::chrono::seconds{5}))
+        {
+            for (auto& Waiter : Waiters)
+                Waiter.join();
+        }
+        else
+        {
+            for (auto& Waiter : Waiters)
+                Waiter.detach();
+        }
+    };
+
+    if (!WaitForFutures(WaiterStarted, std::chrono::seconds{5}))
+    {
+        ADD_FAILURE() << WaiterName << " waiter did not start";
+        Cleanup();
+        return;
+    }
+
+    for (auto& Future : WaiterFinished)
+        EXPECT_EQ(Future.wait_for(std::chrono::milliseconds{0}), std::future_status::timeout);
+
+    SignalFunc(pTask);
+
+    if (!WaitForFutures(WaiterFinished, std::chrono::seconds{5}))
+    {
+        ADD_FAILURE() << FailureMessage;
+        Cleanup();
+        return;
+    }
+
+    for (auto& Waiter : Waiters)
+        Waiter.join();
+
+    if (pTask->GetStatus() == ASYNC_TASK_STATUS_RUNNING)
+        pTask->SetStatus(ASYNC_TASK_STATUS_CANCELLED);
+}
+
+TEST(Common_ThreadPool, WaitForCompletionNotifiesAllWaiters)
+{
+    // Expected behavior: all WaitForCompletion() callers block while the task
+    // is not finished, then wake when the task becomes cancelled or complete.
+    TestAsyncTaskWaitNotifiesAllWaiters(
+        [](IAsyncTask* pTask) //
+        {
+            pTask->WaitForCompletion();
+        },
+        [](IAsyncTask* pTask) //
+        {
+            pTask->SetStatus(ASYNC_TASK_STATUS_CANCELLED);
+        },
+        "WaitForCompletion",
+        "WaitForCompletion did not wake all waiters when the task finished");
+}
+
+TEST(Common_ThreadPool, WaitUntilRunningNotifiesAllWaiters)
+{
+    // Expected behavior: all WaitUntilRunning() callers block while the task is
+    // not started, then wake when the task enters the running state.
+    TestAsyncTaskWaitNotifiesAllWaiters(
+        [](IAsyncTask* pTask) //
+        {
+            pTask->WaitUntilRunning();
+        },
+        [](IAsyncTask* pTask) //
+        {
+            pTask->SetStatus(ASYNC_TASK_STATUS_RUNNING);
+        },
+        "WaitUntilRunning",
+        "WaitUntilRunning did not wake all waiters when the task started");
+}
+
+TEST(Common_ThreadPool, WaitUntilRunningNotifiesAllWaitersWhenCancelled)
+{
+    // Expected behavior: WaitUntilRunning() also returns when a task is
+    // cancelled before it starts, because it can no longer become running.
+    TestAsyncTaskWaitNotifiesAllWaiters(
+        [](IAsyncTask* pTask) //
+        {
+            pTask->WaitUntilRunning();
+        },
+        [](IAsyncTask* pTask) //
+        {
+            pTask->SetStatus(ASYNC_TASK_STATUS_CANCELLED);
+        },
+        "WaitUntilRunning",
+        "WaitUntilRunning did not wake all waiters when the task was cancelled");
 }
 
 TEST(Common_ThreadPool, RemoveTask)
