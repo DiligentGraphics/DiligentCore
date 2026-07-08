@@ -170,7 +170,15 @@ DILIGENT_BEGIN_INTERFACE(IThreadPool, IObject)
     ///
     /// Thread pool will keep a strong reference to the task,
     /// so an application is free to release it after enqueuing.
-    /// 
+    ///
+    /// The thread pool does not keep strong references to prerequisite tasks.
+    /// Prerequisites are tracked weakly; if a prerequisite object expires before
+    /// this task is considered for execution, the prerequisite is treated as
+    /// already satisfied.
+    ///
+    /// If this method is called after StopThreads(), an error is reported,
+    /// pTask is cancelled, and the task is not enqueued.
+    ///
     /// \note       An application must ensure that the task prerequisites are not circular
     ///             to avoid deadlocks.
     VIRTUAL void METHOD(EnqueueTask)(THIS_
@@ -227,11 +235,14 @@ DILIGENT_BEGIN_INTERFACE(IThreadPool, IObject)
     VIRTUAL Uint32 METHOD(GetRunningTaskCount)(THIS) CONST PURE;
 
 
-    /// Stops all worker threads.
+    /// Stops all worker threads after draining queued tasks.
 
-    /// his method makes all worker threads to exit.
-    /// If an application enqueues tasks after calling this methods,
-    /// this tasks will never run.
+    /// This method requests all worker threads to exit and blocks until they
+    /// have stopped. Tasks that were already queued are processed before the
+    /// threads exit, so this is a graceful drain-and-stop operation rather than
+    /// an immediate cancellation of queued work.
+    ///
+    /// Enqueuing tasks after calling this method is an error.
     VIRTUAL void METHOD(StopThreads)(THIS) PURE;
 
 

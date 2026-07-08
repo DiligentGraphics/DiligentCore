@@ -33,9 +33,11 @@
 #include <cmath>
 #include <future>
 #include <memory>
+#include <stdexcept>
 #include <vector>
 
 #include "ThreadSignal.hpp"
+#include "TestingEnvironment.hpp"
 
 
 using namespace Diligent;
@@ -102,6 +104,38 @@ TEST(Common_ThreadPool, EnqueueTask)
 
     pThreadPool.Release();
     EXPECT_EQ(NumThreadsFinished.load(), PoolCI.NumThreads);
+}
+
+TEST(Common_ThreadPool, EnqueueTaskAfterStopCancelsTask)
+{
+    auto pThreadPool = CreateThreadPool(ThreadPoolCreateInfo{0});
+    ASSERT_NE(pThreadPool, nullptr);
+
+    pThreadPool->StopThreads();
+
+    std::atomic<Uint32> NumRuns{0};
+    auto                pTask =
+        CreateAsyncWorkTask(
+            [&NumRuns](Uint32) //
+            {
+                NumRuns.fetch_add(1);
+                return ASYNC_TASK_STATUS_COMPLETE;
+            });
+
+    // Expected behavior: enqueueing after StopThreads() is an error; the task
+    // is cancelled and is not placed into the queue.
+    {
+        Testing::TestingEnvironment::ErrorScope ExpectedErrors{"Enqueue on a stopped ThreadPool"};
+        pThreadPool->EnqueueTask(pTask);
+    }
+
+    EXPECT_EQ(pTask->GetStatus(), ASYNC_TASK_STATUS_CANCELLED);
+    EXPECT_TRUE(pTask->IsFinished());
+    EXPECT_EQ(pThreadPool->GetQueueSize(), 0u);
+    EXPECT_EQ(pThreadPool->GetRunningTaskCount(), 0u);
+    EXPECT_EQ(NumRuns.load(), 0u);
+
+    pTask->WaitForCompletion();
 }
 
 
@@ -191,6 +225,33 @@ TEST(Common_ThreadPool, ProcessTaskNoWaitReturnsTrueWhilePoolIsRunning)
 
     pThreadPool->StopThreads();
     EXPECT_FALSE(pThreadPool->ProcessTask(0, false));
+}
+
+TEST(Common_ThreadPool, ProcessTaskCancelsTaskOnException)
+{
+    auto pThreadPool = CreateThreadPool(ThreadPoolCreateInfo{0});
+    ASSERT_NE(pThreadPool, nullptr);
+
+    auto pTask =
+        EnqueueAsyncWork(
+            pThreadPool,
+            [](Uint32) -> ASYNC_TASK_STATUS //
+            {
+                throw std::runtime_error{"test exception"};
+            });
+
+    // Expected behavior: task exceptions are contained by ProcessTask(), the
+    // task is cancelled, and the running-task counter is decremented.
+    {
+        Testing::TestingEnvironment::ErrorScope ExpectedErrors{"Unhandled exception in asynchronous task"};
+        EXPECT_NO_THROW(EXPECT_TRUE(pThreadPool->ProcessTask(0, false)));
+    }
+    EXPECT_EQ(pTask->GetStatus(), ASYNC_TASK_STATUS_CANCELLED);
+    EXPECT_TRUE(pTask->IsFinished());
+    EXPECT_EQ(pThreadPool->GetQueueSize(), 0u);
+    EXPECT_EQ(pThreadPool->GetRunningTaskCount(), 0u);
+
+    pThreadPool->WaitForAllTasks();
 }
 
 class WaitTask : public AsyncTaskBase

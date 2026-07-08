@@ -133,12 +133,20 @@ public:
             bool TaskFinished = false;
             if (PrerequisitesMet)
             {
-                TaskInfo.pTask->SetStatus(ASYNC_TASK_STATUS_RUNNING);
-                ASYNC_TASK_STATUS ReturnStatus = TaskInfo.pTask->Run(ThreadId);
-                // NB: It is essential to set the task status after the Run() method returns.
-                //     This way if the GetStatus() method returns any value other than ASYNC_TASK_STATUS_RUNNING,
-                //     it is guaranteed that the task is not executed by any thread.
-                TaskInfo.pTask->SetStatus(ReturnStatus);
+                try
+                {
+                    TaskInfo.pTask->SetStatus(ASYNC_TASK_STATUS_RUNNING);
+                    ASYNC_TASK_STATUS ReturnStatus = TaskInfo.pTask->Run(ThreadId);
+                    // NB: It is essential to set the task status after the Run() method returns.
+                    //     This way if the GetStatus() method returns any value other than ASYNC_TASK_STATUS_RUNNING,
+                    //     it is guaranteed that the task is not executed by any thread.
+                    TaskInfo.pTask->SetStatus(ReturnStatus);
+                }
+                catch (...)
+                {
+                    LOG_ERROR_MESSAGE("Unhandled exception in asynchronous task. The task will be cancelled.");
+                    TaskInfo.pTask->SetStatus(ASYNC_TASK_STATUS_CANCELLED);
+                }
                 TaskFinished = TaskInfo.pTask->IsFinished();
                 DEV_CHECK_ERR((TaskFinished || TaskInfo.pTask->GetStatus() == ASYNC_TASK_STATUS_NOT_STARTED),
                               "Finished tasks must be in COMPLETE, CANCELLED or NOT_STARTED state");
@@ -187,7 +195,12 @@ public:
 
         {
             std::unique_lock<std::mutex> lock{m_TasksQueueMtx};
-            DEV_CHECK_ERR(!m_Stop, "Enqueue on a stopped ThreadPool");
+            if (m_Stop.load())
+            {
+                LOG_ERROR_MESSAGE("Enqueue on a stopped ThreadPool. The task will be cancelled.");
+                pTask->SetStatus(ASYNC_TASK_STATUS_CANCELLED);
+                return;
+            }
 
             QueuedTaskInfo TaskInfo;
             TaskInfo.pTask = pTask;
