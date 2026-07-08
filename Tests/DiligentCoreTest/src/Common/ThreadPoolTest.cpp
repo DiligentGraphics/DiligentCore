@@ -256,6 +256,43 @@ TEST(Common_ThreadPool, ProcessTaskCancelsTaskOnException)
     pThreadPool->WaitForAllTasks();
 }
 
+TEST(Common_ThreadPool, ProcessTaskCancelsTaskOnInvalidReturnStatus)
+{
+    const ASYNC_TASK_STATUS InvalidStatuses[] =
+        {
+            ASYNC_TASK_STATUS_UNKNOWN,
+            ASYNC_TASK_STATUS_RUNNING,
+        };
+
+    for (auto InvalidStatus : InvalidStatuses)
+    {
+        auto pThreadPool = CreateThreadPool(ThreadPoolCreateInfo{0});
+        ASSERT_NE(pThreadPool, nullptr);
+
+        auto pTask =
+            EnqueueAsyncWork(
+                pThreadPool,
+                [InvalidStatus](Uint32) //
+                {
+                    return InvalidStatus;
+                });
+
+        // Expected behavior: invalid Run() return statuses are rejected in
+        // release builds too, so the task is cancelled and not requeued.
+        {
+            Testing::TestingEnvironment::ErrorScope ExpectedErrors{"Invalid async task return status"};
+            EXPECT_TRUE(pThreadPool->ProcessTask(0, false));
+        }
+
+        EXPECT_EQ(pTask->GetStatus(), ASYNC_TASK_STATUS_CANCELLED);
+        EXPECT_TRUE(pTask->IsFinished());
+        EXPECT_EQ(pThreadPool->GetQueueSize(), 0u);
+        EXPECT_EQ(pThreadPool->GetRunningTaskCount(), 0u);
+
+        pThreadPool->WaitForAllTasks();
+    }
+}
+
 class WaitTask : public AsyncTaskBase
 {
 public:

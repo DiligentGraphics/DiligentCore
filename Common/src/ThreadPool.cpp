@@ -138,6 +138,18 @@ public:
                 {
                     TaskInfo.pTask->SetStatus(ASYNC_TASK_STATUS_RUNNING);
                     ASYNC_TASK_STATUS ReturnStatus = TaskInfo.pTask->Run(ThreadId);
+                    switch (ReturnStatus)
+                    {
+                        case ASYNC_TASK_STATUS_CANCELLED:
+                        case ASYNC_TASK_STATUS_COMPLETE:
+                        case ASYNC_TASK_STATUS_NOT_STARTED:
+                            break;
+
+                        default:
+                            LOG_ERROR_MESSAGE("Invalid async task return status. The task will be cancelled.");
+                            ReturnStatus = ASYNC_TASK_STATUS_CANCELLED;
+                            break;
+                    }
                     // NB: It is essential to set the task status after the Run() method returns.
                     //     This way if the GetStatus() method returns any value other than ASYNC_TASK_STATUS_RUNNING,
                     //     it is guaranteed that the task is not executed by any thread.
