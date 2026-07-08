@@ -255,6 +255,7 @@ public:
             ++it;
         if (it != m_TasksQueue.end())
         {
+            it->second.pTask->SetStatus(ASYNC_TASK_STATUS_CANCELLED);
             m_TasksQueue.erase(it);
             if (m_TasksQueue.empty() && m_NumRunningTasks.load() == 0)
             {

@@ -292,6 +292,46 @@ TEST(Common_ThreadPool, RemoveTask)
     EXPECT_EQ(pThreadPool->GetQueueSize(), 0u);
 }
 
+TEST(Common_ThreadPool, RemoveTaskCancelsQueuedTask)
+{
+    auto pThreadPool = CreateThreadPool(ThreadPoolCreateInfo{0});
+    ASSERT_NE(pThreadPool, nullptr);
+
+    RefCntAutoPtr<DummyTask> pTask;
+    pTask = MakeNewRCObj<DummyTask>()();
+    pThreadPool->EnqueueTask(pTask);
+
+    EXPECT_TRUE(pThreadPool->RemoveTask(pTask));
+    EXPECT_EQ(pTask->GetStatus(), ASYNC_TASK_STATUS_CANCELLED);
+    EXPECT_TRUE(pTask->IsFinished());
+
+    auto pWaiterFinished = std::make_shared<std::promise<void>>();
+    auto WaiterFinished  = pWaiterFinished->get_future();
+
+    // Expected behavior: a removed queued task is cancelled, so callers that
+    // kept a reference can wait for completion without spinning forever.
+    std::thread Waiter{
+        [pTask, pWaiterFinished]() //
+        {
+            pTask->WaitForCompletion();
+            pWaiterFinished->set_value();
+        }};
+
+    if (WaiterFinished.wait_for(std::chrono::seconds{5}) != std::future_status::ready)
+    {
+        ADD_FAILURE() << "WaitForCompletion did not finish after RemoveTask cancelled the queued task";
+
+        pTask->SetStatus(ASYNC_TASK_STATUS_CANCELLED);
+        if (WaiterFinished.wait_for(std::chrono::seconds{5}) != std::future_status::ready)
+        {
+            Waiter.detach();
+            return;
+        }
+    }
+
+    Waiter.join();
+}
+
 TEST(Common_ThreadPool, WaitForAllTasksNotifiedAfterRemoveTask)
 {
     auto pThreadPool = CreateThreadPool(ThreadPoolCreateInfo{0});
