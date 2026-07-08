@@ -244,8 +244,9 @@ DILIGENT_BEGIN_INTERFACE(IThreadPool, IObject)
     ///                          - if false, the function will return immediately if there are no
     ///                            tasks in the queue.
     ///
-    /// \return     Whether there are more tasks to process. The calling thread must keep
-    ///             calling the function until it returns false.
+    /// \return     true if the thread pool is still running and the calling thread should
+    ///             keep processing tasks; false if the thread pool has stopped and the
+    ///             queue is empty.
     ///
     /// This method allows an application to implement its own threading strategy.
     /// A thread pool may be created with zero threads, and the application may call

@@ -164,6 +164,31 @@ TEST(Common_ThreadPool, ProcessTask)
     }
 }
 
+TEST(Common_ThreadPool, ProcessTaskNoWaitReturnsTrueWhilePoolIsRunning)
+{
+    auto pThreadPool = CreateThreadPool(ThreadPoolCreateInfo{0});
+    ASSERT_NE(pThreadPool, nullptr);
+
+    EXPECT_TRUE(pThreadPool->ProcessTask(0, false));
+
+    std::atomic<Uint32> NumRuns{0};
+    EnqueueAsyncWork(pThreadPool,
+                     [&NumRuns](Uint32 ThreadId) //
+                     {
+                         NumRuns.fetch_add(1);
+                         return ASYNC_TASK_STATUS_COMPLETE;
+                     });
+
+    EXPECT_TRUE(pThreadPool->ProcessTask(0, false));
+    EXPECT_EQ(NumRuns.load(), 1u);
+    EXPECT_EQ(pThreadPool->GetQueueSize(), 0u);
+    EXPECT_EQ(pThreadPool->GetRunningTaskCount(), 0u);
+    EXPECT_TRUE(pThreadPool->ProcessTask(0, false));
+
+    pThreadPool->StopThreads();
+    EXPECT_FALSE(pThreadPool->ProcessTask(0, false));
+}
+
 class WaitTask : public AsyncTaskBase
 {
 public:
