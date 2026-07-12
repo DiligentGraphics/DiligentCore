@@ -193,12 +193,14 @@ DILIGENT_BEGIN_INTERFACE(IThreadPool, IObject)
     /// this task is considered for execution, the prerequisite is treated as
     /// already satisfied.
     ///
+    /// \return     true if the task was accepted into the queue, and false otherwise.
+    ///
     /// If this method is called after StopThreads(), an error is reported,
-    /// pTask is cancelled, and the task is not enqueued.
+    /// pTask is cancelled, the task is not enqueued, and false is returned.
     ///
     /// \note       An application must ensure that the task prerequisites are not circular
     ///             to avoid deadlocks.
-    VIRTUAL void METHOD(EnqueueTask)(THIS_
+    VIRTUAL bool METHOD(EnqueueTask)(THIS_
                                      IAsyncTask*  pTask,
                                      IAsyncTask** ppPrerequisites  DEFAULT_VALUE(nullptr),
                                      Uint32       NumPrerequisites DEFAULT_VALUE(0)) PURE;

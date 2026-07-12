@@ -128,7 +128,7 @@ TEST(Common_ThreadPool, EnqueueTaskAfterStopCancelsTask)
     // is cancelled and is not placed into the queue.
     {
         Testing::TestingEnvironment::ErrorScope ExpectedErrors{"Enqueue on a stopped ThreadPool"};
-        pThreadPool->EnqueueTask(pTask);
+        EXPECT_FALSE(pThreadPool->EnqueueTask(pTask));
     }
 
     EXPECT_EQ(pTask->GetStatus(), ASYNC_TASK_STATUS_CANCELLED);

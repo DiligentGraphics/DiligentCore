@@ -198,13 +198,13 @@ public:
         return true;
     }
 
-    virtual void DILIGENT_CALL_TYPE EnqueueTask(IAsyncTask*  pTask,
+    virtual bool DILIGENT_CALL_TYPE EnqueueTask(IAsyncTask*  pTask,
                                                 IAsyncTask** ppPrerequisites,
                                                 Uint32       NumPrerequisites) override final
     {
         VERIFY_EXPR(pTask != nullptr);
         if (pTask == nullptr)
-            return;
+            return false;
 
         {
             std::unique_lock<std::mutex> lock{m_TasksQueueMtx};
@@ -212,7 +212,7 @@ public:
             {
                 LOG_ERROR_MESSAGE("Enqueue on a stopped ThreadPool. The task will be cancelled.");
                 pTask->SetStatus(ASYNC_TASK_STATUS_CANCELLED);
-                return;
+                return false;
             }
 
             QueuedTaskInfo TaskInfo;
@@ -238,6 +238,7 @@ public:
             m_TasksQueue.emplace(pTask->GetPriority(), std::move(TaskInfo));
         }
         m_NextTaskCond.notify_one();
+        return true;
     }
 
     virtual void DILIGENT_CALL_TYPE WaitForAllTasks() override final
