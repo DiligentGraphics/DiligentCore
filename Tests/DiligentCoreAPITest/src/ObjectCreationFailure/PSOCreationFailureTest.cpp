@@ -72,7 +72,7 @@ struct VertexOut
 void main(out indices  uint3     tris[1],
           out vertices VertexOut verts[3])
 {
-    SetMeshOutputCounts(4, 2);
+    SetMeshOutputCounts(3, 1);
 
     tris[0] = uint3(0, 1, 2);
     verts[0].Pos = float4(0.0, 0.0, 0.0, 1.0);
