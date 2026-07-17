@@ -1,0 +1,6 @@
+# Mesa Lavapipe may retain internal allocations after Vulkan instance destruction.
+leak:libvulkan_lvp.so
+
+# Lavapipe may be unloaded before LSan symbolizes the allocation stack. In that
+# case, match the Vulkan loader frame that remains visible in the report.
+leak:libvulkan.so.1
