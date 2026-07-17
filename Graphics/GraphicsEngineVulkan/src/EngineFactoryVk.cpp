@@ -1135,6 +1135,16 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
             if (EnabledFeatures.WaveOp != DEVICE_FEATURE_STATE_DISABLED)
             {
                 EnabledExtFeats.SubgroupOps = true;
+
+                if (PhysicalDevice->IsExtensionSupported(VK_KHR_COMPUTE_SHADER_DERIVATIVES_EXTENSION_NAME))
+                {
+                    DeviceExtensions.push_back(VK_KHR_COMPUTE_SHADER_DERIVATIVES_EXTENSION_NAME);
+
+                    EnabledExtFeats.ComputeShaderDerivatives = DeviceExtFeatures.ComputeShaderDerivatives;
+
+                    *NextExt = &EnabledExtFeats.ComputeShaderDerivatives;
+                    NextExt  = &EnabledExtFeats.ComputeShaderDerivatives.pNext;
+                }
             }
 
             if (EnabledFeatures.InstanceDataStepRate != DEVICE_FEATURE_STATE_DISABLED)

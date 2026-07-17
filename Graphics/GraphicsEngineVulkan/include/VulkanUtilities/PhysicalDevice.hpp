@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -70,6 +70,7 @@ public:
         VkPhysicalDeviceDynamicRenderingFeaturesKHR          DynamicRendering          = {};
         VkPhysicalDeviceHostImageCopyFeaturesEXT             HostImageCopy             = {};
         VkPhysicalDeviceFragmentShaderBarycentricFeaturesKHR FragmentShaderBarycentric = {};
+        VkPhysicalDeviceComputeShaderDerivativesFeaturesKHR  ComputeShaderDerivatives  = {};
 
 
         bool Spirv14              = false; // Ray tracing requires Vulkan 1.2 or SPIRV 1.4 extension
