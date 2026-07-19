@@ -28,6 +28,7 @@
 #include "GLSLangUtils.hpp"
 #include "DXCompiler.hpp"
 #include "DefaultShaderSourceStreamFactory.h"
+#include "ShaderSourceFactoryUtils.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "EngineMemory.h"
 #include "BasicFileSystem.hpp"
@@ -160,6 +161,7 @@ std::vector<unsigned int> LoadSPIRVFromGLSL(const char* FilePath, SHADER_TYPE Sh
     GLSLangUtils::GLSLtoSPIRVAttribs Attribs;
     Attribs.ShaderType                 = ShaderType;
     Attribs.ShaderSource               = ShaderSource.data();
+    Attribs.SourceName                 = FilePath;
     Attribs.SourceCodeLen              = static_cast<int>(ShaderSourceSize);
     Attribs.pShaderSourceStreamFactory = pShaderSourceStreamFactory;
     Attribs.Version                    = Version;
@@ -644,6 +646,110 @@ TEST_F(SPIRVShaderResourcesTest, SpecializationConstants_GLSLang)
 TEST_F(SPIRVShaderResourcesTest, SpecializationConstants_DXC)
 {
     TestSpecializationConstants(SHADER_COMPILER_DXC);
+}
+
+TEST_F(SPIRVShaderResourcesTest, NestedParentRelativeIncludes_HLSL_GLSLang)
+{
+    auto SPIRV = LoadSPIRVFromHLSL("IncludeNestedParentRelative/Main.psh", SHADER_TYPE_PIXEL, SHADER_COMPILER_GLSLANG);
+    EXPECT_FALSE(SPIRV.empty());
+}
+
+TEST_F(SPIRVShaderResourcesTest, NestedParentRelativeIncludes_GLSL_GLSLang)
+{
+    auto SPIRV = LoadSPIRVFromGLSL("IncludeNestedParentRelative/Main.glsl");
+    EXPECT_FALSE(SPIRV.empty());
+}
+
+TEST_F(SPIRVShaderResourcesTest, NestedLocalAndSystemIncludesFromMemory_GLSL_GLSLang)
+{
+    constexpr char MainGLSL[] =
+        "#version 450\n"
+        "#extension GL_GOOGLE_include_directive : enable\n"
+        "\n"
+        "#include \"Nested/LocalTypes.glsl\"\n"
+        "#include \"Nested/SystemTypes.glsl\"\n"
+        "layout(location = 0) out vec4 OutColor;\n"
+        "void main()\n"
+        "{\n"
+        "    OutColor = GetLocalColor() + GetSystemColor();\n"
+        "}\n";
+
+    auto pShaderSourceFactory = CreateMemoryShaderSourceFactory(
+        {
+            {"Nested/LocalTypes.glsl",
+             "#include \"Config.glsl\"\n"
+             "vec4 GetLocalColor()\n"
+             "{\n"
+             "    return vec4(float(LOCAL_CONFIG_VALUE), 0.0, 0.0, 1.0);\n"
+             "}\n"},
+            {"Nested/SystemTypes.glsl",
+             "#include <Config.glsl>\n"
+             "vec4 GetSystemColor()\n"
+             "{\n"
+             "    return vec4(0.0, float(ROOT_CONFIG_VALUE), 0.0, 1.0);\n"
+             "}\n"},
+            {"Nested/Config.glsl",
+             "#define LOCAL_CONFIG_VALUE 1\n"},
+            {"Config.glsl",
+             "#define ROOT_CONFIG_VALUE 1\n"},
+        },
+        false);
+    ASSERT_NE(pShaderSourceFactory, nullptr);
+
+    GLSLangUtils::GLSLtoSPIRVAttribs Attribs;
+    Attribs.ShaderType                 = SHADER_TYPE_PIXEL;
+    Attribs.ShaderSource               = MainGLSL;
+    Attribs.SourceName                 = "Main.glsl";
+    Attribs.SourceCodeLen              = static_cast<int>(sizeof(MainGLSL) - 1);
+    Attribs.pShaderSourceStreamFactory = pShaderSourceFactory;
+    Attribs.Version                    = GLSLangUtils::SpirvVersion::Vk100;
+    Attribs.AssignBindings             = true;
+
+    auto SPIRV = GLSLangUtils::GLSLtoSPIRV(Attribs);
+    EXPECT_FALSE(SPIRV.empty());
+}
+
+TEST_F(SPIRVShaderResourcesTest, NestedLocalAndSystemIncludesFromMemory_HLSL_GLSLang)
+{
+    auto pShaderSourceFactory = CreateMemoryShaderSourceFactory(
+        {
+            {"Main.hlsl",
+             "#include \"Nested/LocalTypes.hlsli\"\n"
+             "#include \"Nested/SystemTypes.hlsli\"\n"
+             "float4 main() : SV_Target\n"
+             "{\n"
+             "    return GetLocalColor() + GetSystemColor();\n"
+             "}\n"},
+            {"Nested/LocalTypes.hlsli",
+             "#include \"Config.hlsli\"\n"
+             "float4 GetLocalColor()\n"
+             "{\n"
+             "    return float4(LOCAL_CONFIG_VALUE, 0.0, 0.0, 1.0);\n"
+             "}\n"},
+            {"Nested/SystemTypes.hlsli",
+             "#include <Config.hlsli>\n"
+             "float4 GetSystemColor()\n"
+             "{\n"
+             "    return float4(0.0, ROOT_CONFIG_VALUE, 0.0, 1.0);\n"
+             "}\n"},
+            {"Nested/Config.hlsli",
+             "#define LOCAL_CONFIG_VALUE 1.0\n"},
+            {"Config.hlsli",
+             "#define ROOT_CONFIG_VALUE 1.0\n"},
+        },
+        false);
+    ASSERT_NE(pShaderSourceFactory, nullptr);
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.FilePath                   = "Main.hlsl";
+    ShaderCI.Desc                       = {"SPIRV memory include test shader", SHADER_TYPE_PIXEL};
+    ShaderCI.EntryPoint                 = "main";
+    ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+    ShaderCI.ShaderOptimizationLevel    = SHADER_OPTIMIZATION_LEVEL_DISABLED;
+
+    auto SPIRV = GLSLangUtils::HLSLtoSPIRV(ShaderCI, GLSLangUtils::SpirvVersion::Vk100, nullptr, nullptr);
+    EXPECT_FALSE(SPIRV.empty());
 }
 
 } // namespace
