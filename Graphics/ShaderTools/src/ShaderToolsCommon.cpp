@@ -457,11 +457,9 @@ static std::string MakeParentRelativeIncludePath(const String& ParentDir, const 
         Slash);
 }
 
-static bool TryOpenShaderSource(IShaderSourceInputStreamFactory* pFactory, const std::string& FilePath)
+static bool ShaderSourceExists(IShaderSourceInputStreamFactory* pFactory, const std::string& FilePath)
 {
-    RefCntAutoPtr<IFileStream> pSourceStream;
-    pFactory->CreateInputStream2(FilePath.c_str(), CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT, &pSourceStream);
-    return pSourceStream != nullptr;
+    return pFactory->CreateInputStream(FilePath.c_str(), nullptr);
 }
 
 static std::string ResolveIncludePathForPreprocess(const ShaderCreateInfo& ShaderCI, const std::string& IncludeName, bool IsLocalInclude)
@@ -479,12 +477,12 @@ static std::string ResolveIncludePathForPreprocess(const ShaderCreateInfo& Shade
 
     if (ShaderCI.pShaderSourceStreamFactory != nullptr)
     {
-        if (TryOpenShaderSource(ShaderCI.pShaderSourceStreamFactory, RelativePath))
+        if (ShaderSourceExists(ShaderCI.pShaderSourceStreamFactory, RelativePath))
             return RelativePath;
 
         const Char        AlternateSlash = PreferredSlash == BasicFileSystem::UnixSlash ? BasicFileSystem::WinSlash : BasicFileSystem::UnixSlash;
         const std::string AlternatePath  = MakeParentRelativeIncludePath(ParentDir, IncludeName, AlternateSlash);
-        if (AlternatePath != RelativePath && TryOpenShaderSource(ShaderCI.pShaderSourceStreamFactory, AlternatePath))
+        if (AlternatePath != RelativePath && ShaderSourceExists(ShaderCI.pShaderSourceStreamFactory, AlternatePath))
             return AlternatePath;
 
         return IncludeName;

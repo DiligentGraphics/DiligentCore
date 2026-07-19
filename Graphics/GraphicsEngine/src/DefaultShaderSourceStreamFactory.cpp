@@ -40,9 +40,9 @@ class DefaultShaderSourceStreamFactory final : public ObjectBase<IShaderSourceIn
 public:
     DefaultShaderSourceStreamFactory(IReferenceCounters* pRefCounters, const Char* SearchDirectories);
 
-    virtual void DILIGENT_CALL_TYPE CreateInputStream(const Char* Name, IFileStream** ppStream) override final;
+    virtual Bool DILIGENT_CALL_TYPE CreateInputStream(const Char* Name, IFileStream** ppStream) override final;
 
-    virtual void DILIGENT_CALL_TYPE CreateInputStream2(const Char*                             Name,
+    virtual Bool DILIGENT_CALL_TYPE CreateInputStream2(const Char*                             Name,
                                                        CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS Flags,
                                                        IFileStream**                           ppStream) override final;
 
@@ -68,56 +68,58 @@ DefaultShaderSourceStreamFactory::DefaultShaderSourceStreamFactory(IReferenceCou
     m_SearchDirectories.push_back("");
 }
 
-void DefaultShaderSourceStreamFactory::CreateInputStream(const Char*   Name,
+Bool DefaultShaderSourceStreamFactory::CreateInputStream(const Char*   Name,
                                                          IFileStream** ppStream)
 {
-    CreateInputStream2(Name, CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_NONE, ppStream);
+    return CreateInputStream2(Name, CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_NONE, ppStream);
 }
 
-void DefaultShaderSourceStreamFactory::CreateInputStream2(const Char*                             Name,
+Bool DefaultShaderSourceStreamFactory::CreateInputStream2(const Char*                             Name,
                                                           CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS Flags,
                                                           IFileStream**                           ppStream)
 {
-    auto CreateFileStream = [](const char* Path) //
+    auto TryCreateFileStream = [](const char* Path, IFileStream** ppStream) //
     {
-        RefCntAutoPtr<BasicFileStream> pFileStream;
-        if (FileSystem::FileExists(Path))
+        Bool SourceFound = FileSystem::FileExists(Path);
+        if (SourceFound && ppStream != nullptr)
         {
-            pFileStream = BasicFileStream::Create(Path, EFileAccessMode::Read);
-            if (!pFileStream->IsValid())
-                pFileStream.Release();
+            RefCntAutoPtr<BasicFileStream> pFileStream = BasicFileStream::Create(Path, EFileAccessMode::Read);
+
+            SourceFound = pFileStream->IsValid();
+            if (SourceFound)
+            {
+                pFileStream->QueryInterface(IID_FileStream, ppStream);
+                SourceFound = *ppStream != nullptr;
+            }
         }
-        return pFileStream;
+        return SourceFound;
     };
 
-    RefCntAutoPtr<BasicFileStream> pFileStream;
+    DEV_CHECK_ERR(ppStream == nullptr || *ppStream == nullptr, "Output stream pointer must be null. Overwriting a non-null output pointer may result in memory leaks.");
+
+    Bool SourceFound = False;
     if (FileSystem::IsPathAbsolute(Name))
     {
-        pFileStream = CreateFileStream(Name);
+        SourceFound = TryCreateFileStream(Name, ppStream);
     }
     else
     {
         for (const std::string& SearchDir : m_SearchDirectories)
         {
             const std::string FullPath = SearchDir + ((Name[0] == '\\' || Name[0] == '/') ? Name + 1 : Name);
-            pFileStream                = CreateFileStream(FullPath.c_str());
-            if (pFileStream)
+
+            SourceFound = TryCreateFileStream(FullPath.c_str(), ppStream);
+            if (SourceFound)
                 break;
         }
     }
 
-    if (pFileStream)
+    if (!SourceFound && ppStream != nullptr && (Flags & CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT) == 0)
     {
-        pFileStream->QueryInterface(IID_FileStream, ppStream);
+        LOG_ERROR("Failed to create input stream for source file ", Name);
     }
-    else
-    {
-        *ppStream = nullptr;
-        if ((Flags & CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT) == 0)
-        {
-            LOG_ERROR("Failed to create input stream for source file ", Name);
-        }
-    }
+
+    return SourceFound;
 }
 
 void CreateDefaultShaderSourceStreamFactory(const Char*                       SearchDirectories,

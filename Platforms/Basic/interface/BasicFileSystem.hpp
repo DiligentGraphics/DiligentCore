@@ -51,6 +51,14 @@ enum class FilePosOrigin
     End
 };
 
+enum class PathRootType
+{
+    None,
+    Unix,
+    WindowsDrive,
+    WindowsUNC
+};
+
 struct FileOpenAttribs
 {
     const Char*     strFilePath;
@@ -171,6 +179,9 @@ public:
     static void GetPathComponents(const String& Path,
                                   String*       Directory,
                                   String*       FileName);
+
+    /// Returns the type of the path root independently of the current platform.
+    static PathRootType GetPathRootType(const Char* Path);
 
     static bool IsPathAbsolute(const Char* Path);
 

@@ -2,6 +2,7 @@
 
 ## Current progress
 
+* Added success results and probe mode to `IShaderSourceInputStreamFactory::CreateInputStream()` and `CreateInputStream2()` (API256020)
 * Added `SHADER_OPTIMIZATION_LEVEL` enum and `ShaderCreateInfo::ShaderOptimizationLevel` member (API256019)
 * Added `ShaderFloat64` and `ShaderBarycentrics` members to `DeviceFeatures` struct (API256018)
 * Added `DrawMeshIndirectAttribs::pMtlAttribs` member (API256017)

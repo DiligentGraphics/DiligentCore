@@ -1,5 +1,5 @@
 /*
- *  Copyright 2025 Diligent Graphics LLC
+ *  Copyright 2025-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -144,22 +144,27 @@ TEST(ShaderCreationTest, FromBytecode)
             {
             }
 
-            virtual void DILIGENT_CALL_TYPE CreateInputStream(const Char* Name, IFileStream** ppStream) override final
+            virtual Bool DILIGENT_CALL_TYPE CreateInputStream(const Char* Name, IFileStream** ppStream) override final
             {
-                CreateInputStream2(Name, CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_NONE, ppStream);
+                return CreateInputStream2(Name, CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_NONE, ppStream);
             }
 
-            virtual void DILIGENT_CALL_TYPE CreateInputStream2(const Char*                             Name,
+            virtual Bool DILIGENT_CALL_TYPE CreateInputStream2(const Char*                             Name,
                                                                CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS Flags,
                                                                IFileStream**                           ppStream) override final
             {
-                if (strcmp(Name, "ps.bc") != 0)
-                    return;
+                if (ppStream != nullptr)
+                    *ppStream = nullptr;
+                Bool SourceFound = strcmp(Name, "ps.bc") == 0;
+                if (SourceFound && ppStream != nullptr)
+                {
+                    RefCntAutoPtr<IDataBlob>        pDataBlob = ProxyDataBlob::Create(m_Bytecode.data(), m_Bytecode.size());
+                    RefCntAutoPtr<MemoryFileStream> pMemStream{MakeNewRCObj<MemoryFileStream>()(pDataBlob)};
 
-                RefCntAutoPtr<IDataBlob>        pDataBlob = ProxyDataBlob::Create(m_Bytecode.data(), m_Bytecode.size());
-                RefCntAutoPtr<MemoryFileStream> pMemStream{MakeNewRCObj<MemoryFileStream>()(pDataBlob)};
-
-                pMemStream->QueryInterface(IID_FileStream, reinterpret_cast<IObject**>(ppStream));
+                    pMemStream->QueryInterface(IID_FileStream, reinterpret_cast<IObject**>(ppStream));
+                    SourceFound = *ppStream != nullptr;
+                }
+                return SourceFound;
             }
 
         private:

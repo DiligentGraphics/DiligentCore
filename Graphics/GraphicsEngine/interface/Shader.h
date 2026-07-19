@@ -241,8 +241,12 @@ DILIGENT_BEGIN_INTERFACE(IShaderSourceInputStreamFactory, IObject)
 
     /// The stream is used to load the shader source code.
     /// \param [in] Name      - The name of the file to load.
-    /// \param [out] ppStream - Pointer to the shader source input stream.
-    VIRTUAL void METHOD(CreateInputStream)(THIS_
+    /// \param [out] ppStream - Pointer to the shader source input stream. May be null to only check
+    ///                         if the source exists. The check never reports an error if the source
+    ///                         is not found.
+    /// \return     True if the source exists and, when \p ppStream is not null, the stream was
+    ///             created successfully. False otherwise.
+    VIRTUAL Bool METHOD(CreateInputStream)(THIS_
                                            const Char*   Name,
                                            IFileStream** ppStream) PURE;
 
@@ -252,8 +256,12 @@ DILIGENT_BEGIN_INTERFACE(IShaderSourceInputStreamFactory, IObject)
     /// \param [in] Name      - The name of the file to load.
     /// \param [in] Flags     - Flags that control the stream creation,
     ///                         see Diligent::CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS.
-    /// \param [out] ppStream - Pointer to the shader source input stream.
-    VIRTUAL void METHOD(CreateInputStream2)(THIS_
+    /// \param [out] ppStream - Pointer to the shader source input stream. May be null to only check
+    ///                         if the source exists. The check never reports an error if the source
+    ///                         is not found, regardless of \p Flags.
+    /// \return     True if the source exists and, when \p ppStream is not null, the stream was
+    ///             created successfully. False otherwise.
+    VIRTUAL Bool METHOD(CreateInputStream2)(THIS_
                                             const Char*                             Name,
                                             CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS Flags,
                                             IFileStream**                           ppStream) PURE;

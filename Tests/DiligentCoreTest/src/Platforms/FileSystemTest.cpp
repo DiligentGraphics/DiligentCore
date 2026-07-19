@@ -160,6 +160,30 @@ TEST(Platforms_FileSystem, SplitPath)
 }
 
 
+TEST(Platforms_FileSystem, GetPathRootType)
+{
+    EXPECT_EQ(FileSystem::GetPathRootType(nullptr), PathRootType::None);
+    EXPECT_EQ(FileSystem::GetPathRootType(""), PathRootType::None);
+    EXPECT_EQ(FileSystem::GetPathRootType("File"), PathRootType::None);
+    EXPECT_EQ(FileSystem::GetPathRootType("Directory/File"), PathRootType::None);
+    EXPECT_EQ(FileSystem::GetPathRootType("C:"), PathRootType::None);
+    EXPECT_EQ(FileSystem::GetPathRootType("C:File"), PathRootType::None);
+
+    EXPECT_EQ(FileSystem::GetPathRootType("/"), PathRootType::Unix);
+    EXPECT_EQ(FileSystem::GetPathRootType("/File"), PathRootType::Unix);
+    EXPECT_EQ(FileSystem::GetPathRootType("\\File"), PathRootType::Unix);
+
+    EXPECT_EQ(FileSystem::GetPathRootType("C:/"), PathRootType::WindowsDrive);
+    EXPECT_EQ(FileSystem::GetPathRootType("C:/File"), PathRootType::WindowsDrive);
+    EXPECT_EQ(FileSystem::GetPathRootType("C:\\File"), PathRootType::WindowsDrive);
+
+    EXPECT_EQ(FileSystem::GetPathRootType("//Server/Share"), PathRootType::WindowsUNC);
+    EXPECT_EQ(FileSystem::GetPathRootType("\\\\Server\\Share"), PathRootType::WindowsUNC);
+    EXPECT_EQ(FileSystem::GetPathRootType("/\\Server/Share"), PathRootType::WindowsUNC);
+    EXPECT_EQ(FileSystem::GetPathRootType("\\/Server\\Share"), PathRootType::WindowsUNC);
+}
+
+
 TEST(Platforms_FileSystem, SimplifyPath)
 {
     EXPECT_STREQ(FileSystem::SimplifyPath("", '/').c_str(), "");

@@ -125,6 +125,23 @@ void BasicFileSystem::GetPathComponents(const String& Path,
     }
 }
 
+PathRootType BasicFileSystem::GetPathRootType(const Char* Path)
+{
+    if (Path == nullptr || Path[0] == '\0')
+        return PathRootType::None;
+
+    if (IsSlash(Path[0]) && IsSlash(Path[1]))
+        return PathRootType::WindowsUNC;
+
+    if (Path[1] == ':' && IsSlash(Path[2]))
+        return PathRootType::WindowsDrive;
+
+    if (IsSlash(Path[0]))
+        return PathRootType::Unix;
+
+    return PathRootType::None;
+}
+
 bool BasicFileSystem::IsPathAbsolute(const Char* strPath)
 {
     if (strPath == nullptr || strPath[0] == 0)

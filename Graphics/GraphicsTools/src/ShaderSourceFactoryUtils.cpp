@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2025 Diligent Graphics LLC
+ *  Copyright 2023-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -73,17 +73,17 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IShaderSourceInputStreamFactory, TBase)
 
-    virtual void DILIGENT_CALL_TYPE CreateInputStream(const Char*   Name,
+    virtual Bool DILIGENT_CALL_TYPE CreateInputStream(const Char*   Name,
                                                       IFileStream** ppStream) override final
     {
-        CreateInputStream2(Name, CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_NONE, ppStream);
+        return CreateInputStream2(Name, CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_NONE, ppStream);
     }
 
-    virtual void DILIGENT_CALL_TYPE CreateInputStream2(const Char*                             Name,
+    virtual Bool DILIGENT_CALL_TYPE CreateInputStream2(const Char*                             Name,
                                                        CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS Flags,
                                                        IFileStream**                           ppStream) override final
     {
-        VERIFY_EXPR(ppStream != nullptr && *ppStream == nullptr);
+        VERIFY_EXPR(ppStream == nullptr || *ppStream == nullptr);
         if (!m_FileSubstituteMap.empty())
         {
             auto it = m_FileSubstituteMap.find(Name);
@@ -91,16 +91,19 @@ public:
                 Name = it->second.c_str();
         }
 
-        for (size_t i = 0; i < m_pFactories.size() && *ppStream == nullptr; ++i)
+        Bool SourceFound = False;
+        for (size_t i = 0; i < m_pFactories.size() && !SourceFound; ++i)
         {
             if (m_pFactories[i])
-                m_pFactories[i]->CreateInputStream2(Name, CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT, ppStream);
+                SourceFound = m_pFactories[i]->CreateInputStream2(Name, CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT, ppStream);
         }
 
-        if (*ppStream == nullptr && (Flags & CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT) != 0)
+        if (!SourceFound && ppStream != nullptr && (Flags & CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT) == 0)
         {
-            LOG_ERROR("Failed to create input stream for source file ", Name);
+            LOG_ERROR_MESSAGE("Failed to create input stream for source file ", Name);
         }
+
+        return SourceFound;
     }
 
 private:
@@ -158,31 +161,39 @@ public:
         }
     }
 
-    virtual void DILIGENT_CALL_TYPE CreateInputStream(const Char* Name, IFileStream** ppStream) override final
+    virtual Bool DILIGENT_CALL_TYPE CreateInputStream(const Char* Name, IFileStream** ppStream) override final
     {
-        CreateInputStream2(Name, CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_NONE, ppStream);
+        return CreateInputStream2(Name, CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_NONE, ppStream);
     }
 
-    virtual void DILIGENT_CALL_TYPE CreateInputStream2(const Char*                             Name,
+    virtual Bool DILIGENT_CALL_TYPE CreateInputStream2(const Char*                             Name,
                                                        CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS Flags,
                                                        IFileStream**                           ppStream) override final
     {
-        auto SourceIt = m_NameToSourceMap.find(Name);
-        if (SourceIt != m_NameToSourceMap.end())
+        auto SourceIt    = m_NameToSourceMap.find(Name);
+        Bool SourceFound = SourceIt != m_NameToSourceMap.end();
+        if (ppStream != nullptr)
         {
-            RefCntAutoPtr<StringDataBlobImpl> pDataBlob{MakeNewRCObj<StringDataBlobImpl>()(SourceIt->second)};
-            RefCntAutoPtr<MemoryFileStream>   pMemStream{MakeNewRCObj<MemoryFileStream>()(pDataBlob)};
-
-            pMemStream->QueryInterface(IID_FileStream, ppStream);
-        }
-        else
-        {
-            *ppStream = nullptr;
-            if ((Flags & CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT) == 0)
+            DEV_CHECK_ERR(*ppStream == nullptr, "Output stream pointer must be null. Overwriting a non-null output pointer may result in memory leaks.");
+            if (SourceFound)
             {
-                LOG_ERROR("Failed to create input stream for source file ", Name);
+                RefCntAutoPtr<StringDataBlobImpl> pDataBlob{MakeNewRCObj<StringDataBlobImpl>()(SourceIt->second)};
+                RefCntAutoPtr<MemoryFileStream>   pMemStream{MakeNewRCObj<MemoryFileStream>()(pDataBlob)};
+
+                pMemStream->QueryInterface(IID_FileStream, ppStream);
+                SourceFound = *ppStream != nullptr;
+            }
+            else
+            {
+                *ppStream = nullptr;
+                if ((Flags & CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT) == 0)
+                {
+                    LOG_ERROR_MESSAGE("Failed to create input stream for source file ", Name);
+                }
             }
         }
+
+        return SourceFound;
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IShaderSourceInputStreamFactory, TBase)
