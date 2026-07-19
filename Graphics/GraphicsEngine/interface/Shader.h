@@ -234,7 +234,10 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_IShaderSourceInputStreamFactory =
     IObjectInclusiveMethods;                            \
     IShaderSourceInputStreamFactoryMethods ShaderSourceInputStreamFactory
 
-/// Shader source stream factory interface
+/// Shader source stream factory interface.
+///
+/// File names may use either '/' or '\\' as a path separator. Implementations must
+/// treat both separators as equivalent.
 DILIGENT_BEGIN_INTERFACE(IShaderSourceInputStreamFactory, IObject)
 {
     /// Creates a shader source input stream for the specified file name.

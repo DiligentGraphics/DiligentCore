@@ -27,6 +27,7 @@
 #include <deque>
 
 #include "ShaderToolsCommon.hpp"
+#include "ShaderSourcePath.hpp"
 #include "DefaultShaderSourceStreamFactory.h"
 #include "RenderDevice.h"
 #include "ShaderSourceFactoryUtils.hpp"
@@ -39,6 +40,43 @@ using namespace Diligent::Testing;
 
 namespace
 {
+
+TEST(ShaderPreprocessTest, NormalizeShaderSourcePath)
+{
+    const struct
+    {
+        const Char* Path;
+        const Char* ExpectedPath;
+    } TestCases[] = {
+        {nullptr, ""},
+        {"", ""},
+        {"Shader.hlsl", "Shader.hlsl"},
+        {"./Shader.hlsl", "Shader.hlsl"},
+        {"Directory//./Subdir/../Shader.hlsl", "Directory/Shader.hlsl"},
+        {"Directory\\Subdir\\Shader.hlsl", "Directory/Subdir/Shader.hlsl"},
+        {"/Directory\\Subdir/../Shader.hlsl", "/Directory/Shader.hlsl"},
+        {"C:\\Directory\\Subdir\\..\\Shader.hlsl", "C:/Directory/Shader.hlsl"},
+        {"C:/../Shader.hlsl", "C:/Shader.hlsl"},
+        {"\\\\Server\\Share\\Directory\\..\\Shader.hlsl", "//Server/Share/Shader.hlsl"},
+        {"//Server\\Share/Directory/./Shader.hlsl", "//Server/Share/Directory/Shader.hlsl"},
+    };
+
+    for (const auto& TestCase : TestCases)
+    {
+        EXPECT_EQ(NormalizeShaderSourcePath(TestCase.Path), TestCase.ExpectedPath)
+            << "Path: " << (TestCase.Path != nullptr ? TestCase.Path : "<null>");
+    }
+
+    EXPECT_EQ(NormalizeShaderSourcePath("Directory/Subdir/../Shader.hlsl", BasicFileSystem::WinSlash), "Directory\\Shader.hlsl");
+    EXPECT_EQ(NormalizeShaderSourcePath("/Directory/Subdir/../Shader.hlsl", BasicFileSystem::WinSlash), "\\Directory\\Shader.hlsl");
+    EXPECT_EQ(NormalizeShaderSourcePath("C:/Directory/Subdir/../Shader.hlsl", BasicFileSystem::WinSlash), "C:\\Directory\\Shader.hlsl");
+    EXPECT_EQ(NormalizeShaderSourcePath("//Server/Share/Directory/../Shader.hlsl", BasicFileSystem::WinSlash), "\\\\Server\\Share\\Shader.hlsl");
+
+    String PlatformPath = "Directory";
+    PlatformPath += BasicFileSystem::SlashSymbol;
+    PlatformPath += "Shader.hlsl";
+    EXPECT_EQ(NormalizeShaderSourcePath("Directory/Subdir/../Shader.hlsl", 0), PlatformPath);
+}
 
 TEST(ShaderPreprocessTest, Include)
 {
@@ -144,23 +182,32 @@ TEST(ShaderPreprocessTest, ShaderSourceFactoryProbe)
 
     EXPECT_TRUE(pDefaultFactory->CreateInputStream("IncludeBasicTest.hlsl", nullptr));
     EXPECT_FALSE(pDefaultFactory->CreateInputStream("Missing.hlsl", nullptr));
+    EXPECT_TRUE(pDefaultFactory->CreateInputStream("Nested\\Config.hlsl", nullptr));
     EXPECT_TRUE(pDefaultFactory->CreateInputStream2("IncludeBasicTest.hlsl", CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_NONE, nullptr));
     EXPECT_FALSE(pDefaultFactory->CreateInputStream2("Missing.hlsl", CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_NONE, nullptr));
 
     auto pMemoryFactory0 = CreateMemoryShaderSourceFactory(
         {
             {"Memory0.hlsl", "// Memory0.hlsl\n"},
+            {"Directory/Memory0.hlsl", "// Directory/Memory0.hlsl\n"},
+            {"C:\\Directory\\DriveMemory.hlsl", "// DriveMemory.hlsl\n"},
+            {"\\\\server\\share\\NetworkMemory.hlsl", "// NetworkMemory.hlsl\n"},
         },
         false);
     auto pMemoryFactory1 = CreateMemoryShaderSourceFactory(
         {
             {"Memory1.hlsl", "// Memory1.hlsl\n"},
+            {"Directory\\Memory1.hlsl", "// Directory/Memory1.hlsl\n"},
         },
         false);
     ASSERT_NE(pMemoryFactory0, nullptr);
     ASSERT_NE(pMemoryFactory1, nullptr);
 
     EXPECT_TRUE(pMemoryFactory0->CreateInputStream("Memory0.hlsl", nullptr));
+    EXPECT_TRUE(pMemoryFactory0->CreateInputStream("Directory\\Memory0.hlsl", nullptr));
+    EXPECT_TRUE(pMemoryFactory1->CreateInputStream("Directory/Memory1.hlsl", nullptr));
+    EXPECT_TRUE(pMemoryFactory0->CreateInputStream("C:/Directory/DriveMemory.hlsl", nullptr));
+    EXPECT_TRUE(pMemoryFactory0->CreateInputStream("//server/share/NetworkMemory.hlsl", nullptr));
     EXPECT_FALSE(pMemoryFactory0->CreateInputStream("Missing.hlsl", nullptr));
     EXPECT_TRUE(pMemoryFactory0->CreateInputStream2("Memory0.hlsl", CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_NONE, nullptr));
     EXPECT_FALSE(pMemoryFactory0->CreateInputStream2("Missing.hlsl", CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_NONE, nullptr));
@@ -173,6 +220,12 @@ TEST(ShaderPreprocessTest, ShaderSourceFactoryProbe)
     EXPECT_TRUE(pCompoundFactory->CreateInputStream2("Memory0.hlsl", CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_NONE, nullptr));
     EXPECT_TRUE(pCompoundFactory->CreateInputStream2("Memory1.hlsl", CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_NONE, nullptr));
     EXPECT_FALSE(pCompoundFactory->CreateInputStream2("Missing.hlsl", CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_NONE, nullptr));
+
+    auto pSubstituteFactory = CreateCompoundShaderSourceFactory(
+        {pMemoryFactory0.RawPtr(), pMemoryFactory1.RawPtr()},
+        {{"Alias\\Memory.hlsl", "Directory/Memory1.hlsl"}});
+    ASSERT_NE(pSubstituteFactory, nullptr);
+    EXPECT_TRUE(pSubstituteFactory->CreateInputStream("Alias/Memory.hlsl", nullptr));
 
     RefCntAutoPtr<IFileStream> pStream;
     EXPECT_TRUE(pCompoundFactory->CreateInputStream2("Memory1.hlsl", CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_NONE, &pStream));
@@ -275,6 +328,145 @@ TEST(ShaderPreprocessTest, IncludeNestedLocalAndSystemFromMemory)
 
     auto UnrolledStr = UnrollShaderIncludes(ShaderCI);
     ASSERT_EQ(RefString, UnrolledStr);
+}
+
+TEST(ShaderPreprocessTest, IncludeCanonicalPathsFromMemory)
+{
+    auto pShaderSourceFactory = CreateMemoryShaderSourceFactory(
+        {
+            {"/pkg/Main.hlsl",
+             "// Start Main.hlsl\n"
+             "#include \"Nested\\Types.hlsl\"\n"
+             "// End Main.hlsl\n"},
+            {"/pkg\\Nested/Types.hlsl",
+             "// Start Types.hlsl\n"
+             "#include \"Config.hlsl\"\n"
+             "// End Types.hlsl\n"},
+            {"/pkg/Nested\\Config.hlsl",
+             "// Start Correct Config.hlsl\n"
+             "#define CONFIG_SOURCE 2\n"
+             "// End Correct Config.hlsl\n"},
+            {"pkg/Nested/Config.hlsl",
+             "// Start Decoy Config.hlsl\n"
+             "#define CONFIG_SOURCE 1\n"
+             "// End Decoy Config.hlsl\n"},
+            {"/Main.hlsl",
+             "// Start Root Main.hlsl\n"
+             "#include \"Config.hlsl\"\n"
+             "// End Root Main.hlsl\n"},
+            {"/Config.hlsl",
+             "// Start Root Config.hlsl\n"
+             "#define ROOT_CONFIG_SOURCE 2\n"
+             "// End Root Config.hlsl\n"},
+            {"Config.hlsl",
+             "// Start Decoy Root Config.hlsl\n"
+             "#define ROOT_CONFIG_SOURCE 1\n"
+             "// End Decoy Root Config.hlsl\n"},
+            {"C:\\pkg\\Main.hlsl",
+             "// Start Drive Main.hlsl\n"
+             "#include \"../Config.hlsl\"\n"
+             "// End Drive Main.hlsl\n"},
+            {"C:/Config.hlsl",
+             "// Start Drive Config.hlsl\n"
+             "#define DRIVE_CONFIG_SOURCE 2\n"
+             "// End Drive Config.hlsl\n"},
+        },
+        false);
+    ASSERT_NE(pShaderSourceFactory, nullptr);
+
+    {
+        std::deque<const char*> Includes{
+            "/pkg/Nested/Config.hlsl",
+            "/pkg/Nested/Types.hlsl",
+            "/pkg/Main.hlsl"};
+
+        ShaderCreateInfo ShaderCI{};
+        ShaderCI.Desc.Name                  = "TestShader";
+        ShaderCI.FilePath                   = "/pkg/Main.hlsl";
+        ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+
+        const auto Result = ProcessShaderIncludes(ShaderCI, [&](const ShaderIncludePreprocessInfo& ProcessInfo) {
+            ASSERT_FALSE(Includes.empty());
+            EXPECT_EQ(ProcessInfo.FilePath, Includes.front());
+            Includes.pop_front();
+        });
+
+        EXPECT_EQ(Result, true);
+        EXPECT_TRUE(Includes.empty());
+
+        constexpr char RefString[] =
+            "// Start Main.hlsl\n"
+            "// Start Types.hlsl\n"
+            "// Start Correct Config.hlsl\n"
+            "#define CONFIG_SOURCE 2\n"
+            "// End Correct Config.hlsl\n"
+            "\n"
+            "// End Types.hlsl\n"
+            "\n"
+            "// End Main.hlsl\n";
+
+        EXPECT_EQ(UnrollShaderIncludes(ShaderCI), RefString);
+    }
+
+    {
+        std::deque<const char*> Includes{
+            "/Config.hlsl",
+            "/Main.hlsl"};
+
+        ShaderCreateInfo ShaderCI{};
+        ShaderCI.Desc.Name                  = "TestShader";
+        ShaderCI.FilePath                   = "/Main.hlsl";
+        ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+
+        const auto Result = ProcessShaderIncludes(ShaderCI, [&](const ShaderIncludePreprocessInfo& ProcessInfo) {
+            ASSERT_FALSE(Includes.empty());
+            EXPECT_EQ(ProcessInfo.FilePath, Includes.front());
+            Includes.pop_front();
+        });
+
+        EXPECT_EQ(Result, true);
+        EXPECT_TRUE(Includes.empty());
+
+        constexpr char RefString[] =
+            "// Start Root Main.hlsl\n"
+            "// Start Root Config.hlsl\n"
+            "#define ROOT_CONFIG_SOURCE 2\n"
+            "// End Root Config.hlsl\n"
+            "\n"
+            "// End Root Main.hlsl\n";
+
+        EXPECT_EQ(UnrollShaderIncludes(ShaderCI), RefString);
+    }
+
+    {
+        std::deque<const char*> Includes{
+            "C:/Config.hlsl",
+            "C:/pkg/Main.hlsl"};
+
+        ShaderCreateInfo ShaderCI{};
+        ShaderCI.Desc.Name                  = "TestShader";
+        ShaderCI.FilePath                   = "C:\\pkg\\Main.hlsl";
+        ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+
+        const auto Result = ProcessShaderIncludes(ShaderCI, [&](const ShaderIncludePreprocessInfo& ProcessInfo) {
+            ASSERT_FALSE(Includes.empty());
+            EXPECT_EQ(ProcessInfo.FilePath, Includes.front());
+            Includes.pop_front();
+        });
+
+        EXPECT_EQ(Result, true);
+        EXPECT_TRUE(Includes.empty());
+
+        constexpr char RefString[] =
+            "// Start Drive Main.hlsl\n"
+            "// Start Drive Config.hlsl\n"
+            "#define DRIVE_CONFIG_SOURCE 2\n"
+            "// End Drive Config.hlsl\n"
+            "\n"
+            "// End Drive Main.hlsl\n";
+
+        EXPECT_EQ(UnrollShaderIncludes(ShaderCI), RefString);
+    }
 }
 
 TEST(ShaderPreprocessTest, InvalidInclude)

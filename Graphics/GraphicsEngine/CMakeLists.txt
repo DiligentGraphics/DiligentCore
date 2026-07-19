@@ -29,6 +29,7 @@ set(INCLUDE
     include/ResourceMappingImpl.hpp
     include/SamplerBase.hpp
     include/ShaderBase.hpp
+    include/ShaderSourcePath.hpp
     include/ShaderResourceBindingBase.hpp
     include/ShaderResourceCacheCommon.hpp
     include/ShaderResourceVariableBase.hpp

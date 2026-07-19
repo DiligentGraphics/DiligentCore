@@ -31,6 +31,7 @@
 #include "RefCntAutoPtr.hpp"
 #include "EngineMemory.h"
 #include "BasicFileStream.hpp"
+#include "ShaderSourcePath.hpp"
 
 namespace Diligent
 {
@@ -78,12 +79,12 @@ Bool DefaultShaderSourceStreamFactory::CreateInputStream2(const Char*           
                                                           CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS Flags,
                                                           IFileStream**                           ppStream)
 {
-    auto TryCreateFileStream = [](const char* Path, IFileStream** ppStream) //
+    auto TryCreateFileStream = [](const std::string& Path, IFileStream** ppStream) //
     {
-        Bool SourceFound = FileSystem::FileExists(Path);
+        Bool SourceFound = FileSystem::FileExists(Path.c_str());
         if (SourceFound && ppStream != nullptr)
         {
-            RefCntAutoPtr<BasicFileStream> pFileStream = BasicFileStream::Create(Path, EFileAccessMode::Read);
+            RefCntAutoPtr<BasicFileStream> pFileStream = BasicFileStream::Create(Path.c_str(), EFileAccessMode::Read);
 
             SourceFound = pFileStream->IsValid();
             if (SourceFound)
@@ -97,18 +98,20 @@ Bool DefaultShaderSourceStreamFactory::CreateInputStream2(const Char*           
 
     DEV_CHECK_ERR(ppStream == nullptr || *ppStream == nullptr, "Output stream pointer must be null. Overwriting a non-null output pointer may result in memory leaks.");
 
+    const String FileName = NormalizeShaderSourcePath(Name, FileSystem::SlashSymbol);
+
     Bool SourceFound = False;
-    if (FileSystem::IsPathAbsolute(Name))
+    if (FileSystem::IsPathAbsolute(FileName.c_str()))
     {
-        SourceFound = TryCreateFileStream(Name, ppStream);
+        SourceFound = TryCreateFileStream(FileName, ppStream);
     }
-    else
+    else if (!FileName.empty())
     {
         for (const std::string& SearchDir : m_SearchDirectories)
         {
-            const std::string FullPath = SearchDir + ((Name[0] == '\\' || Name[0] == '/') ? Name + 1 : Name);
+            const std::string FullPath = FileSystem::JoinPath(SearchDir, FileName);
 
-            SourceFound = TryCreateFileStream(FullPath.c_str(), ppStream);
+            SourceFound = TryCreateFileStream(FullPath, ppStream);
             if (SourceFound)
                 break;
         }

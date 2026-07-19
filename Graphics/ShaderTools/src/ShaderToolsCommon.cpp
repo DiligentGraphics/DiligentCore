@@ -35,6 +35,7 @@
 #include "StringDataBlobImpl.hpp"
 #include "GraphicsAccessories.hpp"
 #include "ParsingTools.hpp"
+#include "ShaderSourcePath.hpp"
 
 namespace Diligent
 {
@@ -43,6 +44,39 @@ using namespace Parsing;
 
 namespace
 {
+
+class NormalizedShaderCreateInfo
+{
+public:
+    explicit NormalizedShaderCreateInfo(const ShaderCreateInfo& ShaderCI) :
+        m_ShaderCI{ShaderCI}
+    {
+        if (ShaderCI.FilePath != nullptr)
+        {
+            m_FilePath          = NormalizeShaderSourcePath(ShaderCI.FilePath);
+            m_ShaderCI.FilePath = m_FilePath.c_str();
+        }
+    }
+
+    NormalizedShaderCreateInfo(const NormalizedShaderCreateInfo&) = delete;
+    NormalizedShaderCreateInfo& operator=(const NormalizedShaderCreateInfo&) = delete;
+
+    operator const ShaderCreateInfo&() const& noexcept
+    {
+        return m_ShaderCI;
+    }
+
+    operator const ShaderCreateInfo&() const&& = delete;
+
+    const Char* GetFilePath() const noexcept
+    {
+        return m_ShaderCI.FilePath;
+    }
+
+private:
+    ShaderCreateInfo m_ShaderCI;
+    std::string      m_FilePath;
+};
 
 constexpr ShaderMacro VSMacros[]  = {{"VERTEX_SHADER", "1"}};
 constexpr ShaderMacro PSMacros[]  = {{"FRAGMENT_SHADER", "1"}, {"PIXEL_SHADER", "1"}};
@@ -69,7 +103,7 @@ ShaderMacroArray GetShaderTypeMacros(SHADER_TYPE Type)
     static_assert(SHADER_TYPE_LAST == 0x4000, "Please update the switch below to handle the new shader type");
     switch (Type)
     {
-        // clang-format off
+            // clang-format off
         case SHADER_TYPE_VERTEX:           return SHADER_MACROS_ARRAY(VSMacros);
         case SHADER_TYPE_PIXEL:            return SHADER_MACROS_ARRAY(PSMacros);
         case SHADER_TYPE_GEOMETRY:         return SHADER_MACROS_ARRAY(GSMacros);
@@ -425,70 +459,41 @@ static void ProcessIncludeErrorHandler(const ShaderCreateInfo& ShaderCI, const s
     throw std::pair<std::string, std::string>{std::move(FileInfo), Error};
 }
 
-static Char GetFirstSlash(const char* Path)
-{
-    if (Path == nullptr)
-        return 0;
-
-    for (const char* c = Path; *c != '\0'; ++c)
-    {
-        if (BasicFileSystem::IsSlash(*c))
-            return *c;
-    }
-
-    return 0;
-}
-
-static Char GetPreferredIncludePathSlash(const ShaderCreateInfo& ShaderCI, const std::string& IncludeName)
-{
-    if (const Char IncludeSlash = GetFirstSlash(IncludeName.c_str()))
-        return IncludeSlash;
-
-    if (const Char SourceSlash = GetFirstSlash(ShaderCI.FilePath))
-        return SourceSlash;
-
-    return BasicFileSystem::SlashSymbol;
-}
-
-static std::string MakeParentRelativeIncludePath(const String& ParentDir, const std::string& IncludeName, Char Slash)
-{
-    return BasicFileSystem::SimplifyPath(
-        (ParentDir + Slash + IncludeName).c_str(),
-        Slash);
-}
-
-static bool ShaderSourceExists(IShaderSourceInputStreamFactory* pFactory, const std::string& FilePath)
-{
-    return pFactory->CreateInputStream(FilePath.c_str(), nullptr);
-}
-
+// Resolves a shader include path relative to the including source when applicable.
 static std::string ResolveIncludePathForPreprocess(const ShaderCreateInfo& ShaderCI, const std::string& IncludeName, bool IsLocalInclude)
 {
-    if (!IsLocalInclude || ShaderCI.FilePath == nullptr || BasicFileSystem::IsPathAbsolute(IncludeName.c_str()))
-        return IncludeName;
+    const std::string NormalizedIncludeName = NormalizeShaderSourcePath(IncludeName.c_str());
+    // Examples:
+    //   <Common.hlsl>                     -> Common.hlsl
+    //   "/Shaders/Common.hlsl" (absolute) -> /Shaders/Common.hlsl
+    if (!IsLocalInclude || ShaderCI.FilePath == nullptr || BasicFileSystem::GetPathRootType(NormalizedIncludeName.c_str()) != PathRootType::None)
+        return NormalizedIncludeName;
+
+    const std::string SourcePath = NormalizeShaderSourcePath(ShaderCI.FilePath);
 
     String ParentDir;
-    BasicFileSystem::GetPathComponents(ShaderCI.FilePath, &ParentDir, nullptr);
+    BasicFileSystem::GetPathComponents(SourcePath, &ParentDir, nullptr);
+    // GetPathComponents() returns an empty directory for a file in the root
+    // (e.g. "/Main.hlsl"). Restore the root so local includes remain absolute.
+    if (ParentDir.empty() && !SourcePath.empty() && SourcePath.front() == BasicFileSystem::UnixSlash)
+        ParentDir.push_back(BasicFileSystem::UnixSlash);
+    // "Main.hlsl" + "Common.hlsl" -> "Common.hlsl"
     if (ParentDir.empty())
-        return IncludeName;
+        return NormalizedIncludeName;
 
-    const Char        PreferredSlash = GetPreferredIncludePathSlash(ShaderCI, IncludeName);
-    const std::string RelativePath   = MakeParentRelativeIncludePath(ParentDir, IncludeName, PreferredSlash);
+    // "Shaders/Nested/Main.hlsl" + "../Common.hlsl"
+    //     -> "Shaders/Common.hlsl"
+    const std::string ParentRelativePath = BasicFileSystem::JoinPath(ParentDir, NormalizedIncludeName, BasicFileSystem::UnixSlash);
+    const std::string RelativePath       = NormalizeShaderSourcePath(ParentRelativePath.c_str());
+    // With no factory, return "Shaders/Common.hlsl" without probing it.
+    if (ShaderCI.pShaderSourceStreamFactory == nullptr)
+        return RelativePath;
 
-    if (ShaderCI.pShaderSourceStreamFactory != nullptr)
-    {
-        if (ShaderSourceExists(ShaderCI.pShaderSourceStreamFactory, RelativePath))
-            return RelativePath;
-
-        const Char        AlternateSlash = PreferredSlash == BasicFileSystem::UnixSlash ? BasicFileSystem::WinSlash : BasicFileSystem::UnixSlash;
-        const std::string AlternatePath  = MakeParentRelativeIncludePath(ParentDir, IncludeName, AlternateSlash);
-        if (AlternatePath != RelativePath && ShaderSourceExists(ShaderCI.pShaderSourceStreamFactory, AlternatePath))
-            return AlternatePath;
-
-        return IncludeName;
-    }
-
-    return RelativePath;
+    // Return "Shaders/Common.hlsl" when it exists; otherwise return
+    // "Common.hlsl" so the factory can use its search paths.
+    return ShaderCI.pShaderSourceStreamFactory->CreateInputStream(RelativePath.c_str(), nullptr) ?
+        RelativePath :
+        NormalizedIncludeName;
 }
 
 template <typename IncludeHandlerType>
@@ -525,8 +530,11 @@ bool ProcessShaderIncludes(const ShaderCreateInfo& ShaderCI, std::function<void(
 {
     try
     {
+        NormalizedShaderCreateInfo      NormalizedShaderCI{ShaderCI};
         std::unordered_set<std::string> Includes;
-        ProcessShaderIncludesImpl(ShaderCI, Includes, IncludeHandler);
+        if (const Char* FilePath = NormalizedShaderCI.GetFilePath())
+            Includes.emplace(FilePath);
+        ProcessShaderIncludesImpl(NormalizedShaderCI, Includes, IncludeHandler);
         return true;
     }
     catch (const std::pair<std::string, std::string>& ErrInfo)
@@ -583,13 +591,14 @@ static std::string UnrollShaderIncludesImpl(ShaderCreateInfo ShaderCI, std::unor
 
 std::string UnrollShaderIncludes(const ShaderCreateInfo& ShaderCI) noexcept(false)
 {
+    NormalizedShaderCreateInfo      NormalizedShaderCI{ShaderCI};
     std::unordered_set<std::string> Includes;
-    if (ShaderCI.FilePath != nullptr)
-        Includes.emplace(ShaderCI.FilePath);
+    if (const Char* FilePath = NormalizedShaderCI.GetFilePath())
+        Includes.emplace(FilePath);
 
     try
     {
-        return UnrollShaderIncludesImpl(ShaderCI, Includes);
+        return UnrollShaderIncludesImpl(NormalizedShaderCI, Includes);
     }
     catch (const std::pair<std::string, std::string>& ErrInfo)
     {

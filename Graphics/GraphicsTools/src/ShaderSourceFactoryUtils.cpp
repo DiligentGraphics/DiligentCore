@@ -29,12 +29,14 @@
 #include <vector>
 #include <unordered_map>
 #include <string>
+#include <utility>
 
 #include "ObjectBase.hpp"
 #include "HashUtils.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "StringDataBlobImpl.hpp"
 #include "MemoryFileStream.hpp"
+#include "ShaderSourcePath.hpp"
 
 namespace Diligent
 {
@@ -66,7 +68,9 @@ public:
         {
             for (Uint32 i = 0; i < CI.NumFileSubstitutes; ++i)
             {
-                m_FileSubstituteMap.emplace(HashMapStringKey{CI.pFileSubstitutes[i].Name, true}, CI.pFileSubstitutes[i].Substitute);
+                const String Name       = NormalizeShaderSourcePath(CI.pFileSubstitutes[i].Name);
+                String       Substitute = NormalizeShaderSourcePath(CI.pFileSubstitutes[i].Substitute);
+                m_FileSubstituteMap.emplace(HashMapStringKey{Name}, std::move(Substitute));
             }
         }
     }
@@ -84,23 +88,25 @@ public:
                                                        IFileStream**                           ppStream) override final
     {
         VERIFY_EXPR(ppStream == nullptr || *ppStream == nullptr);
+        const String NormalizedName = NormalizeShaderSourcePath(Name);
+        const Char*  SourceName     = NormalizedName.c_str();
         if (!m_FileSubstituteMap.empty())
         {
-            auto it = m_FileSubstituteMap.find(Name);
+            auto it = m_FileSubstituteMap.find(SourceName);
             if (it != m_FileSubstituteMap.end())
-                Name = it->second.c_str();
+                SourceName = it->second.c_str();
         }
 
         Bool SourceFound = False;
         for (size_t i = 0; i < m_pFactories.size() && !SourceFound; ++i)
         {
             if (m_pFactories[i])
-                SourceFound = m_pFactories[i]->CreateInputStream2(Name, CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT, ppStream);
+                SourceFound = m_pFactories[i]->CreateInputStream2(SourceName, CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT, ppStream);
         }
 
         if (!SourceFound && ppStream != nullptr && (Flags & CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT) == 0)
         {
-            LOG_ERROR_MESSAGE("Failed to create input stream for source file ", Name);
+            LOG_ERROR_MESSAGE("Failed to create input stream for source file ", SourceName);
         }
 
         return SourceFound;
@@ -157,7 +163,7 @@ public:
             const MemoryShaderSourceFileInfo& Source = CI.pSources[i];
             DEV_CHECK_ERR(Source.Name != nullptr && Source.Name[0] != '\0', "Source name must not be null or empty");
             DEV_CHECK_ERR(Source.pData != nullptr, "Source data must not be null");
-            m_NameToSourceMap.emplace(HashMapStringKey{Source.Name, true}, CI.CopySources ? m_Sources[i].c_str() : Source.pData);
+            m_NameToSourceMap.emplace(HashMapStringKey{NormalizeShaderSourcePath(Source.Name)}, CI.CopySources ? m_Sources[i].c_str() : Source.pData);
         }
     }
 
@@ -170,8 +176,9 @@ public:
                                                        CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS Flags,
                                                        IFileStream**                           ppStream) override final
     {
-        auto SourceIt    = m_NameToSourceMap.find(Name);
-        Bool SourceFound = SourceIt != m_NameToSourceMap.end();
+        const String NormalizedName = NormalizeShaderSourcePath(Name);
+        auto         SourceIt       = m_NameToSourceMap.find(NormalizedName.c_str());
+        Bool         SourceFound    = SourceIt != m_NameToSourceMap.end();
         if (ppStream != nullptr)
         {
             DEV_CHECK_ERR(*ppStream == nullptr, "Output stream pointer must be null. Overwriting a non-null output pointer may result in memory leaks.");
