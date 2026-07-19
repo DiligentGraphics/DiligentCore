@@ -462,38 +462,20 @@ static void ProcessIncludeErrorHandler(const ShaderCreateInfo& ShaderCI, const s
 // Resolves a shader include path relative to the including source when applicable.
 static std::string ResolveIncludePathForPreprocess(const ShaderCreateInfo& ShaderCI, const std::string& IncludeName, bool IsLocalInclude)
 {
-    const std::string NormalizedIncludeName = NormalizeShaderSourcePath(IncludeName.c_str());
-    // Examples:
-    //   <Common.hlsl>                     -> Common.hlsl
-    //   "/Shaders/Common.hlsl" (absolute) -> /Shaders/Common.hlsl
-    if (!IsLocalInclude || ShaderCI.FilePath == nullptr || BasicFileSystem::GetPathRootType(NormalizedIncludeName.c_str()) != PathRootType::None)
-        return NormalizedIncludeName;
+    ShaderIncludePathCandidates Candidates = GetShaderIncludePathCandidates(ShaderCI.FilePath, IncludeName.c_str(), IsLocalInclude);
 
-    const std::string SourcePath = NormalizeShaderSourcePath(ShaderCI.FilePath);
+    bool UseSearchPath = Candidates.LocalPath.empty();
+    if (!UseSearchPath &&
+        !Candidates.SearchPath.empty() &&
+        ShaderCI.pShaderSourceStreamFactory != nullptr &&
+        !ShaderCI.pShaderSourceStreamFactory->CreateInputStream(Candidates.LocalPath.c_str(), nullptr))
+    {
+        // Return the search-directory fallback without probing it so the regular
+        // source-loading path reports a missing include.
+        UseSearchPath = true;
+    }
 
-    String ParentDir;
-    BasicFileSystem::GetPathComponents(SourcePath, &ParentDir, nullptr);
-    // GetPathComponents() returns an empty directory for a file in the root
-    // (e.g. "/Main.hlsl"). Restore the root so local includes remain absolute.
-    if (ParentDir.empty() && !SourcePath.empty() && SourcePath.front() == BasicFileSystem::UnixSlash)
-        ParentDir.push_back(BasicFileSystem::UnixSlash);
-    // "Main.hlsl" + "Common.hlsl" -> "Common.hlsl"
-    if (ParentDir.empty())
-        return NormalizedIncludeName;
-
-    // "Shaders/Nested/Main.hlsl" + "../Common.hlsl"
-    //     -> "Shaders/Common.hlsl"
-    const std::string ParentRelativePath = BasicFileSystem::JoinPath(ParentDir, NormalizedIncludeName, BasicFileSystem::UnixSlash);
-    const std::string RelativePath       = NormalizeShaderSourcePath(ParentRelativePath.c_str());
-    // With no factory, return "Shaders/Common.hlsl" without probing it.
-    if (ShaderCI.pShaderSourceStreamFactory == nullptr)
-        return RelativePath;
-
-    // Return "Shaders/Common.hlsl" when it exists; otherwise return
-    // "Common.hlsl" so the factory can use its search paths.
-    return ShaderCI.pShaderSourceStreamFactory->CreateInputStream(RelativePath.c_str(), nullptr) ?
-        RelativePath :
-        NormalizedIncludeName;
+    return UseSearchPath ? std::move(Candidates.SearchPath) : std::move(Candidates.LocalPath);
 }
 
 template <typename IncludeHandlerType>

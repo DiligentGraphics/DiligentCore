@@ -26,6 +26,8 @@
 
 #pragma once
 
+#include <utility>
+
 #include "BasicFileSystem.hpp"
 
 namespace Diligent
@@ -52,6 +54,96 @@ inline String NormalizeShaderSourcePath(const Char* Path, Char Slash = BasicFile
     if (SimplifySlash != Slash)
         BasicFileSystem::CorrectSlashes(NormalizedPath, Slash);
     return NormalizedPath;
+}
+
+struct ShaderIncludePathCandidates
+{
+    /// Path to try during local include lookup. This is either relative to the
+    /// including source or a rooted local include path.
+    ///
+    /// Examples:
+    /// - `Shaders/Main.hlsl` including `"Config.hlsl"` produces `Shaders/Config.hlsl`.
+    /// - `Shaders/Main.hlsl` including `"/Config.hlsl"` produces `/Config.hlsl`.
+    /// - A system include or a local include without a parent produces an empty path.
+    String LocalPath;
+
+    /// Normalized include path used for system or search-directory lookup.
+    ///
+    /// Examples:
+    /// - `Shaders/Main.hlsl` including `"Config.hlsl"` produces `Config.hlsl` as
+    ///   the fallback after `LocalPath`.
+    /// - `Shaders/Main.hlsl` including `<Config.hlsl>` produces `Config.hlsl`.
+    /// - `Main.hlsl` including `"Config.hlsl"` produces `Config.hlsl` because the
+    ///   includer has no parent directory.
+    /// - A rooted local include produces an empty path because `LocalPath` contains
+    ///   the only candidate.
+    String SearchPath;
+};
+
+/// Returns normalized paths that may resolve an include.
+///
+/// A relative local include produces a local path relative to the including
+/// source and the original include path for search-directory fallback. System
+/// includes and local includes without a parent only produce a search path.
+/// Rooted local includes only produce a local path.
+///
+/// Examples:
+/// - `Shaders/Main.hlsl` + `"Config.hlsl"` ->
+///   `{LocalPath: "Shaders/Config.hlsl", SearchPath: "Config.hlsl"}`
+/// - `Shaders/Nested/Main.hlsl` + `"../Config.hlsl"` ->
+///   `{LocalPath: "Shaders/Config.hlsl", SearchPath: "../Config.hlsl"}`
+/// - `Main.hlsl` + `"Config.hlsl"` ->
+///   `{LocalPath: "", SearchPath: "Config.hlsl"}`
+/// - `Shaders/Main.hlsl` + `<Config.hlsl>` ->
+///   `{LocalPath: "", SearchPath: "Config.hlsl"}`
+/// - `Shaders/Main.hlsl` + `"/Config.hlsl"` ->
+///   `{LocalPath: "/Config.hlsl", SearchPath: ""}`
+/// - `Shaders/Main.hlsl` + `</Config.hlsl>` ->
+///   `{LocalPath: "", SearchPath: "/Config.hlsl"}`
+inline ShaderIncludePathCandidates GetShaderIncludePathCandidates(const Char* IncluderPath,
+                                                                  const Char* IncludeName,
+                                                                  bool        IsLocalInclude)
+{
+    ShaderIncludePathCandidates Candidates;
+
+    String NormalizedIncludePath = NormalizeShaderSourcePath(IncludeName);
+    if (!NormalizedIncludePath.empty())
+    {
+        const bool IsRootedInclude = BasicFileSystem::GetPathRootType(NormalizedIncludePath.c_str()) != PathRootType::None;
+        const bool IsRelativeLocalInclude =
+            IsLocalInclude &&
+            IncluderPath != nullptr &&
+            IncluderPath[0] != '\0' &&
+            !IsRootedInclude;
+
+        if (IsRelativeLocalInclude)
+        {
+            const String NormalizedIncluderPath = NormalizeShaderSourcePath(IncluderPath);
+
+            String ParentDir;
+            BasicFileSystem::GetPathComponents(NormalizedIncluderPath, &ParentDir, nullptr);
+
+            // GetPathComponents() returns an empty directory for a file in the Unix root
+            // (e.g. "/Main.glsl"). Restore the root so local includes remain absolute.
+            if (ParentDir.empty() && !NormalizedIncluderPath.empty() && NormalizedIncluderPath.front() == BasicFileSystem::UnixSlash)
+                ParentDir.push_back(BasicFileSystem::UnixSlash);
+
+            if (!ParentDir.empty())
+            {
+                const std::string ParentRelativePath = BasicFileSystem::JoinPath(ParentDir, NormalizedIncludePath, BasicFileSystem::UnixSlash);
+                Candidates.LocalPath                 = NormalizeShaderSourcePath(ParentRelativePath.c_str());
+            }
+        }
+        else if (IsLocalInclude && IsRootedInclude)
+        {
+            Candidates.LocalPath = NormalizedIncludePath;
+        }
+
+        if (Candidates.LocalPath != NormalizedIncludePath)
+            Candidates.SearchPath = std::move(NormalizedIncludePath);
+    }
+
+    return Candidates;
 }
 
 } // namespace Diligent

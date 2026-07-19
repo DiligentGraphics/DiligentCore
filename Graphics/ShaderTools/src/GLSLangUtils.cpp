@@ -48,7 +48,6 @@
 #include "RefCntAutoPtr.hpp"
 #include "ShaderToolsCommon.hpp"
 #include "ShaderSourcePath.hpp"
-#include "BasicFileSystem.hpp"
 #ifdef USE_SPIRV_TOOLS
 #    include "SPIRVTools.hpp"
 #    include "spirv-tools/libspirv.h"
@@ -306,15 +305,17 @@ public:
 
     // For the "system" or <>-style includes; search the "system" paths.
     virtual IncludeResult* includeSystem(const char* headerName,
-                                         const char* /*includerName*/,
+                                         const char* includerName,
                                          size_t /*inclusionDepth*/)
     {
-        IncludeResult* pInclude = ReadIncludeFile(headerName, CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_NONE);
+        const ShaderIncludePathCandidates Candidates = GetShaderIncludePathCandidates(includerName, headerName, false);
+
+        IncludeResult* pInclude = nullptr;
+        if (!Candidates.SearchPath.empty())
+            pInclude = ReadIncludeFile(Candidates.SearchPath.c_str(), CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_NONE);
+
         if (pInclude == nullptr)
-        {
             LOG_ERROR("Failed to open shader include file '", headerName, "'. Check that the file exists");
-            return nullptr;
-        }
 
         return pInclude;
     }
@@ -326,35 +327,12 @@ public:
                                         const char* includerName,
                                         size_t /*inclusionDepth*/)
     {
-        if (m_pInputStreamFactory == nullptr)
-            return nullptr;
-
-        const String HeaderPath = NormalizeShaderSourcePath(headerName);
-        if (HeaderPath.empty())
-            return nullptr;
-
         IncludeResult* pInclude = nullptr;
-        if (BasicFileSystem::GetPathRootType(HeaderPath.c_str()) != PathRootType::None)
+        if (m_pInputStreamFactory != nullptr)
         {
-            pInclude = ReadIncludeFile(HeaderPath.c_str(), CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT);
-        }
-        else if (includerName != nullptr && *includerName != '\0')
-        {
-            const String IncluderPath = NormalizeShaderSourcePath(includerName);
-
-            String ParentDir;
-            BasicFileSystem::GetPathComponents(IncluderPath, &ParentDir, nullptr);
-            // GetPathComponents() returns an empty directory for a file in the root
-            // (e.g. "/Main.glsl"). Restore the root so local includes remain absolute.
-            if (ParentDir.empty() && !IncluderPath.empty() && IncluderPath.front() == BasicFileSystem::UnixSlash)
-                ParentDir.push_back(BasicFileSystem::UnixSlash);
-
-            if (!ParentDir.empty())
-            {
-                const std::string ParentRelativePath = BasicFileSystem::JoinPath(ParentDir, HeaderPath, BasicFileSystem::UnixSlash);
-                const String      LocalPath          = NormalizeShaderSourcePath(ParentRelativePath.c_str());
-                pInclude                             = ReadIncludeFile(LocalPath.c_str(), CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT);
-            }
+            const ShaderIncludePathCandidates Candidates = GetShaderIncludePathCandidates(includerName, headerName, true);
+            if (!Candidates.LocalPath.empty())
+                pInclude = ReadIncludeFile(Candidates.LocalPath.c_str(), CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT);
         }
         return pInclude;
     }

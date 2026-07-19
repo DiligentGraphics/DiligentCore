@@ -78,6 +78,67 @@ TEST(ShaderPreprocessTest, NormalizeShaderSourcePath)
     EXPECT_EQ(NormalizeShaderSourcePath("Directory/Subdir/../Shader.hlsl", 0), PlatformPath);
 }
 
+TEST(ShaderPreprocessTest, GetShaderIncludePathCandidates)
+{
+    struct TestCase
+    {
+        const Char* IncluderPath;
+        const Char* IncludeName;
+        bool        IsLocalInclude;
+        const Char* ExpectedLocalPath;
+        const Char* ExpectedSearchPath;
+    };
+
+    const TestCase TestCases[] = {
+        // Empty include names do not produce candidates.
+        {nullptr, nullptr, true, "", ""},
+        {"Shaders/Main.hlsl", "", true, "", ""},
+        {"Shaders/Main.hlsl", ".", true, "", ""},
+
+        // System includes and local includes without a parent use the normalized
+        // include name directly.
+        {"Shaders/Main.hlsl", "Headers\\./Nested\\../Types.hlsl", false, "", "Headers/Types.hlsl"},
+        {nullptr, "Headers\\Types.hlsl", true, "", "Headers/Types.hlsl"},
+        {"", "Headers/Types.hlsl", true, "", "Headers/Types.hlsl"},
+        {"Main.hlsl", "Headers/Types.hlsl", true, "", "Headers/Types.hlsl"},
+
+        // Relative local includes use the parent directory first and preserve the
+        // normalized include name as the search-directory fallback.
+        {"Shaders/Main.hlsl", "Config.hlsl", true, "Shaders/Config.hlsl", "Config.hlsl"},
+        {"Shaders/Nested/Main.hlsl", "../Common.hlsl", true, "Shaders/Common.hlsl", "../Common.hlsl"},
+        {"Shaders\\Nested/Main.hlsl", "..\\Common\\Types.hlsl", true, "Shaders/Common/Types.hlsl", "../Common/Types.hlsl"},
+        {"Shaders/./Nested/../Main.hlsl", "Config.hlsl", true, "Shaders/Config.hlsl", "Config.hlsl"},
+        {"Package/Main.hlsl", "../../Config.hlsl", true, "../Config.hlsl", "../../Config.hlsl"},
+        {"Package/Main.hlsl", "C:Config.hlsl", true, "Package/C:Config.hlsl", "C:Config.hlsl"},
+
+        // Rooted includers keep their root when forming the parent-relative candidate.
+        {"/Main.hlsl", "Config.hlsl", true, "/Config.hlsl", "Config.hlsl"},
+        {"\\Main.hlsl", "Config.hlsl", true, "/Config.hlsl", "Config.hlsl"},
+        {"C:\\Main.hlsl", "Config.hlsl", true, "C:/Config.hlsl", "Config.hlsl"},
+        {"C:/Shaders/Main.hlsl", "../Config.hlsl", true, "C:/Config.hlsl", "../Config.hlsl"},
+        {"\\\\Server\\Share\\Main.hlsl", "Config.hlsl", true, "//Server/Share/Config.hlsl", "Config.hlsl"},
+
+        // A rooted include is independent of its delimiter and includer.
+        {"Shaders/Main.hlsl", "/Common/Config.hlsl", true, "/Common/Config.hlsl", ""},
+        {"Shaders/Main.hlsl", "D:\\Common\\Config.hlsl", true, "D:/Common/Config.hlsl", ""},
+        {"Shaders/Main.hlsl", "\\\\Server\\Share\\Config.hlsl", true, "//Server/Share/Config.hlsl", ""},
+        {"Shaders/Main.hlsl", "/Common/Config.hlsl", false, "", "/Common/Config.hlsl"},
+    };
+
+    for (const TestCase& Test : TestCases)
+    {
+        const ShaderIncludePathCandidates Candidates = GetShaderIncludePathCandidates(Test.IncluderPath, Test.IncludeName, Test.IsLocalInclude);
+        EXPECT_EQ(Candidates.LocalPath, Test.ExpectedLocalPath)
+            << "Includer: " << (Test.IncluderPath != nullptr ? Test.IncluderPath : "<null>")
+            << ", include: " << (Test.IncludeName != nullptr ? Test.IncludeName : "<null>")
+            << ", local: " << Test.IsLocalInclude;
+        EXPECT_EQ(Candidates.SearchPath, Test.ExpectedSearchPath)
+            << "Includer: " << (Test.IncluderPath != nullptr ? Test.IncluderPath : "<null>")
+            << ", include: " << (Test.IncludeName != nullptr ? Test.IncludeName : "<null>")
+            << ", local: " << Test.IsLocalInclude;
+    }
+}
+
 TEST(ShaderPreprocessTest, Include)
 {
     RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
