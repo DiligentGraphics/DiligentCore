@@ -27,6 +27,7 @@
 
 #pragma once
 
+#include <string_view>
 #include <vector>
 #include "../../../Primitives/interface/BasicTypes.h"
 #include "../../../Primitives/interface/FlagEnum.h"
@@ -195,6 +196,11 @@ public:
 
     /// Builds a path from the given components.
     static std::string BuildPathFromComponents(const std::vector<String>& Components, Char Slash = 0);
+
+    /// Joins a base path and a relative path using the given slash symbol.
+    /// Redundant separators at the join boundary are removed, while a root separator in BasePath is preserved.
+    /// RelativePath is treated as a path fragment, so its leading separators do not make the result absolute.
+    static std::string JoinPath(std::string_view BasePath, std::string_view RelativePath, Char Slash = 0);
 
     /// Simplifies the path.
 

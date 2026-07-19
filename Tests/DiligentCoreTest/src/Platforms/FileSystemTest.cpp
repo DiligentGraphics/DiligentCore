@@ -459,6 +459,39 @@ TEST(Platforms_FileSystem, BuildPathFromComponents)
     EXPECT_STREQ(FileSystem::BuildPathFromComponents({{"a"}, {"b"}, {"c"}}, '/').c_str(), "a/b/c");
 }
 
+TEST(Platforms_FileSystem, JoinPath)
+{
+    EXPECT_EQ(FileSystem::JoinPath("", "", '/'), "");
+    EXPECT_EQ(FileSystem::JoinPath("", "a", '/'), "a");
+    EXPECT_EQ(FileSystem::JoinPath("", "/a", '/'), "a");
+    EXPECT_EQ(FileSystem::JoinPath("a", "", '/'), "a");
+    EXPECT_EQ(FileSystem::JoinPath("a/", "", '/'), "a");
+
+    EXPECT_EQ(FileSystem::JoinPath("a", "b", '/'), "a/b");
+    EXPECT_EQ(FileSystem::JoinPath("a/", "/b", '/'), "a/b");
+    EXPECT_EQ(FileSystem::JoinPath("a\\", "\\b", '/'), "a/b");
+    EXPECT_EQ(FileSystem::JoinPath("a/", "/b", '\\'), "a\\b");
+    EXPECT_EQ(FileSystem::JoinPath("a", "b"), std::string{"a"} + FileSystem::SlashSymbol + "b");
+
+    EXPECT_EQ(FileSystem::JoinPath("/", "a", '/'), "/a");
+    EXPECT_EQ(FileSystem::JoinPath("\\", "a", '/'), "/a");
+    EXPECT_EQ(FileSystem::JoinPath("//", "Server", '/'), "//Server");
+    EXPECT_EQ(FileSystem::JoinPath("C:/", "/File", '/'), "C:/File");
+    EXPECT_EQ(FileSystem::JoinPath("C:\\", "\\File", '\\'), "C:\\File");
+    EXPECT_EQ(FileSystem::JoinPath("\\\\Server\\Share\\", "\\File", '\\'), "\\\\Server\\Share\\File");
+    EXPECT_EQ(FileSystem::JoinPath("/", "", '\\'), "\\");
+    EXPECT_EQ(FileSystem::JoinPath("//", "", '\\'), "\\\\");
+    EXPECT_EQ(FileSystem::JoinPath("C:/", "", '\\'), "C:\\");
+
+    EXPECT_EQ(FileSystem::JoinPath("a\\b", "c/d", '/'), "a\\b/c/d");
+    EXPECT_EQ(FileSystem::JoinPath("a/.", "../b", '/'), "a/./../b");
+
+    const std::string Paths = "[Base/][Relative]";
+    EXPECT_EQ(FileSystem::JoinPath(std::string_view{Paths}.substr(1, 5),
+                                   std::string_view{Paths}.substr(8, 8), '/'),
+              "Base/Relative");
+}
+
 TEST(Platforms_FileSystem, GetRelativePath)
 {
     EXPECT_STREQ(FileSystem::GetRelativePath("", true, "", true).c_str(), "");

@@ -242,6 +242,48 @@ std::string BasicFileSystem::BuildPathFromComponents(const std::vector<String>& 
     return Path;
 }
 
+std::string BasicFileSystem::JoinPath(std::string_view BasePath, std::string_view RelativePath, Char Slash)
+{
+    if (Slash != 0)
+        DEV_CHECK_ERR(IsSlash(Slash), "Incorrect slash symbol");
+    else
+        Slash = SlashSymbol;
+
+    size_t RootLength = 0;
+    if (BasePath.length() >= 2 && IsSlash(BasePath[0]) && IsSlash(BasePath[1]))
+        RootLength = 2;
+    else if (!BasePath.empty() && IsSlash(BasePath[0]))
+        RootLength = 1;
+    else if (BasePath.length() >= 3 && BasePath[1] == ':' && IsSlash(BasePath[2]))
+        RootLength = 3;
+
+    size_t BaseEnd = BasePath.length();
+    while (BaseEnd > RootLength && IsSlash(BasePath[BaseEnd - 1]))
+        --BaseEnd;
+
+    size_t RelativeStart = 0;
+    while (RelativeStart < RelativePath.length() && IsSlash(RelativePath[RelativeStart]))
+        ++RelativeStart;
+
+    std::string Path;
+    Path.reserve(BaseEnd + (BaseEnd != 0 && RelativeStart < RelativePath.length() ? 1 : 0) + RelativePath.length() - RelativeStart);
+    if (BaseEnd != 0)
+        Path.append(BasePath.data(), BaseEnd);
+
+    // A path consisting only of root separators keeps its root, but uses the requested slash.
+    for (size_t i = Path.length(); i > 0 && IsSlash(Path[i - 1]); --i)
+        Path[i - 1] = Slash;
+
+    if (RelativeStart < RelativePath.length())
+    {
+        if (!Path.empty() && !IsSlash(Path.back()))
+            Path.push_back(Slash);
+        Path.append(RelativePath.data() + RelativeStart, RelativePath.length() - RelativeStart);
+    }
+
+    return Path;
+}
+
 std::string BasicFileSystem::SimplifyPath(const Char* Path, Char Slash)
 {
     if (Path == nullptr || Path[0] == '\0')
