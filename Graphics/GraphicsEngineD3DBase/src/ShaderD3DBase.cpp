@@ -42,6 +42,7 @@
 #include "DataBlobImpl.hpp"
 #include "DXCompiler.hpp"
 #include "HLSLUtils.hpp"
+#include "ShaderSourcePath.hpp"
 #include "ThreadPool.hpp"
 
 #ifndef D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES
@@ -57,30 +58,61 @@ namespace
 class D3DIncludeImpl : public ID3DInclude
 {
 public:
-    D3DIncludeImpl(IShaderSourceInputStreamFactory* pStreamFactory) :
-        m_pStreamFactory{pStreamFactory}
+    D3DIncludeImpl(IShaderSourceInputStreamFactory* pStreamFactory, const Char* SourcePath) :
+        m_pStreamFactory{pStreamFactory},
+        m_RootSourcePath{SourcePath != nullptr ? SourcePath : ""}
     {
     }
 
     STDMETHOD(Open)
     (THIS_ D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes)
     {
-        RefCntAutoPtr<IFileStream> pSourceStream;
-        m_pStreamFactory->CreateInputStream(pFileName, &pSourceStream);
-        if (pSourceStream == nullptr)
+        const Char* IncluderPath = m_RootSourcePath.c_str();
+        if (pParentData != nullptr)
         {
-            LOG_ERROR("Failed to open shader include file ", pFileName, ". Check that the file exists");
-            return E_FAIL;
+            const auto ParentIt = m_DataBlobs.find(pParentData);
+            if (ParentIt != m_DataBlobs.end())
+                IncluderPath = ParentIt->second.SourcePath.c_str();
         }
 
-        RefCntAutoPtr<DataBlobImpl> pFileData = DataBlobImpl::Create();
-        pSourceStream->ReadBlob(pFileData);
-        *ppData = pFileData->GetDataPtr();
-        *pBytes = StaticCast<UINT>(pFileData->GetSize());
+        ShaderIncludePathCandidates Candidates = GetShaderIncludePathCandidates(IncluderPath, pFileName, IncludeType == D3D_INCLUDE_LOCAL);
 
-        m_DataBlobs.insert(std::make_pair(*ppData, pFileData));
+        RefCntAutoPtr<IFileStream> pSourceStream;
+        String                     ResolvedPath;
+        if (!Candidates.LocalPath.empty())
+        {
+            const CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS Flags = Candidates.SearchPath.empty() ?
+                CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_NONE :
+                CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT;
+            m_pStreamFactory->CreateInputStream2(Candidates.LocalPath.c_str(), Flags, &pSourceStream);
+            if (pSourceStream != nullptr)
+                ResolvedPath = std::move(Candidates.LocalPath);
+        }
 
-        return S_OK;
+        if (pSourceStream == nullptr && !Candidates.SearchPath.empty())
+        {
+            m_pStreamFactory->CreateInputStream(Candidates.SearchPath.c_str(), &pSourceStream);
+            if (pSourceStream != nullptr)
+                ResolvedPath = std::move(Candidates.SearchPath);
+        }
+
+        HRESULT Result = E_FAIL;
+        if (pSourceStream != nullptr)
+        {
+            RefCntAutoPtr<DataBlobImpl> pFileData = DataBlobImpl::Create();
+            pSourceStream->ReadBlob(pFileData);
+            *ppData = pFileData->GetDataPtr();
+            *pBytes = StaticCast<UINT>(pFileData->GetSize());
+
+            m_DataBlobs.emplace(*ppData, IncludeData{std::move(pFileData), std::move(ResolvedPath)});
+            Result = S_OK;
+        }
+        else
+        {
+            LOG_ERROR("Failed to open shader include file ", pFileName, ". Check that the file exists");
+        }
+
+        return Result;
     }
 
     STDMETHOD(Close)
@@ -91,8 +123,15 @@ public:
     }
 
 private:
-    IShaderSourceInputStreamFactory*                      m_pStreamFactory;
-    std::unordered_map<LPCVOID, RefCntAutoPtr<IDataBlob>> m_DataBlobs;
+    struct IncludeData
+    {
+        RefCntAutoPtr<DataBlobImpl> pData;
+        String                      SourcePath;
+    };
+
+    IShaderSourceInputStreamFactory*         m_pStreamFactory;
+    const String                             m_RootSourcePath;
+    std::unordered_map<LPCVOID, IncludeData> m_DataBlobs;
 };
 
 HRESULT CompileShader(const char*             Source,
@@ -137,7 +176,7 @@ HRESULT CompileShader(const char*             Source,
 
     D3D_SHADER_MACRO Macros[] = {{"D3DCOMPILER", ""}, {}};
 
-    D3DIncludeImpl IncludeImpl{ShaderCI.pShaderSourceStreamFactory};
+    D3DIncludeImpl IncludeImpl{ShaderCI.pShaderSourceStreamFactory, ShaderCI.FilePath};
     return D3DCompile(Source, SourceLength, nullptr, Macros, &IncludeImpl, ShaderCI.EntryPoint, profile, dwShaderFlags, 0, ppBlobOut, ppCompilerOutput);
 }
 

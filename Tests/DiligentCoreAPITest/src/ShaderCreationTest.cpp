@@ -29,6 +29,7 @@
 #include "ObjectBase.hpp"
 #include "MemoryFileStream.hpp"
 #include "ProxyDataBlob.hpp"
+#include "ShaderSourceFactoryUtils.hpp"
 
 #include "gtest/gtest.h"
 
@@ -75,6 +76,53 @@ TEST(ShaderCreationTest, FromSource)
         pDevice->CreateShader(ShaderCI, &pShader);
         EXPECT_NE(pShader, nullptr);
     }
+}
+
+TEST(ShaderCreationTest, NestedLocalAndSystemIncludesFXC)
+{
+    GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceInfo().IsD3DDevice())
+        GTEST_SKIP() << "FXC is only supported by Direct3D devices";
+
+    constexpr Char MainSource[] =
+        "#include \"Nested/Types.hlsli\"\n"
+        "float4 main() : SV_Target\n"
+        "{\n"
+        "    return GetLocalColor() + GetSystemColor() + GetFallbackColor();\n"
+        "}\n";
+
+    auto pShaderSourceFactory = CreateMemoryShaderSourceFactory(
+        {
+            {"Shaders/Main.hlsl", MainSource},
+            {"Shaders/Nested/Types.hlsli",
+             "#include \"Config.hlsli\"\n"
+             "#include <Config.hlsli>\n"
+             "#include \"Fallback.hlsli\"\n"
+             "float4 GetLocalColor() { return float4(LOCAL_VALUE, 0.0, 0.0, 0.0); }\n"
+             "float4 GetSystemColor() { return float4(0.0, SYSTEM_VALUE, 0.0, 0.0); }\n"
+             "float4 GetFallbackColor() { return float4(0.0, 0.0, FALLBACK_VALUE, 0.0); }\n"},
+            {"Shaders/Nested/Config.hlsli",
+             "#define LOCAL_VALUE 1.0\n"},
+            {"Config.hlsli",
+             "#define SYSTEM_VALUE 1.0\n"},
+            {"Fallback.hlsli",
+             "#define FALLBACK_VALUE 1.0\n"},
+        },
+        false);
+    ASSERT_NE(pShaderSourceFactory, nullptr);
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.Desc                       = {"ShaderCreationTest.NestedLocalAndSystemIncludesFXC", SHADER_TYPE_PIXEL};
+    ShaderCI.FilePath                   = "Shaders/Main.hlsl";
+    ShaderCI.EntryPoint                 = "main";
+    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.ShaderCompiler             = SHADER_COMPILER_FXC;
+    ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+
+    RefCntAutoPtr<IShader> pShader;
+    pDevice->CreateShader(ShaderCI, &pShader);
+    EXPECT_NE(pShader, nullptr);
 }
 
 static std::vector<uint8_t> CompilePS(IRenderDevice* pDevice)
