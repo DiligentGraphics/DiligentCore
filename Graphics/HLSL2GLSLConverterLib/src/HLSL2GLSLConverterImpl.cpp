@@ -380,6 +380,7 @@
 #include "ParsingTools.hpp"
 #include "EngineMemory.h"
 #include "GLSLParsingTools.hpp"
+#include "ShaderSourcePath.hpp"
 
 using namespace std;
 
@@ -696,115 +697,137 @@ String HLSL2GLSLConverterImpl::ConversionStream::PrintTokenContext(IteratorType&
         }                                                                \
     } while (false)
 
+static void InsertIncludesImpl(String&                          GLSLSource,
+                               IShaderSourceInputStreamFactory* pSourceStreamFactory,
+                               const Char*                      SourcePath,
+                               std::unordered_set<String>&      ProcessedIncludes)
+{
+    do
+    {
+        // Find the first #include statement
+        auto Pos             = GLSLSource.begin();
+        auto IncludeStartPos = GLSLSource.end();
+        while (Pos != GLSLSource.end())
+        {
+            // #   include "TestFile.fxh"
+            Pos = SkipDelimitersAndComments(Pos, GLSLSource.end());
+            if (Pos == GLSLSource.end())
+                break;
+            if (*Pos == '#')
+            {
+                IncludeStartPos = Pos;
+                // #   include "TestFile.fxh"
+                // ^
+                ++Pos;
+                // #   include "TestFile.fxh"
+                //  ^
+                Pos = SkipDelimitersAndComments(Pos, GLSLSource.end());
+                if (Pos == GLSLSource.end())
+                {
+                    // End of the file reached - break
+                    break;
+                }
+                // #   include "TestFile.fxh"
+                //     ^
+                if (Parsing::SkipString(Pos, GLSLSource.end(), "include", Pos))
+                {
+                    // #   include "TestFile.fxh"
+                    //            ^
+                    break;
+                }
+                else
+                {
+                    // This is not an #include directive:
+                    // #define MACRO
+                    // Continue search through the file
+                }
+            }
+            else
+                ++Pos;
+        }
+
+        // No more #include found
+        if (Pos == GLSLSource.end())
+            break;
+
+        // Find open quotes
+        Pos = SkipDelimitersAndComments(Pos, GLSLSource.end());
+        if (Pos == GLSLSource.end())
+            LOG_ERROR_AND_THROW("Unexpected EOF after #include directive");
+        // #   include "TestFile.fxh"
+        //             ^
+        if (*Pos != '\"' && *Pos != '<')
+            LOG_ERROR_AND_THROW("Missing open quotes or \'<\' after #include directive");
+        const bool IsLocalInclude = *Pos == '\"';
+        ++Pos;
+        // #   include "TestFile.fxh"
+        //              ^
+        auto IncludeNameStartPos = Pos;
+        // Find closing quotes
+        while (Pos != GLSLSource.end() && *Pos != '\"' && *Pos != '>') ++Pos;
+        // #   include "TestFile.fxh"
+        //                          ^
+        if (Pos == GLSLSource.end())
+            LOG_ERROR_AND_THROW("Missing closing quotes or \'>\' after #include directive");
+
+        const String IncludeName{IncludeNameStartPos, Pos};
+        ++Pos;
+
+        const size_t IncludeOffset = IncludeStartPos - GLSLSource.begin();
+        GLSLSource.erase(IncludeStartPos, Pos);
+
+        if (pSourceStreamFactory == nullptr)
+            LOG_ERROR_AND_THROW("Input stream factory must not be null when the source contains include directives");
+
+        ShaderIncludePathCandidates Candidates = GetShaderIncludePathCandidates(SourcePath, IncludeName.c_str(), IsLocalInclude);
+
+        RefCntAutoPtr<IFileStream> pIncludeDataStream;
+        String                     ResolvedPath;
+        if (!Candidates.LocalPath.empty())
+        {
+            const CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS Flags = Candidates.SearchPath.empty() ?
+                CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_NONE :
+                CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT;
+            pSourceStreamFactory->CreateInputStream2(Candidates.LocalPath.c_str(), Flags, &pIncludeDataStream);
+            if (pIncludeDataStream != nullptr)
+                ResolvedPath = std::move(Candidates.LocalPath);
+        }
+
+        if (pIncludeDataStream == nullptr && !Candidates.SearchPath.empty())
+        {
+            pSourceStreamFactory->CreateInputStream(Candidates.SearchPath.c_str(), &pIncludeDataStream);
+            if (pIncludeDataStream != nullptr)
+                ResolvedPath = std::move(Candidates.SearchPath);
+        }
+
+        if (pIncludeDataStream == nullptr)
+            LOG_ERROR_AND_THROW("Failed to open include file ", IncludeName);
+
+        const String IncludeFileLowercase = StrToLower(ResolvedPath);
+        if (ProcessedIncludes.insert(IncludeFileLowercase).second)
+        {
+            RefCntAutoPtr<IDataBlob> pIncludeData = DataBlobImpl::Create();
+            pIncludeDataStream->ReadBlob(pIncludeData);
+
+            String IncludeSource{pIncludeData->GetConstDataPtr<Char>(), pIncludeData->GetSize()};
+            InsertIncludesImpl(IncludeSource, pSourceStreamFactory, ResolvedPath.c_str(), ProcessedIncludes);
+
+            GLSLSource.insert(IncludeOffset, IncludeSource);
+        }
+    } while (true);
+}
+
 // The method scans the source code and replaces
 // all #include directives with the contents of the
 // file. It maintains a set of already parsed includes
 // to avoid double inclusion
 void HLSL2GLSLConverterImpl::ConversionStream::InsertIncludes(String& GLSLSource, IShaderSourceInputStreamFactory* pSourceStreamFactory)
 {
-    // Put all the includes into the set to avoid multiple inclusion
     std::unordered_set<String> ProcessedIncludes;
 
     try
     {
-        do
-        {
-            // Find the first #include statement
-            auto Pos             = GLSLSource.begin();
-            auto IncludeStartPos = GLSLSource.end();
-            while (Pos != GLSLSource.end())
-            {
-                // #   include "TestFile.fxh"
-                Pos = SkipDelimitersAndComments(Pos, GLSLSource.end());
-                if (Pos == GLSLSource.end())
-                    break;
-                if (*Pos == '#')
-                {
-                    IncludeStartPos = Pos;
-                    // #   include "TestFile.fxh"
-                    // ^
-                    ++Pos;
-                    // #   include "TestFile.fxh"
-                    //  ^
-                    Pos = SkipDelimitersAndComments(Pos, GLSLSource.end());
-                    if (Pos == GLSLSource.end())
-                    {
-                        // End of the file reached - break
-                        break;
-                    }
-                    // #   include "TestFile.fxh"
-                    //     ^
-                    if (Parsing::SkipString(Pos, GLSLSource.end(), "include", Pos))
-                    {
-                        // #   include "TestFile.fxh"
-                        //            ^
-                        break;
-                    }
-                    else
-                    {
-                        // This is not an #include directive:
-                        // #define MACRO
-                        // Continue search through the file
-                    }
-                }
-                else
-                    ++Pos;
-            }
-
-            // No more #include found
-            if (Pos == GLSLSource.end())
-                break;
-
-            // Find open quotes
-            Pos = SkipDelimitersAndComments(Pos, GLSLSource.end());
-            if (Pos == GLSLSource.end())
-                LOG_ERROR_AND_THROW("Unexpected EOF after #include directive");
-            // #   include "TestFile.fxh"
-            //             ^
-            if (*Pos != '\"' && *Pos != '<')
-                LOG_ERROR_AND_THROW("Missing open quotes or \'<\' after #include directive");
-            ++Pos;
-            // #   include "TestFile.fxh"
-            //              ^
-            auto IncludeNameStartPos = Pos;
-            // Find closing quotes
-            while (Pos != GLSLSource.end() && *Pos != '\"' && *Pos != '>') ++Pos;
-            // #   include "TestFile.fxh"
-            //                          ^
-            if (Pos == GLSLSource.end())
-                LOG_ERROR_AND_THROW("Missing closing quotes or \'>\' after #include directive");
-
-            // Get the name of the include file
-            auto IncludeName = String(IncludeNameStartPos, Pos);
-            ++Pos;
-            // #   include "TestFile.fxh"
-            // ^                         ^
-            // IncludeStartPos           Pos
-            GLSLSource.erase(IncludeStartPos, Pos);
-
-            // Convert the name to lower case
-            String IncludeFileLowercase = StrToLower(IncludeName);
-            // Insert the lower-case name into the set
-            auto It = ProcessedIncludes.insert(IncludeFileLowercase);
-            // If the name was actually inserted, which means the include encountered for the first time,
-            // replace the text with the file content
-            if (It.second)
-            {
-                RefCntAutoPtr<IFileStream> pIncludeDataStream;
-                pSourceStreamFactory->CreateInputStream(IncludeName.c_str(), &pIncludeDataStream);
-                if (!pIncludeDataStream)
-                    LOG_ERROR_AND_THROW("Failed to open include file ", IncludeName);
-                auto pIncludeData = DataBlobImpl::Create();
-                pIncludeDataStream->ReadBlob(pIncludeData);
-
-                // Get include text
-                const Char* IncludeText = pIncludeData->GetConstDataPtr<Char>();
-                size_t      NumSymbols  = pIncludeData->GetSize();
-
-                // Insert the text into source
-                GLSLSource.insert(IncludeStartPos - GLSLSource.begin(), IncludeText, NumSymbols);
-            }
-        } while (true);
+        InsertIncludesImpl(GLSLSource, pSourceStreamFactory, m_InputFileName.c_str(), ProcessedIncludes);
     }
     catch (const std::pair<std::string::iterator, const char*>& ErrInfo)
     {

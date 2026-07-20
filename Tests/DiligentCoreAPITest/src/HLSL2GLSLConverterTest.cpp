@@ -27,6 +27,7 @@
 
 #include "GPUTestingEnvironment.hpp"
 #include "HLSL2GLSLConverter.h"
+#include "ShaderSourceFactoryUtils.hpp"
 
 #include "gtest/gtest.h"
 
@@ -173,6 +174,49 @@ TEST(HLSL2GLSLConverterTest, Preprocessor)
         RefCntAutoPtr<IShader> pVS = CreateTestShader("PreprocessorTest.hlsl", Entry, SHADER_TYPE_PIXEL);
         EXPECT_NE(pVS, nullptr);
     }
+}
+
+TEST(HLSL2GLSLConverterTest, NestedLocalAndSystemIncludesFromMemory)
+{
+    constexpr Char MainSource[] =
+        "#include \"Nested/Types.hlsli\"\n"
+        "float4 main() : SV_Target\n"
+        "{\n"
+        "    return float4(GetLocalValue(), GetSystemValue(), GetFallbackValue(), 1.0);\n"
+        "}\n";
+
+    auto pShaderSourceFactory = CreateMemoryShaderSourceFactory(
+        {
+            {"Shaders/Nested/Types.hlsli",
+             "#include \"Config.hlsli\"\n"
+             "#include <Config.hlsli>\n"
+             "#include \"Fallback.hlsli\"\n"},
+            {"Shaders/Nested/Config.hlsli",
+             "float GetLocalValue() { return 1.125; }\n"},
+            {"Config.hlsli",
+             "float GetSystemValue() { return 2.25; }\n"},
+            {"Fallback.hlsli",
+             "float GetFallbackValue() { return 3.375; }\n"},
+        },
+        false);
+    ASSERT_NE(pShaderSourceFactory, nullptr);
+
+    RefCntAutoPtr<IHLSL2GLSLConverter> pConverter;
+    CreateHLSL2GLSLConverter(&pConverter);
+    ASSERT_NE(pConverter, nullptr);
+
+    RefCntAutoPtr<IHLSL2GLSLConversionStream> pConversionStream;
+    pConverter->CreateStream("Shaders/Main.hlsl", pShaderSourceFactory, MainSource, sizeof(MainSource) - 1, &pConversionStream);
+    ASSERT_NE(pConversionStream, nullptr);
+
+    RefCntAutoPtr<IDataBlob> pGLSLSource;
+    pConversionStream->Convert("main", SHADER_TYPE_PIXEL, false, "_sampler", true, false, &pGLSLSource);
+    ASSERT_NE(pGLSLSource, nullptr);
+
+    const std::string GLSLSource{pGLSLSource->GetConstDataPtr<Char>(), pGLSLSource->GetSize()};
+    EXPECT_NE(GLSLSource.find("1.125"), std::string::npos);
+    EXPECT_NE(GLSLSource.find("2.25"), std::string::npos);
+    EXPECT_NE(GLSLSource.find("3.375"), std::string::npos);
 }
 
 } // namespace
