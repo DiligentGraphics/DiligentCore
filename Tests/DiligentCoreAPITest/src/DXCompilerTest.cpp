@@ -27,6 +27,7 @@
 
 #include "DXCompiler.hpp"
 #include "GPUTestingEnvironment.hpp"
+#include "ShaderSourceFactoryUtils.hpp"
 #include "StringTools.hpp"
 
 #include "gtest/gtest.h"
@@ -111,6 +112,54 @@ const wchar_t* DXCArgs[] = {
     L"-O3" // Optimization level 3
 #endif
 };
+
+TEST(DXCompilerTest, IncludeResolution)
+{
+    auto pDXC = CreateDXCompiler(DXCompilerTarget::Direct3D12, 0, nullptr);
+    ASSERT_TRUE(pDXC);
+
+    auto pShaderSourceFactory = CreateMemoryShaderSourceFactory({
+        {"Shaders/Main.hlsl", R"(
+#include "Nested/Local.hlsli"
+
+float4 main() : SV_Target
+{
+    return GetColor();
+}
+)"},
+        {"Shaders/Nested/Local.hlsli", R"(
+#include "Config.hlsli"
+#include <System.hlsli>
+#include "Fallback.hlsli"
+
+float4 GetColor()
+{
+    return LOCAL_COLOR + SYSTEM_COLOR + FALLBACK_COLOR;
+}
+)"},
+        {"Nested/Local.hlsli", "#error The include must be resolved relative to Shaders/Main.hlsl"},
+        {"Shaders/Nested/Config.hlsli", "#define LOCAL_COLOR float4(1.0, 0.0, 0.0, 0.0)"},
+        {"Config.hlsli", "#error A local include must be resolved relative to its includer"},
+        {"Shaders/Nested/System.hlsli", "#error A system include must not be resolved relative to its includer"},
+        {"System.hlsli", "#define SYSTEM_COLOR float4(0.0, 1.0, 0.0, 0.0)"},
+        {"Fallback.hlsli", "#define FALLBACK_COLOR float4(0.0, 0.0, 1.0, 1.0)"},
+    });
+    ASSERT_TRUE(pShaderSourceFactory);
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.Desc.Name                  = "DXC include resolution test";
+    ShaderCI.Desc.ShaderType            = SHADER_TYPE_PIXEL;
+    ShaderCI.FilePath                   = "Shaders/Main.hlsl";
+    ShaderCI.EntryPoint                 = "main";
+    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+
+    CComPtr<IDxcBlob>        pDXIL;
+    RefCntAutoPtr<IDataBlob> pCompilerOutput;
+    pDXC->Compile(ShaderCI, ShaderVersion{6, 0}, nullptr, &pDXIL, nullptr, &pCompilerOutput);
+
+    ASSERT_TRUE(pDXIL) << (pCompilerOutput != nullptr ? static_cast<const char*>(pCompilerOutput->GetConstDataPtr()) : "");
+}
 
 TEST(DXCompilerTest, Reflection)
 {

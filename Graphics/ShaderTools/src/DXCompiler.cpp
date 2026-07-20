@@ -59,6 +59,7 @@
 
 #include "DataBlobImpl.hpp"
 #include "RefCntAutoPtr.hpp"
+#include "ShaderSourcePath.hpp"
 #include "ShaderToolsCommon.hpp"
 
 #include "HLSLUtils.hpp"
@@ -211,11 +212,12 @@ public:
             fileName.erase(0, 2);
 
         RefCntAutoPtr<IFileStream> pSourceStream;
-        m_pStreamFactory->CreateInputStream(fileName.c_str(), &pSourceStream);
+        m_pStreamFactory->CreateInputStream2(fileName.c_str(), CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT, &pSourceStream);
         if (pSourceStream == nullptr)
         {
-            LOG_ERROR("Failed to open shader include file ", fileName, ". Check that the file exists");
-            return E_FAIL;
+            // S_OK with a null source tells DXC that this candidate was not found,
+            // allowing it to try the next include path.
+            return S_OK;
         }
 
         RefCntAutoPtr<DataBlobImpl> pFileData = DataBlobImpl::Create();
@@ -367,7 +369,7 @@ bool DXCompilerImpl::Compile(const CompileAttribs& Attribs)
         CComPtr<IDxcOperationResult> pdxcResult;
         hr = pdxcCompiler->Compile(
             pSourceBlob,
-            L"",
+            Attribs.SourceName != nullptr ? Attribs.SourceName : L"",
             Attribs.EntryPoint,
             Attribs.Profile,
             Attribs.pArgs, UINT32{Attribs.ArgsCount},
@@ -758,6 +760,8 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
     const String       Profile = GetHLSLProfileString(ShaderCI.Desc.ShaderType, ShaderModel);
     const std::wstring wstrProfile{Profile.begin(), Profile.end()};
     const std::wstring wstrEntryPoint{ShaderCI.EntryPoint, ShaderCI.EntryPoint + strlen(ShaderCI.EntryPoint)};
+    const String       SourceName = NormalizeShaderSourcePath(ShaderCI.FilePath);
+    const std::wstring wstrSourceName{SourceName.begin(), SourceName.end()};
 
     std::vector<const wchar_t*> DxilArgs;
     if (m_Library.GetTarget() == DXCompilerTarget::Direct3D12)
@@ -799,6 +803,15 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
     {
         UNEXPECTED("Unknown compiler target");
     }
+
+    if (ShaderCI.pShaderSourceStreamFactory != nullptr)
+    {
+        // Add the factory root to DXC's include search paths. This enables system
+        // includes and search-root fallback after a relative local include is absent.
+        DxilArgs.push_back(L"-I");
+        DxilArgs.push_back(L".");
+    }
+
     DxilArgs.push_back((ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_PACK_MATRIX_ROW_MAJOR) != 0 ?
                            DXC_ARG_PACK_MATRIX_ROW_MAJOR :
                            DXC_ARG_PACK_MATRIX_COLUMN_MAJOR);
@@ -815,6 +828,7 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
 
     CA.Source                     = Source.c_str();
     CA.SourceLength               = static_cast<Uint32>(Source.length());
+    CA.SourceName                 = wstrSourceName.empty() ? nullptr : wstrSourceName.c_str();
     CA.EntryPoint                 = wstrEntryPoint.c_str();
     CA.Profile                    = wstrProfile.c_str();
     CA.pDefines                   = Defines;
