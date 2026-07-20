@@ -35,6 +35,7 @@
 #include "SerializedPipelineState.h"
 #include "SerializedShader.h"
 #include "ShaderMacroHelper.hpp"
+#include "ShaderSourceFactoryUtils.hpp"
 
 #include "ResourceLayoutTestCommon.hpp"
 #include "gtest/gtest.h"
@@ -1288,6 +1289,63 @@ TEST(ArchiveTest, Shaders)
 TEST(ArchiveTest, Shaders_Async)
 {
     ArchiveGraphicsShaders(true);
+}
+
+TEST(ArchiveTest, NestedLocalAndSystemIncludesOpenGL)
+{
+    constexpr ARCHIVE_DEVICE_DATA_FLAGS OpenGLDeviceFlags = ARCHIVE_DEVICE_DATA_FLAG_GL | ARCHIVE_DEVICE_DATA_FLAG_GLES;
+    if ((GetDeviceBits() & OpenGLDeviceFlags) == 0)
+        GTEST_SKIP() << "OpenGL is not supported by archiver";
+
+    GPUTestingEnvironment* pEnv             = GPUTestingEnvironment::GetInstance();
+    IArchiverFactory*      pArchiverFactory = pEnv->GetArchiverFactory();
+    if (pArchiverFactory == nullptr)
+        GTEST_SKIP() << "Archiver library is not loaded";
+
+    RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
+    pArchiverFactory->CreateSerializationDevice(SerializationDeviceCreateInfo{}, &pSerializationDevice);
+    ASSERT_NE(pSerializationDevice, nullptr);
+
+    constexpr Char MainSource[] =
+        "#extension GL_GOOGLE_include_directive : enable\n"
+        "#include \"Nested/Types.glsl\"\n"
+        "layout(location = 0) out vec4 OutColor;\n"
+        "void main()\n"
+        "{\n"
+        "    OutColor = GetLocalColor() + GetSystemColor() + GetFallbackColor();\n"
+        "}\n";
+
+    auto pShaderSourceFactory = CreateMemoryShaderSourceFactory(
+        {
+            {"Shaders/Main.glsl", MainSource},
+            {"Shaders/Nested/Types.glsl",
+             "#include \"Config.glsl\"\n"
+             "#include <Config.glsl>\n"
+             "#include \"Fallback.glsl\"\n"
+             "vec4 GetLocalColor() { return vec4(float(LOCAL_VALUE), 0.0, 0.0, 0.0); }\n"
+             "vec4 GetSystemColor() { return vec4(0.0, float(SYSTEM_VALUE), 0.0, 0.0); }\n"
+             "vec4 GetFallbackColor() { return vec4(0.0, 0.0, float(FALLBACK_VALUE), 0.0); }\n"},
+            {"Shaders/Nested/Config.glsl",
+             "#define LOCAL_VALUE 1\n"},
+            {"Config.glsl",
+             "#define SYSTEM_VALUE 1\n"},
+            {"Fallback.glsl",
+             "#define FALLBACK_VALUE 1\n"},
+        },
+        false);
+    ASSERT_NE(pShaderSourceFactory, nullptr);
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.Desc                       = {"Archive test nested OpenGL includes", SHADER_TYPE_PIXEL};
+    ShaderCI.FilePath                   = "Shaders/Main.glsl";
+    ShaderCI.EntryPoint                 = "main";
+    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_GLSL;
+    ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+
+    RefCntAutoPtr<IShader> pSerializedShader;
+    pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{OpenGLDeviceFlags}, &pSerializedShader);
+    ASSERT_NE(pSerializedShader, nullptr);
+    EXPECT_EQ(pSerializedShader->GetStatus(true), SHADER_STATUS_READY);
 }
 
 namespace HLSL
