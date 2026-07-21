@@ -678,9 +678,12 @@ TEST_F(SPIRVShaderResourcesTest, NestedLocalAndSystemIncludesFromMemory_GLSL_GLS
         {
             {"Nested/LocalTypes.glsl",
              "#include \"Config.glsl\"\n"
+             "#include \"LocalOnly.glsl\"\n"
+             "#include <SystemOnly.glsl>\n"
+             "#include \"Fallback.glsl\"\n"
              "vec4 GetLocalColor()\n"
              "{\n"
-             "    return vec4(float(LOCAL_CONFIG_VALUE), 0.0, 0.0, 1.0);\n"
+             "    return vec4(float(LOCAL_CONFIG_VALUE + LOCAL_ONLY_VALUE + SYSTEM_ONLY_VALUE + FALLBACK_VALUE), 0.0, 0.0, 1.0);\n"
              "}\n"},
             {"Nested/SystemTypes.glsl",
              "#include <Config.glsl>\n"
@@ -692,6 +695,16 @@ TEST_F(SPIRVShaderResourcesTest, NestedLocalAndSystemIncludesFromMemory_GLSL_GLS
              "#define LOCAL_CONFIG_VALUE 1\n"},
             {"Config.glsl",
              "#define ROOT_CONFIG_VALUE 1\n"},
+            {"Nested/LocalOnly.glsl",
+             "#define LOCAL_ONLY_VALUE 0\n"},
+            {"LocalOnly.glsl",
+             "#error The search path must not be used when the local source exists\n"},
+            {"Nested/SystemOnly.glsl",
+             "#error A system include must not be resolved relative to its includer\n"},
+            {"SystemOnly.glsl",
+             "#define SYSTEM_ONLY_VALUE 0\n"},
+            {"Fallback.glsl",
+             "#define FALLBACK_VALUE 0\n"},
         },
         false);
     ASSERT_NE(pShaderSourceFactory, nullptr);
@@ -722,9 +735,12 @@ TEST_F(SPIRVShaderResourcesTest, NestedLocalAndSystemIncludesFromMemory_HLSL_GLS
              "}\n"},
             {"Nested/LocalTypes.hlsli",
              "#include \"Config.hlsli\"\n"
+             "#include \"LocalOnly.hlsli\"\n"
+             "#include <SystemOnly.hlsli>\n"
+             "#include \"Fallback.hlsli\"\n"
              "float4 GetLocalColor()\n"
              "{\n"
-             "    return float4(LOCAL_CONFIG_VALUE, 0.0, 0.0, 1.0);\n"
+             "    return float4(LOCAL_CONFIG_VALUE + LOCAL_ONLY_VALUE + SYSTEM_ONLY_VALUE + FALLBACK_VALUE, 0.0, 0.0, 1.0);\n"
              "}\n"},
             {"Nested/SystemTypes.hlsli",
              "#include <Config.hlsli>\n"
@@ -736,6 +752,16 @@ TEST_F(SPIRVShaderResourcesTest, NestedLocalAndSystemIncludesFromMemory_HLSL_GLS
              "#define LOCAL_CONFIG_VALUE 1.0\n"},
             {"Config.hlsli",
              "#define ROOT_CONFIG_VALUE 1.0\n"},
+            {"Nested/LocalOnly.hlsli",
+             "#define LOCAL_ONLY_VALUE 0.0\n"},
+            {"LocalOnly.hlsli",
+             "#error The search path must not be used when the local source exists\n"},
+            {"Nested/SystemOnly.hlsli",
+             "#error A system include must not be resolved relative to its includer\n"},
+            {"SystemOnly.hlsli",
+             "#define SYSTEM_ONLY_VALUE 0.0\n"},
+            {"Fallback.hlsli",
+             "#define FALLBACK_VALUE 0.0\n"},
         },
         false);
     ASSERT_NE(pShaderSourceFactory, nullptr);

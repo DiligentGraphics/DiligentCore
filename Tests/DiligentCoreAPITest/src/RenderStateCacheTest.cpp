@@ -34,6 +34,7 @@
 #include "GraphicsTypesX.hpp"
 #include "CallbackWrapper.hpp"
 #include "ResourceLayoutTestCommon.hpp"
+#include "ShaderSourceFactoryUtils.hpp"
 
 #include "InlineShaders/RayTracingTestHLSL.h"
 #include "InlineShaders/DrawCommandTestHLSL.h"
@@ -524,6 +525,98 @@ TEST(RenderStateCacheTest, CreateShaders)
 TEST(RenderStateCacheTest, CreateShaders_Async)
 {
     TestArchivingShaders(true);
+}
+
+TEST(RenderStateCacheTest, IncludeResolutionByContent)
+{
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    static constexpr Char MainSource[] =
+        "#include \"Nested/Types.hlsli\"\n"
+        "float4 main() : SV_Target\n"
+        "{\n"
+        "    return GetColor();\n"
+        "}\n";
+    static constexpr Char TypesSource[] =
+        "#include \"Local.hlsli\"\n"
+        "#include <System.hlsli>\n"
+        "#include \"Fallback.hlsli\"\n"
+        "float4 GetColor()\n"
+        "{\n"
+        "    return LOCAL_COLOR + SYSTEM_COLOR + FALLBACK_COLOR;\n"
+        "}\n";
+
+    auto CreateFactory = [](const Char* LocalSource,
+                            const Char* SystemSource,
+                            const Char* FallbackSource,
+                            const Char* LocalDecoy,
+                            const Char* SystemDecoy) {
+        const MemoryShaderSourceFileInfo Sources[] = {
+            {"Shaders/Main.hlsl", MainSource},
+            {"Shaders/Nested/Types.hlsli", TypesSource},
+            {"Shaders/Nested/Local.hlsli", LocalSource},
+            {"Local.hlsli", LocalDecoy},
+            {"Shaders/Nested/System.hlsli", SystemDecoy},
+            {"System.hlsli", SystemSource},
+            {"Fallback.hlsli", FallbackSource},
+        };
+        return CreateMemoryShaderSourceFactory({Sources, _countof(Sources), false});
+    };
+
+    static constexpr Char LocalSource0[]    = "#define LOCAL_COLOR float4(1.0, 0.0, 0.0, 0.0)\n";
+    static constexpr Char LocalSource1[]    = "#define LOCAL_COLOR float4(0.5, 0.0, 0.0, 0.0)\n";
+    static constexpr Char SystemSource0[]   = "#define SYSTEM_COLOR float4(0.0, 1.0, 0.0, 0.0)\n";
+    static constexpr Char SystemSource1[]   = "#define SYSTEM_COLOR float4(0.0, 0.5, 0.0, 0.0)\n";
+    static constexpr Char FallbackSource0[] = "#define FALLBACK_COLOR float4(0.0, 0.0, 1.0, 1.0)\n";
+    static constexpr Char FallbackSource1[] = "#define FALLBACK_COLOR float4(0.0, 0.0, 0.5, 1.0)\n";
+    static constexpr Char LocalDecoy0[]     = "#error The search path must not be used when the local source exists: 0\n";
+    static constexpr Char LocalDecoy1[]     = "#error The search path must not be used when the local source exists: 1\n";
+    static constexpr Char SystemDecoy0[]    = "#error A system include must not be resolved relative to its includer: 0\n";
+    static constexpr Char SystemDecoy1[]    = "#error A system include must not be resolved relative to its includer: 1\n";
+
+    auto pCache = CreateCache(pDevice, false);
+    ASSERT_NE(pCache, nullptr);
+
+    auto CreateCachedShader = [&](IShaderSourceInputStreamFactory* pFactory,
+                                  bool                             PresentInCache) {
+        ShaderCreateInfo ShaderCI;
+        ShaderCI.Desc                           = {"RenderStateCache include resolution test", SHADER_TYPE_PIXEL, true};
+        ShaderCI.FilePath                       = "Shaders/Main.hlsl";
+        ShaderCI.EntryPoint                     = "main";
+        ShaderCI.SourceLanguage                 = SHADER_SOURCE_LANGUAGE_HLSL;
+        ShaderCI.ShaderCompiler                 = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+        ShaderCI.WebGPUEmulatedArrayIndexSuffix = "_";
+        ShaderCI.pShaderSourceStreamFactory     = pFactory;
+
+        RefCntAutoPtr<IShader> pShader;
+        CreateShader(pCache, ShaderCI, PresentInCache, pShader);
+        EXPECT_EQ(pShader->GetStatus(true), SHADER_STATUS_READY);
+        return pShader;
+    };
+
+    auto pFactory0 = CreateFactory(LocalSource0, SystemSource0, FallbackSource0, LocalDecoy0, SystemDecoy0);
+    auto pShader0  = CreateCachedShader(pFactory0, false);
+
+    // Neither decoy is selected, so changing them must not affect the content hash.
+    auto pFactory1 = CreateFactory(LocalSource0, SystemSource0, FallbackSource0, LocalDecoy1, SystemDecoy1);
+    auto pShader1  = CreateCachedShader(pFactory1, true);
+    EXPECT_EQ(pShader1, pShader0);
+
+    // Every selected include contributes to the content hash.
+    auto pFactory2 = CreateFactory(LocalSource1, SystemSource0, FallbackSource0, LocalDecoy1, SystemDecoy1);
+    auto pShader2  = CreateCachedShader(pFactory2, false);
+    EXPECT_NE(pShader2, pShader1);
+
+    auto pFactory3 = CreateFactory(LocalSource1, SystemSource1, FallbackSource0, LocalDecoy1, SystemDecoy1);
+    auto pShader3  = CreateCachedShader(pFactory3, false);
+    EXPECT_NE(pShader3, pShader2);
+
+    auto pFactory4 = CreateFactory(LocalSource1, SystemSource1, FallbackSource1, LocalDecoy1, SystemDecoy1);
+    auto pShader4  = CreateCachedShader(pFactory4, false);
+    EXPECT_NE(pShader4, pShader3);
 }
 
 void TestBrokenShader(bool CompileAsync)

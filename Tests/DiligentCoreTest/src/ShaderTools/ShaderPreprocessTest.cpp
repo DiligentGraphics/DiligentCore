@@ -447,6 +447,52 @@ TEST(ShaderPreprocessTest, IncludeNestedLocalAndSystemFromMemory)
     ASSERT_EQ(RefString, UnrolledStr);
 }
 
+TEST(ShaderPreprocessTest, IncludeExcludesInvalidCandidates)
+{
+    auto pShaderSourceFactory = CreateMemoryShaderSourceFactory(
+        {
+            {"Main.hlsl", "#include \"Nested/Types.hlsl\"\n"},
+            {"Nested/Types.hlsl",
+             "#include \"Local.hlsl\"\n"
+             "#include <System.hlsl>\n"
+             "#include \"Fallback.hlsl\"\n"},
+            {"Nested/Local.hlsl", "// Selected local source\n"},
+            {"Local.hlsl", "#error The search path must not be used when the local source exists\n"},
+            {"Nested/System.hlsl", "#error A system include must not be resolved relative to its includer\n"},
+            {"System.hlsl", "// Selected system source\n"},
+            {"Fallback.hlsl", "// Selected search-path fallback\n"},
+        },
+        false);
+    ASSERT_NE(pShaderSourceFactory, nullptr);
+
+    ShaderCreateInfo ShaderCI{};
+    ShaderCI.Desc.Name                  = "TestShader";
+    ShaderCI.FilePath                   = "Main.hlsl";
+    ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+
+    std::deque<const char*> Includes{
+        "Nested/Local.hlsl",
+        "System.hlsl",
+        "Fallback.hlsl",
+        "Nested/Types.hlsl",
+        "Main.hlsl"};
+
+    const bool Result = ProcessShaderIncludes(ShaderCI, [&](const ShaderIncludePreprocessInfo& ProcessInfo) {
+        ASSERT_FALSE(Includes.empty());
+        EXPECT_EQ(ProcessInfo.FilePath, Includes.front());
+        Includes.pop_front();
+    });
+
+    EXPECT_TRUE(Result);
+    EXPECT_TRUE(Includes.empty());
+
+    const std::string UnrolledSource = UnrollShaderIncludes(ShaderCI);
+    EXPECT_EQ(UnrolledSource.find("#error"), std::string::npos);
+    EXPECT_NE(UnrolledSource.find("Selected local source"), std::string::npos);
+    EXPECT_NE(UnrolledSource.find("Selected system source"), std::string::npos);
+    EXPECT_NE(UnrolledSource.find("Selected search-path fallback"), std::string::npos);
+}
+
 TEST(ShaderPreprocessTest, IncludeFallsBackWhenLocalSourceCannotBeOpened)
 {
     auto pMemoryFactory = CreateMemoryShaderSourceFactory(

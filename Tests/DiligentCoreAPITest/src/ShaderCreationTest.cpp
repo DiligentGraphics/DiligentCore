@@ -89,7 +89,7 @@ TEST(ShaderCreationTest, NestedLocalAndSystemIncludesFXC)
         "#include \"Nested/Types.hlsli\"\n"
         "float4 main() : SV_Target\n"
         "{\n"
-        "    return GetLocalColor() + GetSystemColor() + GetFallbackColor();\n"
+        "    return GetLocalColor() + GetSystemColor() + GetFallbackColor() + GetLocalOnlyColor() + GetSystemOnlyColor();\n"
         "}\n";
 
     auto pShaderSourceFactory = CreateMemoryShaderSourceFactory(
@@ -99,15 +99,27 @@ TEST(ShaderCreationTest, NestedLocalAndSystemIncludesFXC)
              "#include \"Config.hlsli\"\n"
              "#include <Config.hlsli>\n"
              "#include \"Fallback.hlsli\"\n"
+             "#include \"LocalOnly.hlsli\"\n"
+             "#include <SystemOnly.hlsli>\n"
              "float4 GetLocalColor() { return float4(LOCAL_VALUE, 0.0, 0.0, 0.0); }\n"
              "float4 GetSystemColor() { return float4(0.0, SYSTEM_VALUE, 0.0, 0.0); }\n"
-             "float4 GetFallbackColor() { return float4(0.0, 0.0, FALLBACK_VALUE, 0.0); }\n"},
+             "float4 GetFallbackColor() { return float4(0.0, 0.0, FALLBACK_VALUE, 0.0); }\n"
+             "float4 GetLocalOnlyColor() { return LOCAL_ONLY_COLOR; }\n"
+             "float4 GetSystemOnlyColor() { return SYSTEM_ONLY_COLOR; }\n"},
             {"Shaders/Nested/Config.hlsli",
              "#define LOCAL_VALUE 1.0\n"},
             {"Config.hlsli",
              "#define SYSTEM_VALUE 1.0\n"},
             {"Fallback.hlsli",
              "#define FALLBACK_VALUE 1.0\n"},
+            {"Shaders/Nested/LocalOnly.hlsli",
+             "#define LOCAL_ONLY_COLOR float4(0.0, 0.0, 0.0, 0.0)\n"},
+            {"LocalOnly.hlsli",
+             "#error The search path must not be used when the local source exists\n"},
+            {"Shaders/Nested/SystemOnly.hlsli",
+             "#error A system include must not be resolved relative to its includer\n"},
+            {"SystemOnly.hlsli",
+             "#define SYSTEM_ONLY_COLOR float4(0.0, 0.0, 0.0, 0.0)\n"},
         },
         false);
     ASSERT_NE(pShaderSourceFactory, nullptr);

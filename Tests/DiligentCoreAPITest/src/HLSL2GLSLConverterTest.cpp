@@ -190,13 +190,23 @@ TEST(HLSL2GLSLConverterTest, NestedLocalAndSystemIncludesFromMemory)
             {"Shaders/Nested/Types.hlsli",
              "#include \"Config.hlsli\"\n"
              "#include <Config.hlsli>\n"
-             "#include \"Fallback.hlsli\"\n"},
+             "#include \"Fallback.hlsli\"\n"
+             "#include \"LocalOnly.hlsli\"\n"
+             "#include <SystemOnly.hlsli>\n"},
             {"Shaders/Nested/Config.hlsli",
              "float GetLocalValue() { return 1.125; }\n"},
             {"Config.hlsli",
              "float GetSystemValue() { return 2.25; }\n"},
             {"Fallback.hlsli",
              "float GetFallbackValue() { return 3.375; }\n"},
+            {"Shaders/Nested/LocalOnly.hlsli",
+             "float GetLocalOnlyValue() { return 4.5; }\n"},
+            {"LocalOnly.hlsli",
+             "#error The search path must not be used when the local source exists\n"},
+            {"Shaders/Nested/SystemOnly.hlsli",
+             "#error A system include must not be resolved relative to its includer\n"},
+            {"SystemOnly.hlsli",
+             "float GetSystemOnlyValue() { return 5.625; }\n"},
         },
         false);
     ASSERT_NE(pShaderSourceFactory, nullptr);
@@ -217,6 +227,9 @@ TEST(HLSL2GLSLConverterTest, NestedLocalAndSystemIncludesFromMemory)
     EXPECT_NE(GLSLSource.find("1.125"), std::string::npos);
     EXPECT_NE(GLSLSource.find("2.25"), std::string::npos);
     EXPECT_NE(GLSLSource.find("3.375"), std::string::npos);
+    EXPECT_NE(GLSLSource.find("4.5"), std::string::npos);
+    EXPECT_NE(GLSLSource.find("5.625"), std::string::npos);
+    EXPECT_EQ(GLSLSource.find("#error"), std::string::npos);
 }
 
 } // namespace

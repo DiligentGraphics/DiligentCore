@@ -1312,7 +1312,7 @@ TEST(ArchiveTest, NestedLocalAndSystemIncludesOpenGL)
         "layout(location = 0) out vec4 OutColor;\n"
         "void main()\n"
         "{\n"
-        "    OutColor = GetLocalColor() + GetSystemColor() + GetFallbackColor();\n"
+        "    OutColor = GetLocalColor() + GetSystemColor() + GetFallbackColor() + GetLocalOnlyColor() + GetSystemOnlyColor();\n"
         "}\n";
 
     auto pShaderSourceFactory = CreateMemoryShaderSourceFactory(
@@ -1322,15 +1322,27 @@ TEST(ArchiveTest, NestedLocalAndSystemIncludesOpenGL)
              "#include \"Config.glsl\"\n"
              "#include <Config.glsl>\n"
              "#include \"Fallback.glsl\"\n"
+             "#include \"LocalOnly.glsl\"\n"
+             "#include <SystemOnly.glsl>\n"
              "vec4 GetLocalColor() { return vec4(float(LOCAL_VALUE), 0.0, 0.0, 0.0); }\n"
              "vec4 GetSystemColor() { return vec4(0.0, float(SYSTEM_VALUE), 0.0, 0.0); }\n"
-             "vec4 GetFallbackColor() { return vec4(0.0, 0.0, float(FALLBACK_VALUE), 0.0); }\n"},
+             "vec4 GetFallbackColor() { return vec4(0.0, 0.0, float(FALLBACK_VALUE), 0.0); }\n"
+             "vec4 GetLocalOnlyColor() { return vec4(float(LOCAL_ONLY_VALUE)); }\n"
+             "vec4 GetSystemOnlyColor() { return vec4(float(SYSTEM_ONLY_VALUE)); }\n"},
             {"Shaders/Nested/Config.glsl",
              "#define LOCAL_VALUE 1\n"},
             {"Config.glsl",
              "#define SYSTEM_VALUE 1\n"},
             {"Fallback.glsl",
              "#define FALLBACK_VALUE 1\n"},
+            {"Shaders/Nested/LocalOnly.glsl",
+             "#define LOCAL_ONLY_VALUE 0\n"},
+            {"LocalOnly.glsl",
+             "#error The search path must not be used when the local source exists\n"},
+            {"Shaders/Nested/SystemOnly.glsl",
+             "#error A system include must not be resolved relative to its includer\n"},
+            {"SystemOnly.glsl",
+             "#define SYSTEM_ONLY_VALUE 0\n"},
         },
         false);
     ASSERT_NE(pShaderSourceFactory, nullptr);
