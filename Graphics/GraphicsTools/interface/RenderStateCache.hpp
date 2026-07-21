@@ -210,8 +210,10 @@ public:
             if (pCacheData)
             {
                 FileWrapper CacheDataFile{FilePath, EFileAccessMode::Overwrite};
-                if (CacheDataFile->Write(pCacheData->GetConstDataPtr(), pCacheData->GetSize()))
+                if (CacheDataFile && CacheDataFile->Write(pCacheData->GetConstDataPtr(), pCacheData->GetSize()))
                     LOG_INFO_MESSAGE("Successfully saved state cache file ", FilePath, " (", FormatMemorySize(pCacheData->GetSize()), ").");
+                else
+                    LOG_ERROR_MESSAGE("Failed to save state cache file ", FilePath, " (", FormatMemorySize(pCacheData->GetSize()), ").");
             }
         }
         else
