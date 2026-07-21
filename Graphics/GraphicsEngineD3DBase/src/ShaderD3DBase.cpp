@@ -77,39 +77,22 @@ public:
 
         ShaderIncludePathCandidates Candidates = GetShaderIncludePathCandidates(IncluderPath, pFileName, IncludeType == D3D_INCLUDE_LOCAL);
 
-        RefCntAutoPtr<IFileStream> pSourceStream;
-        String                     ResolvedPath;
-        if (!Candidates.LocalPath.empty())
-        {
-            const CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS Flags = Candidates.SearchPath.empty() ?
-                CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_NONE :
-                CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT;
-            m_pStreamFactory->CreateInputStream2(Candidates.LocalPath.c_str(), Flags, &pSourceStream);
-            if (pSourceStream != nullptr)
-                ResolvedPath = std::move(Candidates.LocalPath);
-        }
-
-        if (pSourceStream == nullptr && !Candidates.SearchPath.empty())
-        {
-            m_pStreamFactory->CreateInputStream(Candidates.SearchPath.c_str(), &pSourceStream);
-            if (pSourceStream != nullptr)
-                ResolvedPath = std::move(Candidates.SearchPath);
-        }
+        OpenShaderIncludeResult Include = OpenShaderInclude(std::move(Candidates), m_pStreamFactory);
 
         HRESULT Result = E_FAIL;
-        if (pSourceStream != nullptr)
+        if (Include)
         {
             RefCntAutoPtr<DataBlobImpl> pFileData = DataBlobImpl::Create();
-            pSourceStream->ReadBlob(pFileData);
+            Include.pStream->ReadBlob(pFileData);
             *ppData = pFileData->GetDataPtr();
             *pBytes = StaticCast<UINT>(pFileData->GetSize());
 
-            m_DataBlobs.emplace(*ppData, IncludeData{std::move(pFileData), std::move(ResolvedPath)});
+            m_DataBlobs.emplace(*ppData, IncludeData{std::move(pFileData), std::move(Include.FilePath)});
             Result = S_OK;
         }
         else
         {
-            LOG_ERROR("Failed to open shader include file ", pFileName, ". Check that the file exists");
+            LOG_ERROR_MESSAGE("Failed to open shader include file ", pFileName, ". Check that the file exists");
         }
 
         return Result;

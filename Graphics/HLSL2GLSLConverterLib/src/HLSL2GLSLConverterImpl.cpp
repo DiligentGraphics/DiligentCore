@@ -781,36 +781,18 @@ static void InsertIncludesImpl(String&                          GLSLSource,
 
         ShaderIncludePathCandidates Candidates = GetShaderIncludePathCandidates(SourcePath, IncludeName.c_str(), IsLocalInclude);
 
-        RefCntAutoPtr<IFileStream> pIncludeDataStream;
-        String                     ResolvedPath;
-        if (!Candidates.LocalPath.empty())
-        {
-            const CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS Flags = Candidates.SearchPath.empty() ?
-                CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_NONE :
-                CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT;
-            pSourceStreamFactory->CreateInputStream2(Candidates.LocalPath.c_str(), Flags, &pIncludeDataStream);
-            if (pIncludeDataStream != nullptr)
-                ResolvedPath = std::move(Candidates.LocalPath);
-        }
-
-        if (pIncludeDataStream == nullptr && !Candidates.SearchPath.empty())
-        {
-            pSourceStreamFactory->CreateInputStream(Candidates.SearchPath.c_str(), &pIncludeDataStream);
-            if (pIncludeDataStream != nullptr)
-                ResolvedPath = std::move(Candidates.SearchPath);
-        }
-
-        if (pIncludeDataStream == nullptr)
+        OpenShaderIncludeResult Include = OpenShaderInclude(std::move(Candidates), pSourceStreamFactory);
+        if (!Include)
             LOG_ERROR_AND_THROW("Failed to open include file ", IncludeName);
 
-        const String IncludeFileLowercase = StrToLower(ResolvedPath);
+        const String IncludeFileLowercase = StrToLower(Include.FilePath);
         if (ProcessedIncludes.insert(IncludeFileLowercase).second)
         {
             RefCntAutoPtr<IDataBlob> pIncludeData = DataBlobImpl::Create();
-            pIncludeDataStream->ReadBlob(pIncludeData);
+            Include.pStream->ReadBlob(pIncludeData);
 
             String IncludeSource{pIncludeData->GetConstDataPtr<Char>(), pIncludeData->GetSize()};
-            InsertIncludesImpl(IncludeSource, pSourceStreamFactory, ResolvedPath.c_str(), ProcessedIncludes);
+            InsertIncludesImpl(IncludeSource, pSourceStreamFactory, Include.FilePath.c_str(), ProcessedIncludes);
 
             GLSLSource.insert(IncludeOffset, IncludeSource);
         }

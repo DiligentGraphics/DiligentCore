@@ -29,6 +29,8 @@
 #include <utility>
 
 #include "BasicFileSystem.hpp"
+#include "RefCntAutoPtr.hpp"
+#include "Shader.h"
 
 namespace Diligent
 {
@@ -119,19 +121,21 @@ inline ShaderIncludePathCandidates GetShaderIncludePathCandidates(const Char* In
         if (IsRelativeLocalInclude)
         {
             const String NormalizedIncluderPath = NormalizeShaderSourcePath(IncluderPath);
-
-            String ParentDir;
-            BasicFileSystem::GetPathComponents(NormalizedIncluderPath, &ParentDir, nullptr);
-
-            // GetPathComponents() returns an empty directory for a file in the Unix root
-            // (e.g. "/Main.glsl"). Restore the root so local includes remain absolute.
-            if (ParentDir.empty() && !NormalizedIncluderPath.empty() && NormalizedIncluderPath.front() == BasicFileSystem::UnixSlash)
-                ParentDir.push_back(BasicFileSystem::UnixSlash);
-
-            if (!ParentDir.empty())
+            if (!NormalizedIncluderPath.empty())
             {
-                const std::string ParentRelativePath = BasicFileSystem::JoinPath(ParentDir, NormalizedIncludePath, BasicFileSystem::UnixSlash);
-                Candidates.LocalPath                 = NormalizeShaderSourcePath(ParentRelativePath.c_str());
+                String ParentDir;
+                BasicFileSystem::GetPathComponents(NormalizedIncluderPath, &ParentDir, nullptr);
+
+                // GetPathComponents() returns an empty directory for a file in the Unix root
+                // (e.g. "/Main.glsl"). Restore the root so local includes remain absolute.
+                if (ParentDir.empty() && NormalizedIncluderPath.front() == BasicFileSystem::UnixSlash)
+                    ParentDir.push_back(BasicFileSystem::UnixSlash);
+
+                if (!ParentDir.empty())
+                {
+                    const std::string ParentRelativePath = BasicFileSystem::JoinPath(ParentDir, NormalizedIncludePath, BasicFileSystem::UnixSlash);
+                    Candidates.LocalPath                 = NormalizeShaderSourcePath(ParentRelativePath.c_str());
+                }
             }
         }
         else if (IsLocalInclude && IsRootedInclude)
@@ -144,6 +148,46 @@ inline ShaderIncludePathCandidates GetShaderIncludePathCandidates(const Char* In
     }
 
     return Candidates;
+}
+
+struct OpenShaderIncludeResult
+{
+    RefCntAutoPtr<IFileStream> pStream;
+    String                     FilePath;
+
+    explicit operator bool() const noexcept
+    {
+        return pStream != nullptr;
+    }
+};
+
+/// Tries to open an include using the local path first and the search path as fallback.
+inline OpenShaderIncludeResult OpenShaderInclude(ShaderIncludePathCandidates      Candidates,
+                                                 IShaderSourceInputStreamFactory* pStreamFactory)
+{
+    OpenShaderIncludeResult Result;
+
+    if (pStreamFactory != nullptr)
+    {
+        if (!Candidates.LocalPath.empty())
+        {
+            const CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS Flags = Candidates.SearchPath.empty() ?
+                CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_NONE :
+                CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT;
+            pStreamFactory->CreateInputStream2(Candidates.LocalPath.c_str(), Flags, &Result.pStream);
+            if (Result.pStream != nullptr)
+                Result.FilePath = std::move(Candidates.LocalPath);
+        }
+
+        if (Result.pStream == nullptr && !Candidates.SearchPath.empty())
+        {
+            pStreamFactory->CreateInputStream(Candidates.SearchPath.c_str(), &Result.pStream);
+            if (Result.pStream != nullptr)
+                Result.FilePath = std::move(Candidates.SearchPath);
+        }
+    }
+
+    return Result;
 }
 
 } // namespace Diligent

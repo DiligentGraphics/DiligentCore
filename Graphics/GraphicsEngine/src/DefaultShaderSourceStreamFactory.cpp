@@ -101,19 +101,22 @@ Bool DefaultShaderSourceStreamFactory::CreateInputStream2(const Char*           
     const String FileName = NormalizeShaderSourcePath(Name, FileSystem::SlashSymbol);
 
     Bool SourceFound = False;
-    if (FileSystem::IsPathAbsolute(FileName.c_str()))
+    if (!FileName.empty())
     {
-        SourceFound = TryCreateFileStream(FileName, ppStream);
-    }
-    else if (!FileName.empty())
-    {
-        for (const std::string& SearchDir : m_SearchDirectories)
+        if (FileSystem::IsPathAbsolute(FileName.c_str()))
         {
-            const std::string FullPath = FileSystem::JoinPath(SearchDir, FileName);
+            SourceFound = TryCreateFileStream(FileName, ppStream);
+        }
+        else
+        {
+            for (const std::string& SearchDir : m_SearchDirectories)
+            {
+                const std::string FullPath = FileSystem::JoinPath(SearchDir, FileName);
 
-            SourceFound = TryCreateFileStream(FullPath, ppStream);
-            if (SourceFound)
-                break;
+                SourceFound = TryCreateFileStream(FullPath, ppStream);
+                if (SourceFound)
+                    break;
+            }
         }
     }
 

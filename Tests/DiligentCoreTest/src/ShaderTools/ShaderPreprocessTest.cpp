@@ -29,6 +29,7 @@
 #include "ShaderToolsCommon.hpp"
 #include "ShaderSourcePath.hpp"
 #include "DefaultShaderSourceStreamFactory.h"
+#include "ObjectBase.hpp"
 #include "RenderDevice.h"
 #include "ShaderSourceFactoryUtils.hpp"
 #include "TestingEnvironment.hpp"
@@ -40,6 +41,61 @@ using namespace Diligent::Testing;
 
 namespace
 {
+
+class ProbeOnlyShaderSourceFactory final : public ObjectBase<IShaderSourceInputStreamFactory>
+{
+public:
+    using TBase = ObjectBase<IShaderSourceInputStreamFactory>;
+
+    static RefCntAutoPtr<IShaderSourceInputStreamFactory> Create(IShaderSourceInputStreamFactory* pFactory,
+                                                                 const Char*                      ProbeOnlyPath)
+    {
+        return RefCntAutoPtr<IShaderSourceInputStreamFactory>{MakeNewRCObj<ProbeOnlyShaderSourceFactory>()(pFactory, ProbeOnlyPath)};
+    }
+
+    ProbeOnlyShaderSourceFactory(IReferenceCounters*              pRefCounters,
+                                 IShaderSourceInputStreamFactory* pFactory,
+                                 const Char*                      ProbeOnlyPath) :
+        TBase{pRefCounters},
+        m_pFactory{pFactory},
+        m_ProbeOnlyPath{NormalizeShaderSourcePath(ProbeOnlyPath)}
+    {
+        VERIFY_EXPR(m_pFactory != nullptr);
+    }
+
+    Bool DILIGENT_CALL_TYPE CreateInputStream(const Char* Name, IFileStream** ppStream) override final
+    {
+        return CreateInputStream2(Name, CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_NONE, ppStream);
+    }
+
+    Bool DILIGENT_CALL_TYPE CreateInputStream2(const Char*                             Name,
+                                               CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS Flags,
+                                               IFileStream**                           ppStream) override final
+    {
+        const bool IsProbeOnlyPath = NormalizeShaderSourcePath(Name) == m_ProbeOnlyPath;
+        Bool       SourceFound     = True;
+        if (IsProbeOnlyPath)
+        {
+            if (ppStream != nullptr)
+            {
+                DEV_CHECK_ERR(*ppStream == nullptr, "Output stream pointer must be null");
+                *ppStream   = nullptr;
+                SourceFound = False;
+            }
+        }
+        else
+        {
+            SourceFound = m_pFactory->CreateInputStream2(Name, Flags, ppStream);
+        }
+        return SourceFound;
+    }
+
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IShaderSourceInputStreamFactory, TBase)
+
+private:
+    RefCntAutoPtr<IShaderSourceInputStreamFactory> m_pFactory;
+    const String                                   m_ProbeOnlyPath;
+};
 
 TEST(ShaderPreprocessTest, NormalizeShaderSourcePath)
 {
@@ -389,6 +445,60 @@ TEST(ShaderPreprocessTest, IncludeNestedLocalAndSystemFromMemory)
 
     auto UnrolledStr = UnrollShaderIncludes(ShaderCI);
     ASSERT_EQ(RefString, UnrolledStr);
+}
+
+TEST(ShaderPreprocessTest, IncludeFallsBackWhenLocalSourceCannotBeOpened)
+{
+    auto pMemoryFactory = CreateMemoryShaderSourceFactory(
+        {
+            {"Main.hlsl",
+             "// Start Main.hlsl\n"
+             "#include \"Nested/Local.hlsl\"\n"
+             "// End Main.hlsl\n"},
+            {"Nested/Local.hlsl",
+             "// Start Local.hlsl\n"
+             "#include \"Config.hlsl\"\n"
+             "// End Local.hlsl\n"},
+            {"Nested/Config.hlsl", "#error This source exists, but cannot be opened\n"},
+            {"Config.hlsl",
+             "// Search path Config.hlsl\n"
+             "#define CONFIG_SOURCE 1\n"},
+        },
+        false);
+    ASSERT_NE(pMemoryFactory, nullptr);
+
+    auto pShaderSourceFactory = ProbeOnlyShaderSourceFactory::Create(pMemoryFactory, "Nested/Config.hlsl");
+    ASSERT_NE(pShaderSourceFactory, nullptr);
+
+    ShaderCreateInfo ShaderCI{};
+    ShaderCI.Desc.Name                  = "TestShader";
+    ShaderCI.FilePath                   = "Main.hlsl";
+    ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+
+    std::deque<const char*> Includes{
+        "Config.hlsl",
+        "Nested/Local.hlsl",
+        "Main.hlsl"};
+
+    const bool Result = ProcessShaderIncludes(ShaderCI, [&](const ShaderIncludePreprocessInfo& ProcessInfo) {
+        ASSERT_FALSE(Includes.empty());
+        EXPECT_EQ(ProcessInfo.FilePath, Includes.front());
+        Includes.pop_front();
+    });
+
+    EXPECT_TRUE(Result);
+    EXPECT_TRUE(Includes.empty());
+
+    constexpr Char RefString[] =
+        "// Start Main.hlsl\n"
+        "// Start Local.hlsl\n"
+        "// Search path Config.hlsl\n"
+        "#define CONFIG_SOURCE 1\n"
+        "\n"
+        "// End Local.hlsl\n"
+        "\n"
+        "// End Main.hlsl\n";
+    EXPECT_EQ(UnrollShaderIncludes(ShaderCI), RefString);
 }
 
 TEST(ShaderPreprocessTest, IncludeCanonicalPathsFromMemory)
