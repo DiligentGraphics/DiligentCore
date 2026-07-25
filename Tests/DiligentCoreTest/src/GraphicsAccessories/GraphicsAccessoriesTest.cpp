@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -493,6 +493,48 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetTextureFormatAttribs)
             TEX_FORMAT_BC7_TYPELESS, TEX_FORMAT_BC7_UNORM, TEX_FORMAT_BC7_UNORM_SRGB //
         };
     CheckComponentType(std::begin(CompressedFormats), std::end(CompressedFormats), COMPONENT_TYPE_COMPRESSED);
+}
+
+TEST(GraphicsAccessories_GraphicsAccessories, ConvertTypelessFormats)
+{
+    struct FormatConversion
+    {
+        TEXTURE_FORMAT Typeless;
+        TEXTURE_FORMAT Typed;
+    };
+
+    constexpr FormatConversion UnormConversions[] =
+        {
+            {TEX_FORMAT_R8_TYPELESS, TEX_FORMAT_R8_UNORM},
+            {TEX_FORMAT_RG8_TYPELESS, TEX_FORMAT_RG8_UNORM},
+            {TEX_FORMAT_RGBA8_TYPELESS, TEX_FORMAT_RGBA8_UNORM},
+            {TEX_FORMAT_BGRA8_TYPELESS, TEX_FORMAT_BGRA8_UNORM},
+            {TEX_FORMAT_BGRX8_TYPELESS, TEX_FORMAT_BGRX8_UNORM},
+            {TEX_FORMAT_R16_TYPELESS, TEX_FORMAT_R16_UNORM},
+            {TEX_FORMAT_RG16_TYPELESS, TEX_FORMAT_RG16_UNORM},
+            {TEX_FORMAT_RGBA16_TYPELESS, TEX_FORMAT_RGBA16_UNORM},
+            {TEX_FORMAT_BC1_TYPELESS, TEX_FORMAT_BC1_UNORM},
+            {TEX_FORMAT_BC2_TYPELESS, TEX_FORMAT_BC2_UNORM},
+            {TEX_FORMAT_BC3_TYPELESS, TEX_FORMAT_BC3_UNORM},
+            {TEX_FORMAT_BC4_TYPELESS, TEX_FORMAT_BC4_UNORM},
+            {TEX_FORMAT_BC5_TYPELESS, TEX_FORMAT_BC5_UNORM},
+            {TEX_FORMAT_BC7_TYPELESS, TEX_FORMAT_BC7_UNORM},
+        };
+    for (const FormatConversion& Conversion : UnormConversions)
+        EXPECT_EQ(TypelessFormatToUnorm(Conversion.Typeless), Conversion.Typed);
+
+    constexpr FormatConversion SRGBConversions[] =
+        {
+            {TEX_FORMAT_RGBA8_TYPELESS, TEX_FORMAT_RGBA8_UNORM_SRGB},
+            {TEX_FORMAT_BGRA8_TYPELESS, TEX_FORMAT_BGRA8_UNORM_SRGB},
+            {TEX_FORMAT_BGRX8_TYPELESS, TEX_FORMAT_BGRX8_UNORM_SRGB},
+            {TEX_FORMAT_BC1_TYPELESS, TEX_FORMAT_BC1_UNORM_SRGB},
+            {TEX_FORMAT_BC2_TYPELESS, TEX_FORMAT_BC2_UNORM_SRGB},
+            {TEX_FORMAT_BC3_TYPELESS, TEX_FORMAT_BC3_UNORM_SRGB},
+            {TEX_FORMAT_BC7_TYPELESS, TEX_FORMAT_BC7_UNORM_SRGB},
+        };
+    for (const FormatConversion& Conversion : SRGBConversions)
+        EXPECT_EQ(TypelessFormatToSRGB(Conversion.Typeless), Conversion.Typed);
 }
 
 TEST(GraphicsAccessories_GraphicsAccessories, GetShaderTypeIndex)

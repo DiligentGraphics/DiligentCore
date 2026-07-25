@@ -2784,6 +2784,9 @@ TEXTURE_FORMAT TypelessFormatToUnorm(TEXTURE_FORMAT Fmt)
         case TEX_FORMAT_BC5_TYPELESS:
             return TEX_FORMAT_BC5_UNORM;
 
+        case TEX_FORMAT_BC7_TYPELESS:
+            return TEX_FORMAT_BC7_UNORM;
+
         default:
             return Fmt;
     }
