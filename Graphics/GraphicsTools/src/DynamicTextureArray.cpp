@@ -509,7 +509,8 @@ bool DynamicTextureArray::ResizeSparseTexture(IDeviceContext* pContext)
     Uint32 EndSlice   = std::max(CurrResidentSize, m_PendingSize);
     for (Uint32 Slice = StartSlice; Slice != EndSlice; ++Slice)
     {
-        // Bind normal mip levels
+        // Bind normal mip levels, if any.
+        if (NumNormalMips > 0)
         {
             SparseTextureMemoryBindInfo NormalMipBindInfo;
             NormalMipBindInfo.pTexture  = m_pTexture;
