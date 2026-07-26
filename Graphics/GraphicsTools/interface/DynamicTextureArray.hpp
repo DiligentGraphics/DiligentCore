@@ -237,6 +237,7 @@ private:
                       IDeviceContext* pContext,
                       bool            AllowNull);
 
+    bool PrepareSparseResize();
     bool ResizeSparseTexture(IDeviceContext* pContext);
     void CopyStaleTextureContents(IDeviceContext* pContext);
 

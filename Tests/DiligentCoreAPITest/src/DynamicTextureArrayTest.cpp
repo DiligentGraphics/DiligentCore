@@ -481,9 +481,16 @@ TEST_P(DynamicTextureArrayResizeTest, Run)
     EXPECT_EQ(pTexture, pDynTexArray->GetTexture());
     UpdateSlice(pContext, pTexture, 1);
     VerifySlices(pContext, pTexture, 1, 1);
-
-
+    const Uint64 MemoryUsageBeforeWorkerResize = pDynTexArray->GetMemoryUsage();
     pDynTexArray->Resize(pDevice, nullptr, 16);
+    if (Usage == USAGE_SPARSE)
+    {
+        // A worker-thread resize grows the sparse memory pool, but leaves tile
+        // bindings pending until a device context is provided.
+        EXPECT_GT(pDynTexArray->GetMemoryUsage(), MemoryUsageBeforeWorkerResize);
+        EXPECT_TRUE(pDynTexArray->PendingUpdate());
+    }
+
     pTexture = pDynTexArray->Update(pDevice, pContext);
     EXPECT_EQ(pTexture, pDynTexArray->GetTexture());
     UpdateSlice(pContext, pTexture, 2);

@@ -387,10 +387,8 @@ ITextureView* DynamicTextureArray::GetTextureSRV(TEXTURE_FORMAT ViewFormat) cons
 }
 
 
-bool DynamicTextureArray::ResizeSparseTexture(IDeviceContext* pContext)
+bool DynamicTextureArray::PrepareSparseResize()
 {
-    const Uint32 CurrResidentSize = GetArraySize();
-    VERIFY_EXPR(m_PendingSize != CurrResidentSize);
     VERIFY_EXPR(m_pTexture && m_pMemory);
 
     const Uint64 ResidentSize = AlignUp(Uint64{m_PendingSize}, Uint64{m_NumSlicesInPage});
@@ -400,14 +398,7 @@ bool DynamicTextureArray::ResizeSparseTexture(IDeviceContext* pContext)
         return false;
     }
 
-    m_PendingSize = StaticCast<Uint32>(ResidentSize);
-    if (m_PendingSize == CurrResidentSize)
-    {
-        // The logical request fits in the currently resident page range. There
-        // are no memory ranges to bind or unbind.
-        return true;
-    }
-
+    m_PendingSize                = StaticCast<Uint32>(ResidentSize);
     const Uint64 RequiredMemSize = (m_PendingSize / m_NumSlicesInPage) * m_MemoryPageSize;
     if (RequiredMemSize > m_pMemory->GetCapacity())
     {
@@ -425,6 +416,18 @@ bool DynamicTextureArray::ResizeSparseTexture(IDeviceContext* pContext)
         }
     }
 
+    return true;
+}
+
+bool DynamicTextureArray::ResizeSparseTexture(IDeviceContext* pContext)
+{
+    const Uint32 CurrResidentSize = GetArraySize();
+    VERIFY_EXPR(m_PendingSize != CurrResidentSize);
+    VERIFY_EXPR(m_pTexture && m_pMemory);
+    VERIFY_EXPR(m_PendingSize % m_NumSlicesInPage == 0);
+
+    const Uint64 RequiredMemSize = (m_PendingSize / m_NumSlicesInPage) * m_MemoryPageSize;
+    VERIFY_EXPR(RequiredMemSize <= m_pMemory->GetCapacity());
     const Uint32 NumSlicesToBind = m_PendingSize > CurrResidentSize ?
         m_PendingSize - CurrResidentSize :
         CurrResidentSize - m_PendingSize;
@@ -607,7 +610,16 @@ void DynamicTextureArray::CommitResize(IRenderDevice*  pDevice,
         bool ResizeCommitted = false;
         if (GetUsage() == USAGE_SPARSE)
         {
-            if (pContext != nullptr)
+            if ((pDevice != nullptr || pContext != nullptr) && !PrepareSparseResize())
+                return;
+
+            if (m_PendingSize == CurrArraySize)
+            {
+                // The requested logical size fits in the currently resident
+                // page range, so no sparse bindings need to change.
+                ResizeCommitted = true;
+            }
+            else if (pContext != nullptr)
             {
                 ResizeCommitted = ResizeSparseTexture(pContext);
             }
