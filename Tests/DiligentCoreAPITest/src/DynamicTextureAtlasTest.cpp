@@ -98,6 +98,26 @@ TEST(DynamicTextureAtlas, Create)
     EXPECT_GE(Stats.CommittedSize, 0u);
 }
 
+TEST(DynamicTextureAtlas, RejectsSparse2DTexture)
+{
+    DynamicTextureAtlasCreateInfo CI;
+    CI.Desc.Format    = TEX_FORMAT_RGBA8_UNORM;
+    CI.Desc.Name      = "Sparse 2D Dynamic Texture Atlas Test";
+    CI.Desc.Type      = RESOURCE_DIM_TEX_2D;
+    CI.Desc.BindFlags = BIND_SHADER_RESOURCE;
+    CI.Desc.Width     = 64;
+    CI.Desc.Height    = 64;
+    CI.Desc.Usage     = USAGE_SPARSE;
+
+    TestingEnvironment::ErrorScope ExpectedErrors{
+        "Failed to create dynamic texture atlas",
+        "USAGE_SPARSE is only supported for 2D array texture atlases"};
+
+    RefCntAutoPtr<IDynamicTextureAtlas> pAtlas;
+    CreateDynamicTextureAtlas(nullptr, CI, &pAtlas);
+    EXPECT_EQ(pAtlas, nullptr);
+}
+
 TEST(DynamicTextureAtlas, ArrayTextureSRVs)
 {
     auto* const pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();

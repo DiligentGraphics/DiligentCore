@@ -182,8 +182,9 @@ struct IDynamicTextureAtlas : public IObject
     /// Returns the constant atlas dimensions.
     virtual uint2 GetAtlasSize() const = 0;
 
-    /// Returns internal texture array version. The version is incremented every time
-    /// the array is expanded.
+    /// Returns the internal texture version. The version is incremented whenever
+    /// a new backing texture object is created. Sparse residency changes that keep
+    /// the same texture object do not change the version.
     virtual Uint32 GetVersion() const = 0;
 
     /// Returns the usage stats, see Diligent::DynamicTextureAtlasUsageStats.
@@ -207,7 +208,8 @@ struct DynamicTextureAtlasCreateInfo
     /// Texture description
 
     /// Texture type must be 2D or 2D array. When the type is
-    /// texture 2D, resizes will be disabled.
+    /// texture 2D, resizes will be disabled and USAGE_SPARSE
+    /// is not supported.
     TextureDesc Desc;
 
 

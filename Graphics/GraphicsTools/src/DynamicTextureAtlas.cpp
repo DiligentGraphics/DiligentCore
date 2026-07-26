@@ -407,6 +407,9 @@ public:
         if (m_Desc.Type != RESOURCE_DIM_TEX_2D && m_Desc.Type != RESOURCE_DIM_TEX_2D_ARRAY)
             LOG_ERROR_AND_THROW(GetResourceDimString(m_Desc.Type), " is not a valid resource dimension. Only 2D and 2D array textures are allowed");
 
+        if (m_Desc.Type == RESOURCE_DIM_TEX_2D && m_Desc.Usage == USAGE_SPARSE)
+            LOG_ERROR_AND_THROW("USAGE_SPARSE is only supported for 2D array texture atlases");
+
         if (m_Desc.Format == TEX_FORMAT_UNKNOWN)
             LOG_ERROR_AND_THROW("Texture format must not be UNKNOWN");
 
@@ -585,6 +588,16 @@ public:
                 Subregion = SliceMgr.Allocate(AlignedWidth / Alignment, AlignedHeight / Alignment);
                 if (!Subregion.IsEmpty())
                     break;
+
+                // A concurrent free may have emptied the slice while this
+                // failed allocation kept its manager in use. Release the
+                // guard and attempt to retire the now-empty manager.
+                SliceMgr.Release();
+                if (pBatch->Purge(Slice))
+                {
+                    RecycleSlice(Slice);
+                    continue;
+                }
             }
 
             // Failed to allocate the region - try the next slice
