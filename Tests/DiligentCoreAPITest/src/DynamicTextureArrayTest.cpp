@@ -25,6 +25,7 @@
  */
 
 #include <cstring>
+#include <stdexcept>
 #include <vector>
 
 #include "DynamicTextureArray.hpp"
@@ -127,6 +128,34 @@ INSTANTIATE_TEST_SUITE_P(DynamicTextureArray,
                              testing::Values<USAGE>(USAGE_DEFAULT, USAGE_SPARSE),
                              testing::Values<TEXTURE_FORMAT>(TEX_FORMAT_RGBA8_UNORM_SRGB, TEX_FORMAT_BC1_UNORM_SRGB)),
                          GetTestName); //
+
+TEST(DynamicTextureArray, RejectsUnsupportedUsage)
+{
+    DynamicTextureArrayCreateInfo CI;
+    CI.Desc.Format    = TEX_FORMAT_RGBA8_UNORM;
+    CI.Desc.Name      = "Dynamic Texture Array Invalid Usage Test";
+    CI.Desc.Type      = RESOURCE_DIM_TEX_2D_ARRAY;
+    CI.Desc.BindFlags = BIND_SHADER_RESOURCE;
+    CI.Desc.Width     = 64;
+    CI.Desc.Height    = 64;
+    CI.Desc.ArraySize = 1;
+    CI.Desc.MipLevels = 1;
+
+    TestingEnvironment::ErrorScope ExpectedErrors{
+        "DynamicTextureArray only supports USAGE_DEFAULT and USAGE_SPARSE",
+        "DynamicTextureArray only supports USAGE_DEFAULT and USAGE_SPARSE",
+        "DynamicTextureArray only supports USAGE_DEFAULT and USAGE_SPARSE",
+        "DynamicTextureArray only supports USAGE_DEFAULT and USAGE_SPARSE"};
+
+    for (const USAGE Usage : {USAGE_IMMUTABLE, USAGE_DYNAMIC, USAGE_STAGING, USAGE_UNIFIED})
+    {
+        CI.Desc.Usage           = Usage;
+        auto CreateTextureArray = [&]() {
+            DynamicTextureArray TextureArray{nullptr, CI};
+        };
+        EXPECT_THROW(CreateTextureArray(), std::runtime_error);
+    }
+}
 
 TEST(DynamicTextureArray, TextureSRVsFollowBackingTexture)
 {

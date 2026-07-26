@@ -94,6 +94,9 @@ DynamicTextureArray::DynamicTextureArray(IRenderDevice* pDevice, const DynamicTe
     if (m_Desc.Height == 0)
         LOG_ERROR_AND_THROW("Texture height must not be zero");
 
+    if (m_Desc.Usage != USAGE_DEFAULT && m_Desc.Usage != USAGE_SPARSE)
+        LOG_ERROR_AND_THROW("DynamicTextureArray only supports USAGE_DEFAULT and USAGE_SPARSE");
+
     if (m_Desc.MipLevels == 0)
         m_Desc.MipLevels = ComputeMipLevelsCount(m_Desc.GetWidth(), m_Desc.GetHeight(), m_Desc.GetDepth());
 
@@ -105,8 +108,27 @@ DynamicTextureArray::DynamicTextureArray(IRenderDevice* pDevice, const DynamicTe
     m_Desc.ArraySize = 0;
     if (pDevice != nullptr && (m_PendingSize > 0 || GetUsage() == USAGE_SPARSE))
     {
-        CreateResources(pDevice);
+        if (!CreateResources(pDevice))
+            LOG_ERROR_AND_THROW("Failed to create texture for a dynamic texture array");
     }
+}
+
+void DynamicTextureArray::FallbackToDefaultTexture() noexcept
+{
+    ReleaseTextureViews();
+    m_pTexture.Release();
+    m_pMemory.Release();
+    m_pBeforeResizeFence.Release();
+    m_pAfterResizeFence.Release();
+
+    m_MemoryPageSize = 0;
+    m_SparseMemoryUsage.store(0, std::memory_order_release);
+    m_NextBeforeResizeFenceValue = 1;
+    m_NextAfterResizeFenceValue  = 1;
+    m_LastAfterResizeFenceValue  = 0;
+
+    StoreArraySize(0);
+    StoreUsage(USAGE_DEFAULT);
 }
 
 
@@ -116,10 +138,34 @@ void DynamicTextureArray::CreateSparseTexture(IRenderDevice* pDevice)
     VERIFY_EXPR(pDevice != nullptr);
     VERIFY_EXPR(GetUsage() == USAGE_SPARSE);
 
+    class SparseCreationGuard
+    {
+    public:
+        explicit SparseCreationGuard(DynamicTextureArray& TextureArray) noexcept :
+            m_TextureArray{TextureArray}
+        {}
+
+        ~SparseCreationGuard() noexcept
+        {
+            if (m_IsArmed)
+                m_TextureArray.FallbackToDefaultTexture();
+        }
+
+        void Disarm() noexcept
+        {
+            m_IsArmed = false;
+        }
+
+    private:
+        DynamicTextureArray& m_TextureArray;
+        bool                 m_IsArmed = true;
+    };
+
+    SparseCreationGuard CreationGuard{*this};
+
     if (!VerifySparseTextureCompatibility(pDevice, m_Desc))
     {
         LOG_WARNING_MESSAGE("This device does not support capabilities required for sparse texture 2D arrays. USAGE_DEFAULT texture will be used instead.");
-        StoreUsage(USAGE_DEFAULT);
         return;
     }
 
@@ -149,7 +195,11 @@ void DynamicTextureArray::CreateSparseTexture(IRenderDevice* pDevice)
             MemCI.InitialSize = Uint64{512} << Uint64{20};
 
             pDevice->CreateDeviceMemory(MemCI, &m_pMemory);
-            DEV_CHECK_ERR(m_pMemory, "Failed to create device memory");
+            if (!m_pMemory)
+            {
+                LOG_ERROR_MESSAGE("Failed to create sparse dynamic texture memory. USAGE_DEFAULT texture will be used instead.");
+                return;
+            }
 
             CreateSparseTextureMtl(pDevice, TmpDesc, m_pMemory, &m_pTexture);
         }
@@ -159,7 +209,7 @@ void DynamicTextureArray::CreateSparseTexture(IRenderDevice* pDevice)
         }
         if (!m_pTexture)
         {
-            DEV_ERROR("Failed to create sparse texture");
+            LOG_ERROR_MESSAGE("Failed to create sparse dynamic texture. USAGE_DEFAULT texture will be used instead.");
             return;
         }
         // No slices are currently committed
@@ -169,9 +219,7 @@ void DynamicTextureArray::CreateSparseTexture(IRenderDevice* pDevice)
     const SparseTextureProperties& TexSparseProps = m_pTexture->GetSparseProperties();
     if ((TexSparseProps.Flags & SPARSE_TEXTURE_FLAG_SINGLE_MIPTAIL) != 0)
     {
-        LOG_WARNING_MESSAGE("This device requires single mip tail for the sparse texture 2D array, which is not suitable for the dynamic array.");
-        m_pTexture.Release();
-        StoreUsage(USAGE_DEFAULT);
+        LOG_ERROR_MESSAGE("This device requires single mip tail for the sparse texture 2D array, which is not suitable for the dynamic array.");
         return;
     }
 
@@ -207,14 +255,22 @@ void DynamicTextureArray::CreateSparseTexture(IRenderDevice* pDevice)
         MemCI.NumResources          = _countof(pCompatibleRes);
 
         pDevice->CreateDeviceMemory(MemCI, &m_pMemory);
-        DEV_CHECK_ERR(m_pMemory, "Failed to create device memory");
     }
     else
     {
         VERIFY_EXPR(DeviceInfo.IsMetalDevice());
-        m_pMemory->Resize(m_MemoryPageSize);
+        if (!m_pMemory->Resize(m_MemoryPageSize))
+        {
+            LOG_ERROR_MESSAGE("Failed to resize sparse dynamic texture memory. USAGE_DEFAULT texture will be used instead.");
+            return;
+        }
     }
-    m_SparseMemoryUsage.store(m_pMemory ? m_pMemory->GetCapacity() : 0, std::memory_order_release);
+    if (!m_pMemory || m_pMemory->GetCapacity() < m_MemoryPageSize)
+    {
+        LOG_ERROR_MESSAGE("Failed to allocate sparse dynamic texture memory. USAGE_DEFAULT texture will be used instead.");
+        return;
+    }
+    m_SparseMemoryUsage.store(m_pMemory->GetCapacity(), std::memory_order_release);
 
     // Create fences
     // Note: D3D11 does not support general fences
@@ -227,10 +283,18 @@ void DynamicTextureArray::CreateSparseTexture(IRenderDevice* pDevice)
         pDevice->CreateFence(Desc, &m_pBeforeResizeFence);
         Desc.Name = "Dynamic texture array after-resize fence";
         pDevice->CreateFence(Desc, &m_pAfterResizeFence);
+
+        if (!m_pBeforeResizeFence || !m_pAfterResizeFence)
+        {
+            LOG_ERROR_MESSAGE("Failed to create sparse dynamic texture synchronization fences. USAGE_DEFAULT texture will be used instead.");
+            return;
+        }
     }
+
+    CreationGuard.Disarm();
 }
 
-void DynamicTextureArray::CreateResources(IRenderDevice* pDevice)
+bool DynamicTextureArray::CreateResources(IRenderDevice* pDevice)
 {
     VERIFY_EXPR(pDevice != nullptr);
     VERIFY(!m_pTexture, "The texture has already been initialized");
@@ -247,23 +311,24 @@ void DynamicTextureArray::CreateResources(IRenderDevice* pDevice)
         TextureDesc Desc = GetDesc();
         Desc.ArraySize   = m_PendingSize;
         pDevice->CreateTexture(Desc, nullptr, &m_pTexture);
-        if (GetArraySize() == 0)
+
+        if (m_pTexture && GetArraySize() == 0)
         {
             // The array was previously empty - nothing to copy
             StoreArraySize(m_PendingSize);
         }
     }
-    if (!m_pTexture)
+
+    if (m_pTexture)
     {
-        // Sparse creation may fall back to USAGE_DEFAULT while the requested
-        // array size is zero. In this case, having no texture yet is valid.
-        DEV_CHECK_ERR(GetUsage() == USAGE_DEFAULT && m_PendingSize == 0,
-                      "Failed to create texture for a dynamic texture array");
-        return;
+        m_Version.fetch_add(1);
+        UpdateTextureViews(pDevice);
     }
 
-    m_Version.fetch_add(1);
-    UpdateTextureViews(pDevice);
+    // Sparse creation may fall back to USAGE_DEFAULT while the requested
+    // array size is zero. In this case, having no texture yet is valid.
+    return m_pTexture != nullptr ||
+        (GetUsage() == USAGE_DEFAULT && m_PendingSize == 0);
 }
 
 void DynamicTextureArray::ReleaseTextureViews() noexcept
@@ -519,7 +584,13 @@ void DynamicTextureArray::CommitResize(IRenderDevice*  pDevice,
     if (!m_pTexture && m_PendingSize > 0)
     {
         if (pDevice != nullptr)
-            CreateResources(pDevice);
+        {
+            if (!CreateResources(pDevice))
+            {
+                LOG_ERROR_MESSAGE("Failed to create texture for a dynamic texture array");
+                return;
+            }
+        }
         else
             DEV_CHECK_ERR(AllowNull, "Dynamic texture array must be initialized, but pDevice is null");
     }

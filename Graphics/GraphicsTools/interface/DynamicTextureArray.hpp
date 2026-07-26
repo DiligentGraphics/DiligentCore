@@ -50,6 +50,7 @@ struct DynamicTextureArrayCreateInfo
     /// - Desc.Type must be Diligent::RESOURCE_DIM_TEX_2D_ARRAY
     /// - Desc.Format must not be Diligent::TEX_FORMAT_UNKNOWN
     /// - `Desc.Width` and `Desc.Height` must not be zero
+    /// - Desc.Usage must be Diligent::USAGE_DEFAULT or Diligent::USAGE_SPARSE
     TextureDesc Desc;
 
     /// The number of slices in memory page.
@@ -240,7 +241,8 @@ private:
     void CopyStaleTextureContents(IDeviceContext* pContext);
 
     void CreateSparseTexture(IRenderDevice* pDevice);
-    void CreateResources(IRenderDevice* pDevice);
+    bool CreateResources(IRenderDevice* pDevice);
+    void FallbackToDefaultTexture() noexcept;
 
     void ReleaseTextureViews() noexcept;
     void UpdateTextureViews(IRenderDevice* pDevice);
