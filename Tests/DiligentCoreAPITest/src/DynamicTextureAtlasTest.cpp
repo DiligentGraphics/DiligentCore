@@ -98,6 +98,69 @@ TEST(DynamicTextureAtlas, Create)
     EXPECT_GE(Stats.CommittedSize, 0u);
 }
 
+TEST(DynamicTextureAtlas, ArrayTextureSRVs)
+{
+    auto* const pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
+
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
+    if (pDevice->GetDeviceInfo().Features.TextureSubresourceViews != DEVICE_FEATURE_STATE_ENABLED)
+        GTEST_SKIP() << "Typed texture views are not supported by this device.";
+
+    DynamicTextureAtlasCreateInfo CI;
+    CI.MinAlignment   = 1;
+    CI.Desc.Format    = TEX_FORMAT_RGBA8_TYPELESS;
+    CI.Desc.Name      = "Dynamic Texture Atlas View Test";
+    CI.Desc.Type      = RESOURCE_DIM_TEX_2D_ARRAY;
+    CI.Desc.BindFlags = BIND_SHADER_RESOURCE;
+    CI.Desc.Width     = 64;
+    CI.Desc.Height    = 64;
+    CI.Desc.ArraySize = 1;
+    CI.Desc.MipLevels = 1;
+
+    RefCntAutoPtr<IDynamicTextureAtlas> pAtlas;
+    CreateDynamicTextureAtlas(pDevice, CI, &pAtlas);
+    ASSERT_NE(pAtlas, nullptr);
+
+    ITexture* const pTexture = pAtlas->GetTexture();
+    ASSERT_NE(pTexture, nullptr);
+
+    ITextureView* const pLinearSRV = pAtlas->GetTextureSRV(TEX_FORMAT_RGBA8_UNORM);
+    ITextureView* const pSRGBSRV   = pAtlas->GetTextureSRV(TEX_FORMAT_RGBA8_UNORM_SRGB);
+    ASSERT_NE(pLinearSRV, nullptr);
+    ASSERT_NE(pSRGBSRV, nullptr);
+    EXPECT_EQ(pLinearSRV, pTexture->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+    EXPECT_EQ(pLinearSRV->GetDesc().Format, TEX_FORMAT_RGBA8_UNORM);
+    EXPECT_EQ(pSRGBSRV->GetDesc().Format, TEX_FORMAT_RGBA8_UNORM_SRGB);
+    EXPECT_EQ(pAtlas->GetTextureSRV(TEX_FORMAT_RGBA8_UINT), nullptr);
+}
+
+TEST(DynamicTextureAtlas, TypedSRGBAtlasReturnsSRGBView)
+{
+    auto* const pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
+
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
+    DynamicTextureAtlasCreateInfo CI;
+    CI.MinAlignment   = 1;
+    CI.Desc.Format    = TEX_FORMAT_RGBA8_UNORM_SRGB;
+    CI.Desc.Name      = "Dynamic Texture Atlas SRGB View Test";
+    CI.Desc.Type      = RESOURCE_DIM_TEX_2D;
+    CI.Desc.BindFlags = BIND_SHADER_RESOURCE;
+    CI.Desc.Width     = 64;
+    CI.Desc.Height    = 64;
+    CI.Desc.MipLevels = 1;
+
+    RefCntAutoPtr<IDynamicTextureAtlas> pAtlas;
+    CreateDynamicTextureAtlas(pDevice, CI, &pAtlas);
+    ASSERT_NE(pAtlas, nullptr);
+
+    ITextureView* const pSRGBView = pAtlas->GetTextureSRV(TEX_FORMAT_RGBA8_UNORM_SRGB);
+    ASSERT_NE(pSRGBView, nullptr);
+    EXPECT_EQ(pSRGBView->GetDesc().Format, TEX_FORMAT_RGBA8_UNORM_SRGB);
+    EXPECT_EQ(pAtlas->GetTextureSRV(TEX_FORMAT_RGBA8_UNORM), nullptr);
+}
+
 TEST(DynamicTextureAtlas, GetUsageStatsFor2DAtlasCommittedSize)
 {
     auto* const pEnv    = GPUTestingEnvironment::GetInstance();

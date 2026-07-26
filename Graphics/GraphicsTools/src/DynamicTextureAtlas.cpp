@@ -435,10 +435,7 @@ public:
         if (m_Desc.Type == RESOURCE_DIM_TEX_2D)
         {
             if (pDevice != nullptr)
-            {
-                pDevice->CreateTexture(m_Desc, nullptr, &m_pTexture);
-                VERIFY_EXPR(m_pTexture);
-            }
+                CreateTexture(pDevice);
         }
         else
         {
@@ -479,11 +476,7 @@ public:
         {
             VERIFY_EXPR(m_Desc.Type == RESOURCE_DIM_TEX_2D);
             if (!m_pTexture)
-            {
-                DEV_CHECK_ERR(pDevice != nullptr, "Texture must be created, but pDevice is null");
-                pDevice->CreateTexture(m_Desc, nullptr, &m_pTexture);
-                DEV_CHECK_ERR(m_pTexture, "Failed to create atlas texture");
-            }
+                CreateTexture(pDevice);
 
             return m_pTexture;
         }
@@ -494,6 +487,21 @@ public:
         return m_DynamicTexArray ?
             m_DynamicTexArray->GetTexture() :
             m_pTexture;
+    }
+
+    virtual ITextureView* GetTextureSRV(TEXTURE_FORMAT ViewFormat) const override final
+    {
+        if (m_DynamicTexArray)
+            return m_DynamicTexArray->GetTextureSRV(ViewFormat);
+
+        ITextureView* const pDefaultSRV = m_pTexture != nullptr ? m_pTexture->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE) : nullptr;
+        if (pDefaultSRV != nullptr && pDefaultSRV->GetDesc().Format == ViewFormat)
+            return pDefaultSRV;
+
+        if (m_SrgbSRV != nullptr && m_SrgbSRV->GetDesc().Format == ViewFormat)
+            return m_SrgbSRV;
+
+        return nullptr;
     }
 
     virtual Uint32 GetAllocationAlignment(Uint32 Width, Uint32 Height) const override final
@@ -768,6 +776,53 @@ private:
     }
 
 private:
+    void CreateTexture(IRenderDevice* pDevice)
+    {
+        VERIFY_EXPR(m_Desc.Type == RESOURCE_DIM_TEX_2D);
+        VERIFY_EXPR(m_pTexture == nullptr);
+
+        if (pDevice == nullptr)
+        {
+            DEV_ERROR("Texture must be created, but pDevice is null");
+            return;
+        }
+
+        pDevice->CreateTexture(m_Desc, nullptr, &m_pTexture);
+        DEV_CHECK_ERR(m_pTexture, "Failed to create atlas texture");
+        if (m_pTexture == nullptr ||
+            pDevice->GetDeviceInfo().Features.TextureSubresourceViews != DEVICE_FEATURE_STATE_ENABLED)
+            return;
+
+        const TEXTURE_FORMAT StorageFormat = m_Desc.Format;
+        if ((m_Desc.BindFlags & BIND_SHADER_RESOURCE) == 0 ||
+            !GetTextureFormatAttribs(StorageFormat).IsTypeless)
+            return;
+
+        ITextureView* const pDefaultSRV = m_pTexture->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
+        if (pDefaultSRV == nullptr)
+        {
+            UNEXPECTED("Failed to get default shader resource view of the texture");
+            return;
+        }
+
+        const TEXTURE_FORMAT DefaultViewFormat = pDefaultSRV->GetDesc().Format;
+        if (IsSRGBFormat(DefaultViewFormat))
+        {
+            UNEXPECTED("Default shader resource view format (", GetTextureFormatAttribs(DefaultViewFormat).Name,
+                       ") is already sRGB. This is unexpected for a typeless texture.");
+            return;
+        }
+
+        const TEXTURE_FORMAT SRGBViewFormat = UnormFormatToSRGB(DefaultViewFormat);
+        if (SRGBViewFormat != DefaultViewFormat)
+        {
+            TextureViewDesc ViewDesc;
+            ViewDesc.ViewType = TEXTURE_VIEW_SHADER_RESOURCE;
+            ViewDesc.Format   = SRGBViewFormat;
+            m_pTexture->CreateView(ViewDesc, m_SrgbSRV.GetAddressOfEmpty());
+        }
+    }
+
     const std::string m_Name;
     const TextureDesc m_Desc;
 
@@ -779,6 +834,8 @@ private:
 
     std::unique_ptr<DynamicTextureArray> m_DynamicTexArray;
     RefCntAutoPtr<ITexture>              m_pTexture;
+
+    RefCntAutoPtr<ITextureView> m_SrgbSRV;
 
     std::atomic<Uint32> m_TexArraySize{0};
 

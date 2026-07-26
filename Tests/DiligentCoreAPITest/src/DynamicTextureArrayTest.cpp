@@ -128,6 +128,88 @@ INSTANTIATE_TEST_SUITE_P(DynamicTextureArray,
                              testing::Values<TEXTURE_FORMAT>(TEX_FORMAT_RGBA8_UNORM_SRGB, TEX_FORMAT_BC1_UNORM_SRGB)),
                          GetTestName); //
 
+TEST(DynamicTextureArray, TextureSRVsFollowBackingTexture)
+{
+    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
+    auto* const pDevice  = pEnv->GetDevice();
+    auto* const pContext = pEnv->GetDeviceContext();
+
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
+    if (pDevice->GetDeviceInfo().Features.TextureSubresourceViews != DEVICE_FEATURE_STATE_ENABLED)
+        GTEST_SKIP() << "Typed texture views are not supported by this device.";
+
+    DynamicTextureArrayCreateInfo CI;
+    CI.Desc.Format    = TEX_FORMAT_RGBA8_TYPELESS;
+    CI.Desc.Name      = "Dynamic Texture Array View Test";
+    CI.Desc.Type      = RESOURCE_DIM_TEX_2D_ARRAY;
+    CI.Desc.BindFlags = BIND_SHADER_RESOURCE;
+    CI.Desc.Width     = 64;
+    CI.Desc.Height    = 64;
+    CI.Desc.ArraySize = 1;
+    CI.Desc.MipLevels = 1;
+
+    DynamicTextureArray TextureArray{nullptr, CI};
+    EXPECT_EQ(TextureArray.GetTextureSRV(TEX_FORMAT_RGBA8_UNORM), nullptr);
+
+    ITexture* const pInitialTexture = TextureArray.Update(pDevice, nullptr);
+    ASSERT_NE(pInitialTexture, nullptr);
+
+    RefCntAutoPtr<ITextureView> pInitialLinearView{TextureArray.GetTextureSRV(TEX_FORMAT_RGBA8_UNORM)};
+    RefCntAutoPtr<ITextureView> pInitialSRGBView{TextureArray.GetTextureSRV(TEX_FORMAT_RGBA8_UNORM_SRGB)};
+    ASSERT_NE(pInitialLinearView, nullptr);
+    ASSERT_NE(pInitialSRGBView, nullptr);
+    EXPECT_EQ(pInitialLinearView, pInitialTexture->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+    EXPECT_NE(pInitialLinearView, pInitialSRGBView);
+    EXPECT_EQ(pInitialLinearView->GetDesc().Format, TEX_FORMAT_RGBA8_UNORM);
+    EXPECT_EQ(pInitialSRGBView->GetDesc().Format, TEX_FORMAT_RGBA8_UNORM_SRGB);
+    EXPECT_EQ(pInitialLinearView->GetTexture(), pInitialTexture);
+    EXPECT_EQ(pInitialSRGBView->GetTexture(), pInitialTexture);
+    EXPECT_EQ(TextureArray.GetTextureSRV(TEX_FORMAT_RGBA8_UINT), nullptr);
+
+    ITexture* const pResizedTexture = TextureArray.Resize(pDevice, pContext, 2);
+    ASSERT_NE(pResizedTexture, nullptr);
+    EXPECT_NE(pResizedTexture, pInitialTexture);
+
+    ITextureView* const pResizedLinearView = TextureArray.GetTextureSRV(TEX_FORMAT_RGBA8_UNORM);
+    ITextureView* const pResizedSRGBView   = TextureArray.GetTextureSRV(TEX_FORMAT_RGBA8_UNORM_SRGB);
+    ASSERT_NE(pResizedLinearView, nullptr);
+    ASSERT_NE(pResizedSRGBView, nullptr);
+    EXPECT_EQ(pResizedLinearView, pResizedTexture->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+    EXPECT_NE(pResizedLinearView, pResizedSRGBView);
+    EXPECT_NE(pResizedLinearView, pInitialLinearView);
+    EXPECT_NE(pResizedSRGBView, pInitialSRGBView);
+    EXPECT_EQ(pResizedLinearView->GetDesc().Format, TEX_FORMAT_RGBA8_UNORM);
+    EXPECT_EQ(pResizedSRGBView->GetDesc().Format, TEX_FORMAT_RGBA8_UNORM_SRGB);
+    EXPECT_EQ(pResizedLinearView->GetTexture(), pResizedTexture);
+    EXPECT_EQ(pResizedSRGBView->GetTexture(), pResizedTexture);
+}
+
+TEST(DynamicTextureArray, TypedSRGBTextureReturnsSRGBView)
+{
+    auto* const pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
+
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
+    DynamicTextureArrayCreateInfo CI;
+    CI.Desc.Format    = TEX_FORMAT_RGBA8_UNORM_SRGB;
+    CI.Desc.Name      = "Dynamic Texture Array SRGB View Test";
+    CI.Desc.Type      = RESOURCE_DIM_TEX_2D_ARRAY;
+    CI.Desc.BindFlags = BIND_SHADER_RESOURCE;
+    CI.Desc.Width     = 64;
+    CI.Desc.Height    = 64;
+    CI.Desc.ArraySize = 1;
+    CI.Desc.MipLevels = 1;
+
+    DynamicTextureArray TextureArray{pDevice, CI};
+
+    ITextureView* const pSRGBView = TextureArray.GetTextureSRV(TEX_FORMAT_RGBA8_UNORM_SRGB);
+    ASSERT_NE(pSRGBView, nullptr);
+    EXPECT_EQ(pSRGBView, TextureArray.GetTexture()->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+    EXPECT_EQ(pSRGBView->GetDesc().Format, TEX_FORMAT_RGBA8_UNORM_SRGB);
+    EXPECT_EQ(TextureArray.GetTextureSRV(TEX_FORMAT_RGBA8_UNORM), nullptr);
+}
+
 
 
 

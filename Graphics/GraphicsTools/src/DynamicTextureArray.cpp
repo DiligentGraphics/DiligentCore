@@ -263,6 +263,62 @@ void DynamicTextureArray::CreateResources(IRenderDevice* pDevice)
     }
 
     m_Version.fetch_add(1);
+    UpdateTextureViews(pDevice);
+}
+
+void DynamicTextureArray::ReleaseTextureViews() noexcept
+{
+    m_SrgbSRV.Release();
+}
+
+void DynamicTextureArray::UpdateTextureViews(IRenderDevice* pDevice)
+{
+    VERIFY_EXPR(pDevice != nullptr);
+
+    if (m_SrgbSRV != nullptr || m_pTexture == nullptr ||
+        pDevice->GetDeviceInfo().Features.TextureSubresourceViews != DEVICE_FEATURE_STATE_ENABLED)
+        return;
+
+    const TEXTURE_FORMAT StorageFormat = m_pTexture->GetDesc().Format;
+    if ((m_pTexture->GetDesc().BindFlags & BIND_SHADER_RESOURCE) == 0 ||
+        !GetTextureFormatAttribs(StorageFormat).IsTypeless)
+        return;
+
+    ITextureView* const pDefaultSRV = m_pTexture->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
+    if (pDefaultSRV == nullptr)
+    {
+        UNEXPECTED("Failed to get default shader resource view of the texture");
+        return;
+    }
+
+    const TEXTURE_FORMAT DefaultViewFormat = pDefaultSRV->GetDesc().Format;
+    if (IsSRGBFormat(DefaultViewFormat))
+    {
+        UNEXPECTED("Default shader resource view format (", GetTextureFormatAttribs(DefaultViewFormat).Name,
+                   ") is already sRGB. This is unexpected for a typeless texture.");
+        return;
+    }
+
+    const TEXTURE_FORMAT SRGBViewFormat = UnormFormatToSRGB(DefaultViewFormat);
+    if (SRGBViewFormat != DefaultViewFormat)
+    {
+        TextureViewDesc ViewDesc;
+        ViewDesc.ViewType = TEXTURE_VIEW_SHADER_RESOURCE;
+        ViewDesc.Format   = SRGBViewFormat;
+        m_pTexture->CreateView(ViewDesc, m_SrgbSRV.GetAddressOfEmpty());
+    }
+}
+
+ITextureView* DynamicTextureArray::GetTextureSRV(TEXTURE_FORMAT ViewFormat) const
+{
+    ITextureView* const pDefaultSRV = m_pTexture != nullptr ? m_pTexture->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE) : nullptr;
+    if (pDefaultSRV != nullptr && pDefaultSRV->GetDesc().Format == ViewFormat)
+        return pDefaultSRV;
+
+    if (m_SrgbSRV != nullptr && m_SrgbSRV->GetDesc().Format == ViewFormat)
+        return m_SrgbSRV;
+
+    return nullptr;
 }
 
 
@@ -512,6 +568,10 @@ ITexture* DynamicTextureArray::Resize(IRenderDevice*  pDevice,
 
         if (GetUsage() != USAGE_SPARSE)
         {
+            // Additional views must not keep the old texture alive after its
+            // ownership is transferred to m_pStaleTexture.
+            ReleaseTextureViews();
+
             if (!m_pStaleTexture)
                 m_pStaleTexture = std::move(m_pTexture);
             else

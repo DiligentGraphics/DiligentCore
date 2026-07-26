@@ -147,6 +147,16 @@ struct IDynamicTextureAtlas : public IObject
     virtual ITexture* GetTexture() const = 0;
 
 
+    /// Returns a shader resource view of the internal texture in the specified format.
+
+    /// The atlas returns the default SRV and, when typed texture views are
+    /// supported, an additional sRGB SRV for compatible typeless formats.
+    /// If the requested view is not available, the method returns null.
+    ///
+    /// The method does not create a view and must not race with Update().
+    virtual ITextureView* GetTextureSRV(TEXTURE_FORMAT ViewFormat) const = 0;
+
+
     /// Performs suballocation from the atlas.
 
     /// \param[in]  Width           - Suballocation width.

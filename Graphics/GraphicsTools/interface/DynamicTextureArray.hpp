@@ -157,6 +157,15 @@ public:
         return m_pTexture;
     }
 
+    /// Returns a shader resource view of the internal texture in the specified format.
+
+    /// The array returns the default SRV and, when typed texture views are
+    /// supported, an additional sRGB SRV for compatible typeless formats.
+    /// If the requested view is not available, the method returns null.
+    ///
+    /// The method does not create a view and must not race with Update() or Resize().
+    ITextureView* GetTextureSRV(TEXTURE_FORMAT ViewFormat) const;
+
     /// Returns true if the texture must be updated before use (e.g. it has been resized,
     /// but internal texture has not been initialized or updated).
     /// When update is not pending, Update() may be called with null device and context.
@@ -221,6 +230,9 @@ private:
     void CreateSparseTexture(IRenderDevice* pDevice);
     void CreateResources(IRenderDevice* pDevice);
 
+    void ReleaseTextureViews() noexcept;
+    void UpdateTextureViews(IRenderDevice* pDevice);
+
     void StoreArraySize(Uint32 ArraySize) noexcept
     {
         m_ArraySize.store(ArraySize, std::memory_order_release);
@@ -250,6 +262,7 @@ private:
     RefCntAutoPtr<ITexture>      m_pTexture;
     RefCntAutoPtr<ITexture>      m_pStaleTexture;
     RefCntAutoPtr<IDeviceMemory> m_pMemory;
+    RefCntAutoPtr<ITextureView>  m_SrgbSRV;
 
     Uint64 m_MemoryPageSize = 0;
 
