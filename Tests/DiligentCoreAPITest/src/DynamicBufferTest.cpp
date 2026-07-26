@@ -284,7 +284,9 @@ TEST_P(DynamicBufferResizeTest, Run)
         DynBuff.Resize(pDevice, pContext, BuffDesc.Size);
         EXPECT_FALSE(DynBuff.PendingUpdate());
         EXPECT_EQ(DynBuff.GetVersion(), Usage == USAGE_SPARSE ? 1u : 2u);
-        pBuffer = DynBuff.Update(nullptr, Usage == USAGE_SPARSE ? pContext : nullptr);
+        // Resize has already queued the sparse mapping wait, so a committed
+        // resize no longer requires a context in Update().
+        pBuffer = DynBuff.Update(nullptr, nullptr);
         EXPECT_NE(pBuffer, nullptr);
         EXPECT_EQ(pBuffer, DynBuff.GetBuffer());
         UpdateBuffer(pBuffer, 256 << 10, 256 << 10);
@@ -302,7 +304,7 @@ TEST_P(DynamicBufferResizeTest, Run)
         EXPECT_FALSE(DynBuff.PendingUpdate());
         EXPECT_EQ(DynBuff.GetVersion(), Usage == USAGE_SPARSE ? 1u : 3u);
 
-        pBuffer = DynBuff.Update(nullptr, Usage == USAGE_SPARSE ? pContext : nullptr);
+        pBuffer = DynBuff.Update(nullptr, nullptr);
         ASSERT_NE(pBuffer, nullptr);
         EXPECT_EQ(pBuffer, DynBuff.GetBuffer());
         if (Usage != USAGE_SPARSE)

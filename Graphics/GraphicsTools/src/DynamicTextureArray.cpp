@@ -125,7 +125,6 @@ void DynamicTextureArray::FallbackToDefaultTexture() noexcept
     m_SparseMemoryUsage.store(0, std::memory_order_release);
     m_NextBeforeResizeFenceValue = 1;
     m_NextAfterResizeFenceValue  = 1;
-    m_LastAfterResizeFenceValue  = 0;
 
     StoreArraySize(0);
     StoreUsage(USAGE_DEFAULT);
@@ -542,6 +541,12 @@ bool DynamicTextureArray::ResizeSparseTexture(IDeviceContext* pContext)
     }
 
     pContext->BindSparseResourceMemory(BindMemAttribs);
+    if (pSignalFence != nullptr)
+    {
+        // Order subsequent commands submitted through this context after the
+        // sparse mapping operation before publishing the new resident size.
+        pContext->DeviceWaitForFence(pSignalFence, SignalFenceValue);
+    }
 
     if (RequiredMemSize < m_pMemory->GetCapacity())
         m_pMemory->Resize(RequiredMemSize); // Release unused memory
@@ -707,15 +712,6 @@ ITexture* DynamicTextureArray::Update(IRenderDevice*  pDevice,
                                       IDeviceContext* pContext)
 {
     CommitResize(pDevice, pContext, false /*AllowNull*/);
-
-    if (m_LastAfterResizeFenceValue + 1 < m_NextAfterResizeFenceValue)
-    {
-        DEV_CHECK_ERR(pContext != nullptr, "Device context is null, but waiting for the fence is required");
-        VERIFY_EXPR(m_pAfterResizeFence);
-        m_LastAfterResizeFenceValue = m_NextAfterResizeFenceValue - 1;
-        pContext->DeviceWaitForFence(m_pAfterResizeFence, m_LastAfterResizeFenceValue);
-    }
-
     return m_pTexture;
 }
 

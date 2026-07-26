@@ -496,8 +496,10 @@ TEST_P(DynamicTextureArrayResizeTest, Run)
     UpdateSlice(pContext, pTexture, 2);
     VerifySlices(pContext, pTexture, 2, 1);
 
-    pDynTexArray->Resize(pDevice, nullptr, 9);
-    pTexture = pDynTexArray->Update(pDevice, pContext);
+    pDynTexArray->Resize(pDevice, pContext, 9);
+    // Resize has already queued the sparse mapping wait, so a committed
+    // resize no longer requires a context in Update().
+    pTexture = pDynTexArray->Update(nullptr, nullptr);
     EXPECT_EQ(pTexture, pDynTexArray->GetTexture());
     UpdateSlice(pContext, pTexture, 3);
     UpdateSlice(pContext, pTexture, 4);

@@ -243,6 +243,12 @@ void DynamicBuffer::ResizeSparseBuffer(IDeviceContext* pContext)
     }
 
     pContext->BindSparseResourceMemory(BindMemAttribs);
+    if (pSignalFence != nullptr)
+    {
+        // Order subsequent commands submitted through this context after the
+        // sparse mapping operation before publishing the new buffer size.
+        pContext->DeviceWaitForFence(pSignalFence, SignalFenceValue);
+    }
 
     if (m_pMemory->GetCapacity() > m_PendingSize)
         m_pMemory->Resize(m_PendingSize); // Release unused memory
@@ -343,15 +349,6 @@ IBuffer* DynamicBuffer::Update(IRenderDevice*  pDevice,
                                IDeviceContext* pContext)
 {
     CommitResize(pDevice, pContext, false /*AllowNull*/);
-
-    if (m_LastAfterResizeFenceValue + 1 < m_NextAfterResizeFenceValue)
-    {
-        DEV_CHECK_ERR(pContext != nullptr, "Device context is null, but waiting for the fence is required");
-        VERIFY_EXPR(m_pAfterResizeFence);
-        m_LastAfterResizeFenceValue = m_NextAfterResizeFenceValue - 1;
-        pContext->DeviceWaitForFence(m_pAfterResizeFence, m_LastAfterResizeFenceValue);
-    }
-
     return m_pBuffer;
 }
 

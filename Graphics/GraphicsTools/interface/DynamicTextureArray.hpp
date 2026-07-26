@@ -283,7 +283,6 @@ private:
 
     Uint64 m_NextBeforeResizeFenceValue = 1;
     Uint64 m_NextAfterResizeFenceValue  = 1;
-    Uint64 m_LastAfterResizeFenceValue  = 0;
 
     RefCntAutoPtr<IFence> m_pBeforeResizeFence;
     RefCntAutoPtr<IFence> m_pAfterResizeFence;
