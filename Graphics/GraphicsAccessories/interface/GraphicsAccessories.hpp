@@ -214,7 +214,8 @@ TEXTURE_FORMAT TextureComponentAttribsToTextureFormat(COMPONENT_TYPE CompType, U
 /// ** `R16_TYPELESS` is special. If `BIND_DEPTH_STENCIL` flag is set, it is translated to `R16_UNORM`/`D16_UNORM`;
 ///    otherwise it is translated to `R16_FLOAT`.
 /// * For 8-bit typeless formats, default view is `XXXX8_UNORM` (where `XXXX` are the actual format components)\n
-/// * sRGB is always chosen if it is available (`RGBA8_UNORM_SRGB`, `TEX_FORMAT_BC1_UNORM_SRGB`, etc.)
+/// * For typeless formats that support both UNORM and sRGB views, UNORM is chosen by default;
+///   sRGB must be requested explicitly.
 /// * For combined depth-stencil formats, SRV format references depth component (`R24_UNORM_X8_TYPELESS` for `D24S8` formats, and
 ///   `R32_FLOAT_X8X24_TYPELESS` for `D32S8X24` formats)
 /// * For compressed formats, only SRV format is defined

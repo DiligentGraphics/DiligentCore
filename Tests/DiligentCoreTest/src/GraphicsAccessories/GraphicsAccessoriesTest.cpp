@@ -537,6 +537,44 @@ TEST(GraphicsAccessories_GraphicsAccessories, ConvertTypelessFormats)
         EXPECT_EQ(TypelessFormatToSRGB(Conversion.Typeless), Conversion.Typed);
 }
 
+TEST(GraphicsAccessories_GraphicsAccessories, GetDefaultUNORMTextureViewFormats)
+{
+    constexpr struct
+    {
+        TEXTURE_FORMAT Typeless;
+        TEXTURE_FORMAT Unorm;
+    } UnormFormats[] =
+        {
+            {TEX_FORMAT_RGBA8_TYPELESS, TEX_FORMAT_RGBA8_UNORM},
+            {TEX_FORMAT_BGRA8_TYPELESS, TEX_FORMAT_BGRA8_UNORM},
+            {TEX_FORMAT_BGRX8_TYPELESS, TEX_FORMAT_BGRX8_UNORM},
+            {TEX_FORMAT_BC1_TYPELESS, TEX_FORMAT_BC1_UNORM},
+            {TEX_FORMAT_BC2_TYPELESS, TEX_FORMAT_BC2_UNORM},
+            {TEX_FORMAT_BC3_TYPELESS, TEX_FORMAT_BC3_UNORM},
+            {TEX_FORMAT_BC7_TYPELESS, TEX_FORMAT_BC7_UNORM},
+        };
+
+    for (const auto& Format : UnormFormats)
+    {
+        EXPECT_EQ(GetDefaultTextureViewFormat(Format.Typeless, TEXTURE_VIEW_SHADER_RESOURCE, BIND_SHADER_RESOURCE),
+                  Format.Unorm);
+    }
+
+    EXPECT_EQ(GetDefaultTextureViewFormat(TEX_FORMAT_RGBA8_TYPELESS, TEXTURE_VIEW_RENDER_TARGET, BIND_RENDER_TARGET),
+              TEX_FORMAT_RGBA8_UNORM);
+    EXPECT_EQ(GetDefaultTextureViewFormat(TEX_FORMAT_BGRA8_TYPELESS, TEXTURE_VIEW_RENDER_TARGET, BIND_RENDER_TARGET),
+              TEX_FORMAT_BGRA8_UNORM);
+    EXPECT_EQ(GetDefaultTextureViewFormat(TEX_FORMAT_BGRX8_TYPELESS, TEXTURE_VIEW_RENDER_TARGET, BIND_RENDER_TARGET),
+              TEX_FORMAT_BGRX8_UNORM);
+
+    EXPECT_EQ(GetDefaultTextureViewFormat(TEX_FORMAT_RGBA8_TYPELESS, TEXTURE_VIEW_UNORDERED_ACCESS, BIND_UNORDERED_ACCESS),
+              TEX_FORMAT_RGBA8_UNORM);
+    EXPECT_EQ(GetDefaultTextureViewFormat(TEX_FORMAT_BGRA8_TYPELESS, TEXTURE_VIEW_UNORDERED_ACCESS, BIND_UNORDERED_ACCESS),
+              TEX_FORMAT_BGRA8_UNORM);
+    EXPECT_EQ(GetDefaultTextureViewFormat(TEX_FORMAT_BGRX8_TYPELESS, TEXTURE_VIEW_UNORDERED_ACCESS, BIND_UNORDERED_ACCESS),
+              TEX_FORMAT_BGRX8_UNORM);
+}
+
 TEST(GraphicsAccessories_GraphicsAccessories, GetShaderTypeIndex)
 {
     static_assert(SHADER_TYPE_LAST == 0x4000, "Please update the test below to handle the new shader type");
