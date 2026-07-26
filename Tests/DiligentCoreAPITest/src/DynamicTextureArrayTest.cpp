@@ -197,6 +197,52 @@ TEST(DynamicTextureArray, TextureSRVsFollowBackingTexture)
     EXPECT_EQ(TextureArray.GetTextureSRV(TEX_FORMAT_RGBA8_UNORM_SRGB), pResizedSRGBView);
 }
 
+TEST(DynamicTextureArray, PendingResizeRejectsRetargetingAndCancellation)
+{
+    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
+    auto* const pDevice  = pEnv->GetDevice();
+    auto* const pContext = pEnv->GetDeviceContext();
+
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
+    DynamicTextureArrayCreateInfo CI;
+    CI.Desc.Format    = TEX_FORMAT_RGBA8_UNORM;
+    CI.Desc.Name      = "Dynamic Texture Array Pending Resize Test";
+    CI.Desc.Type      = RESOURCE_DIM_TEX_2D_ARRAY;
+    CI.Desc.BindFlags = BIND_SHADER_RESOURCE;
+    CI.Desc.Width     = 64;
+    CI.Desc.Height    = 64;
+    CI.Desc.ArraySize = 1;
+    CI.Desc.MipLevels = 1;
+
+    DynamicTextureArray TextureArray{pDevice, CI};
+
+    ITexture* const pPendingTexture = TextureArray.Resize(pDevice, nullptr, 2);
+    ASSERT_NE(pPendingTexture, nullptr);
+    EXPECT_TRUE(TextureArray.PendingUpdate());
+    EXPECT_EQ(TextureArray.GetArraySize(), 1u);
+    EXPECT_EQ(pPendingTexture->GetDesc().ArraySize, 2u);
+
+    // A pending content-preserving resize must be committed before it can be
+    // retargeted or cancelled.
+    {
+        TestingEnvironment::ErrorScope ExpectedErrors{
+            "A default texture resize is already pending",
+            "A default texture resize is already pending"};
+        EXPECT_EQ(TextureArray.Resize(pDevice, nullptr, 3), pPendingTexture);
+        EXPECT_EQ(TextureArray.Resize(nullptr, nullptr, 1), pPendingTexture);
+    }
+
+    EXPECT_TRUE(TextureArray.PendingUpdate());
+    EXPECT_EQ(TextureArray.GetArraySize(), 1u);
+    EXPECT_EQ(TextureArray.GetTexture(), pPendingTexture);
+    EXPECT_EQ(pPendingTexture->GetDesc().ArraySize, 2u);
+
+    EXPECT_EQ(TextureArray.Resize(pDevice, pContext, 2), pPendingTexture);
+    EXPECT_FALSE(TextureArray.PendingUpdate());
+    EXPECT_EQ(TextureArray.GetArraySize(), 2u);
+}
+
 TEST(DynamicTextureArray, TypedSRGBTextureReturnsSRGBView)
 {
     auto* const pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
@@ -220,6 +266,27 @@ TEST(DynamicTextureArray, TypedSRGBTextureReturnsSRGBView)
     EXPECT_EQ(pSRGBView, TextureArray.GetTexture()->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
     EXPECT_EQ(pSRGBView->GetDesc().Format, TEX_FORMAT_RGBA8_UNORM_SRGB);
     EXPECT_EQ(TextureArray.GetTextureSRV(TEX_FORMAT_RGBA8_UNORM), nullptr);
+}
+
+TEST(DynamicTextureArray, ResizeToZeroBeforeInitialization)
+{
+    DynamicTextureArrayCreateInfo CI;
+    CI.Desc.Format    = TEX_FORMAT_RGBA8_UNORM;
+    CI.Desc.Name      = "Uninitialized Dynamic Texture Array Resize Test";
+    CI.Desc.Type      = RESOURCE_DIM_TEX_2D_ARRAY;
+    CI.Desc.BindFlags = BIND_SHADER_RESOURCE;
+    CI.Desc.Width     = 64;
+    CI.Desc.Height    = 64;
+    CI.Desc.ArraySize = 1;
+    CI.Desc.MipLevels = 1;
+
+    DynamicTextureArray TextureArray{nullptr, CI};
+    ASSERT_TRUE(TextureArray.PendingUpdate());
+
+    EXPECT_EQ(TextureArray.Resize(nullptr, nullptr, 0), nullptr);
+    EXPECT_FALSE(TextureArray.PendingUpdate());
+    EXPECT_EQ(TextureArray.GetArraySize(), 0u);
+    EXPECT_EQ(TextureArray.GetTexture(), nullptr);
 }
 
 

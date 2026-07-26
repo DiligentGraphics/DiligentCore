@@ -117,6 +117,11 @@ public:
     ///
     /// Typically `pContext` is null when the method is called from a worker thread.
     ///
+    /// While a content-preserving resize of a default texture is pending, the
+    /// method may only be called with the same `NewArraySize`, for example to
+    /// provide a device or context that was previously unavailable. A different
+    /// size, including cancellation, is rejected until the pending resize commits.
+    ///
     /// If `NewArraySize` is zero, internal buffer will be released.
     ITexture* Resize(IRenderDevice*  pDevice,
                      IDeviceContext* pContext,

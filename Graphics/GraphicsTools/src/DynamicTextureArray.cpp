@@ -514,6 +514,12 @@ void DynamicTextureArray::CommitResize(IRenderDevice*  pDevice,
     const Uint32 CurrArraySize = GetArraySize();
     if (m_pTexture && CurrArraySize != m_PendingSize)
     {
+        if (GetUsage() == USAGE_DEFAULT && m_pTexture->GetDesc().ArraySize != m_PendingSize)
+        {
+            LOG_ERROR_MESSAGE("Pending texture size does not match the requested array size");
+            return;
+        }
+
         bool ResizeCommitted = false;
         if (GetUsage() == USAGE_SPARSE)
         {
@@ -562,27 +568,26 @@ ITexture* DynamicTextureArray::Resize(IRenderDevice*  pDevice,
                                       Uint32          NewArraySize,
                                       bool            DiscardContent)
 {
+    if (GetUsage() == USAGE_DEFAULT &&
+        m_pStaleTexture != nullptr &&
+        NewArraySize != m_PendingSize)
+    {
+        LOG_ERROR_MESSAGE("A default texture resize is already pending. Commit it before requesting another size.");
+        return m_pTexture;
+    }
+
     if (m_PendingSize != NewArraySize)
     {
         m_PendingSize = NewArraySize;
 
         if (GetUsage() != USAGE_SPARSE)
         {
-            if (!m_pStaleTexture)
-            {
-                // Additional views must not keep the old texture alive after its
-                // ownership is transferred to m_pStaleTexture.
-                ReleaseTextureViews();
-                m_pStaleTexture = std::move(m_pTexture);
-            }
-            else
-            {
-                DEV_CHECK_ERR(!m_pTexture || NewArraySize == 0,
-                              "There is a non-null stale Texture. This likely indicates that "
-                              "Resize() has been called multiple times with different sizes, "
-                              "but copy has not been committed by providing non-null device "
-                              "context to either Resize() or Update()");
-            }
+            VERIFY_EXPR(!m_pStaleTexture);
+
+            // Additional views must not keep the old texture alive after its
+            // ownership is transferred to m_pStaleTexture.
+            ReleaseTextureViews();
+            m_pStaleTexture = std::move(m_pTexture);
 
             if (m_PendingSize == 0)
             {
