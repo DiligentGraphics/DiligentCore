@@ -167,9 +167,13 @@ TEST(DynamicTextureArray, TextureSRVsFollowBackingTexture)
     EXPECT_EQ(pInitialSRGBView->GetTexture(), pInitialTexture);
     EXPECT_EQ(TextureArray.GetTextureSRV(TEX_FORMAT_RGBA8_UINT), nullptr);
 
-    ITexture* const pResizedTexture = TextureArray.Resize(pDevice, pContext, 2);
+    // Create the replacement texture, but leave the copy from the stale
+    // texture pending until a context is provided.
+    ITexture* const pResizedTexture = TextureArray.Resize(pDevice, nullptr, 2);
     ASSERT_NE(pResizedTexture, nullptr);
     EXPECT_NE(pResizedTexture, pInitialTexture);
+    EXPECT_TRUE(TextureArray.PendingUpdate());
+    EXPECT_EQ(TextureArray.GetArraySize(), 1u);
 
     ITextureView* const pResizedLinearView = TextureArray.GetTextureSRV(TEX_FORMAT_RGBA8_UNORM);
     ITextureView* const pResizedSRGBView   = TextureArray.GetTextureSRV(TEX_FORMAT_RGBA8_UNORM_SRGB);
@@ -183,6 +187,14 @@ TEST(DynamicTextureArray, TextureSRVsFollowBackingTexture)
     EXPECT_EQ(pResizedSRGBView->GetDesc().Format, TEX_FORMAT_RGBA8_UNORM_SRGB);
     EXPECT_EQ(pResizedLinearView->GetTexture(), pResizedTexture);
     EXPECT_EQ(pResizedSRGBView->GetTexture(), pResizedTexture);
+
+    // Repeating the same pending resize must preserve the replacement texture
+    // and its additional SRV while committing the copy.
+    EXPECT_EQ(TextureArray.Resize(pDevice, pContext, 2), pResizedTexture);
+    EXPECT_FALSE(TextureArray.PendingUpdate());
+    EXPECT_EQ(TextureArray.GetArraySize(), 2u);
+    EXPECT_EQ(TextureArray.GetTextureSRV(TEX_FORMAT_RGBA8_UNORM), pResizedLinearView);
+    EXPECT_EQ(TextureArray.GetTextureSRV(TEX_FORMAT_RGBA8_UNORM_SRGB), pResizedSRGBView);
 }
 
 TEST(DynamicTextureArray, TypedSRGBTextureReturnsSRGBView)

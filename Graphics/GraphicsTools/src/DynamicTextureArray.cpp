@@ -562,18 +562,19 @@ ITexture* DynamicTextureArray::Resize(IRenderDevice*  pDevice,
                                       Uint32          NewArraySize,
                                       bool            DiscardContent)
 {
-    if (GetArraySize() != NewArraySize)
+    if (m_PendingSize != NewArraySize)
     {
         m_PendingSize = NewArraySize;
 
         if (GetUsage() != USAGE_SPARSE)
         {
-            // Additional views must not keep the old texture alive after its
-            // ownership is transferred to m_pStaleTexture.
-            ReleaseTextureViews();
-
             if (!m_pStaleTexture)
+            {
+                // Additional views must not keep the old texture alive after its
+                // ownership is transferred to m_pStaleTexture.
+                ReleaseTextureViews();
                 m_pStaleTexture = std::move(m_pTexture);
+            }
             else
             {
                 DEV_CHECK_ERR(!m_pTexture || NewArraySize == 0,
@@ -586,6 +587,7 @@ ITexture* DynamicTextureArray::Resize(IRenderDevice*  pDevice,
             if (m_PendingSize == 0)
             {
                 m_pStaleTexture.Release();
+                ReleaseTextureViews();
                 m_pTexture.Release();
                 StoreArraySize(0);
             }
