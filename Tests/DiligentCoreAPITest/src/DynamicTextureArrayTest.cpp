@@ -289,9 +289,6 @@ TEST(DynamicTextureArray, ResizeToZeroBeforeInitialization)
     EXPECT_EQ(TextureArray.GetTexture(), nullptr);
 }
 
-
-
-
 class DynamicTextureArrayResizeTest : public testing::TestWithParam<std::tuple<USAGE, TEXTURE_FORMAT>>
 {
 };
@@ -438,6 +435,17 @@ TEST_P(DynamicTextureArrayResizeTest, Run)
     EXPECT_EQ(pTexture, pDynTexArray->GetTexture());
     UpdateSlice(pContext, pTexture, 0);
     VerifySlices(pContext, pTexture, 0, 1);
+
+    if (Usage == USAGE_SPARSE)
+    {
+        ASSERT_EQ(pDynTexArray->GetArraySize(), DynTexArrCI.NumSlicesInMemoryPage);
+
+        // One requested slice still requires the same two-slice resident page,
+        // so the resize completes without issuing an empty sparse bind.
+        EXPECT_EQ(pDynTexArray->Resize(nullptr, pContext, 1), pTexture);
+        EXPECT_FALSE(pDynTexArray->PendingUpdate());
+        EXPECT_EQ(pDynTexArray->GetArraySize(), DynTexArrCI.NumSlicesInMemoryPage);
+    }
 
     pDynTexArray->Resize(pDevice, pContext, 2);
     pTexture = pDynTexArray->Update(nullptr, nullptr);

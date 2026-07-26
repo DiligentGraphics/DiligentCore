@@ -117,6 +117,10 @@ public:
     ///
     /// Typically `pContext` is null when the method is called from a worker thread.
     ///
+    /// For a sparse texture, `NewArraySize` is rounded up to a multiple of
+    /// DynamicTextureArrayCreateInfo::NumSlicesInMemoryPage. GetArraySize()
+    /// reports this committed page-aligned resident capacity.
+    ///
     /// While a content-preserving resize of a default texture is pending, the
     /// method may only be called with the same `NewArraySize`, for example to
     /// provide a device or context that was previously unavailable. A different
@@ -196,6 +200,9 @@ public:
     }
 
     /// Returns the current number of slices in the texture array.
+    ///
+    /// For a sparse texture, this is the committed page-aligned resident
+    /// capacity and may be greater than the size passed to Resize().
     ///
     /// \remarks The method is thread-safe and may be called from worker threads.
     ///          If it races with Update() or Resize(), the returned value may
