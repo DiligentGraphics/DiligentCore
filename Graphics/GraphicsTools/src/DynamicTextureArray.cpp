@@ -97,6 +97,9 @@ DynamicTextureArray::DynamicTextureArray(IRenderDevice* pDevice, const DynamicTe
     if (m_Desc.Usage != USAGE_DEFAULT && m_Desc.Usage != USAGE_SPARSE)
         LOG_ERROR_AND_THROW("DynamicTextureArray only supports USAGE_DEFAULT and USAGE_SPARSE");
 
+    if (m_Desc.Usage == USAGE_SPARSE && !IsPowerOfTwo(m_Desc.ImmediateContextMask))
+        LOG_ERROR_AND_THROW("Sparse DynamicTextureArray requires exactly one immediate context");
+
     if (m_Desc.MipLevels == 0)
         m_Desc.MipLevels = ComputeMipLevelsCount(m_Desc.GetWidth(), m_Desc.GetHeight(), m_Desc.GetDepth());
 
@@ -187,9 +190,10 @@ void DynamicTextureArray::CreateSparseTexture(IRenderDevice* pDevice)
         {
             // Metal sparse texture requires memory object at initialization
             DeviceMemoryCreateInfo MemCI;
-            MemCI.Desc.Name     = "Sparse dynamic texture memory pool";
-            MemCI.Desc.Type     = DEVICE_MEMORY_TYPE_SPARSE;
-            MemCI.Desc.PageSize = 65536; // Page size is not relevant in Metal
+            MemCI.Desc.Name                 = "Sparse dynamic texture memory pool";
+            MemCI.Desc.Type                 = DEVICE_MEMORY_TYPE_SPARSE;
+            MemCI.Desc.PageSize             = 65536; // Page size is not relevant in Metal
+            MemCI.Desc.ImmediateContextMask = m_Desc.ImmediateContextMask;
             // TODO: properly set the heap size.
             MemCI.InitialSize = Uint64{512} << Uint64{20};
 
@@ -243,9 +247,10 @@ void DynamicTextureArray::CreateSparseTexture(IRenderDevice* pDevice)
     if (!m_pMemory)
     {
         DeviceMemoryCreateInfo MemCI;
-        MemCI.Desc.Name     = "Sparse dynamic texture memory pool";
-        MemCI.Desc.Type     = DEVICE_MEMORY_TYPE_SPARSE;
-        MemCI.Desc.PageSize = m_MemoryPageSize;
+        MemCI.Desc.Name                 = "Sparse dynamic texture memory pool";
+        MemCI.Desc.Type                 = DEVICE_MEMORY_TYPE_SPARSE;
+        MemCI.Desc.PageSize             = m_MemoryPageSize;
+        MemCI.Desc.ImmediateContextMask = m_Desc.ImmediateContextMask;
 
         MemCI.InitialSize = m_MemoryPageSize;
 
@@ -413,6 +418,27 @@ bool DynamicTextureArray::PrepareSparseResize()
             LOG_ERROR_MESSAGE("Failed to resize sparse dynamic texture memory pool to ", RequiredMemSize, " bytes. Actual capacity is ", MemoryCapacity, " bytes");
             return false;
         }
+    }
+
+    return true;
+}
+
+bool DynamicTextureArray::ValidateSparseContext(IDeviceContext* pContext) const
+{
+    VERIFY_EXPR(pContext != nullptr);
+
+    const DeviceContextDesc& CtxDesc    = pContext->GetDesc();
+    const bool               IsValidId  = CtxDesc.ContextId < sizeof(Uint64) * 8;
+    const Uint64             ContextBit = IsValidId ? Uint64{1} << CtxDesc.ContextId : 0;
+    const bool               SupportsSparse =
+        (CtxDesc.QueueType & COMMAND_QUEUE_TYPE_SPARSE_BINDING) == COMMAND_QUEUE_TYPE_SPARSE_BINDING;
+
+    if (CtxDesc.IsDeferred ||
+        (m_Desc.ImmediateContextMask & ContextBit) == 0 ||
+        !SupportsSparse)
+    {
+        LOG_ERROR_MESSAGE("Invalid context for sparse DynamicTextureArray resize");
+        return false;
     }
 
     return true;
@@ -615,6 +641,9 @@ void DynamicTextureArray::CommitResize(IRenderDevice*  pDevice,
         bool ResizeCommitted = false;
         if (GetUsage() == USAGE_SPARSE)
         {
+            if (pContext != nullptr && !ValidateSparseContext(pContext))
+                return;
+
             if ((pDevice != nullptr || pContext != nullptr) && !PrepareSparseResize())
                 return;
 

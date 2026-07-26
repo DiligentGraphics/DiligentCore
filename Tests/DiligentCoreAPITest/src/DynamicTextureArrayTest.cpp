@@ -157,6 +157,33 @@ TEST(DynamicTextureArray, RejectsUnsupportedUsage)
     }
 }
 
+TEST(DynamicTextureArray, SparseUsageRequiresOneImmediateContext)
+{
+    DynamicTextureArrayCreateInfo CI;
+    CI.Desc.Format    = TEX_FORMAT_RGBA8_UNORM;
+    CI.Desc.Name      = "Dynamic Texture Array Invalid Context Mask Test";
+    CI.Desc.Type      = RESOURCE_DIM_TEX_2D_ARRAY;
+    CI.Desc.BindFlags = BIND_SHADER_RESOURCE;
+    CI.Desc.Width     = 64;
+    CI.Desc.Height    = 64;
+    CI.Desc.ArraySize = 1;
+    CI.Desc.MipLevels = 1;
+    CI.Desc.Usage     = USAGE_SPARSE;
+
+    TestingEnvironment::ErrorScope ExpectedErrors{
+        "Sparse DynamicTextureArray requires exactly one immediate context",
+        "Sparse DynamicTextureArray requires exactly one immediate context"};
+
+    for (const Uint64 ImmediateContextMask : {Uint64{0}, Uint64{3}})
+    {
+        CI.Desc.ImmediateContextMask = ImmediateContextMask;
+        auto CreateTextureArray      = [&]() {
+            DynamicTextureArray TextureArray{nullptr, CI};
+        };
+        EXPECT_THROW(CreateTextureArray(), std::runtime_error);
+    }
+}
+
 TEST(DynamicTextureArray, TextureSRVsFollowBackingTexture)
 {
     auto* const pEnv     = GPUTestingEnvironment::GetInstance();

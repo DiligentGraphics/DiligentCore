@@ -70,6 +70,10 @@ struct DynamicTextureArrayCreateInfo
 ///          All other methods are not thread-safe and must be externally
 ///          synchronized: they must not race with each other or with Update()
 ///          or Resize().
+///
+///          Sparse arrays require exactly one immediate context in
+///          TextureDesc::ImmediateContextMask. The context used by Resize()
+///          or Update() must be that context and support sparse binding.
 class DynamicTextureArray
 {
 public:
@@ -238,6 +242,7 @@ private:
                       bool            AllowNull);
 
     bool PrepareSparseResize();
+    bool ValidateSparseContext(IDeviceContext* pContext) const;
     bool ResizeSparseTexture(IDeviceContext* pContext);
     void CopyStaleTextureContents(IDeviceContext* pContext);
 
