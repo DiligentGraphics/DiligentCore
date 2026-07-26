@@ -299,6 +299,87 @@ TEST(DynamicTextureArray, PendingResizeRejectsRetargetingAndCancellation)
     EXPECT_EQ(TextureArray.GetArraySize(), 2u);
 }
 
+TEST(DynamicTextureArray, UnallocatedPendingResizeKeepsCommittedTexture)
+{
+    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
+    auto* const pDevice  = pEnv->GetDevice();
+    auto* const pContext = pEnv->GetDeviceContext();
+
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
+    DynamicTextureArrayCreateInfo CI;
+    CI.Desc.Format    = TEX_FORMAT_RGBA8_UNORM;
+    CI.Desc.Name      = "Dynamic Texture Array Deferred Resize Test";
+    CI.Desc.Type      = RESOURCE_DIM_TEX_2D_ARRAY;
+    CI.Desc.BindFlags = BIND_SHADER_RESOURCE;
+    CI.Desc.Width     = 64;
+    CI.Desc.Height    = 64;
+    CI.Desc.ArraySize = 1;
+    CI.Desc.MipLevels = 1;
+
+    DynamicTextureArray TextureArray{pDevice, CI};
+
+    ITexture* const     pInitialTexture = TextureArray.GetTexture();
+    ITextureView* const pInitialSRV     = TextureArray.GetTextureSRV(TEX_FORMAT_RGBA8_UNORM);
+    const Uint32        InitialVersion  = TextureArray.GetVersion();
+    ASSERT_NE(pInitialTexture, nullptr);
+    ASSERT_NE(pInitialSRV, nullptr);
+
+    // Until a device is provided, the committed texture and its views remain
+    // usable and the pending request can be changed or cancelled.
+    EXPECT_EQ(TextureArray.Resize(nullptr, nullptr, 2), pInitialTexture);
+    EXPECT_TRUE(TextureArray.PendingUpdate());
+    EXPECT_EQ(TextureArray.GetArraySize(), 1u);
+    EXPECT_EQ(TextureArray.GetVersion(), InitialVersion);
+    EXPECT_EQ(TextureArray.GetTextureSRV(TEX_FORMAT_RGBA8_UNORM), pInitialSRV);
+
+    EXPECT_EQ(TextureArray.Resize(nullptr, nullptr, 3), pInitialTexture);
+    EXPECT_TRUE(TextureArray.PendingUpdate());
+    EXPECT_EQ(TextureArray.GetArraySize(), 1u);
+
+    EXPECT_EQ(TextureArray.Resize(nullptr, nullptr, 1), pInitialTexture);
+    EXPECT_FALSE(TextureArray.PendingUpdate());
+    EXPECT_EQ(TextureArray.GetArraySize(), 1u);
+    EXPECT_EQ(TextureArray.GetVersion(), InitialVersion);
+
+    TextureArray.Resize(nullptr, nullptr, 2);
+    ITexture* const pResizedTexture = TextureArray.Resize(pDevice, pContext, 2);
+    ASSERT_NE(pResizedTexture, nullptr);
+    EXPECT_NE(pResizedTexture, pInitialTexture);
+    EXPECT_FALSE(TextureArray.PendingUpdate());
+    EXPECT_EQ(TextureArray.GetArraySize(), 2u);
+    EXPECT_EQ(TextureArray.GetVersion(), InitialVersion + 1);
+}
+
+TEST(DynamicTextureArray, RepeatedPendingResizeCanDiscardContent)
+{
+    auto* const pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
+
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
+    DynamicTextureArrayCreateInfo CI;
+    CI.Desc.Format    = TEX_FORMAT_RGBA8_UNORM;
+    CI.Desc.Name      = "Dynamic Texture Array Pending Discard Test";
+    CI.Desc.Type      = RESOURCE_DIM_TEX_2D_ARRAY;
+    CI.Desc.BindFlags = BIND_SHADER_RESOURCE;
+    CI.Desc.Width     = 64;
+    CI.Desc.Height    = 64;
+    CI.Desc.ArraySize = 1;
+    CI.Desc.MipLevels = 1;
+
+    DynamicTextureArray TextureArray{pDevice, CI};
+
+    ITexture* const pPendingTexture = TextureArray.Resize(pDevice, nullptr, 2);
+    ASSERT_NE(pPendingTexture, nullptr);
+    EXPECT_TRUE(TextureArray.PendingUpdate());
+
+    // Repeating the request with DiscardContent releases the copy source and
+    // commits the already allocated replacement without requiring a context.
+    EXPECT_EQ(TextureArray.Resize(nullptr, nullptr, 2, true), pPendingTexture);
+    EXPECT_FALSE(TextureArray.PendingUpdate());
+    EXPECT_EQ(TextureArray.GetArraySize(), 2u);
+}
+
 TEST(DynamicTextureArray, TypedSRGBTextureReturnsSRGBView)
 {
     auto* const pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();

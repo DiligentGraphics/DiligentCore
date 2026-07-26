@@ -106,7 +106,8 @@ public:
     /// \param[in] NewArraySize   - The new number of slices in the texture array.
     /// \param[in] DiscardContent - Whether to discard previous texture content (for non-sparse textures).
     ///
-    /// \return     Pointer to the new texture object after resize.
+    /// \return     Pointer to the current usable texture object. If replacement
+    ///             creation is deferred or fails, this is the committed texture.
     ///
     /// The method operation depends on which of `pDevice` and `pContext` parameters
     /// are not null:
@@ -126,10 +127,13 @@ public:
     /// DynamicTextureArrayCreateInfo::NumSlicesInMemoryPage. GetArraySize()
     /// reports this committed page-aligned resident capacity.
     ///
-    /// While a content-preserving resize of a default texture is pending, the
-    /// method may only be called with the same `NewArraySize`, for example to
-    /// provide a device or context that was previously unavailable. A different
-    /// size, including cancellation, is rejected until the pending resize commits.
+    /// A content-preserving default resize keeps the committed texture and its
+    /// views usable until replacement texture creation succeeds.
+    ///
+    /// After a replacement default texture has been created and its content copy
+    /// is pending, the method may only be called with the same `NewArraySize`, for
+    /// example to provide a context that was previously unavailable. Before the
+    /// replacement is created, the pending request may be retargeted or cancelled.
     ///
     /// If `NewArraySize` is zero, internal buffer will be released.
     ITexture* Resize(IRenderDevice*  pDevice,
@@ -247,6 +251,7 @@ private:
     void CopyStaleTextureContents(IDeviceContext* pContext);
 
     void CreateSparseTexture(IRenderDevice* pDevice);
+    bool CreateDefaultTexture(IRenderDevice* pDevice);
     bool CreateResources(IRenderDevice* pDevice);
     void FallbackToDefaultTexture() noexcept;
 

@@ -296,6 +296,9 @@ void DynamicTextureArray::CreateSparseTexture(IRenderDevice* pDevice)
     }
 
     CreationGuard.Disarm();
+
+    m_Version.fetch_add(1);
+    UpdateTextureViews(pDevice);
 }
 
 bool DynamicTextureArray::CreateResources(IRenderDevice* pDevice)
@@ -307,32 +310,53 @@ bool DynamicTextureArray::CreateResources(IRenderDevice* pDevice)
     if (GetUsage() == USAGE_SPARSE)
     {
         CreateSparseTexture(pDevice);
+
+        if (GetUsage() == USAGE_SPARSE)
+            return m_pTexture != nullptr;
     }
 
-    // NB: usage may be changed by CreateSparseTexture().
-    if (GetUsage() == USAGE_DEFAULT && m_PendingSize > 0)
+    // Sparse creation may fall back to a default texture.
+    VERIFY_EXPR(GetUsage() == USAGE_DEFAULT);
+    return m_PendingSize == 0 || CreateDefaultTexture(pDevice);
+}
+
+bool DynamicTextureArray::CreateDefaultTexture(IRenderDevice* pDevice)
+{
+    VERIFY_EXPR(pDevice != nullptr);
+    VERIFY_EXPR(GetUsage() == USAGE_DEFAULT);
+    VERIFY_EXPR(m_PendingSize > 0);
+    VERIFY_EXPR(!m_pStaleTexture);
+
+    TextureDesc Desc = GetDesc();
+    Desc.ArraySize   = m_PendingSize;
+
+    // Keep the committed texture and its views usable unless replacement
+    // allocation succeeds.
+    RefCntAutoPtr<ITexture> pNewTexture;
+    pDevice->CreateTexture(Desc, nullptr, &pNewTexture);
+    if (!pNewTexture)
+        return false;
+
+    ReleaseTextureViews();
+
+    const Uint32 CurrArraySize = GetArraySize();
+    if (CurrArraySize != 0)
     {
-        TextureDesc Desc = GetDesc();
-        Desc.ArraySize   = m_PendingSize;
-        pDevice->CreateTexture(Desc, nullptr, &m_pTexture);
-
-        if (m_pTexture && GetArraySize() == 0)
-        {
-            // The array was previously empty - nothing to copy
-            StoreArraySize(m_PendingSize);
-        }
+        VERIFY_EXPR(m_pTexture != nullptr);
+        m_pStaleTexture = std::move(m_pTexture);
     }
 
-    if (m_pTexture)
+    m_pTexture = std::move(pNewTexture);
+    m_Version.fetch_add(1);
+    UpdateTextureViews(pDevice);
+
+    if (CurrArraySize == 0)
     {
-        m_Version.fetch_add(1);
-        UpdateTextureViews(pDevice);
+        // There is no previous texture to copy.
+        StoreArraySize(m_PendingSize);
     }
 
-    // Sparse creation may fall back to USAGE_DEFAULT while the requested
-    // array size is zero. In this case, having no texture yet is valid.
-    return m_pTexture != nullptr ||
-        (GetUsage() == USAGE_DEFAULT && m_PendingSize == 0);
+    return true;
 }
 
 void DynamicTextureArray::ReleaseTextureViews() noexcept
@@ -617,20 +641,37 @@ void DynamicTextureArray::CommitResize(IRenderDevice*  pDevice,
 {
     if (!m_pTexture && m_PendingSize > 0)
     {
-        if (pDevice != nullptr)
+        if (pDevice == nullptr)
         {
-            if (!CreateResources(pDevice))
-            {
-                LOG_ERROR_MESSAGE("Failed to create texture for a dynamic texture array");
-                return;
-            }
-        }
-        else
             DEV_CHECK_ERR(AllowNull, "Dynamic texture array must be initialized, but pDevice is null");
+            return;
+        }
+
+        if (!CreateResources(pDevice))
+        {
+            LOG_ERROR_MESSAGE("Failed to create texture for a dynamic texture array");
+            return;
+        }
+    }
+    else if (GetUsage() == USAGE_DEFAULT &&
+             m_PendingSize > 0 &&
+             m_pTexture->GetDesc().ArraySize != m_PendingSize)
+    {
+        if (pDevice == nullptr)
+        {
+            DEV_CHECK_ERR(AllowNull, "Dynamic texture array replacement must be created, but pDevice is null");
+            return;
+        }
+
+        if (!CreateDefaultTexture(pDevice))
+        {
+            LOG_ERROR_MESSAGE("Failed to create texture for a dynamic texture array");
+            return;
+        }
     }
 
-    const Uint32 CurrArraySize = GetArraySize();
-    if (m_pTexture && CurrArraySize != m_PendingSize)
+    const Uint32 UpdatedArraySize = GetArraySize();
+    if (m_pTexture && UpdatedArraySize != m_PendingSize)
     {
         if (GetUsage() == USAGE_DEFAULT && m_pTexture->GetDesc().ArraySize != m_PendingSize)
         {
@@ -647,7 +688,7 @@ void DynamicTextureArray::CommitResize(IRenderDevice*  pDevice,
             if ((pDevice != nullptr || pContext != nullptr) && !PrepareSparseResize())
                 return;
 
-            if (m_PendingSize == CurrArraySize)
+            if (m_PendingSize == UpdatedArraySize)
             {
                 // The requested logical size fits in the currently resident
                 // page range, so no sparse bindings need to change.
@@ -681,7 +722,7 @@ void DynamicTextureArray::CommitResize(IRenderDevice*  pDevice,
             ResizeCommitted = true;
         }
 
-        if (ResizeCommitted && m_PendingSize != CurrArraySize)
+        if (ResizeCommitted && m_PendingSize != UpdatedArraySize)
         {
             StoreArraySize(m_PendingSize);
 
@@ -706,29 +747,33 @@ ITexture* DynamicTextureArray::Resize(IRenderDevice*  pDevice,
         return m_pTexture;
     }
 
-    if (m_PendingSize != NewArraySize)
+    if (m_PendingSize != NewArraySize || DiscardContent)
     {
         m_PendingSize = NewArraySize;
 
-        if (GetUsage() != USAGE_SPARSE)
+        if (GetUsage() == USAGE_DEFAULT)
         {
-            VERIFY_EXPR(!m_pStaleTexture);
-
-            // Additional views must not keep the old texture alive after its
-            // ownership is transferred to m_pStaleTexture.
-            ReleaseTextureViews();
-            m_pStaleTexture = std::move(m_pTexture);
-
             if (m_PendingSize == 0)
             {
-                m_pStaleTexture.Release();
                 ReleaseTextureViews();
+                m_pStaleTexture.Release();
                 m_pTexture.Release();
                 StoreArraySize(0);
             }
-
-            if (DiscardContent)
+            else if (DiscardContent)
+            {
+                // If the replacement already exists, dropping the copy source lets
+                // CommitResize() publish it without a context. Otherwise, explicitly
+                // discard the committed texture so a retry can allocate under lower
+                // memory pressure.
                 m_pStaleTexture.Release();
+                if (m_pTexture == nullptr || m_pTexture->GetDesc().ArraySize != m_PendingSize)
+                {
+                    ReleaseTextureViews();
+                    m_pTexture.Release();
+                    StoreArraySize(0);
+                }
+            }
         }
     }
 
