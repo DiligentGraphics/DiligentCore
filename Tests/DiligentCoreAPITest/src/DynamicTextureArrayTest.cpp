@@ -588,6 +588,51 @@ TEST(DynamicTextureArray, ResizeDiscardContentDoesNotRequireCopy)
     EXPECT_EQ(pTexture->GetDesc().ArraySize, 3u);
 }
 
+TEST(DynamicTextureArray, SparseResizeSupportsNonPowerOfTwoPageSize)
+{
+    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
+    auto* const pDevice  = pEnv->GetDevice();
+    auto* const pContext = pEnv->GetDeviceContext();
+
+    const RenderDeviceInfo& DeviceInfo = pDevice->GetDeviceInfo();
+    if (!DeviceInfo.Features.SparseResources)
+        GTEST_SKIP() << "Sparse resources are not enabled on this device";
+
+    const GraphicsAdapterInfo& AdapterInfo = pDevice->GetAdapterInfo();
+    if ((AdapterInfo.SparseResources.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL) == 0)
+        GTEST_SKIP() << "This device does not support sparse texture 2D arrays with mip tails";
+
+    if (DeviceInfo.IsMetalDevice())
+        GTEST_SKIP() << "This test is currently disabled on Metal";
+
+    GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
+    DynamicTextureArrayCreateInfo CI;
+    CI.NumSlicesInMemoryPage = 3;
+    CI.Desc.Name             = "Dynamic texture array non-power-of-two page test";
+    CI.Desc.Type             = RESOURCE_DIM_TEX_2D_ARRAY;
+    CI.Desc.BindFlags        = BIND_SHADER_RESOURCE;
+    CI.Desc.Width            = 1024;
+    CI.Desc.Height           = 1024;
+    CI.Desc.MipLevels        = 11;
+    CI.Desc.Usage            = USAGE_SPARSE;
+    CI.Desc.Format           = TEX_FORMAT_RGBA8_UNORM_SRGB;
+    CI.Desc.ArraySize        = 0;
+
+    DynamicTextureArray TextureArray{pDevice, CI};
+
+    constexpr Uint32 RequestedSizes[] = {1, 2, 3, 4};
+    constexpr Uint32 ExpectedSizes[]  = {3, 3, 3, 6};
+    static_assert(_countof(RequestedSizes) == _countof(ExpectedSizes));
+
+    for (size_t i = 0; i < _countof(RequestedSizes); ++i)
+    {
+        TextureArray.Resize(pDevice, pContext, RequestedSizes[i]);
+        EXPECT_FALSE(TextureArray.PendingUpdate());
+        EXPECT_EQ(TextureArray.GetArraySize(), ExpectedSizes[i]);
+    }
+}
+
 
 INSTANTIATE_TEST_SUITE_P(DynamicTextureArray,
                          DynamicTextureArrayResizeTest,

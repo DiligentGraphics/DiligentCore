@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -1006,15 +1006,25 @@ void TextureVkImpl::InitSparseProperties() noexcept(false)
     }
     else
     {
-        if (Props.Flags & SPARSE_TEXTURE_FLAG_SINGLE_MIPTAIL)
+        if (Props.MipTailSize == 0)
+        {
+            // Some implementations do not use a mip tail for this image.
+            Props.MipTailOffset = 0;
             Props.MipTailStride = 0;
+        }
+        else if (Props.Flags & SPARSE_TEXTURE_FLAG_SINGLE_MIPTAIL)
+        {
+            Props.MipTailStride = 0;
+            VERIFY_EXPR(Props.MipTailOffset + Props.MipTailSize <= MemReq.size);
+        }
         else
+        {
             VERIFY_EXPR(Props.MipTailStride > 0);
-
-        VERIFY_EXPR(Props.MipTailStride * m_Desc.GetArraySize() == MemReq.size);
-        VERIFY_EXPR(Props.MipTailStride % MemReq.alignment == 0);
-        VERIFY_EXPR(Props.MipTailOffset < Props.MipTailStride);
-        VERIFY_EXPR(Props.MipTailOffset + Props.MipTailSize <= Props.MipTailStride);
+            VERIFY_EXPR(Props.MipTailStride * m_Desc.GetArraySize() == MemReq.size);
+            VERIFY_EXPR(Props.MipTailStride % MemReq.alignment == 0);
+            VERIFY_EXPR(Props.MipTailOffset < Props.MipTailStride);
+            VERIFY_EXPR(Props.MipTailOffset + Props.MipTailSize <= Props.MipTailStride);
+        }
     }
 
     Props.AddressSpaceSize = MemReq.size;

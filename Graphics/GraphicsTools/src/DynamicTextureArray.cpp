@@ -395,7 +395,7 @@ bool DynamicTextureArray::PrepareSparseResize()
 {
     VERIFY_EXPR(m_pTexture && m_pMemory);
 
-    const Uint64 ResidentSize = AlignUp(Uint64{m_PendingSize}, Uint64{m_NumSlicesInPage});
+    const Uint64 ResidentSize = AlignUpNonPw2(Uint64{m_PendingSize}, Uint64{m_NumSlicesInPage});
     if (ResidentSize > m_pTexture->GetDesc().ArraySize)
     {
         LOG_ERROR_MESSAGE("Requested sparse dynamic texture array size exceeds the texture capacity after page alignment");
