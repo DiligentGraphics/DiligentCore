@@ -177,14 +177,27 @@ void DynamicTextureArray::CreateSparseTexture(IRenderDevice* pDevice)
     {
         // Some implementations may return UINT64_MAX, so limit the maximum memory size per resource.
         // Some implementations will fail to create texture even if size is less than ResourceSpaceSize.
-        const Uint64             MaxMemorySize = std::min(Uint64{1} << 40, AdapterInfo.SparseResources.ResourceSpaceSize) >> 1;
-        const MipLevelProperties MipProps      = GetMipLevelProperties(m_Desc, 0);
+        const Uint64 MaxMemorySize = std::min(Uint64{1} << 40, AdapterInfo.SparseResources.ResourceSpaceSize) >> 1;
+
+        // Estimate the address space occupied by one array slice from the
+        // requested mip chain.
+        Uint64 EstimatedSliceSize = 0;
+        for (Uint32 Mip = 0; Mip < m_Desc.MipLevels; ++Mip)
+            EstimatedSliceSize += GetMipLevelProperties(m_Desc, Mip).MipSize;
+
+        if (EstimatedSliceSize > MaxMemorySize)
+        {
+            LOG_ERROR_MESSAGE("Sparse texture address space is insufficient for one dynamic texture array slice. USAGE_DEFAULT texture will be used instead.");
+            return;
+        }
+
+        const Uint64 MaxSlicesInAddressSpace = MaxMemorySize / std::max(EstimatedSliceSize, Uint64{1});
+
+        const Uint64 MaxArraySize = std::min(Uint64{AdapterInfo.Texture.MaxTexture2DArraySlices},
+                                             MaxSlicesInAddressSpace);
 
         TextureDesc TmpDesc = m_Desc;
-        // Reserve the maximum available number of slices
-        TmpDesc.ArraySize = AdapterInfo.Texture.MaxTexture2DArraySlices;
-        // Account for the maximum virtual space size
-        TmpDesc.ArraySize = std::min(TmpDesc.ArraySize, StaticCast<Uint32>(MaxMemorySize / (MipProps.MipSize * 4 / 3)));
+        TmpDesc.ArraySize   = StaticCast<Uint32>(MaxArraySize);
 
         if (DeviceInfo.IsMetalDevice())
         {
