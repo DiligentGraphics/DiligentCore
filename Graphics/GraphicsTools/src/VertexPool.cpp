@@ -42,6 +42,13 @@
 namespace Diligent
 {
 
+namespace
+{
+
+std::atomic<Int32> s_NextVertexPoolUniqueID{0};
+
+} // namespace
+
 class VertexPoolImpl;
 
 class VertexPoolAllocationImpl final : public ObjectBase<IVertexPoolAllocation>
@@ -130,6 +137,7 @@ public:
                    const VertexPoolCreateInfo& CreateInfo) :
         // clang-format off
         TBase{pRefCounters},
+        m_UniqueID{s_NextVertexPoolUniqueID.fetch_add(1, std::memory_order_relaxed) + 1},
         m_Name    {CreateInfo.Desc.Name != nullptr ? CreateInfo.Desc.Name : "Vertex pool"},
         m_Elements{CreateInfo.Desc.pElements, CreateInfo.Desc.pElements + CreateInfo.Desc.NumElements},
         m_Desc    {CreateInfo.Desc},
@@ -207,6 +215,11 @@ public:
     ~VertexPoolImpl()
     {
         VERIFY_EXPR(m_AllocationCount.load() == 0);
+    }
+
+    virtual Int32 GetUniqueID() const override final
+    {
+        return m_UniqueID;
     }
 
     virtual IBuffer* Update(Uint32 Index, IRenderDevice* pDevice, IDeviceContext* pContext) override final
@@ -384,6 +397,7 @@ private:
     }
 
 private:
+    const Int32                              m_UniqueID;
     const std::string                        m_Name;
     const std::vector<VertexPoolElementDesc> m_Elements;
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -62,7 +62,14 @@ TEST(VertexPoolTest, Create)
 
     RefCntAutoPtr<IVertexPool> pVtxPool;
     CreateVertexPool(pDevice, CI, &pVtxPool);
-    EXPECT_NE(pVtxPool, nullptr);
+    ASSERT_NE(pVtxPool, nullptr);
+    EXPECT_NE(pVtxPool->GetUniqueID(), 0);
+    EXPECT_EQ(pVtxPool->GetUniqueID(), pVtxPool->GetUniqueID());
+
+    RefCntAutoPtr<IVertexPool> pOtherVtxPool;
+    CreateVertexPool(pDevice, CI, &pOtherVtxPool);
+    ASSERT_NE(pOtherVtxPool, nullptr);
+    EXPECT_NE(pOtherVtxPool->GetUniqueID(), pVtxPool->GetUniqueID());
 
     auto* pBuffer0 = pVtxPool->Update(0, pDevice, pContext);
     EXPECT_NE(pBuffer0, nullptr);

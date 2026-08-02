@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -210,6 +210,9 @@ struct VertexPoolDesc
 /// The vertex pool is a collection of dynamic buffers that can be used to store vertex data.
 struct IVertexPool : public IObject
 {
+    /// Returns the unique identifier of this vertex pool.
+    virtual Int32 GetUniqueID() const = 0;
+
     /// Updates the internal buffer object at the given index.
 
     /// \param[in]  Index    - The vertex buffer index. Must be in range [0, Desc.NumElements-1].
