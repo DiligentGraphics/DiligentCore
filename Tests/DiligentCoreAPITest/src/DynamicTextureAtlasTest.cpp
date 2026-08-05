@@ -62,6 +62,93 @@ TEST(DynamicTextureAtlas, ComputeTextureAtlasSuballocationAlignment)
     EXPECT_EQ(ComputeTextureAtlasSuballocationAlignment(2048, 1024, 64), 1024u);
 }
 
+TEST(DynamicTextureAtlas, SuballocationMipLevelCount)
+{
+    auto CreateAtlas = [](TEXTURE_FORMAT Format,
+                          Uint32         Size,
+                          Uint32         MipLevels,
+                          Uint32         MinAlignment) {
+        DynamicTextureAtlasCreateInfo CI;
+        CI.MinAlignment   = MinAlignment;
+        CI.Desc.Format    = Format;
+        CI.Desc.Type      = RESOURCE_DIM_TEX_2D;
+        CI.Desc.BindFlags = BIND_SHADER_RESOURCE;
+        CI.Desc.Width     = Size;
+        CI.Desc.Height    = Size;
+        CI.Desc.MipLevels = MipLevels;
+
+        RefCntAutoPtr<IDynamicTextureAtlas> pAtlas;
+        CreateDynamicTextureAtlas(nullptr, CI, &pAtlas);
+        return pAtlas;
+    };
+
+    {
+        RefCntAutoPtr<IDynamicTextureAtlas> pAtlas = CreateAtlas(TEX_FORMAT_RGBA8_UNORM, 2048, 0, 64);
+        ASSERT_TRUE(pAtlas);
+
+        RefCntAutoPtr<ITextureAtlasSuballocation> pSizeLimited;
+        pAtlas->Allocate(16, 32, &pSizeLimited);
+        ASSERT_TRUE(pSizeLimited);
+        EXPECT_EQ(pSizeLimited->GetMipLevelCount(), 6u);
+    }
+
+    {
+        RefCntAutoPtr<IDynamicTextureAtlas> pAtlas = CreateAtlas(TEX_FORMAT_RGBA8_UNORM, 2048, 0, 64);
+        ASSERT_TRUE(pAtlas);
+
+        RefCntAutoPtr<ITextureAtlasSuballocation> pAlignmentLimited;
+        pAtlas->Allocate(256, 1024, &pAlignmentLimited);
+        ASSERT_TRUE(pAlignmentLimited);
+        EXPECT_EQ(pAlignmentLimited->GetMipLevelCount(), 9u);
+    }
+
+    {
+        RefCntAutoPtr<IDynamicTextureAtlas> pAtlas = CreateAtlas(TEX_FORMAT_RGBA8_UNORM, 512, 4, 64);
+        ASSERT_TRUE(pAtlas);
+
+        RefCntAutoPtr<ITextureAtlasSuballocation> pAtlasLimited;
+        pAtlas->Allocate(256, 256, &pAtlasLimited);
+        ASSERT_TRUE(pAtlasLimited);
+        EXPECT_EQ(pAtlasLimited->GetMipLevelCount(), 4u);
+    }
+
+    {
+        RefCntAutoPtr<IDynamicTextureAtlas> pAtlas = CreateAtlas(TEX_FORMAT_BC1_UNORM, 512, 0, 256);
+        ASSERT_TRUE(pAtlas);
+
+        RefCntAutoPtr<ITextureAtlasSuballocation> pBlockLimited;
+        pAtlas->Allocate(256, 512, &pBlockLimited);
+        ASSERT_TRUE(pBlockLimited);
+        EXPECT_EQ(pBlockLimited->GetMipLevelCount(), 7u);
+    }
+
+    {
+        RefCntAutoPtr<IDynamicTextureAtlas> pAtlas = CreateAtlas(TEX_FORMAT_RGBA8_UNORM, 512, 0, 0);
+        ASSERT_TRUE(pAtlas);
+
+        RefCntAutoPtr<ITextureAtlasSuballocation> pNaturallyAligned;
+        pAtlas->Allocate(128, 128, &pNaturallyAligned);
+        ASSERT_TRUE(pNaturallyAligned);
+        EXPECT_EQ(pNaturallyAligned->GetOrigin(), uint2(0, 0));
+        EXPECT_EQ(pNaturallyAligned->GetMipLevelCount(), 8u);
+    }
+
+    {
+        RefCntAutoPtr<IDynamicTextureAtlas> pAtlas = CreateAtlas(TEX_FORMAT_RGBA8_UNORM, 512, 0, 0);
+        ASSERT_TRUE(pAtlas);
+
+        RefCntAutoPtr<ITextureAtlasSuballocation> pOffset;
+        pAtlas->Allocate(1, 512, &pOffset);
+        ASSERT_TRUE(pOffset);
+
+        RefCntAutoPtr<ITextureAtlasSuballocation> pUnaligned;
+        pAtlas->Allocate(128, 128, &pUnaligned);
+        ASSERT_TRUE(pUnaligned);
+        EXPECT_EQ(pUnaligned->GetOrigin(), uint2(1, 0));
+        EXPECT_EQ(pUnaligned->GetMipLevelCount(), 1u);
+    }
+}
+
 TEST(DynamicTextureAtlas, Create)
 {
     auto* const pEnv    = GPUTestingEnvironment::GetInstance();

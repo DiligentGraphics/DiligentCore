@@ -68,6 +68,13 @@ struct ITextureAtlasSuballocation : public IObject
     /// Returns the suballocation alignment.
     virtual Uint32 GetAlignment() const = 0;
 
+    /// Returns the number of consecutive mip levels, starting at level zero,
+    /// that can be safely sampled without accessing texels belonging to
+    /// neighboring suballocations. The count accounts for the actual allocated
+    /// region placement and extent, the suballocation size, the parent atlas
+    /// mip count, and compressed-format block dimensions.
+    virtual Uint32 GetMipLevelCount() const = 0;
+
     /// Returns the pointer to the parent texture atlas.
     virtual IDynamicTextureAtlas* GetAtlas() = 0;
 

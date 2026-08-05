@@ -116,6 +116,8 @@ public:
         return m_Alignment;
     }
 
+    virtual Uint32 GetMipLevelCount() const override final;
+
     virtual IDynamicTextureAtlas* GetAtlas() override final;
 
     virtual void SetUserData(IObject* pUserData) override final
@@ -890,6 +892,44 @@ float4 TextureAtlasSuballocationImpl::GetUVScaleBias() const
         Origin.x / AtlasSize.x,
         Origin.y / AtlasSize.y,
     };
+}
+
+Uint32 TextureAtlasSuballocationImpl::GetMipLevelCount() const
+{
+    const TextureDesc AtlasDesc = m_pParentAtlas->GetAtlasDesc();
+
+    const uint2 Origin = GetOrigin();
+    const uint2 End{
+        (m_Subregion.x + m_Subregion.width) * m_Alignment,
+        (m_Subregion.y + m_Subregion.height) * m_Alignment,
+    };
+
+    Uint32 BoundaryMask = Origin.x | Origin.y | End.x | End.y;
+    VERIFY_EXPR(BoundaryMask != 0);
+
+    Uint32 PlacementMipLevelCount = 1;
+    while ((BoundaryMask & 1u) == 0)
+    {
+        ++PlacementMipLevelCount;
+        BoundaryMask >>= 1;
+    }
+
+    Uint32 MipLevelCount = std::min(AtlasDesc.MipLevels, ComputeMipLevelsCount(m_Size.x, m_Size.y));
+    MipLevelCount        = std::min(MipLevelCount, PlacementMipLevelCount);
+
+    const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(AtlasDesc.Format);
+    while (MipLevelCount > 0)
+    {
+        const Uint32 MipLevel  = MipLevelCount - 1;
+        const Uint32 MipWidth  = std::max(m_Size.x >> MipLevel, 1u);
+        const Uint32 MipHeight = std::max(m_Size.y >> MipLevel, 1u);
+        if (MipWidth >= FmtAttribs.BlockWidth && MipHeight >= FmtAttribs.BlockHeight)
+            break;
+
+        --MipLevelCount;
+    }
+
+    return MipLevelCount;
 }
 
 Uint32 ComputeTextureAtlasSuballocationAlignment(Uint32 Width, Uint32 Height, Uint32 MinAlignment)
