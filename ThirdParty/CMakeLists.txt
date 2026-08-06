@@ -216,5 +216,6 @@ if (DILIGENT_INSTALL_CORE)
 endif()
 
 install(FILES stb/stb_image_write_license.txt DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}")
+install(FILES stb/stb_image_license.txt DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}")
 install(FILES DirectXShaderCompiler/LICENSE.TXT DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME DXC-License.txt)
 install(FILES DirectXShaderCompiler/ThirdPartyNotices.txt DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME DXC-ThirdPartyNotices.txt)

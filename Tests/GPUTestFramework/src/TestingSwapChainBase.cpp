@@ -28,10 +28,24 @@
 #include <cstring>
 #include <cstdlib>
 #include <algorithm>
+#include <limits>
+#include <memory>
 
 #include "TestingSwapChainBase.hpp"
 #include "GraphicsAccessories.hpp"
 #include "FileSystem.hpp"
+
+#ifdef __clang__
+#    pragma clang diagnostic push
+#    pragma clang diagnostic ignored "-Wunused-function"
+#endif
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_STATIC
+#define STBI_ONLY_PNG
+#include "../../../ThirdParty/stb/stb_image.h"
+#ifdef __clang__
+#    pragma clang diagnostic pop
+#endif
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../../../ThirdParty/stb/stb_image_write.h"
@@ -42,6 +56,55 @@ namespace Diligent
 namespace Testing
 {
 
+bool LoadTestImage(const char*         FilePath,
+                   std::vector<Uint8>& Pixels,
+                   Uint32&             Width,
+                   Uint32&             Height)
+{
+    Pixels.clear();
+    Width  = 0;
+    Height = 0;
+
+    if (FilePath == nullptr || FilePath[0] == '\0')
+    {
+        LOG_ERROR_MESSAGE("Reference image file path must not be null or empty");
+        return false;
+    }
+
+    int ImageWidth      = 0;
+    int ImageHeight     = 0;
+    int ImageComponents = 0;
+
+    std::unique_ptr<stbi_uc, decltype(&stbi_image_free)> pImage{
+        stbi_load(FilePath, &ImageWidth, &ImageHeight, &ImageComponents, STBI_rgb_alpha),
+        &stbi_image_free};
+    if (!pImage)
+    {
+        LOG_ERROR_MESSAGE("Failed to load reference image '", FilePath, "': ", stbi_failure_reason());
+        return false;
+    }
+
+    if (ImageWidth <= 0 || ImageHeight <= 0)
+    {
+        LOG_ERROR_MESSAGE("Reference image '", FilePath, "' has invalid dimensions ", ImageWidth, 'x', ImageHeight);
+        return false;
+    }
+
+    const size_t ImageWidthSize  = static_cast<size_t>(ImageWidth);
+    const size_t ImageHeightSize = static_cast<size_t>(ImageHeight);
+    if (ImageWidthSize > (std::numeric_limits<size_t>::max)() / 4 / ImageHeightSize)
+    {
+        LOG_ERROR_MESSAGE("Reference image '", FilePath, "' is too large");
+        return false;
+    }
+
+    const size_t DataSize = ImageWidthSize * ImageHeightSize * 4;
+    Pixels.assign(pImage.get(), pImage.get() + DataSize);
+    Width  = static_cast<Uint32>(ImageWidth);
+    Height = static_cast<Uint32>(ImageHeight);
+    return true;
+}
+
 void CompareTestImages(const Uint8*                          pReferencePixels,
                        Uint64                                RefPixelsStride,
                        const Uint8*                          pPixels,
@@ -49,7 +112,8 @@ void CompareTestImages(const Uint8*                          pReferencePixels,
                        Uint32                                Width,
                        Uint32                                Height,
                        TEXTURE_FORMAT                        Format,
-                       std::unordered_map<std::string, int>& FailureCounters)
+                       std::unordered_map<std::string, int>& FailureCounters,
+                       const TestImageComparisonAttribs&     ComparisonAttribs)
 {
     VERIFY_EXPR(pReferencePixels != nullptr);
     VERIFY_EXPR(pPixels != nullptr);
@@ -58,6 +122,7 @@ void CompareTestImages(const Uint8*                          pReferencePixels,
     VERIFY_EXPR(PixelsStride != 0);
     VERIFY_EXPR(RefPixelsStride != 0);
     VERIFY(Format == TEX_FORMAT_RGBA8_UNORM, GetTextureFormatAttribs(Format).Name, " is not supported");
+    VERIFY_EXPR(ComparisonAttribs.MaxBadPixelRatio >= 0 && ComparisonAttribs.MaxBadPixelRatio <= 1);
 
     bool bIsIdentical = true;
 
@@ -72,9 +137,34 @@ void CompareTestImages(const Uint8*                          pReferencePixels,
     }
 
     if (bIsIdentical)
+        return;
+
+    Uint64 BadPixelCount         = 0;
+    Uint32 MaxObservedChannelErr = 0;
+    for (Uint32 Row = 0; Row < Height; ++Row)
     {
+        for (Uint32 Col = 0; Col < Width; ++Col)
+        {
+            bool BadPixel = false;
+            for (Uint32 Component = 0; Component < 4; ++Component)
+            {
+                const Uint32 RefValue = pReferencePixels[Row * RefPixelsStride + Col * 4 + Component];
+                const Uint32 Value    = pPixels[Row * PixelsStride + Col * 4 + Component];
+                const Uint32 Error    = RefValue > Value ? RefValue - Value : Value - RefValue;
+                MaxObservedChannelErr = std::max(MaxObservedChannelErr, Error);
+                BadPixel |= Error > ComparisonAttribs.MaxChannelError;
+            }
+            BadPixelCount += BadPixel ? 1 : 0;
+        }
     }
-    else
+
+    const Uint64 PixelCount = Uint64{Width} * Height;
+    if (static_cast<double>(BadPixelCount) <=
+        static_cast<double>(PixelCount) * ComparisonAttribs.MaxBadPixelRatio)
+    {
+        return;
+    }
+
     {
         auto ReportImageStride = (Width * 2) * 3;
 
@@ -122,7 +212,10 @@ void CompareTestImages(const Uint8*                          pReferencePixels,
         {
             LOG_ERROR_MESSAGE("Failed to write ", FileName);
         }
-        ADD_FAILURE() << "Image rendered by the test is not identical to the reference image";
+        ADD_FAILURE() << "Image rendered by the test differs from the reference image: "
+                      << BadPixelCount << " of " << PixelCount << " pixels exceed the per-channel error threshold "
+                      << Uint32{ComparisonAttribs.MaxChannelError} << "; maximum observed channel error is "
+                      << MaxObservedChannelErr;
         ++FailureCounter;
     }
 }

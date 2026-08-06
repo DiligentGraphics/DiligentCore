@@ -46,6 +46,17 @@ namespace Diligent
 namespace Testing
 {
 
+/// Image comparison settings.
+struct TestImageComparisonAttribs
+{
+    /// Maximum per-channel difference that is ignored.
+    Uint8 MaxChannelError = 0;
+
+    /// Maximum fraction of pixels with at least one channel exceeding
+    /// MaxChannelError. Must be in the [0, 1] range.
+    float MaxBadPixelRatio = 0;
+};
+
 void CompareTestImages(const Uint8*                          pReferencePixels,
                        Uint64                                RefPixelsStride,
                        const Uint8*                          pPixels,
@@ -53,7 +64,14 @@ void CompareTestImages(const Uint8*                          pReferencePixels,
                        Uint32                                Width,
                        Uint32                                Height,
                        TEXTURE_FORMAT                        Format,
-                       std::unordered_map<std::string, int>& FailureCounters);
+                       std::unordered_map<std::string, int>& FailureCounters,
+                       const TestImageComparisonAttribs&     ComparisonAttribs = {});
+
+/// Loads an RGBA8 reference image from a PNG file.
+bool LoadTestImage(const char*         FilePath,
+                   std::vector<Uint8>& Pixels,
+                   Uint32&             Width,
+                   Uint32&             Height);
 
 void DumpTestImage(const Uint8*   pPixels,
                    Uint64         PixelsStride,
@@ -75,6 +93,12 @@ public:
     /// Sets the reference image used by Present()/CompareWithSnapshot().
     /// Data must contain rows matching the swap-chain dimensions and color format.
     virtual void SetReferenceData(const void* pData, size_t Stride = 0) = 0;
+
+    /// Loads the reference image used by Present()/CompareWithSnapshot() from a PNG file.
+    virtual bool LoadReferenceImage(const char* FilePath) = 0;
+
+    /// Sets image comparison settings. Exact comparison is used by default.
+    virtual void SetImageComparisonAttribs(const TestImageComparisonAttribs& Attribs) = 0;
 
     virtual ITextureView* GetCurrentBackBufferUAV() = 0;
 
@@ -217,6 +241,61 @@ public:
         }
     }
 
+    virtual bool LoadReferenceImage(const char* FilePath) override final
+    {
+        std::vector<Uint8> Pixels;
+        Uint32             Width  = 0;
+        Uint32             Height = 0;
+        if (!LoadTestImage(FilePath, Pixels, Width, Height))
+            return false;
+
+        if (Width != m_SwapChainDesc.Width || Height != m_SwapChainDesc.Height)
+        {
+            LOG_ERROR_MESSAGE("Reference image dimensions ", Width, 'x', Height,
+                              " do not match the testing swap chain dimensions ",
+                              m_SwapChainDesc.Width, 'x', m_SwapChainDesc.Height);
+            return false;
+        }
+
+        if (m_SwapChainDesc.ColorBufferFormat != TEX_FORMAT_RGBA8_UNORM)
+        {
+            LOG_ERROR_MESSAGE("Loading reference images is only supported for TEX_FORMAT_RGBA8_UNORM testing swap chains");
+            return false;
+        }
+
+        const size_t RowStride = static_cast<size_t>(Width) * 4;
+        if (m_pDevice->GetDeviceInfo().IsGLDevice())
+        {
+            // PNG rows are stored top-to-bottom, while OpenGL framebuffer
+            // readback starts at the bottom row.
+            m_ReferenceDataPitch = static_cast<Uint32>(RowStride);
+            m_ReferenceData.resize(Pixels.size());
+            for (Uint32 Row = 0; Row < Height; ++Row)
+            {
+                std::memcpy(m_ReferenceData.data() + static_cast<size_t>(Row) * RowStride,
+                            Pixels.data() + static_cast<size_t>(Height - 1 - Row) * RowStride,
+                            RowStride);
+            }
+        }
+        else
+        {
+            SetReferenceData(Pixels.data(), RowStride);
+        }
+
+        return true;
+    }
+
+    virtual void SetImageComparisonAttribs(const TestImageComparisonAttribs& Attribs) override final
+    {
+        if (Attribs.MaxBadPixelRatio < 0 || Attribs.MaxBadPixelRatio > 1)
+        {
+            UNEXPECTED("MaxBadPixelRatio must be in the [0, 1] range");
+            return;
+        }
+
+        m_ImageComparisonAttribs = Attribs;
+    }
+
     virtual void DILIGENT_CALL_TYPE Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFORM NewPreTransform) override final
     {
         UNEXPECTED("Resizing testing swap chains is not supported");
@@ -318,7 +397,8 @@ public:
 
         m_pContext->MapTextureSubresource(m_pStagingTexture, 0, 0, MAP_READ, MapFlag, nullptr, MapData);
         CompareTestImages(m_ReferenceData.data(), m_ReferenceDataPitch, static_cast<const Uint8*>(MapData.pData), MapData.Stride,
-                          m_SwapChainDesc.Width, m_SwapChainDesc.Height, m_SwapChainDesc.ColorBufferFormat, m_FailureCounters);
+                          m_SwapChainDesc.Width, m_SwapChainDesc.Height, m_SwapChainDesc.ColorBufferFormat, m_FailureCounters,
+                          m_ImageComparisonAttribs);
 
         m_pContext->UnmapTextureSubresource(m_pStagingTexture, 0, 0);
     }
@@ -338,6 +418,8 @@ protected:
 
     std::vector<Uint8> m_ReferenceData;
     Uint32             m_ReferenceDataPitch = 0;
+
+    TestImageComparisonAttribs m_ImageComparisonAttribs;
 };
 
 } // namespace Testing
