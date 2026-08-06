@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -159,6 +159,7 @@ protected:
                        Uint32                                  AdapterId);
 
     const RENDER_DEVICE_TYPE m_DeviceType;
+    const SwapChainDesc      m_InitialSwapChainDesc;
 
     ADAPTER_TYPE m_AdapterType = ADAPTER_TYPE_UNKNOWN;
 

@@ -128,7 +128,8 @@ Uint32 GPUTestingEnvironment::FindAdapter(const std::vector<GraphicsAdapterInfo>
 }
 
 GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const SwapChainDesc& SCDesc) :
-    m_DeviceType{EnvCI.deviceType}
+    m_DeviceType{EnvCI.deviceType},
+    m_InitialSwapChainDesc{SCDesc}
 {
     Uint32 NumDeferredCtx = 0;
 
@@ -694,6 +695,20 @@ void GPUTestingEnvironment::Reset()
         pCtx->InvalidateState();
     }
     m_pDevice->IdleGPU();
+
+    if (m_pSwapChain != nullptr)
+    {
+        const SwapChainDesc& CurrentDesc = m_pSwapChain->GetDesc();
+        if (CurrentDesc.Width != m_InitialSwapChainDesc.Width ||
+            CurrentDesc.Height != m_InitialSwapChainDesc.Height ||
+            CurrentDesc.PreTransform != m_InitialSwapChainDesc.PreTransform)
+        {
+            m_pSwapChain->Resize(m_InitialSwapChainDesc.Width,
+                                 m_InitialSwapChainDesc.Height,
+                                 m_InitialSwapChainDesc.PreTransform);
+        }
+    }
+
     m_pDevice->ReleaseStaleResources();
     m_NumAllowedErrors = 0;
 }

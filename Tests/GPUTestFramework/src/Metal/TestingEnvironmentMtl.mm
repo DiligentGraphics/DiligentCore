@@ -64,6 +64,7 @@ TestingEnvironmentMtl::~TestingEnvironmentMtl()
 
 void TestingEnvironmentMtl::Reset()
 {
+    GPUTestingEnvironment::Reset();
 }
 
 GPUTestingEnvironment* CreateTestingEnvironmentMtl(const GPUTestingEnvironment::CreateInfo& CI,
