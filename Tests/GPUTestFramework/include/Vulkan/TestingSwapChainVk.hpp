@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -76,9 +76,15 @@ public:
     void EndRenderPass(VkCommandBuffer vkCmdBuffer);
 
 private:
+    virtual void ResizeBackendResources() override final;
+
+    void CreateBackendResources();
+    void ReleaseBackendResources();
     void CreateFramebuffer();
 
-    VkDevice m_vkDevice = VK_NULL_HANDLE;
+    // The testing environment owns the swap chain.
+    TestingEnvironmentVk* m_pEnvironment = nullptr;
+    VkDevice              m_vkDevice     = VK_NULL_HANDLE;
 
     VkDeviceMemory m_vkRenderTargetMemory = VK_NULL_HANDLE;
     VkImage        m_vkRenderTargetImage  = VK_NULL_HANDLE;

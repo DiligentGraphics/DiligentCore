@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -51,8 +51,13 @@ TestingSwapChainVk::TestingSwapChainVk(IReferenceCounters*   pRefCounters,
         SCDesc //
     }
 {
-    m_vkDevice = pEnv->GetVkDevice();
+    m_pEnvironment = pEnv;
+    m_vkDevice     = pEnv->GetVkDevice();
+    CreateBackendResources();
+}
 
+void TestingSwapChainVk::CreateBackendResources()
+{
     VkFormat ColorFormat = VK_FORMAT_UNDEFINED;
     switch (m_SwapChainDesc.ColorBufferFormat)
     {
@@ -63,10 +68,10 @@ TestingSwapChainVk::TestingSwapChainVk(IReferenceCounters*   pRefCounters,
         default:
             UNSUPPORTED("Texture format ", GetTextureFormatAttribs(m_SwapChainDesc.ColorBufferFormat).Name, " is not a supported color buffer format");
     }
-    pEnv->CreateImage2D(m_SwapChainDesc.Width, m_SwapChainDesc.Height, ColorFormat,
-                        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-                        m_vkRenderTargetLayout,
-                        m_vkRenderTargetMemory, m_vkRenderTargetImage);
+    m_pEnvironment->CreateImage2D(m_SwapChainDesc.Width, m_SwapChainDesc.Height, ColorFormat,
+                                  VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+                                  m_vkRenderTargetLayout,
+                                  m_vkRenderTargetMemory, m_vkRenderTargetImage);
 
 
     VkFormat DepthFormat = VK_FORMAT_UNDEFINED;
@@ -79,17 +84,17 @@ TestingSwapChainVk::TestingSwapChainVk(IReferenceCounters*   pRefCounters,
         default:
             UNSUPPORTED("Texture format ", GetTextureFormatAttribs(m_SwapChainDesc.DepthBufferFormat).Name, " is not a supported depth buffer format");
     }
-    pEnv->CreateImage2D(m_SwapChainDesc.Width, m_SwapChainDesc.Height, DepthFormat,
-                        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-                        m_vkDepthBufferLayout,
-                        m_vkDepthBufferMemory, m_vkDepthBufferImage);
+    m_pEnvironment->CreateImage2D(m_SwapChainDesc.Width, m_SwapChainDesc.Height, DepthFormat,
+                                  VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+                                  m_vkDepthBufferLayout,
+                                  m_vkDepthBufferMemory, m_vkDepthBufferImage);
 
     {
         VERIFY(m_SwapChainDesc.ColorBufferFormat == TEX_FORMAT_RGBA8_UNORM, "Unexpected color buffer format");
-        m_StagingBufferSize = m_SwapChainDesc.Width * m_SwapChainDesc.Height * 4;
-        pEnv->CreateBuffer(m_StagingBufferSize, VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
-                           m_vkStagingBufferMemory, m_vkStagingBuffer);
+        m_StagingBufferSize = VkDeviceSize{m_SwapChainDesc.Width} * m_SwapChainDesc.Height * 4;
+        m_pEnvironment->CreateBuffer(m_StagingBufferSize, VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+                                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
+                                     m_vkStagingBufferMemory, m_vkStagingBuffer);
     }
 
     VkImageViewCreateInfo ImageViewCI = {};
@@ -158,6 +163,27 @@ void TestingSwapChainVk::CreateFramebuffer()
 
 TestingSwapChainVk::~TestingSwapChainVk()
 {
+    ReleaseBackendResources();
+}
+
+void TestingSwapChainVk::ResizeBackendResources()
+{
+    ReleaseBackendResources();
+    CreateBackendResources();
+}
+
+void TestingSwapChainVk::ReleaseBackendResources()
+{
+    if (m_vkFramebuffer != VK_NULL_HANDLE)
+        vkDestroyFramebuffer(m_vkDevice, m_vkFramebuffer, nullptr);
+    if (m_vkRenderPass != VK_NULL_HANDLE)
+        vkDestroyRenderPass(m_vkDevice, m_vkRenderPass, nullptr);
+
+    if (m_vkRenderTargetView != VK_NULL_HANDLE)
+        vkDestroyImageView(m_vkDevice, m_vkRenderTargetView, nullptr);
+    if (m_vkDepthBufferView != VK_NULL_HANDLE)
+        vkDestroyImageView(m_vkDevice, m_vkDepthBufferView, nullptr);
+
     if (m_vkRenderTargetImage != VK_NULL_HANDLE)
         vkDestroyImage(m_vkDevice, m_vkRenderTargetImage, nullptr);
     if (m_vkRenderTargetMemory != VK_NULL_HANDLE)
@@ -173,15 +199,20 @@ TestingSwapChainVk::~TestingSwapChainVk()
     if (m_vkStagingBufferMemory != VK_NULL_HANDLE)
         vkFreeMemory(m_vkDevice, m_vkStagingBufferMemory, nullptr);
 
-    if (m_vkRenderPass != VK_NULL_HANDLE)
-        vkDestroyRenderPass(m_vkDevice, m_vkRenderPass, nullptr);
-    if (m_vkFramebuffer != VK_NULL_HANDLE)
-        vkDestroyFramebuffer(m_vkDevice, m_vkFramebuffer, nullptr);
-
-    if (m_vkRenderTargetView != VK_NULL_HANDLE)
-        vkDestroyImageView(m_vkDevice, m_vkRenderTargetView, nullptr);
-    if (m_vkDepthBufferView != VK_NULL_HANDLE)
-        vkDestroyImageView(m_vkDevice, m_vkDepthBufferView, nullptr);
+    m_vkRenderTargetMemory       = VK_NULL_HANDLE;
+    m_vkRenderTargetImage        = VK_NULL_HANDLE;
+    m_vkRenderTargetLayout       = VK_IMAGE_LAYOUT_UNDEFINED;
+    m_vkRenderTargetView         = VK_NULL_HANDLE;
+    m_vkDepthBufferMemory        = VK_NULL_HANDLE;
+    m_vkDepthBufferImage         = VK_NULL_HANDLE;
+    m_vkDepthBufferLayout        = VK_IMAGE_LAYOUT_UNDEFINED;
+    m_vkDepthBufferView          = VK_NULL_HANDLE;
+    m_StagingBufferSize          = 0;
+    m_vkStagingBufferMemory      = VK_NULL_HANDLE;
+    m_vkStagingBuffer            = VK_NULL_HANDLE;
+    m_vkRenderPass               = VK_NULL_HANDLE;
+    m_vkFramebuffer              = VK_NULL_HANDLE;
+    m_ActiveGraphicsShaderStages = 0;
 }
 
 void TestingSwapChainVk::TransitionRenderTarget(VkCommandBuffer vkCmdBuffer, VkImageLayout Layout, VkPipelineStageFlags GraphicsShaderStages)

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2025 Diligent Graphics LLC
+ *  Copyright 2023-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@
 #include "RenderDeviceWebGPU.h"
 #include "DeviceContextWebGPU.h"
 #include "TextureWebGPU.h"
+#include "Align.hpp"
 
 #if PLATFORM_WEB
 #    include <emscripten.h>
@@ -53,10 +54,13 @@ TestingSwapChainWebGPU::TestingSwapChainWebGPU(IReferenceCounters*       pRefCou
         SCDesc //
     }
 {
-    RefCntAutoPtr<IRenderDeviceWebGPU>  pRenderDeviceWebGPU{m_pDevice, IID_RenderDeviceWebGPU};
-    RefCntAutoPtr<IDeviceContextWebGPU> pContextWebGPU{m_pContext, IID_DeviceContextWebGPU};
-
+    RefCntAutoPtr<IRenderDeviceWebGPU> pRenderDeviceWebGPU{m_pDevice, IID_RenderDeviceWebGPU};
     m_wgpuDevice = pRenderDeviceWebGPU->GetWebGPUDevice();
+    CreateBackendResources();
+}
+
+void TestingSwapChainWebGPU::CreateBackendResources()
+{
 
     WGPUTextureFormat ColorFormat = WGPUTextureFormat_Undefined;
     WGPUTextureFormat DepthFormat = WGPUTextureFormat_Undefined;
@@ -106,9 +110,12 @@ TestingSwapChainWebGPU::TestingSwapChainWebGPU(IReferenceCounters*       pRefCou
     }
 
     {
+        static constexpr Uint32 CopyBytesPerRowAlignment = 256;
+        m_StagingRowPitch                                = AlignUp(m_SwapChainDesc.Width * 4, CopyBytesPerRowAlignment);
+
         WGPUBufferDescriptor wgpuStagingBufferDesc{};
         wgpuStagingBufferDesc.usage = WGPUBufferUsage_MapRead | WGPUBufferUsage_CopyDst;
-        wgpuStagingBufferDesc.size  = m_SwapChainDesc.Width * m_SwapChainDesc.Height * 4;
+        wgpuStagingBufferDesc.size  = Uint64{m_StagingRowPitch} * m_SwapChainDesc.Height;
 
         m_wgpuStagingBuffer = wgpuDeviceCreateBuffer(m_wgpuDevice, &wgpuStagingBufferDesc);
     }
@@ -136,16 +143,34 @@ TestingSwapChainWebGPU::TestingSwapChainWebGPU(IReferenceCounters*       pRefCou
 
 TestingSwapChainWebGPU::~TestingSwapChainWebGPU()
 {
-    if (m_wgpuColorTexture != nullptr)
-        wgpuTextureRelease(m_wgpuColorTexture);
-    if (m_wgpuDepthTexture != nullptr)
-        wgpuTextureRelease(m_wgpuDepthTexture);
+    ReleaseBackendResources();
+}
+
+void TestingSwapChainWebGPU::ResizeBackendResources()
+{
+    ReleaseBackendResources();
+    CreateBackendResources();
+}
+
+void TestingSwapChainWebGPU::ReleaseBackendResources()
+{
     if (m_wgpuColorTextureView != nullptr)
         wgpuTextureViewRelease(m_wgpuColorTextureView);
     if (m_wgpuDepthTextureView != nullptr)
         wgpuTextureViewRelease(m_wgpuDepthTextureView);
+    if (m_wgpuColorTexture != nullptr)
+        wgpuTextureRelease(m_wgpuColorTexture);
+    if (m_wgpuDepthTexture != nullptr)
+        wgpuTextureRelease(m_wgpuDepthTexture);
     if (m_wgpuStagingBuffer != nullptr)
         wgpuBufferRelease(m_wgpuStagingBuffer);
+
+    m_wgpuColorTexture     = nullptr;
+    m_wgpuDepthTexture     = nullptr;
+    m_wgpuColorTextureView = nullptr;
+    m_wgpuDepthTextureView = nullptr;
+    m_wgpuStagingBuffer    = nullptr;
+    m_StagingRowPitch      = 0;
 }
 
 void TestingSwapChainWebGPU::TakeSnapshot(ITexture* pCopyFrom)
@@ -172,7 +197,7 @@ void TestingSwapChainWebGPU::TakeSnapshot(ITexture* pCopyFrom)
 
     WGPUImageCopyBuffer wgpuImageCopyDst{};
     wgpuImageCopyDst.layout.offset       = 0;
-    wgpuImageCopyDst.layout.bytesPerRow  = 4 * m_SwapChainDesc.Width;
+    wgpuImageCopyDst.layout.bytesPerRow  = m_StagingRowPitch;
     wgpuImageCopyDst.layout.rowsPerImage = m_SwapChainDesc.Height;
     wgpuImageCopyDst.buffer              = m_wgpuStagingBuffer;
 
@@ -190,7 +215,7 @@ void TestingSwapChainWebGPU::TakeSnapshot(ITexture* pCopyFrom)
     wgpuCommandEncoderRelease(wgpuCmdEncoder);
     wgpuCommandBufferRelease(wgpuCmdBuffer);
 
-    const size_t DataSize = 4 * m_SwapChainDesc.Width * m_SwapChainDesc.Height;
+    const size_t DataSize = size_t{m_StagingRowPitch} * m_SwapChainDesc.Height;
     wgpuBufferMapAsync(
         m_wgpuStagingBuffer, WGPUMapMode_Read, 0, DataSize, [](WGPUBufferMapAsyncStatus MapStatus, void* pUserData) {
             if (MapStatus == WGPUBufferMapAsyncStatus_Success)
@@ -200,10 +225,16 @@ void TestingSwapChainWebGPU::TakeSnapshot(ITexture* pCopyFrom)
                 pThis->m_ReferenceDataPitch = pThis->m_SwapChainDesc.Width * 4;
                 pThis->m_ReferenceData.resize(pThis->m_ReferenceDataPitch * pThis->m_SwapChainDesc.Height);
 
-                const auto* pMappedData = static_cast<const Uint8*>(wgpuBufferGetConstMappedRange(pThis->m_wgpuStagingBuffer, 0, pThis->m_ReferenceData.size()));
+                const auto* pMappedData = static_cast<const Uint8*>(wgpuBufferGetConstMappedRange(
+                    pThis->m_wgpuStagingBuffer, 0, size_t{pThis->m_StagingRowPitch} * pThis->m_SwapChainDesc.Height));
                 VERIFY_EXPR(pMappedData != nullptr);
 
-                memcpy(pThis->m_ReferenceData.data(), pMappedData, pThis->m_ReferenceData.size());
+                for (Uint32 Row = 0; Row < pThis->m_SwapChainDesc.Height; ++Row)
+                {
+                    memcpy(pThis->m_ReferenceData.data() + size_t{Row} * pThis->m_ReferenceDataPitch,
+                           pMappedData + size_t{Row} * pThis->m_StagingRowPitch,
+                           pThis->m_ReferenceDataPitch);
+                }
                 wgpuBufferUnmap(pThis->m_wgpuStagingBuffer);
             }
             else

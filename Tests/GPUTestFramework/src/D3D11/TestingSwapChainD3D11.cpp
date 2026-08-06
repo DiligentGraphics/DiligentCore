@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -50,19 +50,30 @@ TestingSwapChainD3D11::TestingSwapChainD3D11(IReferenceCounters*  pRefCounters,
         SCDesc //
     }
 {
-    RefCntAutoPtr<IRenderDeviceD3D11>  pRenderDeviceD3D11{pDevice, IID_RenderDeviceD3D11};
     RefCntAutoPtr<IDeviceContextD3D11> pContextD3D11{pContext, IID_DeviceContextD3D11};
+    m_pd3d11Context = pContextD3D11->GetD3D11DeviceContext();
+    ResizeBackendResources();
+}
 
-    auto* pd3d11Device = pRenderDeviceD3D11->GetD3D11Device();
-    m_pd3d11Context    = pContextD3D11->GetD3D11DeviceContext();
+void TestingSwapChainD3D11::ResizeBackendResources()
+{
+    m_pd3d11RTV.Release();
+    m_pd3d11UAV.Release();
+    m_pd3d11DSV.Release();
+    m_pd3d11RenderTarget.Release();
+    m_pd3d11DepthBuffer.Release();
+    m_pd3d11StagingTex.Release();
+
+    RefCntAutoPtr<IRenderDeviceD3D11> pRenderDeviceD3D11{m_pDevice, IID_RenderDeviceD3D11};
+    auto*                             pd3d11Device = pRenderDeviceD3D11->GetD3D11Device();
 
     D3D11_TEXTURE2D_DESC TexDesc = {};
 
-    TexDesc.Width              = SCDesc.Width;
-    TexDesc.Height             = SCDesc.Height;
+    TexDesc.Width              = m_SwapChainDesc.Width;
+    TexDesc.Height             = m_SwapChainDesc.Height;
     TexDesc.MipLevels          = 1;
     TexDesc.ArraySize          = 1;
-    TexDesc.Format             = TexFormatToDXGI_Format(SCDesc.ColorBufferFormat);
+    TexDesc.Format             = TexFormatToDXGI_Format(m_SwapChainDesc.ColorBufferFormat);
     TexDesc.SampleDesc.Count   = 1;
     TexDesc.SampleDesc.Quality = 0;
     TexDesc.Usage              = D3D11_USAGE_DEFAULT;
@@ -86,10 +97,10 @@ TestingSwapChainD3D11::TestingSwapChainD3D11(IReferenceCounters*  pRefCounters,
     hr = pd3d11Device->CreateTexture2D(&TexDesc, nullptr, &m_pd3d11StagingTex);
     VERIFY(SUCCEEDED(hr), "Failed to create staging D3D11 texture");
 
-    if (SCDesc.DepthBufferFormat != TEX_FORMAT_UNKNOWN)
+    if (m_SwapChainDesc.DepthBufferFormat != TEX_FORMAT_UNKNOWN)
     {
         TexDesc.Usage          = D3D11_USAGE_DEFAULT;
-        TexDesc.Format         = TexFormatToDXGI_Format(SCDesc.DepthBufferFormat);
+        TexDesc.Format         = TexFormatToDXGI_Format(m_SwapChainDesc.DepthBufferFormat);
         TexDesc.BindFlags      = BIND_DEPTH_STENCIL;
         TexDesc.CPUAccessFlags = 0;
 

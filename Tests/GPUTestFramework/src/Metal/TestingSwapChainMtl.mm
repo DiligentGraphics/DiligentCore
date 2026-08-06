@@ -33,6 +33,7 @@
 #include "DeviceContextMtl.h"
 #include "TextureViewMtl.h"
 #include "TextureMtl.h"
+#include "Align.hpp"
 
 namespace Diligent
 {
@@ -51,21 +52,42 @@ TestingSwapChainMtl::TestingSwapChainMtl(IReferenceCounters*    pRefCounters,
         SCDesc //
     }
 {
-    auto mtlDevice = pEnv->GetMtlDevice();
+    m_pEnvironment = pEnv;
+    CreateBackendResources();
+}
+
+void TestingSwapChainMtl::CreateBackendResources()
+{
+    static constexpr Uint32 CopyBytesPerRowAlignment = 256;
+    m_MtlStagingRowPitch = AlignUp(m_SwapChainDesc.Width * 4, CopyBytesPerRowAlignment);
+
+    auto mtlDevice = m_pEnvironment->GetMtlDevice();
     m_MtlStagingBuffer =
-        [mtlDevice newBufferWithLength:SCDesc.Width * SCDesc.Height * 4
+        [mtlDevice newBufferWithLength:size_t{m_MtlStagingRowPitch} * m_SwapChainDesc.Height
                    options:MTLResourceStorageModeManaged];
 }
 
 TestingSwapChainMtl::~TestingSwapChainMtl()
 {
+    ReleaseBackendResources();
+}
+
+void TestingSwapChainMtl::ResizeBackendResources()
+{
+    ReleaseBackendResources();
+    CreateBackendResources();
+}
+
+void TestingSwapChainMtl::ReleaseBackendResources()
+{
     [m_MtlStagingBuffer release];
+    m_MtlStagingBuffer   = nil;
+    m_MtlStagingRowPitch = 0;
 }
 
 void TestingSwapChainMtl::TakeSnapshot(ITexture* pCopyFrom)
 {
-    auto* pEnv = TestingEnvironmentMtl::GetInstance();
-    auto mtlCommandQueue = pEnv->GetMtlCommandQueue();
+    auto mtlCommandQueue = m_pEnvironment->GetMtlCommandQueue();
 
     id<MTLTexture> mtlTexture = nil;
     if (pCopyFrom != nullptr)
@@ -82,8 +104,8 @@ void TestingSwapChainMtl::TakeSnapshot(ITexture* pCopyFrom)
         auto* pRTV = ClassPtrCast<ITextureViewMtl>(GetCurrentBackBufferRTV());
         mtlTexture = pRTV->GetMtlTexture();
     }
-    m_ReferenceDataPitch = m_SwapChainDesc.Height * 4;
-    m_ReferenceData.resize(m_SwapChainDesc.Width * m_ReferenceDataPitch);
+    m_ReferenceDataPitch = m_MtlStagingRowPitch;
+    m_ReferenceData.resize(m_SwapChainDesc.Height * m_ReferenceDataPitch);
 
     @autoreleasepool
     {
@@ -98,7 +120,7 @@ void TestingSwapChainMtl::TakeSnapshot(ITexture* pCopyFrom)
             sourceSize:MTLSize{m_SwapChainDesc.Width, m_SwapChainDesc.Height, 1}
             toBuffer:m_MtlStagingBuffer
             destinationOffset:0
-            destinationBytesPerRow:m_ReferenceDataPitch
+            destinationBytesPerRow:m_MtlStagingRowPitch
             destinationBytesPerImage:0];
         [blitEncoder synchronizeResource:m_MtlStagingBuffer];
         [blitEncoder endEncoding];

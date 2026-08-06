@@ -129,61 +129,7 @@ public:
         VERIFY_EXPR(m_SwapChainDesc.ColorBufferFormat != TEX_FORMAT_UNKNOWN);
         VERIFY_EXPR(m_SwapChainDesc.Width != 0);
         VERIFY_EXPR(m_SwapChainDesc.Height != 0);
-
-        {
-            TextureDesc RenderTargetDesc;
-            RenderTargetDesc.Name        = "Testing color buffer";
-            RenderTargetDesc.Type        = RESOURCE_DIM_TEX_2D;
-            RenderTargetDesc.Width       = m_SwapChainDesc.Width;
-            RenderTargetDesc.Height      = m_SwapChainDesc.Height;
-            RenderTargetDesc.Format      = m_SwapChainDesc.ColorBufferFormat;
-            RenderTargetDesc.SampleCount = 1;
-            RenderTargetDesc.Usage       = USAGE_DEFAULT;
-            RenderTargetDesc.BindFlags   = BIND_RENDER_TARGET;
-            if (pDevice->GetDeviceInfo().Features.ComputeShaders)
-                RenderTargetDesc.BindFlags |= BIND_UNORDERED_ACCESS;
-            m_pDevice->CreateTexture(RenderTargetDesc, nullptr, static_cast<ITexture**>(&m_pRenderTarget));
-            VERIFY_EXPR(m_pRenderTarget != nullptr);
-            m_pRTV = m_pRenderTarget->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET);
-            VERIFY_EXPR(m_pRTV != nullptr);
-
-            if (pDevice->GetDeviceInfo().Features.ComputeShaders)
-            {
-                m_pUAV = m_pRenderTarget->GetDefaultView(TEXTURE_VIEW_UNORDERED_ACCESS);
-                VERIFY_EXPR(m_pUAV != nullptr);
-            }
-
-            RenderTargetDesc.Name           = "Staging color buffer copy";
-            RenderTargetDesc.Usage          = USAGE_STAGING;
-            RenderTargetDesc.CPUAccessFlags = CPU_ACCESS_READ;
-            RenderTargetDesc.BindFlags      = BIND_NONE;
-            m_pDevice->CreateTexture(RenderTargetDesc, nullptr, static_cast<ITexture**>(&m_pStagingTexture));
-        }
-
-        if (m_SwapChainDesc.DepthBufferFormat != TEX_FORMAT_UNKNOWN)
-        {
-            TextureDesc DepthBufferDesc;
-            DepthBufferDesc.Name        = "Testing depth buffer";
-            DepthBufferDesc.Type        = RESOURCE_DIM_TEX_2D;
-            DepthBufferDesc.Width       = m_SwapChainDesc.Width;
-            DepthBufferDesc.Height      = m_SwapChainDesc.Height;
-            DepthBufferDesc.Format      = m_SwapChainDesc.DepthBufferFormat;
-            DepthBufferDesc.SampleCount = 1;
-            DepthBufferDesc.Usage       = USAGE_DEFAULT;
-            DepthBufferDesc.BindFlags   = BIND_DEPTH_STENCIL;
-
-            DepthBufferDesc.ClearValue.Format               = DepthBufferDesc.Format;
-            DepthBufferDesc.ClearValue.DepthStencil.Depth   = m_SwapChainDesc.DefaultDepthValue;
-            DepthBufferDesc.ClearValue.DepthStencil.Stencil = m_SwapChainDesc.DefaultStencilValue;
-
-            m_pDevice->CreateTexture(DepthBufferDesc, nullptr, &m_pDepthBuffer);
-            VERIFY_EXPR(m_pDepthBuffer != nullptr);
-            m_pDSV = m_pDepthBuffer->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
-            VERIFY_EXPR(m_pDSV != nullptr);
-        }
-
-        m_ReferenceDataPitch = m_SwapChainDesc.Width * 4;
-        m_ReferenceData.resize(m_ReferenceDataPitch * m_SwapChainDesc.Height);
+        CreateResources();
     }
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override
@@ -249,19 +195,14 @@ public:
         if (!LoadTestImage(FilePath, Pixels, Width, Height))
             return false;
 
-        if (Width != m_SwapChainDesc.Width || Height != m_SwapChainDesc.Height)
-        {
-            LOG_ERROR_MESSAGE("Reference image dimensions ", Width, 'x', Height,
-                              " do not match the testing swap chain dimensions ",
-                              m_SwapChainDesc.Width, 'x', m_SwapChainDesc.Height);
-            return false;
-        }
-
         if (m_SwapChainDesc.ColorBufferFormat != TEX_FORMAT_RGBA8_UNORM)
         {
             LOG_ERROR_MESSAGE("Loading reference images is only supported for TEX_FORMAT_RGBA8_UNORM testing swap chains");
             return false;
         }
+
+        if (Width != m_SwapChainDesc.Width || Height != m_SwapChainDesc.Height)
+            Resize(Width, Height, m_SwapChainDesc.PreTransform);
 
         const size_t RowStride = static_cast<size_t>(Width) * 4;
         if (m_pDevice->GetDeviceInfo().IsGLDevice())
@@ -298,7 +239,23 @@ public:
 
     virtual void DILIGENT_CALL_TYPE Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFORM NewPreTransform) override final
     {
-        UNEXPECTED("Resizing testing swap chains is not supported");
+        if (NewWidth == 0 || NewHeight == 0 ||
+            (NewWidth == m_SwapChainDesc.Width &&
+             NewHeight == m_SwapChainDesc.Height &&
+             NewPreTransform == m_SwapChainDesc.PreTransform))
+        {
+            return;
+        }
+
+        m_pContext->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE);
+        m_pContext->WaitForIdle();
+
+        ReleaseResources();
+        m_SwapChainDesc.Width        = NewWidth;
+        m_SwapChainDesc.Height       = NewHeight;
+        m_SwapChainDesc.PreTransform = NewPreTransform;
+        CreateResources();
+        ResizeBackendResources();
     }
 
     virtual void DILIGENT_CALL_TYPE SetFullscreenMode(const DisplayModeAttribs& DisplayMode) override final
@@ -404,7 +361,78 @@ public:
     }
 
 protected:
-    const SwapChainDesc           m_SwapChainDesc;
+    virtual void ResizeBackendResources() = 0;
+
+    void CreateResources()
+    {
+        {
+            TextureDesc RenderTargetDesc;
+            RenderTargetDesc.Name        = "Testing color buffer";
+            RenderTargetDesc.Type        = RESOURCE_DIM_TEX_2D;
+            RenderTargetDesc.Width       = m_SwapChainDesc.Width;
+            RenderTargetDesc.Height      = m_SwapChainDesc.Height;
+            RenderTargetDesc.Format      = m_SwapChainDesc.ColorBufferFormat;
+            RenderTargetDesc.SampleCount = 1;
+            RenderTargetDesc.Usage       = USAGE_DEFAULT;
+            RenderTargetDesc.BindFlags   = BIND_RENDER_TARGET;
+            if (m_pDevice->GetDeviceInfo().Features.ComputeShaders)
+                RenderTargetDesc.BindFlags |= BIND_UNORDERED_ACCESS;
+            m_pDevice->CreateTexture(RenderTargetDesc, nullptr, static_cast<ITexture**>(&m_pRenderTarget));
+            VERIFY_EXPR(m_pRenderTarget != nullptr);
+            m_pRTV = m_pRenderTarget->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET);
+            VERIFY_EXPR(m_pRTV != nullptr);
+
+            if (m_pDevice->GetDeviceInfo().Features.ComputeShaders)
+            {
+                m_pUAV = m_pRenderTarget->GetDefaultView(TEXTURE_VIEW_UNORDERED_ACCESS);
+                VERIFY_EXPR(m_pUAV != nullptr);
+            }
+
+            RenderTargetDesc.Name           = "Staging color buffer copy";
+            RenderTargetDesc.Usage          = USAGE_STAGING;
+            RenderTargetDesc.CPUAccessFlags = CPU_ACCESS_READ;
+            RenderTargetDesc.BindFlags      = BIND_NONE;
+            m_pDevice->CreateTexture(RenderTargetDesc, nullptr, static_cast<ITexture**>(&m_pStagingTexture));
+            VERIFY_EXPR(m_pStagingTexture != nullptr);
+        }
+
+        if (m_SwapChainDesc.DepthBufferFormat != TEX_FORMAT_UNKNOWN)
+        {
+            TextureDesc DepthBufferDesc;
+            DepthBufferDesc.Name        = "Testing depth buffer";
+            DepthBufferDesc.Type        = RESOURCE_DIM_TEX_2D;
+            DepthBufferDesc.Width       = m_SwapChainDesc.Width;
+            DepthBufferDesc.Height      = m_SwapChainDesc.Height;
+            DepthBufferDesc.Format      = m_SwapChainDesc.DepthBufferFormat;
+            DepthBufferDesc.SampleCount = 1;
+            DepthBufferDesc.Usage       = USAGE_DEFAULT;
+            DepthBufferDesc.BindFlags   = BIND_DEPTH_STENCIL;
+
+            DepthBufferDesc.ClearValue.Format               = DepthBufferDesc.Format;
+            DepthBufferDesc.ClearValue.DepthStencil.Depth   = m_SwapChainDesc.DefaultDepthValue;
+            DepthBufferDesc.ClearValue.DepthStencil.Stencil = m_SwapChainDesc.DefaultStencilValue;
+
+            m_pDevice->CreateTexture(DepthBufferDesc, nullptr, &m_pDepthBuffer);
+            VERIFY_EXPR(m_pDepthBuffer != nullptr);
+            m_pDSV = m_pDepthBuffer->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
+            VERIFY_EXPR(m_pDSV != nullptr);
+        }
+
+        m_ReferenceDataPitch = m_SwapChainDesc.Width * 4;
+        m_ReferenceData.resize(size_t{m_ReferenceDataPitch} * m_SwapChainDesc.Height);
+    }
+
+    void ReleaseResources()
+    {
+        m_pRTV.Release();
+        m_pUAV.Release();
+        m_pDSV.Release();
+        m_pRenderTarget.Release();
+        m_pDepthBuffer.Release();
+        m_pStagingTexture.Release();
+    }
+
+    SwapChainDesc                 m_SwapChainDesc;
     RefCntAutoPtr<IRenderDevice>  m_pDevice;
     RefCntAutoPtr<IDeviceContext> m_pContext;
     RefCntAutoPtr<ITexture>       m_pRenderTarget;

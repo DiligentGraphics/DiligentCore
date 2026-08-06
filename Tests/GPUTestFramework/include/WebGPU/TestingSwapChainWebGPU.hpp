@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -70,12 +70,18 @@ public:
     }
 
 private:
+    void ResizeBackendResources() override;
+
+    void CreateBackendResources();
+    void ReleaseBackendResources();
+
     WGPUDevice      m_wgpuDevice           = nullptr;
     WGPUTexture     m_wgpuColorTexture     = nullptr;
     WGPUTexture     m_wgpuDepthTexture     = nullptr;
     WGPUTextureView m_wgpuColorTextureView = nullptr;
     WGPUTextureView m_wgpuDepthTextureView = nullptr;
     WGPUBuffer      m_wgpuStagingBuffer    = nullptr;
+    Uint32          m_StagingRowPitch      = 0;
 };
 
 } // namespace Testing

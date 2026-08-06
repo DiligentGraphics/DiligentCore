@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,7 +49,15 @@ public:
     virtual void TakeSnapshot(ITexture* pCopyFrom) override final;
 
 private:
-    id<MTLBuffer> m_MtlStagingBuffer;
+    virtual void ResizeBackendResources() override final;
+
+    void CreateBackendResources();
+    void ReleaseBackendResources();
+
+    // The testing environment owns the swap chain.
+    TestingEnvironmentMtl* m_pEnvironment       = nullptr;
+    id<MTLBuffer>          m_MtlStagingBuffer   = nil;
+    Uint32                 m_MtlStagingRowPitch = 0;
 };
 
 } // namespace Testing

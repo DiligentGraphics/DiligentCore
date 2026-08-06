@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,6 +47,11 @@ TestingSwapChainGL::TestingSwapChainGL(IReferenceCounters*  pRefCounters,
         pContext,
         SCDesc //
     }
+{
+    CreateBackendResources();
+}
+
+void TestingSwapChainGL::CreateBackendResources()
 {
     {
         glGenTextures(1, &m_RenderTarget);
@@ -114,7 +119,7 @@ TestingSwapChainGL::TestingSwapChainGL(IReferenceCounters*  pRefCounters,
     }
 
     // Make sure Diligent Engine will reset all GL states
-    pContext->InvalidateState();
+    m_pContext->InvalidateState();
 }
 
 void TestingSwapChainGL::BindFramebuffer()
@@ -125,12 +130,27 @@ void TestingSwapChainGL::BindFramebuffer()
 
 TestingSwapChainGL::~TestingSwapChainGL()
 {
+    ReleaseBackendResources();
+}
+
+void TestingSwapChainGL::ResizeBackendResources()
+{
+    ReleaseBackendResources();
+    CreateBackendResources();
+}
+
+void TestingSwapChainGL::ReleaseBackendResources()
+{
     if (m_RenderTarget != 0)
         glDeleteTextures(1, &m_RenderTarget);
     if (m_DepthBuffer != 0)
         glDeleteTextures(1, &m_DepthBuffer);
     if (m_FBO != 0)
         glDeleteFramebuffers(1, &m_FBO);
+
+    m_RenderTarget = 0;
+    m_DepthBuffer  = 0;
+    m_FBO          = 0;
 }
 
 void TestingSwapChainGL::TakeSnapshot(ITexture* pCopyFrom)

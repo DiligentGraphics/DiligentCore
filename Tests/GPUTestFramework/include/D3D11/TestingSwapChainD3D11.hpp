@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -75,6 +75,8 @@ public:
     }
 
 private:
+    virtual void ResizeBackendResources() override final;
+
     CComPtr<ID3D11DeviceContext>       m_pd3d11Context;
     CComPtr<ID3D11Texture2D>           m_pd3d11RenderTarget;
     CComPtr<ID3D11Texture2D>           m_pd3d11DepthBuffer;

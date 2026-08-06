@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -58,6 +58,11 @@ public:
     }
 
 private:
+    virtual void ResizeBackendResources() override final;
+
+    void CreateBackendResources();
+    void ReleaseBackendResources();
+
     GLuint m_RenderTarget = 0;
     GLuint m_DepthBuffer  = 0;
     GLuint m_FBO          = 0;

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -53,7 +53,27 @@ TestingSwapChainD3D12::TestingSwapChainD3D12(IReferenceCounters*  pRefCounters,
         SCDesc //
     }
 {
-    RefCntAutoPtr<IRenderDeviceD3D12> pRenderDeviceD3D12{pDevice, IID_RenderDeviceD3D12};
+    ResizeBackendResources();
+}
+
+void TestingSwapChainD3D12::ResizeBackendResources()
+{
+    m_pd3d12RTVDescriptorHeap.Release();
+    m_pd3d12DSVDescriptorHeap.Release();
+    m_pd3d12CbvSrvUavDescriptorHeap.Release();
+    m_pd3d12RenderTarget.Release();
+    m_pd3d12DepthBuffer.Release();
+    m_pd3d12StagingBuffer.Release();
+
+    m_RenderTargetState      = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    m_DepthBufferState       = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+    m_RTVDescriptorHandle    = {};
+    m_DSVDescriptorHandle    = {};
+    m_UAVDescriptorHandle    = {};
+    m_StagingBufferFootprint = {};
+    m_StagingBufferSize      = 0;
+
+    RefCntAutoPtr<IRenderDeviceD3D12> pRenderDeviceD3D12{m_pDevice, IID_RenderDeviceD3D12};
 
     auto* pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
 
@@ -71,7 +91,7 @@ TestingSwapChainD3D12::TestingSwapChainD3D12(IReferenceCounters*  pRefCounters,
     TexDesc.Height              = m_SwapChainDesc.Height;
     TexDesc.DepthOrArraySize    = 1;
     TexDesc.MipLevels           = 1;
-    TexDesc.Format              = TexFormatToDXGI_Format(SCDesc.ColorBufferFormat);
+    TexDesc.Format              = TexFormatToDXGI_Format(m_SwapChainDesc.ColorBufferFormat);
     TexDesc.SampleDesc.Count    = 1;
     TexDesc.SampleDesc.Quality  = 0;
     TexDesc.Layout              = D3D12_TEXTURE_LAYOUT_UNKNOWN;
@@ -116,10 +136,10 @@ TestingSwapChainD3D12::TestingSwapChainD3D12(IReferenceCounters*  pRefCounters,
             LOG_ERROR_AND_THROW("Failed to create committed staging buffer in an upload heap");
     }
 
-    if (SCDesc.DepthBufferFormat != TEX_FORMAT_UNKNOWN)
+    if (m_SwapChainDesc.DepthBufferFormat != TEX_FORMAT_UNKNOWN)
     {
         TexDesc.Flags  = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-        TexDesc.Format = TexFormatToDXGI_Format(SCDesc.DepthBufferFormat);
+        TexDesc.Format = TexFormatToDXGI_Format(m_SwapChainDesc.DepthBufferFormat);
 
         D3D12_CLEAR_VALUE ClearDepthValue  = {};
         ClearDepthValue.Format             = TexDesc.Format;

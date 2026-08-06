@@ -26,10 +26,12 @@
 
 #include "TestingSwapChainBase.hpp"
 
+#include "FileSystem.hpp"
 #include "TempDirectory.hpp"
 #include "TestingEnvironment.hpp"
 
 #include "gtest/gtest.h"
+#include "gtest/gtest-spi.h"
 
 #include <algorithm>
 #include <array>
@@ -169,24 +171,42 @@ TEST(TestingSwapChainBaseTest, LoadsReferenceImageIntoSwapChain)
     pTestingSwapChain->CompareWithSnapshot(nullptr);
 }
 
-TEST(TestingSwapChainBaseTest, RejectsReferenceImageWithWrongDimensions)
+TEST(TestingSwapChainBaseTest, ReportsComparisonFailure)
 {
     GPUTestingEnvironment::ScopedReset AutoReset;
 
-    ISwapChain* const pSwapChain = GPUTestingEnvironment::GetInstance()->GetSwapChain();
+    GPUTestingEnvironment* const pEnvironment = GPUTestingEnvironment::GetInstance();
+    IDeviceContext* const        pContext     = pEnvironment->GetDeviceContext();
+    ISwapChain* const            pSwapChain   = pEnvironment->GetSwapChain();
+    ASSERT_NE(pContext, nullptr);
     ASSERT_NE(pSwapChain, nullptr);
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
     ASSERT_NE(pTestingSwapChain, nullptr);
 
-    constexpr std::array<Uint8, 4> Pixel{0, 0, 0, 255};
-    TempDirectory                  TempDir{"TestingSwapChainBaseTest"};
-    const std::string              ImageName = TempDir.Get() + "/Reference";
-    const std::string              ImagePath = ImageName + ".png";
-    DumpTestImage(Pixel.data(), 4, 1, 1, TEX_FORMAT_RGBA8_UNORM, ImageName.c_str(), false);
+    const SwapChainDesc& SwapChainDesc = pSwapChain->GetDesc();
+    std::vector<Uint8>   ReferencePixels(static_cast<size_t>(SwapChainDesc.Width) * SwapChainDesc.Height * 4, 0);
+    for (size_t Pixel = 3; Pixel < ReferencePixels.size(); Pixel += 4)
+        ReferencePixels[Pixel] = 255;
 
-    TestingEnvironment::ErrorScope ExpectedError{"do not match the testing swap chain dimensions"};
-    EXPECT_FALSE(pTestingSwapChain->LoadReferenceImage(ImagePath.c_str()));
+    TempDirectory     TempDir{"TestingSwapChainBaseTest"};
+    const std::string ImageName = TempDir.Get() + "/Reference";
+    const std::string ImagePath = ImageName + ".png";
+    DumpTestImage(ReferencePixels.data(), Uint64{SwapChainDesc.Width} * 4,
+                  SwapChainDesc.Width, SwapChainDesc.Height,
+                  TEX_FORMAT_RGBA8_UNORM, ImageName.c_str(), false);
+    ASSERT_TRUE(pTestingSwapChain->LoadReferenceImage(ImagePath.c_str()));
+
+    constexpr float ClearColor[] = {1, 1, 1, 1};
+    ITextureView*   pRTV         = pSwapChain->GetCurrentBackBufferRTV();
+    pContext->SetRenderTargets(1, &pRTV, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->ClearRenderTarget(pRTV, ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    EXPECT_NONFATAL_FAILURE(
+        pTestingSwapChain->CompareWithSnapshot(nullptr),
+        "Image rendered by the test differs from the reference image");
+
+    FileSystem::DeleteFile("TestingSwapChainBaseTest.ReportsComparisonFailure_FAIL_.png");
 }
 
 #endif
