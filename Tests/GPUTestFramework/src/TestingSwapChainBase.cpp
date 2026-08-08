@@ -235,22 +235,22 @@ void DumpTestImage(const Uint8*   pPixels,
     VERIFY_EXPR(PixelsStride != 0);
     VERIFY(Format == TEX_FORMAT_RGBA8_UNORM, GetTextureFormatAttribs(Format).Name, " is not supported");
 
-    const auto         DumpImageStride = Width * 3;
+    const auto         DumpImageStride = Width * 4;
     std::vector<Uint8> DumpImage(DumpImageStride * Height);
     for (Uint32 y = 0; y < Height; ++y)
     {
         for (Uint32 x = 0; x < Width; ++x)
         {
-            for (Uint32 c = 0; c < 3; ++c)
+            for (Uint32 c = 0; c < 4; ++c)
             {
                 const Uint32 FlipCoord                     = bIsOpenGL ? (Height - 1 - y) : y;
-                DumpImage[y * DumpImageStride + x * 3 + c] = pPixels[FlipCoord * PixelsStride + x * 4 + c];
+                DumpImage[y * DumpImageStride + x * 4 + c] = pPixels[FlipCoord * PixelsStride + x * 4 + c];
             }
         }
     }
 
     const String FileName = String{DumpName} + ".png";
-    if (stbi_write_png(FileName.c_str(), Width, Height, 3, DumpImage.data(), static_cast<int>(DumpImageStride)) == 0)
+    if (stbi_write_png(FileName.c_str(), Width, Height, 4, DumpImage.data(), static_cast<int>(DumpImageStride)) == 0)
     {
         LOG_ERROR_MESSAGE("Failed to write ", FileName);
     }
