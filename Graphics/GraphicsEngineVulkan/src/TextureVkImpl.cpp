@@ -38,9 +38,6 @@
 namespace Diligent
 {
 
-namespace
-{
-
 VkImageCreateInfo TextureDescToVkImageCreateInfo(const TextureDesc& Desc, const RenderDeviceVkImpl* pRenderDeviceVk) noexcept
 {
     const bool                  IsMemoryless         = (Desc.MiscFlags & MISC_TEXTURE_FLAG_MEMORYLESS) != 0;
@@ -146,6 +143,9 @@ VkImageCreateInfo TextureDescToVkImageCreateInfo(const TextureDesc& Desc, const 
 
     return ImageCI;
 }
+
+namespace
+{
 
 VkImageLayout VkImageLayoutFromUsage(VkImageUsageFlags Usage)
 {

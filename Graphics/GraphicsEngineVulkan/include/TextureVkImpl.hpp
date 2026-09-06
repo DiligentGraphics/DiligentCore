@@ -89,6 +89,11 @@ public:
         return StagingDataCPUAddress;
     }
 
+    VulkanUtilities::MemoryAllocation& GetMemoryAllocation()
+    {
+        return m_MemoryAllocation;
+    }
+
     void InvalidateStagingRange(VkDeviceSize Offset, VkDeviceSize Size);
 
     // For non-compressed color format buffer, the offset must be a multiple of the format's texel block size.
