@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -77,6 +77,34 @@ TEST(HLSL2GLSLConverterTest, VS_PS)
     EXPECT_NE(pVS, nullptr);
     RefCntAutoPtr<IShader> pPS = CreateTestShader("VS_PS.hlsl", "TestPS", SHADER_TYPE_PIXEL);
     EXPECT_NE(pPS, nullptr);
+}
+
+TEST(HLSL2GLSLConverterTest, VertexAndInstanceIDs)
+{
+    GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice = pEnv->GetDevice();
+
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    constexpr Char Source[] = R"(
+void main(uint VertexID   : SV_VertexID,
+          uint InstanceID : SV_InstanceID,
+          out float4 Pos  : SV_Position)
+{
+    Pos = float4(float(VertexID), float(InstanceID), 0.0, 1.0);
+}
+)";
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.Source         = Source;
+    ShaderCI.EntryPoint     = "main";
+    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.CompileFlags   = SHADER_COMPILE_FLAG_HLSL_TO_SPIRV_VIA_GLSL;
+    ShaderCI.Desc           = {"Vertex and instance ID test VS", SHADER_TYPE_VERTEX, pDevice->GetDeviceInfo().IsGLDevice()};
+
+    RefCntAutoPtr<IShader> pVS;
+    pDevice->CreateShader(ShaderCI, &pVS);
+    EXPECT_NE(pVS, nullptr);
 }
 
 TEST(HLSL2GLSLConverterTest, CS_RWTex1D)

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -1186,8 +1186,13 @@ out gl_PerVertex
 };
 #endif
 
-#define _GET_GL_VERTEX_ID(VertexId)_TypeConvertStore(VertexId, gl_VertexID)
-#define _GET_GL_INSTANCE_ID(InstId)_TypeConvertStore(InstId, gl_InstanceID)
+#ifdef VULKAN
+#   define _GET_GL_VERTEX_ID(VertexId)_TypeConvertStore(VertexId, gl_VertexIndex)
+#   define _GET_GL_INSTANCE_ID(InstId)_TypeConvertStore(InstId, gl_InstanceIndex)
+#else
+#   define _GET_GL_VERTEX_ID(VertexId)_TypeConvertStore(VertexId, gl_VertexID)
+#   define _GET_GL_INSTANCE_ID(InstId)_TypeConvertStore(InstId, gl_InstanceID)
+#endif
 #define _SET_GL_POSITION(Pos)gl_Position=_ExpandVector(Pos)
 
 #endif
