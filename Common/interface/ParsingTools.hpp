@@ -362,16 +362,13 @@ IteratorType SkipFloatNumber(const IteratorType& Start, const IteratorType& End)
         }
 
         ++c;
-        if (c == End || (*c != '+' && *c != '-'))
-        {
-            // 10e&
-            return Pos;
-        }
+        // The exponent sign is optional: 1e10 is as valid as 1e+10.
+        if (c != End && (*c == '+' || *c == '-'))
+            ++c;
 
-        ++c;
         if (c == End || !IsNum(*c))
         {
-            // 10e+x
+            // 10e&, 10e+x
             return Pos;
         }
 

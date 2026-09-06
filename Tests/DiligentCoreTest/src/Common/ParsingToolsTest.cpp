@@ -956,6 +956,8 @@ void main()
     float Number4 = 40.0e+2f;
     float Number5 = 50.f;
     float Number6 = .123f;
+    float Number7 = 6.02e23;
+    float Number8 = 1E10f;
 }
 )";
 
@@ -968,6 +970,8 @@ void main()
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "Number4"}, {TestTokenType::Assignment, "="}, {TestTokenType::NumericConstant, "40.0e+2f"}}));
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "Number5"}, {TestTokenType::Assignment, "="}, {TestTokenType::NumericConstant, "50.f"}}));
     EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "Number6"}, {TestTokenType::Assignment, "="}, {TestTokenType::NumericConstant, ".123f"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "Number7"}, {TestTokenType::Assignment, "="}, {TestTokenType::NumericConstant, "6.02e23"}}));
+    EXPECT_TRUE(FindTokenSequence(Tokens, {{TestTokenType::Identifier, "Number8"}, {TestTokenType::Assignment, "="}, {TestTokenType::NumericConstant, "1E10f"}}));
 }
 
 TEST(Common_ParsingTools, Tokenizer_UnknownIdentifier)

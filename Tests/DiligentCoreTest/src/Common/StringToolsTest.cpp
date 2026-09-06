@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -138,6 +138,14 @@ TEST(Common_StringTools, CountFloatNumberChars)
     EXPECT_EQ(CountFloatNumberChars("+1e-3f"), size_t{6});
     EXPECT_EQ(CountFloatNumberChars("-1.e+4f"), size_t{7});
     EXPECT_EQ(CountFloatNumberChars("+1.e-5f"), size_t{7});
+
+    EXPECT_EQ(CountFloatNumberChars("1e10"), size_t{4});
+    EXPECT_EQ(CountFloatNumberChars("1E10"), size_t{4});
+    EXPECT_EQ(CountFloatNumberChars("1.5e10"), size_t{6});
+    EXPECT_EQ(CountFloatNumberChars("2.0E8"), size_t{5});
+    EXPECT_EQ(CountFloatNumberChars("1e10f"), size_t{5});
+    EXPECT_EQ(CountFloatNumberChars("6.02e23"), size_t{7});
+    EXPECT_EQ(CountFloatNumberChars("1e0"), size_t{3});
 
     EXPECT_EQ(CountFloatNumberChars("0"), size_t{1});
     EXPECT_EQ(CountFloatNumberChars("+0"), size_t{2});
