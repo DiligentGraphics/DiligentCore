@@ -24,6 +24,11 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+if (MSVC)
+    # Enable inline expansion in Debug builds to improve Dawn and Tint runtime performance.
+    add_compile_options("$<$<CONFIG:DEBUG>:/Ob1>")
+endif()
+
 if (PLATFORM_WEB)
     set(TINT_BUILD_AS_OTHER_OS ON CACHE BOOL "" FORCE)
 else()
