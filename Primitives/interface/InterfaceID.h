@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,6 +44,9 @@ struct INTERFACE_ID
 #if DILIGENT_CPP_INTERFACE
     bool operator==(const INTERFACE_ID& rhs) const noexcept
     {
+        if (this == &rhs)
+            return true;
+
         return Data1 == rhs.Data1 &&
             Data2 == rhs.Data2 &&
             Data3 == rhs.Data3 &&
@@ -52,6 +55,19 @@ struct INTERFACE_ID
     bool operator!=(const INTERFACE_ID& rhs) const noexcept
     {
         return !(*this == rhs);
+    }
+    bool operator<(const INTERFACE_ID& rhs) const noexcept
+    {
+        if (this == &rhs)
+            return false;
+
+        if (Data1 != rhs.Data1)
+            return Data1 < rhs.Data1;
+        if (Data2 != rhs.Data2)
+            return Data2 < rhs.Data2;
+        if (Data3 != rhs.Data3)
+            return Data3 < rhs.Data3;
+        return memcmp(Data4, rhs.Data4, sizeof(Data4)) < 0;
     }
 #endif
 };
