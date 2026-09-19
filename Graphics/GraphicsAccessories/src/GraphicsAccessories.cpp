@@ -29,6 +29,7 @@
 #include <array>
 
 #include "GraphicsAccessories.hpp"
+#include "PlatformMisc.hpp"
 #include "DebugUtilities.hpp"
 #include "Align.hpp"
 #include "BasicMath.hpp"
@@ -2011,11 +2012,7 @@ Uint32 ComputeMipLevelsCount(Uint32 Width)
     if (Width == 0)
         return 0;
 
-    Uint32 MipLevels = 0;
-    while ((Width >> MipLevels) > 0)
-        ++MipLevels;
-    VERIFY(Width >= (1U << (MipLevels - 1)) && Width < (1U << MipLevels), "Incorrect number of Mip levels");
-    return MipLevels;
+    return PlatformMisc::GetMSB(Width) + 1;
 }
 
 Uint32 ComputeMipLevelsCount(Uint32 Width, Uint32 Height)

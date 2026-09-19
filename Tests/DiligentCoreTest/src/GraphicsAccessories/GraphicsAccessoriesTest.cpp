@@ -938,6 +938,67 @@ TEST(GraphicsAccessories_GraphicsAccessories, TextureComponentMappingFromString)
     }
 }
 
+TEST(GraphicsAccessories_GraphicsAccessories, ComputeMipLevelsCount)
+{
+    EXPECT_EQ(ComputeMipLevelsCount(0), 0u);
+    for (Uint32 Bit = 0; Bit < 32; ++Bit)
+    {
+        SCOPED_TRACE(Bit);
+        const Uint32 PowerOfTwo = Uint32{1} << Bit;
+        EXPECT_EQ(ComputeMipLevelsCount(PowerOfTwo - 1), Bit);
+        EXPECT_EQ(ComputeMipLevelsCount(PowerOfTwo), Bit + 1);
+        EXPECT_EQ(ComputeMipLevelsCount(PowerOfTwo + 1), Bit == 0 ? 2u : Bit + 1);
+    }
+    EXPECT_EQ(ComputeMipLevelsCount(~Uint32{0}), 32u);
+}
+
+TEST(GraphicsAccessories_GraphicsAccessories, ComputeMipLevelsCountDimensions)
+{
+    EXPECT_EQ(ComputeMipLevelsCount(0, 0), 0u);
+    EXPECT_EQ(ComputeMipLevelsCount(0, 0, 0), 0u);
+    EXPECT_EQ(ComputeMipLevelsCount(8, 17), 5u);
+    EXPECT_EQ(ComputeMipLevelsCount(17, 8), 5u);
+    EXPECT_EQ(ComputeMipLevelsCount(8, 17, 32), 6u);
+    EXPECT_EQ(ComputeMipLevelsCount(32, 8, 17), 6u);
+    EXPECT_EQ(ComputeMipLevelsCount(17, 32, 8), 6u);
+
+    for (Uint32 Dimension : {0x80000000u, ~Uint32{0}})
+    {
+        SCOPED_TRACE(Dimension);
+        EXPECT_EQ(ComputeMipLevelsCount(Dimension, 1), 32u);
+        EXPECT_EQ(ComputeMipLevelsCount(1, Dimension), 32u);
+        EXPECT_EQ(ComputeMipLevelsCount(Dimension, 1, 1), 32u);
+        EXPECT_EQ(ComputeMipLevelsCount(1, Dimension, 1), 32u);
+        EXPECT_EQ(ComputeMipLevelsCount(1, 1, Dimension), 32u);
+    }
+}
+
+TEST(GraphicsAccessories_GraphicsAccessories, ComputeMipLevelsCountTextureDesc)
+{
+    TextureDesc Desc;
+    Desc.Type   = RESOURCE_DIM_TEX_1D;
+    Desc.Width  = 8;
+    Desc.Height = ~Uint32{0}; // Ignored for 1D textures.
+    EXPECT_EQ(ComputeMipLevelsCount(Desc), 4u);
+
+    Desc.Type   = RESOURCE_DIM_TEX_2D;
+    Desc.Height = 17;
+    EXPECT_EQ(ComputeMipLevelsCount(Desc), 5u);
+    Desc.Height = 0x80000000u;
+    EXPECT_EQ(ComputeMipLevelsCount(Desc), 32u);
+
+    Desc.Type   = RESOURCE_DIM_TEX_3D;
+    Desc.Height = 17;
+    Desc.Depth  = 32;
+    EXPECT_EQ(ComputeMipLevelsCount(Desc), 6u);
+    Desc.Depth = ~Uint32{0};
+    EXPECT_EQ(ComputeMipLevelsCount(Desc), 32u);
+
+    Desc.Type      = RESOURCE_DIM_TEX_2D_ARRAY;
+    Desc.ArraySize = ~Uint32{0}; // Array layers do not contribute to the mip count.
+    EXPECT_EQ(ComputeMipLevelsCount(Desc), 5u);
+}
+
 TEST(GraphicsAccessories_GraphicsAccessories, GetMipLevelProperties)
 {
     TextureDesc        Desc;
