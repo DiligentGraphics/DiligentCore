@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,11 +45,11 @@
 
 #if PLATFORM_WIN32
 #    ifndef D3D11_VERSION
-#        define D3D11_VERSION 2
+#        define D3D11_VERSION 3
 #    endif
 #elif PLATFORM_UNIVERSAL_WINDOWS
 #    ifndef D3D11_VERSION
-#        define D3D11_VERSION 2
+#        define D3D11_VERSION 3
 #    endif
 #endif
 

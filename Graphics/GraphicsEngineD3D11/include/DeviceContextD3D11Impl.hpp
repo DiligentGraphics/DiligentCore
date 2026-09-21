@@ -59,6 +59,8 @@ public:
                            const DeviceContextDesc& Desc,
                            ID3D11DeviceContext1*    pd3d11DeviceContext);
 
+    ~DeviceContextD3D11Impl();
+
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DeviceContextD3D11, TDeviceContextBase)
 
     /// Implementation of IDeviceContext::Begin() in Direct3D11 backend.
@@ -445,6 +447,10 @@ private:
     std::shared_ptr<DisjointQueryPool::DisjointQueryWrapper> BeginDisjointQuery();
 
     CComPtr<ID3D11DeviceContext1> m_pd3d11DeviceContext; ///< D3D11 device context
+
+    // Optional runtime interface and reusable auto-reset event for immediate-context waits.
+    CComPtr<ID3D11DeviceContext3> m_pd3d11DeviceContext3;
+    HANDLE                        m_WaitForIdleEvent = nullptr;
 
     struct BindInfo : CommittedShaderResources
     {

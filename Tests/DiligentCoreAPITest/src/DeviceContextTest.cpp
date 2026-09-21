@@ -24,6 +24,9 @@
  *  of the possibility of such damages.
  */
 
+#include <array>
+#include <cstring>
+
 #include "DynamicBuffer.hpp"
 #include "GPUTestingEnvironment.hpp"
 
@@ -48,6 +51,57 @@ TEST(DeviceContextTest, DebugGroups)
     pCtx->BeginDebugGroup("Test group with color", Color);
     pCtx->InsertDebugLabel("Debug Label with color", Color);
     pCtx->EndDebugGroup();
+}
+
+// Repeated waits cover both empty submissions and reuse of the backend's completion
+// event. Nonblocking readback ensures WaitForIdle itself completes each GPU copy.
+TEST(DeviceContextTest, WaitForIdleReadback)
+{
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
+
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    std::array<Uint32, 1024> Expected{};
+    BufferDesc               Desc;
+    Desc.Name      = "WaitForIdle source buffer";
+    Desc.Size      = sizeof(Expected);
+    Desc.Usage     = USAGE_DEFAULT;
+    Desc.BindFlags = BIND_UNIFORM_BUFFER;
+    RefCntAutoPtr<IBuffer> pSource;
+    pDevice->CreateBuffer(Desc, nullptr, &pSource);
+    ASSERT_NE(pSource, nullptr);
+
+    Desc.Name           = "WaitForIdle readback buffer";
+    Desc.Usage          = USAGE_STAGING;
+    Desc.BindFlags      = BIND_NONE;
+    Desc.CPUAccessFlags = CPU_ACCESS_READ;
+    RefCntAutoPtr<IBuffer> pReadback;
+    pDevice->CreateBuffer(Desc, nullptr, &pReadback);
+    ASSERT_NE(pReadback, nullptr);
+
+    for (Uint32 Iteration = 0; Iteration < 32; ++Iteration)
+    {
+        SCOPED_TRACE(Iteration);
+        pContext->WaitForIdle();
+
+        for (Uint32 i = 0; i < Expected.size(); ++i)
+            Expected[i] = (Iteration + 1) * 1024 + i;
+
+        pContext->UpdateBuffer(pSource, 0, Desc.Size, Expected.data(), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pContext->CopyBuffer(pSource, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
+                             pReadback, 0, Desc.Size, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pContext->WaitForIdle();
+
+        void* pData = nullptr;
+        pContext->MapBuffer(pReadback, MAP_READ, MAP_FLAG_DO_NOT_WAIT, pData);
+        ASSERT_NE(pData, nullptr);
+        std::array<Uint32, 1024> Actual{};
+        std::memcpy(Actual.data(), pData, sizeof(Actual));
+        pContext->UnmapBuffer(pReadback, MAP_READ);
+        EXPECT_EQ(Actual, Expected);
+    }
 }
 
 } // namespace

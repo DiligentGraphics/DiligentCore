@@ -65,6 +65,22 @@ DeviceContextD3D11Impl::DeviceContextD3D11Impl(IReferenceCounters*      pRefCoun
     m_CmdListAllocator    {GetRawAllocator(), sizeof(CommandListD3D11Impl), 64}
 // clang-format on
 {
+    if (!IsDeferred())
+    {
+        m_pd3d11DeviceContext3 = CComQIPtr<ID3D11DeviceContext3>{pd3d11DeviceContext};
+        if (m_pd3d11DeviceContext3)
+        {
+            m_WaitForIdleEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+            if (m_WaitForIdleEvent == nullptr)
+                LOG_WARNING_MESSAGE("Failed to create the D3D11 idle event (error ", GetLastError(), "). Falling back to event queries.");
+        }
+    }
+}
+
+DeviceContextD3D11Impl::~DeviceContextD3D11Impl()
+{
+    if (m_WaitForIdleEvent != nullptr)
+        CloseHandle(m_WaitForIdleEvent);
 }
 
 void DeviceContextD3D11Impl::Begin(Uint32 ImmediateContextId)
@@ -2067,13 +2083,40 @@ void DeviceContextD3D11Impl::DeviceWaitForFence(IFence* pFence, Uint64 Value)
 void DeviceContextD3D11Impl::WaitForIdle()
 {
     DEV_CHECK_ERR(!IsDeferred(), "Only immediate contexts can be idled");
-    Flush();
-    ID3D11Device*        pd3d11Device = m_pDevice->GetD3D11Device();
-    CComPtr<ID3D11Query> pd3d11Query  = CreateD3D11QueryEvent(pd3d11Device);
-    m_pd3d11DeviceContext->End(pd3d11Query);
-    BOOL Data;
-    while (m_pd3d11DeviceContext->GetData(pd3d11Query, &Data, sizeof(Data), 0) != S_OK)
-        std::this_thread::sleep_for(std::chrono::microseconds{1});
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Flushing device context inside an active render pass.");
+
+    if (m_WaitForIdleEvent != nullptr)
+    {
+        // Flush1 submits all preceding commands and signals the event when they complete.
+        // The auto-reset event can be reused after each successful wait without polling.
+        m_pd3d11DeviceContext3->Flush1(D3D11_CONTEXT_TYPE_ALL, m_WaitForIdleEvent);
+        const DWORD WaitResult = WaitForSingleObject(m_WaitForIdleEvent, INFINITE);
+        if (WaitResult != WAIT_OBJECT_0)
+            LOG_ERROR_MESSAGE("Failed to wait for D3D11 context completion (error ", GetLastError(), ").");
+    }
+    else
+    {
+        // Use query wait for runtimes without Flush1.
+        ID3D11Device*        pd3d11Device = m_pDevice->GetD3D11Device();
+        CComPtr<ID3D11Query> pd3d11Query  = CreateD3D11QueryEvent(pd3d11Device);
+        if (!pd3d11Query)
+        {
+            LOG_ERROR_MESSAGE("Failed to create the D3D11 idle query.");
+            return;
+        }
+
+        m_pd3d11DeviceContext->End(pd3d11Query);
+        m_pd3d11DeviceContext->Flush();
+
+        BOOL    Data = FALSE;
+        HRESULT hr   = S_FALSE;
+        // Note: yield-only polling causes nonblocking staging-buffer maps to report busy
+        // on an AMD adapter after query completion.
+        while ((hr = m_pd3d11DeviceContext->GetData(pd3d11Query, &Data, sizeof(Data), 0)) == S_FALSE)
+            std::this_thread::sleep_for(std::chrono::microseconds{1});
+
+        LOG_D3D_ERROR(hr, "Failed to wait for the D3D11 idle query.");
+    }
 }
 
 std::shared_ptr<DisjointQueryPool::DisjointQueryWrapper> DeviceContextD3D11Impl::BeginDisjointQuery()
