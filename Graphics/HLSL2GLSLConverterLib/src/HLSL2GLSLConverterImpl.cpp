@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -513,7 +513,8 @@ HLSL2GLSLConverterImpl::HLSL2GLSLConverterImpl()
             }
 
             Swizzle = "";
-            DEFINE_STUB("CalculateLevelOfDetail_2", GLSLSampler, "CalculateLevelOfDetail", 2); // CalculateLevelOfDetail(Sampler, Location)
+            DEFINE_STUB("CalculateLevelOfDetail_2", GLSLSampler, "CalculateLevelOfDetail", 2);                   // CalculateLevelOfDetail(Sampler, Location)
+            DEFINE_STUB("CalculateLevelOfDetailUnclamped_2", GLSLSampler, "CalculateLevelOfDetailUnclamped", 2); // CalculateLevelOfDetailUnclamped(Sampler, Location)
         }
     }
 
