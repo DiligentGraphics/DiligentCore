@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -864,10 +864,11 @@ void RayTracingProceduralIntersectionReferenceD3D12(ISwapChain* pSwapChain)
 
         const auto& Boxes = TestingConstants::ProceduralIntersection::Boxes;
 
-        Geometry.Type                      = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS;
-        Geometry.Flags                     = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
-        Geometry.AABBs.AABBs.StartAddress  = 0;
-        Geometry.AABBs.AABBs.StrideInBytes = 0;
+        Geometry.Type                     = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS;
+        Geometry.Flags                    = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+        Geometry.AABBs.AABBs.StartAddress = 0;
+        // Zero stride is legal, but causes missed intersections on some AMD drivers.
+        Geometry.AABBs.AABBs.StrideInBytes = sizeof(D3D12_RAYTRACING_AABB); // 0
         Geometry.AABBs.AABBCount           = _countof(Boxes) / 2;
 
         BottomLevelInputs.pGeometryDescs = &Geometry;
