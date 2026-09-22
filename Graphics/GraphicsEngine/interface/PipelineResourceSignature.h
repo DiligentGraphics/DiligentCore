@@ -122,6 +122,13 @@ DILIGENT_TYPED_ENUM(PIPELINE_RESOURCE_FLAGS, Uint8)
     /// signatures, but are set directly in command buffers or command lists and are very cheap.
     /// In legacy APIs (Direct3D11 and OpenGL), inline constants are emulated using regular
     /// constant buffers and thus have higher overhead.
+    ///
+    /// In Direct3D12, accesses to inline constants must use compile-time constant offsets.
+    /// Array members may only be accessed with static/literal indices. Use a regular
+    /// constant buffer if the shader needs runtime indexing into the buffer.
+    /// In Vulkan, array members of push constant blocks may only be accessed with
+    /// dynamically uniform indices, i.e. indices that are identical across the
+    /// relevant shader invocation group.
     PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS = 1u << 1,
 
     /// Indicates that a texture SRV will be combined with a sampler.

@@ -72,11 +72,36 @@ struct PSInput
     float3 Color : COLOR;
 };
 
+float4 GetPosition(uint VertexId)
+{
+    // Use literal indices: D3D12 requires static offsets, and Vulkan requires
+    // dynamically uniform indices when accessing push constant arrays.
+    switch (VertexId)
+    {
+        case 0:  return g_Positions[0];
+        case 1:  return g_Positions[1];
+        case 2:  return g_Positions[2];
+        case 3:  return g_Positions[3];
+        case 4:  return g_Positions[4];
+        default: return g_Positions[5];
+    }
+}
+
+float3 GetColor(uint VertexId)
+{
+    switch (VertexId % 3)
+    {
+        case 0:  return g_Colors[0].rgb;
+        case 1:  return g_Colors[1].rgb;
+        default: return g_Colors[2].rgb;
+    }
+}
+
 void main(uint VertexId : SV_VertexId, 
           out  PSInput  PSIn)
 {
-    PSIn.Pos   = g_Positions[VertexId];
-    PSIn.Color = g_Colors[VertexId % 3].rgb;
+    PSIn.Pos   = GetPosition(VertexId);
+    PSIn.Color = GetColor(VertexId);
 }
 )"};
 
@@ -119,14 +144,34 @@ struct PSInput
     float4 Color : COLOR;
 };
 
+float4 GetPosition(uint VertexId)
+{
+    // VertexId is not dynamically uniform, so use literal push constant indices.
+    switch (VertexId)
+    {
+        case 0:  return PushConstants.g_Positions[0];
+        case 1:  return PushConstants.g_Positions[1];
+        case 2:  return PushConstants.g_Positions[2];
+        case 3:  return PushConstants.g_Positions[3];
+        case 4:  return PushConstants.g_Positions[4];
+        default: return PushConstants.g_Positions[5];
+    }
+}
+
+float4 GetColor(uint VertexId)
+{
+    switch (VertexId % 3)
+    {
+        case 0:  return float4(1.0, 0.0, 0.0, 1.0);
+        case 1:  return float4(0.0, 1.0, 0.0, 1.0);
+        default: return float4(0.0, 0.0, 1.0, 1.0);
+    }
+}
+
 void main(uint VertexId : SV_VertexId, out PSInput PSIn)
 {
-    float4 Colors[3];
-    Colors[0] = float4(1.0, 0.0, 0.0, 1.0);
-    Colors[1] = float4(0.0, 1.0, 0.0, 1.0);
-    Colors[2] = float4(0.0, 0.0, 1.0, 1.0);
-    PSIn.Pos = PushConstants.g_Positions[VertexId];
-    PSIn.Color = Colors[VertexId % 3];
+    PSIn.Pos   = GetPosition(VertexId);
+    PSIn.Color = GetColor(VertexId);
 }
 )"};
 
@@ -192,16 +237,36 @@ struct PSInput
     float3 Color : COLOR;
 };
 
+float4 GetPosition(uint VertexId)
+{
+    // Use literal indices: D3D12 requires static offsets, and Vulkan requires
+    // dynamically uniform indices when accessing push constant arrays.
+    switch (VertexId)
+    {
+        case 0:  return g_Positions[0];
+        case 1:  return g_Positions[1];
+        case 2:  return g_Positions[2];
+        case 3:  return g_Positions[3];
+        case 4:  return g_Positions[4];
+        default: return g_Positions[5];
+    }
+}
+
+float3 GetColor(uint VertexId)
+{
+    switch (VertexId % 3)
+    {
+        case 0:  return float3(1.0, 0.0, 0.0);
+        case 1:  return float3(0.0, 1.0, 0.0);
+        default: return float3(0.0, 0.0, 1.0);
+    }
+}
+
 void main(uint VertexId : SV_VertexId, 
           out  PSInput  PSIn)
 {
-    float3 Colors[3];
-    Colors[0] = float3(1.0, 0.0, 0.0);
-    Colors[1] = float3(0.0, 1.0, 0.0);
-    Colors[2] = float3(0.0, 0.0, 1.0);
-
-    PSIn.Pos   = g_Positions[VertexId];
-    PSIn.Color = Colors[VertexId % 3].rgb;
+    PSIn.Pos   = GetPosition(VertexId);
+    PSIn.Color = GetColor(VertexId);
 }
 )"};
 
