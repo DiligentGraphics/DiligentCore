@@ -159,10 +159,13 @@ float4 VerifyResources(uint index, float2 coord)
     AllCorrect *= CheckValue(g_Textures[TEXTURES_NONUNIFORM(TexIdx)].SampleLevel(g_Samplers[NonUniformResourceIndex(SamIdx)], coord, 0.0), TexRefValues[TexIdx]);
     AllCorrect *= CheckValue(g_ConstantBuffers[CONST_BUFFERS_NONUNIFORM(ConstBuffIdx)].Data, ConstBuffRefValues[ConstBuffIdx]);
     AllCorrect *= CheckValue(g_FormattedBuffers[FMT_BUFFERS_NONUNIFORM(FmtBuffIdx)].Load(0), FmtBuffRefValues[FmtBuffIdx]);
-    AllCorrect *= CheckValue(g_StructuredBuffers[STRUCT_BUFFERS_NONUNIFORM(StructBuffIdx)][0].Data, StructBuffRefValues[StructBuffIdx]);
+    // Use Load() for StructuredBuffer and RWStructuredBuffer reads below:
+    // FXC can drop the nonuniform operand flag when optimizing operator[],
+    // causing incorrect descriptor selection on AMD/D3D12.
+    AllCorrect *= CheckValue(g_StructuredBuffers[STRUCT_BUFFERS_NONUNIFORM(StructBuffIdx)].Load(0).Data, StructBuffRefValues[StructBuffIdx]);
     AllCorrect *= CheckValue(g_RWTextures[RWTEXTURES_NONUNIFORM(RWTexIdx)][int2(coord*10)], RWTexRefValues[RWTexIdx]);
 #ifndef VULKAN
-    AllCorrect *= CheckValue(g_RWStructBuffers[RWSTRUCT_BUFFERS_NONUNIFORM(RWStructBuffIdx)][0].Data, RWStructBuffRefValues[RWStructBuffIdx]);
+    AllCorrect *= CheckValue(g_RWStructBuffers[RWSTRUCT_BUFFERS_NONUNIFORM(RWStructBuffIdx)].Load(0).Data, RWStructBuffRefValues[RWStructBuffIdx]);
 #endif
     AllCorrect *= CheckValue(g_RWFormattedBuffers[RWFMT_BUFFERS_NONUNIFORM(RWFmtBuffIdx)][0], RWFmtBuffRefValues[RWFmtBuffIdx]);
 
