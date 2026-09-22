@@ -2085,10 +2085,19 @@ void DeviceContextD3D11Impl::WaitForIdle()
     DEV_CHECK_ERR(!IsDeferred(), "Only immediate contexts can be idled");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Flushing device context inside an active render pass.");
 
+    ID3D11Device*        pd3d11Device = m_pDevice->GetD3D11Device();
+    CComPtr<ID3D11Query> pd3d11Query  = CreateD3D11QueryEvent(pd3d11Device);
+    if (!pd3d11Query)
+    {
+        LOG_ERROR_MESSAGE("Failed to create the D3D11 idle query.");
+        return;
+    }
+
+    m_pd3d11DeviceContext->End(pd3d11Query);
     if (m_WaitForIdleEvent != nullptr)
     {
-        // Flush1 submits all preceding commands and signals the event when they complete.
-        // The auto-reset event can be reused after each successful wait without polling.
+        // Block on the reusable auto-reset event before checking the query to reduce
+        // polling while the submitted work is running.
         m_pd3d11DeviceContext3->Flush1(D3D11_CONTEXT_TYPE_ALL, m_WaitForIdleEvent);
         const DWORD WaitResult = WaitForSingleObject(m_WaitForIdleEvent, INFINITE);
         if (WaitResult != WAIT_OBJECT_0)
@@ -2096,27 +2105,20 @@ void DeviceContextD3D11Impl::WaitForIdle()
     }
     else
     {
-        // Use query wait for runtimes without Flush1.
-        ID3D11Device*        pd3d11Device = m_pDevice->GetD3D11Device();
-        CComPtr<ID3D11Query> pd3d11Query  = CreateD3D11QueryEvent(pd3d11Device);
-        if (!pd3d11Query)
-        {
-            LOG_ERROR_MESSAGE("Failed to create the D3D11 idle query.");
-            return;
-        }
-
-        m_pd3d11DeviceContext->End(pd3d11Query);
         m_pd3d11DeviceContext->Flush();
-
-        BOOL    Data = FALSE;
-        HRESULT hr   = S_FALSE;
-        // Note: yield-only polling causes nonblocking staging-buffer maps to report busy
-        // on an AMD adapter after query completion.
-        while ((hr = m_pd3d11DeviceContext->GetData(pd3d11Query, &Data, sizeof(Data), 0)) == S_FALSE)
-            std::this_thread::sleep_for(std::chrono::microseconds{1});
-
-        LOG_D3D_ERROR(hr, "Failed to wait for the D3D11 idle query.");
     }
+
+    // WARP can signal the Flush1 event while preceding event queries still return
+    // S_FALSE. Check the trailing query so that earlier fence signals (e.g. screen
+    // capture completion) are observable when WaitForIdle returns.
+    BOOL    Data = FALSE;
+    HRESULT hr   = S_FALSE;
+    // Note: yield-only polling causes nonblocking staging-buffer maps to report busy
+    // on an AMD adapter after query completion.
+    while ((hr = m_pd3d11DeviceContext->GetData(pd3d11Query, &Data, sizeof(Data), 0)) == S_FALSE)
+        std::this_thread::sleep_for(std::chrono::microseconds{1});
+
+    LOG_D3D_ERROR(hr, "Failed to wait for the D3D11 idle query.");
 }
 
 std::shared_ptr<DisjointQueryPool::DisjointQueryWrapper> DeviceContextD3D11Impl::BeginDisjointQuery()

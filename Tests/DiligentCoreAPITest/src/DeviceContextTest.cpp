@@ -54,7 +54,9 @@ TEST(DeviceContextTest, DebugGroups)
 }
 
 // Repeated waits cover both empty submissions and reuse of the backend's completion
-// event. Nonblocking readback ensures WaitForIdle itself completes each GPU copy.
+// event. Check fence completion before mapping to catch query results that are
+// still pending after the idle wait. Nonblocking readback ensures WaitForIdle
+// itself completes each GPU copy.
 TEST(DeviceContextTest, WaitForIdleReadback)
 {
     GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
@@ -81,6 +83,12 @@ TEST(DeviceContextTest, WaitForIdleReadback)
     pDevice->CreateBuffer(Desc, nullptr, &pReadback);
     ASSERT_NE(pReadback, nullptr);
 
+    FenceDesc FenceCI;
+    FenceCI.Name = "WaitForIdle readback fence";
+    RefCntAutoPtr<IFence> pFence;
+    pDevice->CreateFence(FenceCI, &pFence);
+    ASSERT_NE(pFence, nullptr);
+
     for (Uint32 Iteration = 0; Iteration < 32; ++Iteration)
     {
         SCOPED_TRACE(Iteration);
@@ -92,7 +100,10 @@ TEST(DeviceContextTest, WaitForIdleReadback)
         pContext->UpdateBuffer(pSource, 0, Desc.Size, Expected.data(), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
         pContext->CopyBuffer(pSource, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
                              pReadback, 0, Desc.Size, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        const Uint64 FenceValue = Uint64{Iteration} + 1;
+        pContext->EnqueueSignal(pFence, FenceValue);
         pContext->WaitForIdle();
+        EXPECT_EQ(pFence->GetCompletedValue(), FenceValue);
 
         void* pData = nullptr;
         pContext->MapBuffer(pReadback, MAP_READ, MAP_FLAG_DO_NOT_WAIT, pData);

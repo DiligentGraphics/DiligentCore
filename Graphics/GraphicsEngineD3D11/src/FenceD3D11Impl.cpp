@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -66,6 +66,7 @@ Uint64 FenceD3D11Impl::GetCompletedValue()
         }
         else
         {
+            LOG_D3D_ERROR(res, FormatString("Failed to query completion of fence '", m_Desc.Name, "' at value ", QueryData.Value, "."));
             break;
         }
     }
