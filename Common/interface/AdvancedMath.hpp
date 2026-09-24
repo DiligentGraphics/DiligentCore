@@ -1391,6 +1391,10 @@ public:
             const auto& V0 = Polygon[Idx0];
             const auto& V1 = Polygon[Idx1];
             const auto& V2 = Polygon[Idx2];
+            // A reflex vertex on a nondegenerate ear's diagonal must block
+            // clipping, or the diagonal can cut through a concave boundary.
+            // Degenerate ears still need to be removable with collinear vertices.
+            const bool AllowEdges = GetWinding(V0, V1, V2) != 0;
 
             for (const int Idx : m_RemainingVertIds)
             {
@@ -1412,9 +1416,7 @@ public:
                     continue;
                 }
 
-                // Do not treat vertices exactly on the edge as inside the triangle,
-                // so that we can clip out degenerate triangles.
-                if (IsPointInsideTriangle(V0, V1, V2, Polygon[Idx], /*AllowEdges = */ false))
+                if (IsPointInsideTriangle(V0, V1, V2, Polygon[Idx], AllowEdges))
                 {
                     // The vertex is inside the triangle
                     return VertexType::Convexx;

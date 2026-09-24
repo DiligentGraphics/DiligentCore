@@ -3528,6 +3528,63 @@ TEST(Common_AdvancedMath, TriangulatePolygon2D)
     }
 }
 
+TEST(Common_AdvancedMath, TriangulateConcavePolygonWithVertexOnEarDiagonal)
+{
+    // Counterclockwise vertex numbering:
+    //
+    //  5---4
+    //  |   |
+    //  |   3---2
+    //  |       |
+    //  0-------1
+    //
+    // Vertex 3 lies on diagonal 5--1, so (5, 0, 1) must not be clipped as
+    // the first ear. The reference triangles explicitly partition the L.
+    struct TestCase
+    {
+        const char*          Name;
+        std::vector<double2> Vertices;
+        std::vector<Uint32>  ExpectedIndices;
+    };
+    const TestCase Cases[] = {
+        {"Counterclockwise",
+         {{0, 0}, {2, 0}, {2, 1}, {1, 1}, {1, 2}, {0, 2}},
+         {0, 1, 2, 0, 2, 3, 5, 0, 3, 3, 4, 5}},
+        {"Clockwise",
+         {{0, 2}, {1, 2}, {1, 1}, {2, 1}, {2, 0}, {0, 0}},
+         {5, 0, 1, 5, 1, 2, 5, 2, 3, 3, 4, 5}},
+    };
+
+    Polygon2DTriangulator<Uint32>         Triangulator2D;
+    Polygon3DTriangulator<Uint32, double> Triangulator3D;
+    for (const TestCase& Case : Cases)
+    {
+        SCOPED_TRACE(Case.Name);
+        const std::vector<Uint32>& Indices2D = Triangulator2D.Triangulate(Case.Vertices);
+        EXPECT_EQ(Triangulator2D.GetResult(), TRIANGULATE_POLYGON_RESULT_OK);
+        EXPECT_EQ(Indices2D, Case.ExpectedIndices);
+
+        for (size_t Plane = 0; Plane < 3; ++Plane)
+        {
+            SCOPED_TRACE(Plane);
+            std::vector<double3> Vertices3D;
+            for (const double2& Vertex : Case.Vertices)
+            {
+                switch (Plane)
+                {
+                    case 0: Vertices3D.emplace_back(Vertex.x, Vertex.y, 5.0); break;
+                    case 1: Vertices3D.emplace_back(Vertex.x, -3.0, Vertex.y); break;
+                    case 2: Vertices3D.emplace_back(2.0, Vertex.x, Vertex.y); break;
+                }
+            }
+            const std::vector<Uint32>& Indices3D = Triangulator3D.Triangulate(Vertices3D);
+            EXPECT_EQ(Triangulator3D.GetResult(), TRIANGULATE_POLYGON_RESULT_OK);
+            EXPECT_EQ(Indices3D, Case.ExpectedIndices);
+        }
+    }
+}
+
+
 TEST(Common_AdvancedMath, TriangulatePolygon3D)
 {
     for (size_t proj = 0; proj < 3; ++proj)
