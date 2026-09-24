@@ -30,11 +30,13 @@
 /// Parsing tools
 
 #include <cstring>
+#include <cmath>
 #include <sstream>
 #include <limits>
 #include <vector>
 #include <algorithm>
 #include <optional>
+#include <type_traits>
 
 #include "../../Primitives/interface/BasicTypes.h"
 #include "../../Primitives/interface/FlagEnum.h"
@@ -423,38 +425,223 @@ bool SkipString(const IteratorType& Start, const IteratorType& End, const char* 
     }
 }
 
-/// Parses an integer starting from the given position.
+/// Parses a decimal integer starting from the given position.
 ///
-/// \param[in]  Start - starting position.
-/// \param[in]  End   - end of the input string
-/// \param[out] Value - parsed integer value.
-/// \return     position immediately following the last character of the number.
+/// \param[in]  Start - starting position; leading whitespace is not skipped.
+/// \param[in]  End   - end of the input range.
+/// \param[out] Value - parsed integer value, unchanged on failure.
+/// \return The position immediately following the last digit, or Start if no
+///         integer is found or its value cannot be represented by ValueType.
+///
+/// Accepts an optional sign. Negative values are rejected for unsigned types.
+/// ValueType must be an integral type other than bool.
 template <typename IteratorType, typename ValueType>
 IteratorType ParseInteger(const IteratorType& Start, const IteratorType& End, ValueType& Value) noexcept
 {
-    auto Pos = Start;
+    static_assert(std::is_integral<ValueType>::value && !std::is_same<ValueType, bool>::value,
+                  "ValueType must be an integral type other than bool");
+
+    IteratorType Pos = Start;
     if (Pos == End)
-        return Pos;
+        return Start;
 
     const bool IsNegative = *Pos == '-';
+    if (IsNegative && !std::numeric_limits<ValueType>::is_signed)
+        return Start;
+
     if (*Pos == '+' || *Pos == '-')
         ++Pos;
 
-    if (Pos == End || !IsNum(*Pos))
+    if (Pos == End || !IsDigit(*Pos))
         return Start;
 
-    Value = 0;
-    while (Pos != End && IsNum(*Pos))
+    ValueType Number = 0;
+    while (Pos != End && IsDigit(*Pos))
     {
-        Value = Value * 10 + (*Pos - '0');
+        const ValueType Digit = static_cast<ValueType>(*Pos - '0');
+        if (IsNegative)
+        {
+            // Accumulate negative values directly so that the minimum signed
+            // value never needs to be represented as a positive value.
+            if (Number < ((std::numeric_limits<ValueType>::min)() + Digit) / 10)
+                return Start;
+            Number = static_cast<ValueType>(Number * 10 - Digit);
+        }
+        else
+        {
+            if (Number > ((std::numeric_limits<ValueType>::max)() - Digit) / 10)
+                return Start;
+            Number = static_cast<ValueType>(Number * 10 + Digit);
+        }
         ++Pos;
     }
 
-    if (IsNegative)
-        Value = -Value;
-
+    Value = Number;
     return Pos;
 }
+
+/// Reads a decimal floating-point number starting from the given position.
+///
+/// \param[in]  Start - starting position; leading whitespace is not skipped.
+/// \param[in]  End   - end of the input range; no null terminator is required.
+/// \param[out] Value - parsed value, unchanged on failure.
+/// \return The position immediately following the number, or Start if no valid
+///         number is found or its magnitude exceeds the finite ValueType range.
+///
+/// Accepts an optional sign, decimal digits with an optional decimal point,
+/// and an optional e/E exponent. At least one digit is required before the
+/// exponent, and an exponent marker must be followed by an optional sign and
+/// at least one digit. NaN and infinity are not accepted. Conversion is
+/// locale-independent and does not allocate memory. Underflow is accepted,
+/// including signed zero. ValueType must be float or double.
+template <typename IteratorType, typename ValueType>
+IteratorType ReadFloat(const IteratorType& Start, const IteratorType& End, ValueType& Value) noexcept
+{
+    static_assert(std::is_same<ValueType, float>::value || std::is_same<ValueType, double>::value,
+                  "ValueType must be float or double");
+
+    // Retain 19 significant decimal digits for conversion to float or double without
+    // allocating a terminated string or depending on floating from_chars support.
+    if (Start == End)
+    {
+        return Start;
+    }
+    IteratorType Pos = Start;
+
+    // Parse the optional sign.
+    //  -12.34e-5;
+    //  ^
+    //  Pos
+    const bool Negative = *Pos == '-';
+    if (*Pos == '-' || *Pos == '+')
+    {
+        ++Pos;
+    }
+    Uint64 Mantissa = 0;
+    int    Digits   = 0;
+    Int64  Power    = 0;
+    bool   AnyDigit = false;
+
+    const auto ReadDigits = [&](bool IsFractional) {
+        while (Pos != End && IsDigit(*Pos))
+        {
+            AnyDigit = true;
+            if (Digits < 19)
+            {
+                Mantissa = Mantissa * 10 + static_cast<unsigned>(*Pos - '0');
+                if (Mantissa != 0)
+                {
+                    ++Digits;
+                }
+                if (IsFractional)
+                {
+                    // Each retained fractional digit shifts the decimal point left.
+                    --Power;
+                }
+            }
+            else if (!IsFractional)
+            {
+                // Discarded integer digits still contribute to the magnitude.
+                // Discarded fractional digits do not change the retained value.
+                ++Power;
+            }
+            ++Pos;
+        }
+    };
+
+    // Parse the integer part, which may be empty (e.g. ".5").
+    //  -12.34e-5;
+    //   ^
+    //   Pos
+    ReadDigits(false);
+
+    // Parse the optional decimal point and fractional part.
+    //  -12.34e-5;
+    //     ^
+    //     Pos
+    if (Pos != End && *Pos == '.')
+    {
+        ++Pos;
+        //  -12.34e-5;
+        //      ^
+        //      Pos
+        ReadDigits(true);
+    }
+    // A sign or decimal point alone does not form a number.
+    if (!AnyDigit)
+    {
+        return Start;
+    }
+
+    // Parse the optional exponent marker and sign.
+    //  -12.34e-5;
+    //        ^
+    //        Pos
+    if (Pos != End && (*Pos == 'e' || *Pos == 'E'))
+    {
+        ++Pos;
+        //  -12.34e-5;
+        //         ^
+        //         Pos
+        bool NegativeExponent = false;
+        if (Pos != End && (*Pos == '-' || *Pos == '+'))
+        {
+            NegativeExponent = *Pos == '-';
+            ++Pos;
+        }
+        // An exponent marker requires at least one exponent digit.
+        //  -12.34e-5;
+        //          ^
+        //          Pos
+        if (Pos == End || !IsDigit(*Pos))
+        {
+            return Start;
+        }
+        Int64 Exponent = 0;
+        while (Pos != End && IsDigit(*Pos))
+        {
+            // Cap the exponent so additional digits cannot overflow Int64.
+            Exponent = (std::min)(Exponent * 10 + static_cast<Int64>(*Pos - '0'), Int64{1000000000});
+            ++Pos;
+        }
+        Power += NegativeExponent ? -Exponent : Exponent;
+    }
+
+    // Pos now points past the number. Convert Mantissa * 10^Power.
+    //  -12.34e-5;
+    //           ^
+    //           Pos
+    double Number = 0;
+    if (Mantissa != 0)
+    {
+        Number = static_cast<double>(Mantissa);
+        if (Power > std::numeric_limits<double>::max_exponent10 - 19)
+        {
+            // Normalize near the upper double limit to avoid overflowing the
+            // product through rounding of a large power of ten.
+            Number /= std::pow(10.0, Digits - 1);
+            Power += Digits - 1;
+        }
+        if (Power < std::numeric_limits<double>::min_exponent10)
+        {
+            // A subnormal result may still be representable even when 10^Power
+            // alone underflows. Apply the scale in two representable steps.
+            Number *= std::pow(10.0, static_cast<double>(Power - std::numeric_limits<double>::min_exponent10));
+            Number *= std::pow(10.0, std::numeric_limits<double>::min_exponent10);
+        }
+        else
+        {
+            Number *= std::pow(10.0, static_cast<double>(Power));
+        }
+        if (!std::isfinite(Number) || Number > (std::numeric_limits<ValueType>::max)())
+        {
+            return Start;
+        }
+    }
+    Value = static_cast<ValueType>(Negative ? -Number : Number);
+    return Pos;
+}
+
 
 /// Splits string into chunks separated by comments and delimiters.
 ///

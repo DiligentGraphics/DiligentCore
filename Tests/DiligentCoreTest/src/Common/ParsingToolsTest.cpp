@@ -26,7 +26,9 @@
 
 #include "ParsingTools.hpp"
 
+#include <cmath>
 #include <limits.h>
+#include <string_view>
 
 #include "gtest/gtest.h"
 
@@ -1488,6 +1490,306 @@ TEST(Common_ParsingTools, ParseInteger)
     }
 };
 
+
+template <typename ValueType>
+void TestParseIntegerLimits(const char* MinText, const char* MaxText, const char* UnderflowText, const char* OverflowText)
+{
+    struct ValidCase
+    {
+        const char* Text;
+        ValueType   Expected;
+    };
+    const ValidCase ValidCases[] = {
+        {MinText, (std::numeric_limits<ValueType>::min)()},
+        {MaxText, (std::numeric_limits<ValueType>::max)()},
+        {"+0", ValueType{0}},
+        {"0007", ValueType{7}},
+    };
+    for (const ValidCase& Case : ValidCases)
+    {
+        SCOPED_TRACE(Case.Text);
+        ValueType              Value = 7;
+        const std::string_view Text{Case.Text};
+        EXPECT_EQ(ParseInteger(Text.begin(), Text.end(), Value), Text.end());
+        EXPECT_EQ(Value, Case.Expected);
+
+        // A valid number may be followed by a delimiter or another token.
+        const std::string Prefix = std::string{Case.Text} + "x";
+        Value                    = 7;
+        EXPECT_EQ(ParseInteger(Prefix.begin(), Prefix.end(), Value), Prefix.end() - 1);
+        EXPECT_EQ(Value, Case.Expected);
+    }
+    for (const char* Text : {UnderflowText, OverflowText})
+    {
+        SCOPED_TRACE(Text);
+        ValueType   Value = 7;
+        const char* End   = Text + std::strlen(Text);
+        EXPECT_EQ(ParseInteger(Text, End, Value), Text);
+        EXPECT_EQ(Value, ValueType{7});
+    }
+    if constexpr (!std::numeric_limits<ValueType>::is_signed)
+    {
+        const char  Text[] = "-0";
+        ValueType   Value  = 7;
+        const char* Start  = Text;
+        const char* End    = Text + 2;
+        EXPECT_EQ(ParseInteger(Start, End, Value), Start);
+        EXPECT_EQ(Value, ValueType{7});
+    }
+}
+
+TEST(Common_ParsingTools, ParseIntegerLimits)
+{
+    TestParseIntegerLimits<Int8>("-128", "127", "-129", "128");
+    TestParseIntegerLimits<Uint8>("0", "255", "-1", "256");
+    TestParseIntegerLimits<Int16>("-32768", "32767", "-32769", "32768");
+    TestParseIntegerLimits<Uint16>("0", "65535", "-1", "65536");
+    TestParseIntegerLimits<Int32>("-2147483648", "2147483647", "-2147483649", "2147483648");
+    TestParseIntegerLimits<Uint32>("0", "4294967295", "-1", "4294967296");
+    TestParseIntegerLimits<Int64>("-9223372036854775808", "9223372036854775807", "-9223372036854775809", "9223372036854775808");
+    TestParseIntegerLimits<Uint64>("0", "18446744073709551615", "-1", "18446744073709551616");
+}
+
+TEST(Common_ParsingTools, ParseIntegerBoundedInput)
+{
+    const char  Text[] = {'-', '1', '2', '8', '9'};
+    const char* Start  = Text;
+    const char* End    = Text + 4;
+    Int8        Value  = 7;
+    EXPECT_EQ(ParseInteger(Start, End, Value), End);
+    EXPECT_EQ(Value, -128);
+
+    // The digit beyond End must not turn the valid bounded number into overflow.
+    Value = 7;
+    End   = Text + 5;
+    EXPECT_EQ(ParseInteger(Start, End, Value), Start);
+    EXPECT_EQ(Value, 7);
+}
+
+TEST(Common_ParsingTools, ReadFloat)
+{
+    struct ValidCase
+    {
+        const char* Text;
+        float       Expected;
+    };
+    const ValidCase Cases[] = {
+        {"0", 0.0f},
+        {"+0", 0.0f},
+        {"-0.0", -0.0f},
+        {"1", 1.0f},
+        {"-1", -1.0f},
+        {"+2.5", 2.5f},
+        {".25", 0.25f},
+        {"-.5", -0.5f},
+        {"1.", 1.0f},
+        {"00012.5", 12.5f},
+        {"1.25e2", 125.0f},
+        {"-1.25E-2", -0.0125f},
+        {"3.e-1", 0.3f},
+        {".4e+1", 4.0f},
+        {"000.000125e+3", 0.125f},
+        {"123456789012345678901234567890e-29", 1.2345679f},
+        {"0.00000000000000000000000000000125e30", 1.25f},
+        {"3.4028234e38", (std::numeric_limits<float>::max)()},
+        {"1.1754943508222875e-38", (std::numeric_limits<float>::min)()},
+        {"1e-9999999999999999999999999", 0.0f},
+        {"-1e-9999999999999999999999999", -0.0f},
+        {"0e9999999999999999999999999", 0.0f},
+        {"-0e9999999999999999999999999", -0.0f},
+    };
+    for (const ValidCase& Case : Cases)
+    {
+        SCOPED_TRACE(Case.Text);
+        const std::string Text{Case.Text};
+        float             Value = 7.0f;
+        ASSERT_EQ(ReadFloat(Text.begin(), Text.end(), Value), Text.end());
+        EXPECT_FLOAT_EQ(Value, Case.Expected);
+        EXPECT_EQ(std::signbit(Value), std::signbit(Case.Expected));
+    }
+}
+
+TEST(Common_ParsingTools, ReadFloatDouble)
+{
+    struct ValidCase
+    {
+        const char* Text;
+        double      Expected;
+    };
+    const ValidCase Cases[] = {
+        {"+2.5", 2.5},
+        {"-.125e+1", -1.25},
+        {"1.2345678901234567", 1.2345678901234567},
+        {"1.2345678901234567890123456789", 1.2345678901234567},
+        {"123456789012345678901234567890.987654321e-29", 1.2345678901234567},
+        {"123456789012345678901234567890e-29", 1.2345678901234567},
+        {"1e39", 1e39},
+        {"1.7976931348623157e308", (std::numeric_limits<double>::max)()},
+        {"1.797693134862315708e308", (std::numeric_limits<double>::max)()},
+        {"1.797693134862315700e308", (std::numeric_limits<double>::max)()},
+        {"2.2250738585072014e-308", (std::numeric_limits<double>::min)()},
+        {"0", 0.0},
+        {"-0.0", -0.0},
+        {"1e-9999999999999999999999999", 0.0},
+        {"-1e-9999999999999999999999999", -0.0},
+        {"0e9999999999999999999999999", 0.0},
+        {"-0e9999999999999999999999999", -0.0},
+    };
+    for (const ValidCase& Case : Cases)
+    {
+        SCOPED_TRACE(Case.Text);
+        const std::string Text{Case.Text};
+        double            Value = 7.0;
+        ASSERT_EQ(ReadFloat(Text.begin(), Text.end(), Value), Text.end());
+        EXPECT_DOUBLE_EQ(Value, Case.Expected);
+        EXPECT_EQ(std::signbit(Value), std::signbit(Case.Expected));
+    }
+
+    for (const char* Case : {"1e309", "-1e309", "1e9999999999999999999999999", "1e+", "nan"})
+    {
+        SCOPED_TRACE(Case);
+        const std::string Text{Case};
+        double            Value = 7.0;
+        EXPECT_EQ(ReadFloat(Text.begin(), Text.end(), Value), Text.begin());
+        EXPECT_EQ(Value, 7.0);
+    }
+}
+
+TEST(Common_ParsingTools, ReadFloatSmallestSubnormal)
+{
+    const std::string FloatText{"1.401298464324817e-45"};
+    float             FloatValue = 7.0f;
+    ASSERT_EQ(ReadFloat(FloatText.begin(), FloatText.end(), FloatValue), FloatText.end());
+    // Exact comparisons distinguish the smallest subnormal from zero.
+    EXPECT_EQ(FloatValue, std::numeric_limits<float>::denorm_min());
+
+    const std::string DoubleText{"4.9406564584124654e-324"};
+    double            DoubleValue = 7.0;
+    ASSERT_EQ(ReadFloat(DoubleText.begin(), DoubleText.end(), DoubleValue), DoubleText.end());
+    EXPECT_EQ(DoubleValue, std::numeric_limits<double>::denorm_min());
+}
+
+TEST(Common_ParsingTools, ReadFloatDoubleBoundedInput)
+{
+    const char  Text[] = {'1', '.', '2', '5', 'e', '3', '0', '0', '9'};
+    const char* Start  = Text;
+    const char* End    = Text + 8;
+    double      Value  = 7.0;
+    ASSERT_EQ(ReadFloat(Start, End, Value), End);
+    EXPECT_DOUBLE_EQ(Value, 1.25e300);
+
+    // Including the final digit makes the exponent overflow double's range.
+    End   = Text + 9;
+    Value = 7.0;
+    EXPECT_EQ(ReadFloat(Start, End, Value), Start);
+    EXPECT_EQ(Value, 7.0);
+}
+
+TEST(Common_ParsingTools, ReadFloatPrefixes)
+{
+    struct PrefixCase
+    {
+        const char* Text;
+        size_t      Length;
+        float       Expected;
+    };
+    const PrefixCase Cases[] = {
+        {"1e1e1", 3, 10.0f},
+        {"1.2.3", 3, 1.2f},
+        {"1f", 1, 1.0f},
+        {"1.0F", 3, 1.0f},
+        {"0x1p0", 1, 0.0f},
+        {"1 2", 1, 1.0f},
+        {"1 ", 1, 1.0f},
+        {"1\n", 1, 1.0f},
+        {"1.0junk", 3, 1.0f},
+        {"-12.5,", 5, -12.5f},
+    };
+    for (const PrefixCase& Case : Cases)
+    {
+        SCOPED_TRACE(Case.Text);
+        const std::string Text{Case.Text};
+        float             Value = 7.0f;
+        EXPECT_EQ(ReadFloat(Text.begin(), Text.end(), Value), Text.begin() + Case.Length);
+        EXPECT_FLOAT_EQ(Value, Case.Expected);
+    }
+}
+
+TEST(Common_ParsingTools, ReadFloatRejectsInvalidInput)
+{
+    const char* Cases[] = {
+        "",
+        " ",
+        "\t",
+        "+",
+        "-",
+        ".",
+        "+.",
+        ".e1",
+        "1e",
+        "1e+",
+        "1e-",
+        "1eX",
+        "1e+X",
+        "1e-X",
+        "NaN",
+        "nan",
+        "inf",
+        "-inf",
+        "Infinity",
+        " 1",
+        "1e39",
+        "1e9999999999999999999999999",
+        "-1e9999999999999999999999999",
+    };
+    for (const char* Case : Cases)
+    {
+        SCOPED_TRACE(Case);
+        const std::string Text{Case};
+        float             Value = 7.0f;
+        EXPECT_EQ(ReadFloat(Text.begin(), Text.end(), Value), Text.begin());
+        EXPECT_FLOAT_EQ(Value, 7.0f);
+    }
+}
+
+TEST(Common_ParsingTools, ReadFloatBoundedInput)
+{
+    const char  Text[] = {'x', '-', '1', '.', '2', '5', 'e', '1', '!'};
+    const char* Start  = Text + 1;
+    const char* End    = Text + 8;
+    float       Value  = 7.0f;
+    ASSERT_EQ(ReadFloat(Start, End, Value), End);
+    EXPECT_FLOAT_EQ(Value, -12.5f);
+
+    End   = Text + 9;
+    Value = 7.0f;
+    EXPECT_EQ(ReadFloat(Start, End, Value), Text + 8);
+    EXPECT_FLOAT_EQ(Value, -12.5f);
+
+    const char Unterminated[] = {'1', '.', '5'};
+    Start                     = Unterminated;
+    End                       = Unterminated + sizeof(Unterminated);
+    ASSERT_EQ(ReadFloat(Start, End, Value), End);
+    EXPECT_FLOAT_EQ(Value, 1.5f);
+
+    const char EmbeddedNull[] = {'1', '\0', '2'};
+    Start                     = EmbeddedNull;
+    End                       = EmbeddedNull + sizeof(EmbeddedNull);
+    EXPECT_EQ(ReadFloat(Start, End, Value), EmbeddedNull + 1);
+    EXPECT_FLOAT_EQ(Value, 1.0f);
+
+    // Only consider the exponent if it lies inside the supplied range.
+    const char Exponent[] = {'1', 'e', '+'};
+    Start                 = Exponent;
+    End                   = Exponent + 1;
+    ASSERT_EQ(ReadFloat(Start, End, Value), End);
+    EXPECT_FLOAT_EQ(Value, 1.0f);
+
+    End   = Exponent + sizeof(Exponent);
+    Value = 7.0f;
+    EXPECT_EQ(ReadFloat(Start, End, Value), Start);
+    EXPECT_FLOAT_EQ(Value, 7.0f);
+}
 
 TEST(Common_ParsingTools, GetArrayIndex)
 {
