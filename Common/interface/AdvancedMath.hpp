@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,6 +31,7 @@
 /// Additional math functions and structures.
 
 #include <float.h>
+#include <limits>
 #include <vector>
 #include <type_traits>
 
@@ -1261,7 +1262,10 @@ enum TRIANGULATE_POLYGON_RESULT : Uint32
     TRIANGULATE_POLYGON_RESULT_INVALID_EAR = 1u << 3u,
 
     /// No ear vertex was found at one of the steps.
-    TRIANGULATE_POLYGON_RESULT_NO_EAR_FOUND = 1u << 4u
+    TRIANGULATE_POLYGON_RESULT_NO_EAR_FOUND = 1u << 4u,
+
+    /// The polygon's vertex indices do not fit IndexType, or its vertex count does not fit int.
+    TRIANGULATE_POLYGON_RESULT_TOO_MANY_VERTS = 1u << 5u
 };
 DEFINE_FLAG_ENUM_OPERATORS(TRIANGULATE_POLYGON_RESULT);
 
@@ -1295,13 +1299,21 @@ public:
         m_Result = TRIANGULATE_POLYGON_RESULT_OK;
         m_Triangles.clear();
 
-        const int VertCount = static_cast<int>(Polygon.size());
-        if (VertCount <= 2)
+        if (Polygon.size() <= 2)
         {
             m_Result = TRIANGULATE_POLYGON_RESULT_TOO_FEW_VERTS;
             return m_Triangles;
         }
+        // The vertex count must fit int, so cap the last index at INT_MAX - 1.
+        constexpr size_t MaxIndex = (std::min)(static_cast<size_t>((std::numeric_limits<IndexType>::max)()),
+                                               static_cast<size_t>((std::numeric_limits<int>::max)()) - 1);
+        if (Polygon.size() > MaxIndex + 1)
+        {
+            m_Result = TRIANGULATE_POLYGON_RESULT_TOO_MANY_VERTS;
+            return m_Triangles;
+        }
 
+        const int VertCount     = static_cast<int>(Polygon.size());
         const int TriangleCount = VertCount - 2;
         if (TriangleCount == 1)
         {

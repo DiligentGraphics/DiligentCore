@@ -25,6 +25,7 @@
  *  of the possibility of such damages.
  */
 
+#include <algorithm>
 #include <climits>
 #include <sstream>
 #include <array>
@@ -3526,6 +3527,28 @@ TEST(Common_AdvancedMath, TriangulatePolygon2D)
         const std::vector<Uint32> RefTris = {1, 2, 3, 1, 3, 4, 0, 1, 4, 0, 4, 5, 10, 0, 5, 5, 6, 7, 5, 7, 8, 5, 8, 9, 5, 9, 10};
         EXPECT_EQ(Tris, RefTris);
     }
+}
+
+TEST(Common_AdvancedMath, TriangulatePolygonIndexTypeLimits)
+{
+    // A convex polygon along a parabola uses every Uint8 index, including 255.
+    constexpr int     MaxVertexCount = 256;
+    std::vector<int2> Vertices;
+    for (int i = 0; i < MaxVertexCount; ++i)
+    {
+        Vertices.emplace_back(i, i * i);
+    }
+
+    Polygon2DTriangulator<Uint8> Triangulator;
+    const std::vector<Uint8>&    Indices = Triangulator.Triangulate(Vertices);
+    EXPECT_EQ(Triangulator.GetResult(), TRIANGULATE_POLYGON_RESULT_OK);
+    ASSERT_EQ(Indices.size(), size_t{3} * (MaxVertexCount - 2));
+    EXPECT_NE(std::find(Indices.begin(), Indices.end(), Uint8{255}), Indices.end());
+
+    // The next vertex would require index 256; reject it and clear the previous output.
+    Vertices.emplace_back(MaxVertexCount, MaxVertexCount * MaxVertexCount);
+    EXPECT_TRUE(Triangulator.Triangulate(Vertices).empty());
+    EXPECT_EQ(Triangulator.GetResult(), TRIANGULATE_POLYGON_RESULT_TOO_MANY_VERTS);
 }
 
 TEST(Common_AdvancedMath, TriangulateConcavePolygonWithConvexVertexInsideEarCandidate)
