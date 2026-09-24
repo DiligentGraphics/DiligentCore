@@ -3585,6 +3585,29 @@ TEST(Common_AdvancedMath, TriangulateConvexPolygons)
     EXPECT_EQ(Triangulator.GetResult(), TRIANGULATE_POLYGON_RESULT_VERTS_COLLINEAR);
 }
 
+TEST(Common_AdvancedMath, TriangulatePolygonWithTooFewVertices)
+{
+    const std::vector<int2>       Triangle        = {{0, 0}, {1, 0}, {0, 1}};
+    const std::vector<Uint32>     ExpectedIndices = {0, 1, 2};
+    Polygon2DTriangulator<Uint32> Triangulator;
+    for (size_t VertexCount = 0; VertexCount < 3; ++VertexCount)
+    {
+        SCOPED_TRACE(VertexCount);
+        EXPECT_EQ(Triangulator.Triangulate(Triangle), ExpectedIndices);
+        EXPECT_EQ(Triangulator.GetResult(), TRIANGULATE_POLYGON_RESULT_OK);
+
+        // Reject each short input and clear the triangles from the preceding call.
+        std::vector<int2> Vertices = Triangle;
+        Vertices.resize(VertexCount);
+        EXPECT_TRUE(Triangulator.Triangulate(Vertices).empty());
+        EXPECT_EQ(Triangulator.GetResult(), TRIANGULATE_POLYGON_RESULT_TOO_FEW_VERTS);
+    }
+
+    // A subsequent valid input must reset the error status.
+    EXPECT_EQ(Triangulator.Triangulate(Triangle), ExpectedIndices);
+    EXPECT_EQ(Triangulator.GetResult(), TRIANGULATE_POLYGON_RESULT_OK);
+}
+
 TEST(Common_AdvancedMath, TriangulatePolygonIndexTypeLimits)
 {
     // A convex polygon along a parabola uses every Uint8 index, including 255.
@@ -3628,6 +3651,41 @@ TEST(Common_AdvancedMath, TriangulateConcavePolygonWithConvexVertexInsideEarCand
     const std::vector<Uint32>&    Indices = Triangulator.Triangulate(Vertices);
     EXPECT_EQ(Triangulator.GetResult(), TRIANGULATE_POLYGON_RESULT_OK);
     EXPECT_EQ(Indices, ExpectedIndices);
+}
+
+TEST(Common_AdvancedMath, TriangulateConcavePolygonWithCollinearVertices)
+{
+    // Counterclockwise vertex numbering:
+    //
+    //  4.     .2
+    //  | '. .' |
+    //  |   3   |
+    //  |       |
+    //  5---0---1
+    //
+    // Reflex vertex 3 keeps this on the ear-clipping path. Collinear vertices
+    // (5, 0, 1) form the first ear in the counterclockwise case.
+    struct TestCase
+    {
+        const char*         Name;
+        std::vector<int2>   Vertices;
+        std::vector<Uint32> ExpectedIndices;
+    };
+    const TestCase Cases[] = {
+        {"Counterclockwise",
+         {{1, 0}, {2, 0}, {2, 2}, {1, 1}, {0, 2}, {0, 0}},
+         {5, 0, 1, 1, 2, 3, 5, 1, 3, 3, 4, 5}},
+        {"Clockwise",
+         {{0, 0}, {0, 2}, {1, 1}, {2, 2}, {2, 0}, {1, 0}},
+         {5, 0, 1, 5, 1, 2, 5, 2, 3, 3, 4, 5}},
+    };
+    Polygon2DTriangulator<Uint32> Triangulator;
+    for (const TestCase& Case : Cases)
+    {
+        SCOPED_TRACE(Case.Name);
+        EXPECT_EQ(Triangulator.Triangulate(Case.Vertices), Case.ExpectedIndices);
+        EXPECT_EQ(Triangulator.GetResult(), TRIANGULATE_POLYGON_RESULT_OK);
+    }
 }
 
 TEST(Common_AdvancedMath, TriangulateConcavePolygonWithVertexOnEarDiagonal)
