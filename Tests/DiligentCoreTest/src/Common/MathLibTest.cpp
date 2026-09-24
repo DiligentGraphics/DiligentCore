@@ -3529,6 +3529,62 @@ TEST(Common_AdvancedMath, TriangulatePolygon2D)
     }
 }
 
+TEST(Common_AdvancedMath, TriangulateConvexPolygons)
+{
+    struct TestCase
+    {
+        const char*       Name;
+        std::vector<int2> Vertices;
+    };
+    const TestCase Cases[] = {
+        // Counterclockwise vertex numbering:
+        //
+        //    5-------4
+        //  .'         '.
+        //  0           3
+        //  '.         .'
+        //    1-------2
+        {"StrictlyConvex", {{0, 1}, {1, 0}, {3, 0}, {4, 1}, {3, 2}, {1, 2}}},
+
+        // Vertices 1 and 4 lie on straight boundary edges:
+        //
+        //  5---4-------3
+        //  |           |
+        //  0---1-------2
+        {"CollinearBoundaryVertices", {{0, 0}, {1, 0}, {3, 0}, {3, 2}, {1, 2}, {0, 2}}},
+    };
+    // Preserve the fan and final triangle order produced by clipping the first ear.
+    const std::vector<Uint32> ExpectedIndices = {5, 0, 1, 5, 1, 2, 5, 2, 3, 3, 4, 5};
+
+    Polygon2DTriangulator<Uint32> Triangulator;
+    for (const TestCase& Case : Cases)
+    {
+        SCOPED_TRACE(Case.Name);
+        for (bool Clockwise : {false, true})
+        {
+            SCOPED_TRACE(Clockwise);
+            std::vector<int2> Vertices = Case.Vertices;
+            if (Clockwise)
+            {
+                std::reverse(Vertices.begin(), Vertices.end());
+            }
+            for (size_t StartVertex = 0; StartVertex < Vertices.size(); ++StartVertex)
+            {
+                SCOPED_TRACE(StartVertex);
+                const std::vector<Uint32>& Indices = Triangulator.Triangulate(Vertices);
+                EXPECT_EQ(Triangulator.GetResult(), TRIANGULATE_POLYGON_RESULT_OK);
+                EXPECT_EQ(Indices, ExpectedIndices);
+                std::rotate(Vertices.begin(), Vertices.begin() + 1, Vertices.end());
+            }
+        }
+    }
+
+    // An entirely collinear polygon must still be rejected, clearing the previous fan.
+    const std::vector<int2> CollinearVertices = {{0, 0}, {1, 0}, {2, 0}, {3, 0}};
+    EXPECT_TRUE(Triangulator.Triangulate(CollinearVertices).empty());
+    EXPECT_EQ(Triangulator.GetResult(), TRIANGULATE_POLYGON_RESULT_VERTS_COLLINEAR);
+}
+
 TEST(Common_AdvancedMath, TriangulatePolygonIndexTypeLimits)
 {
     // A convex polygon along a parabola uses every Uint8 index, including 255.

@@ -1428,9 +1428,29 @@ public:
         };
 
         // First label vertices as reflex or convex
+        bool IsConvex = true;
         for (int vert_id = 0; vert_id < VertCount; ++vert_id)
         {
             m_VertTypes[vert_id] = CheckConvex(vert_id);
+            if (m_VertTypes[vert_id] == VertexType::Reflex)
+                IsConvex = false;
+        }
+
+        m_Triangles.reserve(TriangleCount * 3);
+        if (IsConvex)
+        {
+            // All vertices are ears. Emit the fan in linear time, preserving
+            // the triangle order produced by clipping the first ear repeatedly.
+            for (int i = 0; i < VertCount - 3; ++i)
+            {
+                m_Triangles.emplace_back(VertCount - 1);
+                m_Triangles.emplace_back(i);
+                m_Triangles.emplace_back(i + 1);
+            }
+            m_Triangles.emplace_back(VertCount - 3);
+            m_Triangles.emplace_back(VertCount - 2);
+            m_Triangles.emplace_back(VertCount - 1);
+            return m_Triangles;
         }
 
         // Next, check convex vertices for ears
@@ -1440,9 +1460,6 @@ public:
             if (VertType == VertexType::Convexx)
                 VertType = CheckEar(vert_id);
         }
-
-        m_Triangles.clear();
-        m_Triangles.reserve(TriangleCount * 3);
 
         // Clip ears one by one until only three vertices are left
         while (m_RemainingVertIds.size() > 3)
