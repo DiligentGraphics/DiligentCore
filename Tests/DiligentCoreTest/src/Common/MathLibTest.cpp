@@ -3715,8 +3715,22 @@ TEST(Common_AdvancedMath, TriangulateConcavePolygonWithVertexOnEarDiagonal)
          {5, 0, 1, 5, 1, 2, 5, 2, 3, 3, 4, 5}},
     };
 
+    struct ProjectionCase
+    {
+        const char* Name;
+        double      XCoefficient;
+        double      YCoefficient;
+    };
+    const ProjectionCase Projections[] = {
+        {"AxisAligned", 0, 0},
+        {"Oblique", 1, 3},
+        {"TwoTiedNormalComponents", 0, 1},
+        {"ThreeTiedNormalComponents", 1, 1},
+    };
+
     Polygon2DTriangulator<Uint32>         Triangulator2D;
     Polygon3DTriangulator<Uint32, double> Triangulator3D;
+    Polygon3DTriangulator<Uint32, float>  Triangulator3DFloat;
     for (const TestCase& Case : Cases)
     {
         SCOPED_TRACE(Case.Name);
@@ -3724,22 +3738,42 @@ TEST(Common_AdvancedMath, TriangulateConcavePolygonWithVertexOnEarDiagonal)
         EXPECT_EQ(Triangulator2D.GetResult(), TRIANGULATE_POLYGON_RESULT_OK);
         EXPECT_EQ(Indices2D, Case.ExpectedIndices);
 
-        for (size_t Plane = 0; Plane < 3; ++Plane)
+        for (const ProjectionCase& Projection : Projections)
         {
-            SCOPED_TRACE(Plane);
-            std::vector<double3> Vertices3D;
-            for (const double2& Vertex : Case.Vertices)
+            SCOPED_TRACE(Projection.Name);
+            // The oblique case lies on z = x + 3*y - 2. An orthonormal projection
+            // can round vertex 3 off diagonal 5--1 and permit an overlapping ear.
+            // Cyclic axis permutations exercise every projection axis and ties
+            // between the largest absolute normal components.
+            for (size_t AxisPermutation = 0; AxisPermutation < 3; ++AxisPermutation)
             {
-                switch (Plane)
+                SCOPED_TRACE(AxisPermutation);
+                std::vector<double3> Vertices3D;
+                std::vector<float3>  Vertices3DFloat;
+                for (const double2& Vertex : Case.Vertices)
                 {
-                    case 0: Vertices3D.emplace_back(Vertex.x, Vertex.y, 5.0); break;
-                    case 1: Vertices3D.emplace_back(Vertex.x, -3.0, Vertex.y); break;
-                    case 2: Vertices3D.emplace_back(2.0, Vertex.x, Vertex.y); break;
+                    const double3 Vertex3D{Vertex.x + 2, Vertex.y,
+                                           Projection.XCoefficient * Vertex.x + Projection.YCoefficient * Vertex.y};
+                    double3       PermutedVertex;
+                    switch (AxisPermutation)
+                    {
+                        case 0: PermutedVertex = Vertex3D; break;
+                        case 1: PermutedVertex = double3{Vertex3D.y, Vertex3D.z, Vertex3D.x}; break;
+                        case 2: PermutedVertex = double3{Vertex3D.z, Vertex3D.x, Vertex3D.y}; break;
+                    }
+                    Vertices3D.push_back(PermutedVertex);
+                    Vertices3DFloat.emplace_back(static_cast<float>(PermutedVertex.x),
+                                                 static_cast<float>(PermutedVertex.y),
+                                                 static_cast<float>(PermutedVertex.z));
                 }
+                const std::vector<Uint32>& Indices3D = Triangulator3D.Triangulate(Vertices3D);
+                EXPECT_EQ(Triangulator3D.GetResult(), TRIANGULATE_POLYGON_RESULT_OK);
+                EXPECT_EQ(Indices3D, Case.ExpectedIndices);
+
+                const std::vector<Uint32>& Indices3DFloat = Triangulator3DFloat.Triangulate(Vertices3DFloat);
+                EXPECT_EQ(Triangulator3DFloat.GetResult(), TRIANGULATE_POLYGON_RESULT_OK);
+                EXPECT_EQ(Indices3DFloat, Case.ExpectedIndices);
             }
-            const std::vector<Uint32>& Indices3D = Triangulator3D.Triangulate(Vertices3D);
-            EXPECT_EQ(Triangulator3D.GetResult(), TRIANGULATE_POLYGON_RESULT_OK);
-            EXPECT_EQ(Indices3D, Case.ExpectedIndices);
         }
     }
 }
@@ -3788,15 +3822,23 @@ TEST(Common_AdvancedMath, TriangulatePolygon3D)
     }
 
     {
+        // Clockwise notched rectangle in the plane z = 1:
+        //
+        //  2---3---4---5
+        //  |           |
+        //  |           |
+        //  |   0       |
+        //  | .' '.     |
+        //  1'     '7---6
         const std::vector<double3> Verts = {
-            {0.0866542682, 0.191178054, 0.119771279},
-            {0.0846562684, 0.192071155, 0.119771279},
-            {0.0846562684, 0.192071155, 0.120928936},
-            {0.104519472, 0.182026610, 0.120928936},
-            {0.121640369, 0.171060309, 0.120928936},
-            {0.129021034, 0.165564433, 0.120928936},
-            {0.129021034, 0.165564433, 0.119771279},
-            {0.104520433, 0.182026073, 0.119771279},
+            {2, 1, 1},
+            {0, 0, 1},
+            {0, 4, 1},
+            {2, 4, 1},
+            {4, 4, 1},
+            {6, 4, 1},
+            {6, 0, 1},
+            {4, 0, 1},
         };
         Polygon3DTriangulator<Uint32, double> Triangulator;
         const std::vector<Uint32>             RefTris = {0, 1, 2, 7, 0, 2, 7, 2, 3, 7, 3, 4, 7, 4, 5, 5, 6, 7};

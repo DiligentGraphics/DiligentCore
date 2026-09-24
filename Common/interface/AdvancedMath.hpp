@@ -1548,7 +1548,7 @@ private:
 /// 3D polygon triangulator.
 
 /// The class extends the Polygon2DTriangulator class to handle simple 3D polygons.
-/// It first projects the polygon onto a plane and then triangulates the resulting 2D polygon.
+/// It first projects the polygon onto a coordinate plane and then triangulates the resulting 2D polygon.
 ///
 /// \tparam IndexType     - Index type (e.g. Uint32 or Uint16).
 /// \tparam ComponentType - Vertex component type, must be a floating point type (e.g. float or double).
@@ -1558,7 +1558,7 @@ class Polygon3DTriangulator : public Polygon2DTriangulator<typename std::enable_
 public:
     /// Triangulates a simple polygon in 3D.
 
-    /// The function first projects the polygon onto a plane and then
+    /// The function first projects the polygon onto a coordinate plane and then
     /// triangulates the resulting 2D polygon.
     ///
     /// If vertices are not coplanar, the result is undefined.
@@ -1586,28 +1586,29 @@ public:
             this->m_Result = TRIANGULATE_POLYGON_RESULT_VERTS_COLLINEAR;
             return this->m_Triangles;
         }
-        const auto AbsNormal = abs(Normal);
+        const Vector3<ComponentType> AbsNormal = abs(Normal);
 
-        Vector3<ComponentType> Tangent;
-        if (AbsNormal.z > (std::max)(AbsNormal.x, AbsNormal.y))
-            Tangent = cross(Vector3<ComponentType>{ComponentType{0}, ComponentType{1}, ComponentType{0}}, Normal);
-        else if (AbsNormal.y > (std::max)(AbsNormal.x, AbsNormal.z))
-            Tangent = cross(Vector3<ComponentType>{ComponentType{1}, ComponentType{0}, ComponentType{0}}, Normal);
-        else
-            Tangent = cross(Vector3<ComponentType>{ComponentType{0}, ComponentType{0}, ComponentType{1}}, Normal);
-        VERIFY_EXPR(length(Tangent) > 0);
-        Tangent = normalize(Tangent);
+        // Drop the largest normal component to maximize the projected area.
+        // Keeping the original coordinates avoids normalization and dot-product
+        // rounding that can move collinear vertices off an ear's diagonal.
+        size_t Axis0 = 0;
+        size_t Axis1 = 1;
+        if (AbsNormal.x >= AbsNormal.y && AbsNormal.x >= AbsNormal.z)
+        {
+            Axis0 = 1;
+            Axis1 = 2;
+        }
+        else if (AbsNormal.y >= AbsNormal.z)
+        {
+            Axis1 = 2;
+        }
 
-        auto Bitangent = cross(Normal, Tangent);
-        VERIFY_EXPR(length(Bitangent) > 0);
-        Bitangent = normalize(Bitangent);
-
-        // Project the polygon
+        // Project the polygon onto the selected coordinate plane.
         m_PolygonProj.clear();
         m_PolygonProj.reserve(Polygon.size());
-        for (const auto& Vert : Polygon)
+        for (const Vector3<ComponentType>& Vert : Polygon)
         {
-            m_PolygonProj.emplace_back(dot(Tangent, Vert), dot(Bitangent, Vert));
+            m_PolygonProj.emplace_back(Vert[Axis0], Vert[Axis1]);
         }
 
         return Polygon2DTriangulator<IndexType>::Triangulate(m_PolygonProj);
