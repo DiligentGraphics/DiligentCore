@@ -3521,11 +3521,34 @@ TEST(Common_AdvancedMath, TriangulatePolygon2D)
         };
 
         const auto Tris = Triangulator.Triangulate(Verts);
-        EXPECT_EQ(Triangulator.GetResult() & ~TRIANGULATE_POLYGON_RESULT_INVALID_EAR, TRIANGULATE_POLYGON_RESULT_OK);
+        EXPECT_EQ(Triangulator.GetResult(), TRIANGULATE_POLYGON_RESULT_OK);
 
         const std::vector<Uint32> RefTris = {1, 2, 3, 1, 3, 4, 0, 1, 4, 0, 4, 5, 10, 0, 5, 5, 6, 7, 5, 7, 8, 5, 8, 9, 5, 9, 10};
         EXPECT_EQ(Tris, RefTris);
     }
+}
+
+TEST(Common_AdvancedMath, TriangulateConcavePolygonWithConvexVertexInsideEarCandidate)
+{
+    // Counterclockwise vertex numbering:
+    //
+    //  0
+    //  |'.
+    //  |  '.
+    //  |   4---3
+    //  |        '.
+    //  1-----------2
+    //
+    // Candidate triangle (0, 1, 2) contains convex vertex 3 and reflex vertex 4.
+    // Vertex 4 disqualifies the ear candidate; vertex 3 does not indicate an
+    // invalid polygon and must not cause a validation error.
+    const std::vector<int2>   Vertices        = {{0, 4}, {0, 0}, {4, 0}, {2, 1}, {1, 1}};
+    const std::vector<Uint32> ExpectedIndices = {4, 0, 1, 4, 1, 2, 2, 3, 4};
+
+    Polygon2DTriangulator<Uint32> Triangulator;
+    const std::vector<Uint32>&    Indices = Triangulator.Triangulate(Vertices);
+    EXPECT_EQ(Triangulator.GetResult(), TRIANGULATE_POLYGON_RESULT_OK);
+    EXPECT_EQ(Indices, ExpectedIndices);
 }
 
 TEST(Common_AdvancedMath, TriangulateConcavePolygonWithVertexOnEarDiagonal)

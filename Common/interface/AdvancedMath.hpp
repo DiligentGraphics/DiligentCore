@@ -1401,20 +1401,9 @@ public:
                 if (Idx == Idx0 || Idx == Idx1 || Idx == Idx2)
                     continue;
 
+                // Only reflex vertices can disqualify an ear candidate.
                 if (m_VertTypes[Idx] == VertexType::Convexx || m_VertTypes[Idx] == VertexType::Ear)
-                {
-#ifdef DILIGENT_DEVELOPMENT
-                    // This check may fail due to floating point imprecision if there are collinear vertices.
-                    if (IsPointInsideTriangle(V0, V1, V2, Polygon[Idx], /*AllowEdges = */ false))
-                    {
-                        // Convex and ear vertices must always be outside the triangle
-                        m_Result |= (m_VertTypes[Idx] == VertexType::Convexx) ?
-                            TRIANGULATE_POLYGON_RESULT_INVALID_CONVEX :
-                            TRIANGULATE_POLYGON_RESULT_INVALID_EAR;
-                    }
-#endif
                     continue;
-                }
 
                 if (IsPointInsideTriangle(V0, V1, V2, Polygon[Idx], AllowEdges))
                 {
