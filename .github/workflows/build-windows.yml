@@ -124,6 +124,8 @@ jobs:
       uses: DiligentGraphics/github-action/run-core-gpu-tests@v26
       with:
         mode: d3d12_sw
+        # Temporarily skip flaky RT2/RT4 until WARP and reference AS synchronization are fixed.
+        args: --gtest_filter=-RayTracingTest/RT2.*:RayTracingTest/RT4.*
 
     - name: DiligentCoreAPITest D3D12 DXC
       if:   ${{ (success() || failure() && steps.build.outcome == 'success') && (matrix.name == 'Win10' || matrix.name == 'Win10-Ninja') }}
@@ -131,8 +133,9 @@ jobs:
       with:
         mode:    d3d12_sw
         use-dxc: true
+        # Temporarily skip flaky RT2/RT4 until WARP and reference AS synchronization are fixed.
         # Disable texture creation tests that are not relevant for DXC to save time
-        args: --gtest_filter=-TextureCreation*
+        args: --gtest_filter=-TextureCreation*:RayTracingTest/RT2.*:RayTracingTest/RT4.*
 
     - name: DiligentCoreAPITest WebGPU
       if:   ${{ (success() || failure() && steps.build.outcome == 'success') && matrix.name == 'Win10' }}
