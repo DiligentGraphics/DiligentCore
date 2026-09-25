@@ -1371,16 +1371,16 @@ public:
         m_VertTypes.resize(VertCount);
         for (int i = 0; i < VertCount; ++i)
         {
-            m_RemainingVertIds[i] = i;
+            m_RemainingVertIds[i] = static_cast<IndexType>(i);
             m_VertTypes[i]        = VertexType::Convexx;
         }
 
         auto CheckConvex = [&](int vert_id) {
             const int RemainingVertCount = static_cast<int>(m_RemainingVertIds.size());
 
-            const int Idx0 = m_RemainingVertIds[WrapIndex(vert_id - 1, RemainingVertCount)];
-            const int Idx1 = m_RemainingVertIds[WrapIndex(vert_id + 0, RemainingVertCount)];
-            const int Idx2 = m_RemainingVertIds[WrapIndex(vert_id + 1, RemainingVertCount)];
+            const IndexType Idx0 = m_RemainingVertIds[WrapIndex(vert_id - 1, RemainingVertCount)];
+            const IndexType Idx1 = m_RemainingVertIds[WrapIndex(vert_id + 0, RemainingVertCount)];
+            const IndexType Idx2 = m_RemainingVertIds[WrapIndex(vert_id + 1, RemainingVertCount)];
 
             const auto& V0 = Polygon[Idx0];
             const auto& V1 = Polygon[Idx1];
@@ -1394,9 +1394,9 @@ public:
         auto CheckEar = [&](int vert_id) {
             const int RemainingVertCount = static_cast<int>(m_RemainingVertIds.size());
 
-            const int Idx0 = m_RemainingVertIds[WrapIndex(vert_id - 1, RemainingVertCount)];
-            const int Idx1 = m_RemainingVertIds[WrapIndex(vert_id + 0, RemainingVertCount)];
-            const int Idx2 = m_RemainingVertIds[WrapIndex(vert_id + 1, RemainingVertCount)];
+            const IndexType Idx0 = m_RemainingVertIds[WrapIndex(vert_id - 1, RemainingVertCount)];
+            const IndexType Idx1 = m_RemainingVertIds[WrapIndex(vert_id + 0, RemainingVertCount)];
+            const IndexType Idx2 = m_RemainingVertIds[WrapIndex(vert_id + 1, RemainingVertCount)];
 
             VERIFY_EXPR(m_VertTypes[Idx1] == VertexType::Convexx);
 
@@ -1408,7 +1408,7 @@ public:
             // Degenerate ears still need to be removable with collinear vertices.
             const bool AllowEdges = GetWinding(V0, V1, V2) != 0;
 
-            for (const int Idx : m_RemainingVertIds)
+            for (const IndexType Idx : m_RemainingVertIds)
             {
                 if (Idx == Idx0 || Idx == Idx1 || Idx == Idx2)
                     continue;
@@ -1443,13 +1443,13 @@ public:
             // the triangle order produced by clipping the first ear repeatedly.
             for (int i = 0; i < VertCount - 3; ++i)
             {
-                m_Triangles.emplace_back(VertCount - 1);
-                m_Triangles.emplace_back(i);
-                m_Triangles.emplace_back(i + 1);
+                m_Triangles.emplace_back(static_cast<IndexType>(VertCount - 1));
+                m_Triangles.emplace_back(static_cast<IndexType>(i));
+                m_Triangles.emplace_back(static_cast<IndexType>(i + 1));
             }
-            m_Triangles.emplace_back(VertCount - 3);
-            m_Triangles.emplace_back(VertCount - 2);
-            m_Triangles.emplace_back(VertCount - 1);
+            m_Triangles.emplace_back(static_cast<IndexType>(VertCount - 3));
+            m_Triangles.emplace_back(static_cast<IndexType>(VertCount - 2));
+            m_Triangles.emplace_back(static_cast<IndexType>(VertCount - 1));
             return m_Triangles;
         }
 
@@ -1470,7 +1470,7 @@ public:
             int ear_vert_id = 0;
             for (; ear_vert_id < RemainingVertCount; ++ear_vert_id)
             {
-                const int Idx = m_RemainingVertIds[ear_vert_id];
+                const IndexType Idx = m_RemainingVertIds[ear_vert_id];
                 if (m_VertTypes[Idx] == VertexType::Ear)
                     break;
             };
@@ -1482,9 +1482,9 @@ public:
                 ear_vert_id = 0;
             }
 
-            const int Idx0 = m_RemainingVertIds[WrapIndex(ear_vert_id - 1, RemainingVertCount)];
-            const int Idx1 = m_RemainingVertIds[ear_vert_id];
-            const int Idx2 = m_RemainingVertIds[WrapIndex(ear_vert_id + 1, RemainingVertCount)];
+            const IndexType Idx0 = m_RemainingVertIds[WrapIndex(ear_vert_id - 1, RemainingVertCount)];
+            const IndexType Idx1 = m_RemainingVertIds[ear_vert_id];
+            const IndexType Idx2 = m_RemainingVertIds[WrapIndex(ear_vert_id + 1, RemainingVertCount)];
 
             m_Triangles.emplace_back(Idx0);
             m_Triangles.emplace_back(Idx1);
@@ -1495,8 +1495,8 @@ public:
             // Update adjacent vertices
             if (RemainingVertCount > 3)
             {
-                const int IdxL = m_RemainingVertIds[WrapIndex(ear_vert_id - 1, RemainingVertCount)];
-                const int IdxR = m_RemainingVertIds[WrapIndex(ear_vert_id, RemainingVertCount)];
+                const IndexType IdxL = m_RemainingVertIds[WrapIndex(ear_vert_id - 1, RemainingVertCount)];
+                const IndexType IdxR = m_RemainingVertIds[WrapIndex(ear_vert_id, RemainingVertCount)];
                 // First check for convex vs reflex
                 m_VertTypes[IdxL] = CheckConvex(ear_vert_id - 1);
                 m_VertTypes[IdxR] = CheckConvex(ear_vert_id);
@@ -1541,7 +1541,7 @@ private:
     std::vector<VertexType> m_VertTypes;
 
     // Remaining vertices to process
-    std::vector<int> m_RemainingVertIds;
+    std::vector<IndexType> m_RemainingVertIds;
 };
 
 
