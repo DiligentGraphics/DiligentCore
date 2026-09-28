@@ -187,7 +187,11 @@ PRIVATE
 )
 
 if (PLATFORM_WEB)
-    target_link_options(Diligent-GraphicsEngineWebGPU-static PUBLIC "SHELL: --use-port=emdawnwebgpu -s USE_PTHREADS=1")
+    # Emscripten 6.0.10 still treats legacy exception invoke_* trampolines as
+    # suspending imports in JSPI builds. Static constructors run outside a
+    # WebAssembly.promising export and trap unless these indirect calls are ignored.
+    target_link_options(Diligent-GraphicsEngineWebGPU-static PUBLIC
+        "SHELL: --use-port=emdawnwebgpu -pthread -s JSPI=1 -s ASYNCIFY_IGNORE_INDIRECT=1")
     target_compile_options(Diligent-GraphicsEngineWebGPU-static PUBLIC "--use-port=emdawnwebgpu")
     # This is required only for IntelliSense to detect webgpu.h.
     target_include_directories(Diligent-GraphicsEngineWebGPU-static PUBLIC 

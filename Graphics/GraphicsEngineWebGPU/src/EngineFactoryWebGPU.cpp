@@ -99,19 +99,26 @@ public:
 namespace
 {
 
-void InstancePoolEvents(WGPUInstance wgpuInstance)
+constexpr WGPUCallbackMode RequestCallbackMode = WGPUCallbackMode_WaitAnyOnly;
+
+void WaitForFuture(WGPUInstance wgpuInstance, WGPUFuture Future)
 {
-#if !PLATFORM_WEB
-    wgpuInstanceProcessEvents(wgpuInstance);
-#endif
+    WGPUFutureWaitInfo WaitInfo{};
+    WaitInfo.future             = Future;
+    const WGPUWaitStatus Status = wgpuInstanceWaitAny(wgpuInstance, 1, &WaitInfo, std::numeric_limits<Uint64>::max());
+    if (Status != WGPUWaitStatus_Success || !WaitInfo.completed)
+        LOG_ERROR_AND_THROW("Failed to wait for WebGPU request");
 }
 
 WebGPUInstanceWrapper InitializeWebGPUInstance(bool EnableUnsafe)
 {
-    // Not implemented in Emscripten https://github.com/emscripten-core/emscripten/blob/217010a223375e6e9251669187d406ef2ddf266e/system/lib/webgpu/webgpu.cpp#L24
-#if PLATFORM_WEB
-    WebGPUInstanceWrapper wgpuInstance{wgpuCreateInstance(nullptr)};
-#else
+    const WGPUInstanceFeatureName RequiredFeature = WGPUInstanceFeatureName_TimedWaitAny;
+
+    WGPUInstanceDescriptor wgpuInstanceDesc{};
+    wgpuInstanceDesc.requiredFeatureCount = 1;
+    wgpuInstanceDesc.requiredFeatures     = &RequiredFeature;
+
+#if !PLATFORM_WEB
     struct SetDawnProcsHelper
     {
         SetDawnProcsHelper()
@@ -129,13 +136,11 @@ WebGPUInstanceWrapper InitializeWebGPUInstance(bool EnableUnsafe)
     wgpuDawnTogglesDesc.enabledToggleCount        = _countof(ToggleNames);
     wgpuDawnTogglesDesc.enabledToggles            = ToggleNames;
 
-    WGPUInstanceDescriptor wgpuInstanceDesc = {};
     if (EnableUnsafe)
-    {
         wgpuInstanceDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuDawnTogglesDesc);
-    }
-    WebGPUInstanceWrapper wgpuInstance{wgpuCreateInstance(&wgpuInstanceDesc)};
 #endif
+
+    WebGPUInstanceWrapper wgpuInstance{wgpuCreateInstance(&wgpuInstanceDesc)};
     if (!wgpuInstance)
         LOG_ERROR_AND_THROW("Failed to create WebGPU instance");
     return wgpuInstance;
@@ -150,7 +155,6 @@ std::vector<WebGPUAdapterWrapper> FindCompatibleAdapters(WGPUInstance wgpuInstan
         WGPUAdapter              wgpuAdapter       = nullptr;
         WGPURequestAdapterStatus wgpuRequestStatus = {};
         String                   Message           = {};
-        bool                     IsReady           = {};
     };
 
     auto OnAdapterRequestEnded = [](WGPURequestAdapterStatus wgpuStatus, WGPUAdapter wgpuAdapter, WGPUStringView Message, void* pUserData1, void* pUserData2) {
@@ -159,7 +163,6 @@ std::vector<WebGPUAdapterWrapper> FindCompatibleAdapters(WGPUInstance wgpuInstan
             CallbackUserData* pUserData  = static_cast<CallbackUserData*>(pUserData1);
             pUserData->wgpuAdapter       = wgpuAdapter;
             pUserData->wgpuRequestStatus = wgpuStatus;
-            pUserData->IsReady           = true;
             if (WGPUStringViewValid(Message))
                 pUserData->Message = WGPUStringViewToString(Message);
         }
@@ -180,12 +183,10 @@ std::vector<WebGPUAdapterWrapper> FindCompatibleAdapters(WGPUInstance wgpuInstan
 
         WGPURequestAdapterCallbackInfo wgpuAdapterRequestCallbackInfo{};
         wgpuAdapterRequestCallbackInfo.callback  = OnAdapterRequestEnded;
-        wgpuAdapterRequestCallbackInfo.mode      = WGPUCallbackMode_AllowSpontaneous;
+        wgpuAdapterRequestCallbackInfo.mode      = RequestCallbackMode;
         wgpuAdapterRequestCallbackInfo.userdata1 = &UserData;
-        wgpuInstanceRequestAdapter(wgpuInstance, &wgpuAdapterRequestOptions, wgpuAdapterRequestCallbackInfo);
-
-        while (!UserData.IsReady)
-            InstancePoolEvents(wgpuInstance);
+        const WGPUFuture Future                  = wgpuInstanceRequestAdapter(wgpuInstance, &wgpuAdapterRequestOptions, wgpuAdapterRequestCallbackInfo);
+        WaitForFuture(wgpuInstance, Future);
 
         if (UserData.wgpuRequestStatus == WGPURequestAdapterStatus_Success)
         {
@@ -269,7 +270,6 @@ WebGPUDeviceWrapper CreateDeviceForAdapter(const DeviceFeatures& Features, WGPUI
         WGPUDevice              wgpuDevice        = nullptr;
         WGPURequestDeviceStatus wgpuRequestStatus = {};
         String                  Message           = {};
-        bool                    IsReady           = {};
     } UserData;
 
     auto OnDeviceRequestEnded = [](WGPURequestDeviceStatus wgpuStatus, WGPUDevice wgpuDevice, WGPUStringView Message, void* pUserData1, void* pUserData2) {
@@ -278,7 +278,6 @@ WebGPUDeviceWrapper CreateDeviceForAdapter(const DeviceFeatures& Features, WGPUI
             CallbackUserData* pUserData  = static_cast<CallbackUserData*>(pUserData1);
             pUserData->wgpuDevice        = wgpuDevice;
             pUserData->wgpuRequestStatus = wgpuStatus;
-            pUserData->IsReady           = true;
             if (WGPUStringViewValid(Message))
                 pUserData->Message = WGPUStringViewToString(Message);
         }
@@ -312,13 +311,11 @@ WebGPUDeviceWrapper CreateDeviceForAdapter(const DeviceFeatures& Features, WGPUI
 
     WGPURequestDeviceCallbackInfo wgpuDeviceRequestCallbackInfo{};
     wgpuDeviceRequestCallbackInfo.nextInChain = nullptr;
-    wgpuDeviceRequestCallbackInfo.mode        = WGPUCallbackMode_AllowSpontaneous;
+    wgpuDeviceRequestCallbackInfo.mode        = RequestCallbackMode;
     wgpuDeviceRequestCallbackInfo.callback    = OnDeviceRequestEnded;
     wgpuDeviceRequestCallbackInfo.userdata1   = &UserData;
-    wgpuAdapterRequestDevice(wgpuAdapter, &wgpuDeviceDesc, wgpuDeviceRequestCallbackInfo);
-
-    while (!UserData.IsReady)
-        InstancePoolEvents(wgpuInstance);
+    const WGPUFuture Future                   = wgpuAdapterRequestDevice(wgpuAdapter, &wgpuDeviceDesc, wgpuDeviceRequestCallbackInfo);
+    WaitForFuture(wgpuInstance, Future);
 
     if (UserData.wgpuRequestStatus != WGPURequestDeviceStatus_Success)
         LOG_ERROR_AND_THROW(UserData.Message);
