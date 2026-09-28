@@ -475,6 +475,7 @@ void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint3
     uint32_t     TotalSetCount      = 0;
     const Uint32 FirstSetToBind     = BindInfo.SetInfo[FirstSign].BaseInd;
     const Uint16 FirstDynamicOffset = BindInfo.SetInfo[FirstSign].FirstDynamicOffset;
+    const auto&  PushConstantInfo   = m_pPipelineState->GetPipelineLayout().GetPushConstantInfo();
 
     // Note that in current implementation, if any of the dynamic offsets change,
     // all descriptor sets are rebound. This may be further optimized to only rebind
@@ -511,7 +512,16 @@ void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint3
             VERIFY(m_DynamicBufferOffsets.size() >= size_t{FirstDynamicOffset} + size_t{DynamicOffsetCount} + size_t{SetInfo.DynamicOffsetCount},
                    "m_DynamicBufferOffsets must've been resized by SetPipelineState() to have enough space");
 
-            auto WriteResult = pResourceCache->WriteDynamicBufferOffsets(this, m_DynamicBufferOffsets, FirstDynamicOffset + DynamicOffsetCount);
+            const ShaderResourceCacheVk::Resource* pPushConstantResource = nullptr;
+            if (PushConstantInfo && sign == PushConstantInfo.SignatureIndex)
+            {
+                // Resolve through the bound SRB cache: it may come from a compatible
+                // signature instance with different backing buffer objects.
+                const auto& Attribs = m_pPipelineState->GetResourceSignature(sign)->GetResourceAttribs(PushConstantInfo.ResourceIndex);
+                pPushConstantResource = &pResourceCache->GetDescriptorSet(Attribs.DescrSet).GetResource(Attribs.CacheOffset(ResourceCacheContentType::SRB));
+            }
+            auto WriteResult = pResourceCache->WriteDynamicBufferOffsets(this, m_DynamicBufferOffsets,
+                                                                         FirstDynamicOffset + DynamicOffsetCount, pPushConstantResource);
             VERIFY_EXPR(WriteResult.NumOffsetsWritten == SetInfo.DynamicOffsetCount);
             DynamicOffsetCount += SetInfo.DynamicOffsetCount;
 
@@ -2454,30 +2464,7 @@ void DeviceContextVkImpl::UpdateTexture(ITexture*                      pTexture,
 
     if (SubresData.pSrcBuffer != nullptr)
     {
-        BufferVkImpl*               pSrcBuffVk = ClassPtrCast<BufferVkImpl>(SubresData.pSrcBuffer);
-        const TextureDesc&          DstTexDesc = pTexVk->GetDesc();
-        const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(DstTexDesc.Format);
-
-        TransitionOrVerifyBufferState(*pSrcBuffVk, SrcBufferStateTransitionMode, RESOURCE_STATE_COPY_SOURCE, VK_ACCESS_TRANSFER_READ_BIT,
-                                      "Using buffer as copy source (DeviceContextVkImpl::UpdateTexture)");
-
-        // We must unbind the texture from framebuffer because we will transition its state.
-        // If we later try to commit it as a render target (e.g. from SetPipelineState()), a
-        // state mismatch error will occur.
-        UnbindTextureFromFramebuffer(pTexVk, true);
-
-        const Uint32 SrcBufferRowStrideInTexels = (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED) ?
-            StaticCast<Uint32>(SubresData.Stride / Uint64{FmtAttribs.ComponentSize} * Uint64{FmtAttribs.BlockWidth}) :
-            StaticCast<Uint32>(SubresData.Stride / (Uint64{FmtAttribs.ComponentSize} * Uint64{FmtAttribs.NumComponents}));
-
-        CopyBufferToTexture(pSrcBuffVk->GetVkBuffer(),
-                            SubresData.SrcOffset,
-                            SrcBufferRowStrideInTexels,
-                            *pTexVk,
-                            DstBox,
-                            MipLevel,
-                            Slice,
-                            TextureStateTransitionMode);
+        UNSUPPORTED("Copying buffer to texture is not implemented");
     }
     else
     {
