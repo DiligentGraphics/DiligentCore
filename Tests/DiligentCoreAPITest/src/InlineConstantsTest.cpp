@@ -34,6 +34,14 @@
 #include "FastRand.hpp"
 #include "MapHelper.hpp"
 
+#include <algorithm>
+#include <cstdint>
+#include <cstring>
+
+#if VULKAN_SUPPORTED
+#    include "Vulkan/TestingEnvironmentVk.hpp"
+#endif
+
 
 namespace Diligent
 {
@@ -1062,6 +1070,221 @@ TEST_F(InlineConstants, CrossSignatureSRB)
     pContext->Draw({3, DRAW_FLAG_VERIFY_ALL});
 
     Present();
+}
+
+// Regression for https://github.com/hzqst/DiligentCore/issues/2.
+void TestPromotedUBORecycledDynamicOffset(bool UseCompatibleSignature)
+{
+#if VULKAN_SUPPORTED
+    GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceInfo().IsVulkanDevice())
+        GTEST_SKIP() << "This regression requires Vulkan";
+
+    const auto&  Limits           = TestingEnvironmentVk::GetInstance()->DeviceProps.limits;
+    const Uint64 UniformAlignment = Limits.minUniformBufferOffsetAlignment;
+    const Uint64 VertexAlignment  = std::max(Uint64{4}, Uint64{Limits.optimalBufferCopyOffsetAlignment});
+    if (VertexAlignment >= UniformAlignment)
+        GTEST_SKIP() << "Dynamic vertex buffer offsets always satisfy uniform buffer alignment on this device";
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+    IDeviceContext*                    pContext = pEnv->GetDeviceContext();
+
+    constexpr Uint32 NumDispatches                         = 4;
+    constexpr Uint32 NumConstants                          = 4;
+    Uint32           Expected[NumDispatches][NumConstants] = {};
+
+    BufferDesc OutputDesc{"Promoted UBO regression output", sizeof(Expected), BIND_UNORDERED_ACCESS};
+    OutputDesc.Mode                = BUFFER_MODE_STRUCTURED;
+    OutputDesc.ElementByteStride   = NumConstants * sizeof(Uint32);
+    RefCntAutoPtr<IBuffer> pOutput = pEnv->CreateBuffer(OutputDesc, Expected);
+    ASSERT_TRUE(pOutput);
+    RefCntAutoPtr<IBuffer> pReadback = pEnv->CreateBuffer(
+        {"Promoted UBO regression readback", sizeof(Expected), BIND_NONE, USAGE_STAGING, CPU_ACCESS_READ});
+    ASSERT_TRUE(pReadback);
+    RefCntAutoPtr<IBuffer> pDynamicCB = pEnv->CreateBuffer(
+        {"Ordinary dynamic UBO", NumConstants * sizeof(Uint32), BIND_UNIFORM_BUFFER, USAGE_DYNAMIC, CPU_ACCESS_WRITE});
+    ASSERT_TRUE(pDynamicCB);
+
+    PipelineResourceSignatureDescX SignADesc{"Push constants A"};
+    SignADesc.AddResource(SHADER_TYPE_COMPUTE, "cbA", NumConstants, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,
+                          SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS);
+    RefCntAutoPtr<IPipelineResourceSignature> pSignA;
+    pDevice->CreatePipelineResourceSignature(SignADesc, &pSignA);
+    ASSERT_TRUE(pSignA);
+
+    PipelineResourceSignatureDescX SignBDesc{"Push constants or emulated UBO B"};
+    SignBDesc.BindingIndex = 1;
+    SignBDesc
+        .AddResource(SHADER_TYPE_COMPUTE, "cbDynamic", SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
+        .AddResource(SHADER_TYPE_COMPUTE, "cbB", NumConstants, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,
+                     SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
+        .AddResource(SHADER_TYPE_COMPUTE, "g_Output", SHADER_RESOURCE_TYPE_BUFFER_UAV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
+
+    RefCntAutoPtr<IPipelineResourceSignature> pCompatibleSignB;
+    if (UseCompatibleSignature)
+    {
+        pDevice->CreatePipelineResourceSignature(SignBDesc, &pCompatibleSignB);
+        ASSERT_TRUE(pCompatibleSignB);
+    }
+
+    // All dynamic buffers share the context's mapped Vulkan heap. The UBO anchor
+    // has a uniform-aligned offset, so a mapped address difference modulo the
+    // uniform alignment also gives the vertex allocation's offset modulo it.
+    // This works even after other tests have used the heap or a new block is allocated.
+    RefCntAutoPtr<IBuffer> pAnchor = pEnv->CreateBuffer(
+        {"Uniform-aligned allocation anchor", UniformAlignment, BIND_UNIFORM_BUFFER, USAGE_DYNAMIC, CPU_ACCESS_WRITE});
+    RefCntAutoPtr<IBuffer> pRecycledVB = pEnv->CreateBuffer(
+        {"Recycled vertex buffer ID", VertexAlignment, BIND_VERTEX_BUFFER, USAGE_DYNAMIC, CPU_ACCESS_WRITE});
+    ASSERT_TRUE(pAnchor);
+    ASSERT_TRUE(pRecycledVB);
+    std::uintptr_t AnchorAddress = 0;
+    {
+        MapHelper<Uint8> Data{pContext, pAnchor, MAP_WRITE, MAP_FLAG_DISCARD};
+        Uint8*           pData = Data;
+        ASSERT_NE(nullptr, pData);
+        AnchorAddress = reinterpret_cast<std::uintptr_t>(pData);
+        std::memset(pData, 0, static_cast<size_t>(UniformAlignment));
+    }
+    Uint64 OffsetRemainder = 0;
+    // If the first allocation is aligned (including a block rollover), the next
+    // small allocation advances by VertexAlignment and must be misaligned.
+    for (Uint32 Attempt = 0; Attempt < 2 && OffsetRemainder == 0; ++Attempt)
+    {
+        MapHelper<Uint8> Data{pContext, pRecycledVB, MAP_WRITE, MAP_FLAG_DISCARD};
+        Uint8*           pData = Data;
+        ASSERT_NE(nullptr, pData);
+        OffsetRemainder = (reinterpret_cast<std::uintptr_t>(pData) - AnchorAddress) % UniformAlignment;
+    }
+    ASSERT_NE(Uint64{0}, OffsetRemainder) << "Failed to seed a misaligned dynamic allocation";
+
+    // Dynamic buffer IDs are recycled in LIFO order. Do not create another
+    // dynamic buffer between releasing the VB and creating B's backing UBO.
+    pRecycledVB.Release();
+    RefCntAutoPtr<IPipelineResourceSignature> pSignB;
+    pDevice->CreatePipelineResourceSignature(SignBDesc, &pSignB);
+    ASSERT_TRUE(pSignB);
+    if (UseCompatibleSignature)
+    {
+        ASSERT_NE(pSignB, pCompatibleSignB);
+        ASSERT_TRUE(pSignB->IsCompatibleWith(pCompatibleSignB));
+    }
+
+    const char* ShaderSource = R"(
+#if USE_A
+cbuffer cbA { uint4 g_A; }
+#endif
+cbuffer cbB { uint4 g_B; }
+cbuffer cbDynamic { uint4 g_Dynamic; }
+RWStructuredBuffer<uint4> g_Output;
+[numthreads(1, 1, 1)]
+void main()
+{
+#if USE_A
+    uint A = g_A.x;
+#else
+    uint A = 0;
+#endif
+    g_Output[g_Dynamic.w] = uint4(A, g_B.x, g_Dynamic.x, A + 3 * g_B.x + 7 * g_Dynamic.x);
+}
+)";
+
+    RefCntAutoPtr<IPipelineState> pPSOs[2];
+    for (Uint32 UseA = 0; UseA < 2; ++UseA)
+    {
+        const std::string Source = std::string{UseA ? "#define USE_A 1\n" : "#define USE_A 0\n"} + ShaderSource;
+        ShaderCreateInfo  ShaderCI;
+        ShaderCI.Desc           = {"Promoted UBO dynamic offset regression", SHADER_TYPE_COMPUTE, true};
+        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+        ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+        ShaderCI.EntryPoint     = "main";
+        ShaderCI.Source         = Source.c_str();
+        RefCntAutoPtr<IShader> pCS;
+        pDevice->CreateShader(ShaderCI, &pCS);
+        ASSERT_TRUE(pCS);
+
+        ComputePipelineStateCreateInfoX PsoCI{"Promoted UBO dynamic offset regression"};
+        PsoCI.AddShader(pCS);
+        if (UseA != 0)
+            PsoCI.AddSignature(pSignA);
+        PsoCI.AddSignature(UseCompatibleSignature ? pCompatibleSignB : pSignB);
+        pDevice->CreateComputePipelineState(PsoCI, &pPSOs[UseA]);
+        ASSERT_TRUE(pPSOs[UseA]);
+    }
+
+    RefCntAutoPtr<IShaderResourceBinding> pSRBA, pSRBB;
+    pSignA->CreateShaderResourceBinding(&pSRBA, true);
+    pSignB->CreateShaderResourceBinding(&pSRBB, true);
+    ASSERT_TRUE(pSRBA);
+    ASSERT_TRUE(pSRBB);
+    IShaderResourceVariable* pVarA       = pSRBA->GetVariableByName(SHADER_TYPE_COMPUTE, "cbA");
+    IShaderResourceVariable* pVarB       = pSRBB->GetVariableByName(SHADER_TYPE_COMPUTE, "cbB");
+    IShaderResourceVariable* pVarDynamic = pSRBB->GetVariableByName(SHADER_TYPE_COMPUTE, "cbDynamic");
+    IShaderResourceVariable* pVarOutput  = pSRBB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_Output");
+    ASSERT_TRUE(pVarA);
+    ASSERT_TRUE(pVarB);
+    ASSERT_TRUE(pVarDynamic);
+    ASSERT_TRUE(pVarOutput);
+    pVarDynamic->Set(pDynamicCB);
+    pVarOutput->Set(pOutput->GetDefaultView(BUFFER_VIEW_UNORDERED_ACCESS));
+
+    // The first dispatch leaves B's fallback UBO unmapped. Without the fix, its
+    // recycled ID supplies the old VB offset to vkCmdBindDescriptorSets, causing
+    // VUID-vkCmdBindDescriptorSets-pDynamicOffsets-01971. GPUTestingEnvironment
+    // enables validation and turns unexpected validation errors into test failures;
+    // GPU readback alone would not detect this violation.
+    // Repeat without-fix runs in separate processes: validation layers may limit
+    // the number of duplicate VUID messages emitted per instance.
+    for (Uint32 Pass = 0; Pass < NumDispatches; ++Pass)
+    {
+        SCOPED_TRACE(Pass);
+        const Uint32 UseA                  = Pass % 2;
+        const Uint32 A[NumConstants]       = {11 + Pass, 0, 0, 0};
+        const Uint32 B[NumConstants]       = {23 + Pass, 0, 0, 0};
+        const Uint32 Dynamic[NumConstants] = {37 + Pass, 0, 0, Pass};
+        pVarA->SetInlineConstants(A, 0, NumConstants);
+        pVarB->SetInlineConstants(B, 0, NumConstants);
+        {
+            MapHelper<Uint32> Data{pContext, pDynamicCB, MAP_WRITE, MAP_FLAG_DISCARD};
+            Uint32*           pData = Data;
+            ASSERT_NE(nullptr, pData);
+            std::memcpy(pData, Dynamic, sizeof(Dynamic));
+        }
+
+        pContext->SetPipelineState(pPSOs[UseA]);
+        if (UseA != 0)
+            pContext->CommitShaderResources(pSRBA, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pContext->CommitShaderResources(pSRBB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pContext->DispatchCompute({1, 1, 1});
+
+        Expected[Pass][0] = UseA ? A[0] : 0;
+        Expected[Pass][1] = B[0];
+        Expected[Pass][2] = Dynamic[0];
+        Expected[Pass][3] = Expected[Pass][0] + 3 * B[0] + 7 * Dynamic[0];
+    }
+
+    pContext->CopyBuffer(pOutput, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
+                         pReadback, 0, sizeof(Expected), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->WaitForIdle();
+    MapHelper<Uint32> Data{pContext, pReadback, MAP_READ, MAP_FLAG_DO_NOT_WAIT};
+    ASSERT_NE(nullptr, static_cast<Uint32*>(Data));
+    for (Uint32 Pass = 0; Pass < NumDispatches; ++Pass)
+        for (Uint32 Component = 0; Component < NumConstants; ++Component)
+            EXPECT_EQ(Expected[Pass][Component], Data[Pass * NumConstants + Component])
+                << "Dispatch " << Pass << ", component " << Component;
+#else
+    GTEST_SKIP() << "Vulkan is not supported in this build";
+#endif
+}
+
+TEST_F(InlineConstants, VulkanPromotedUBORecycledDynamicOffset)
+{
+    TestPromotedUBORecycledDynamicOffset(false);
+}
+
+TEST_F(InlineConstants, VulkanPromotedUBOCompatibleSRB)
+{
+    TestPromotedUBORecycledDynamicOffset(true);
 }
 
 constexpr Uint32 kCacheContentVersion = 7;
