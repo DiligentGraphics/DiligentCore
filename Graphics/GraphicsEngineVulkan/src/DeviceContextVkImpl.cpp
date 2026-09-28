@@ -517,7 +517,7 @@ void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint3
             {
                 // Resolve through the bound SRB cache: it may come from a compatible
                 // signature instance with different backing buffer objects.
-                const auto& Attribs = m_pPipelineState->GetResourceSignature(sign)->GetResourceAttribs(PushConstantInfo.ResourceIndex);
+                const auto& Attribs   = m_pPipelineState->GetResourceSignature(sign)->GetResourceAttribs(PushConstantInfo.ResourceIndex);
                 pPushConstantResource = &pResourceCache->GetDescriptorSet(Attribs.DescrSet).GetResource(Attribs.CacheOffset(ResourceCacheContentType::SRB));
             }
             auto WriteResult = pResourceCache->WriteDynamicBufferOffsets(this, m_DynamicBufferOffsets,
