@@ -1072,7 +1072,7 @@ TEST_F(InlineConstants, CrossSignatureSRB)
     Present();
 }
 
-// Regression for https://github.com/hzqst/DiligentCore/issues/2.
+// Regression for https://github.com/DiligentGraphics/DiligentCore/issues/808.
 void TestPromotedUBORecycledDynamicOffset(bool UseCompatibleSignature)
 {
 #if VULKAN_SUPPORTED
