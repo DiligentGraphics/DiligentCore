@@ -512,19 +512,11 @@ void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint3
             VERIFY(m_DynamicBufferOffsets.size() >= size_t{FirstDynamicOffset} + size_t{DynamicOffsetCount} + size_t{SetInfo.DynamicOffsetCount},
                    "m_DynamicBufferOffsets must've been resized by SetPipelineState() to have enough space");
 
-            Uint32 PushConstantSet         = ~0u;
-            Uint32 PushConstantCacheOffset = ~0u;
-            if (PushConstantInfo && sign == PushConstantInfo.SignatureIndex)
-            {
-                // Compatible signatures have matching cache layouts, so these indices
-                // identify the promoted resource in the bound SRB cache as well.
-                const auto& Attribs     = m_pPipelineState->GetResourceSignature(sign)->GetResourceAttribs(PushConstantInfo.ResourceIndex);
-                PushConstantSet         = Attribs.DescrSet;
-                PushConstantCacheOffset = Attribs.CacheOffset(ResourceCacheContentType::SRB);
-            }
-            auto WriteResult = pResourceCache->WriteDynamicBufferOffsets(this, m_DynamicBufferOffsets,
+            const bool HasPushConstant = PushConstantInfo && sign == PushConstantInfo.SignatureIndex;
+            auto       WriteResult     = pResourceCache->WriteDynamicBufferOffsets(this, m_DynamicBufferOffsets,
                                                                          FirstDynamicOffset + DynamicOffsetCount,
-                                                                         PushConstantSet, PushConstantCacheOffset);
+                                                                         HasPushConstant ? PushConstantInfo.DescrSet : ~0u,
+                                                                         HasPushConstant ? PushConstantInfo.SRBCacheOffset : ~0u);
             VERIFY_EXPR(WriteResult.NumOffsetsWritten == SetInfo.DynamicOffsetCount);
             DynamicOffsetCount += SetInfo.DynamicOffsetCount;
 
