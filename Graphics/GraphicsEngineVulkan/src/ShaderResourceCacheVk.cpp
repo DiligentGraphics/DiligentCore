@@ -946,7 +946,8 @@ ShaderResourceCacheVk::WriteDynamicBufferOffsetsResult ShaderResourceCacheVk::Wr
     DeviceContextVkImpl*   pCtx,
     std::vector<uint32_t>& Offsets,
     Uint32                 StartInd,
-    const Resource*        pPushConstantResource) const
+    Uint32                 PushConstantSet,
+    Uint32                 PushConstantCacheOffset) const
 {
     WriteDynamicBufferOffsetsResult Result;
 
@@ -991,7 +992,7 @@ ShaderResourceCacheVk::WriteDynamicBufferOffsetsResult ShaderResourceCacheVk::Wr
             const Resource& Res = DescrSet.GetResource(res);
             if (Res.Type == DescriptorType::UniformBufferDynamic)
             {
-                if (&Res == pPushConstantResource)
+                if (set == PushConstantSet && res == PushConstantCacheOffset)
                 {
                     // The promoted resource still has a dynamic UBO descriptor, but its buffer
                     // is not mapped by CommitInlineConstants. Its recycled dynamic buffer ID

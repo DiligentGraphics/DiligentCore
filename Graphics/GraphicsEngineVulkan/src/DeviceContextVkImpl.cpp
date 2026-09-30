@@ -512,16 +512,19 @@ void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint3
             VERIFY(m_DynamicBufferOffsets.size() >= size_t{FirstDynamicOffset} + size_t{DynamicOffsetCount} + size_t{SetInfo.DynamicOffsetCount},
                    "m_DynamicBufferOffsets must've been resized by SetPipelineState() to have enough space");
 
-            const ShaderResourceCacheVk::Resource* pPushConstantResource = nullptr;
+            Uint32 PushConstantSet         = ~0u;
+            Uint32 PushConstantCacheOffset = ~0u;
             if (PushConstantInfo && sign == PushConstantInfo.SignatureIndex)
             {
-                // Resolve through the bound SRB cache: it may come from a compatible
-                // signature instance with different backing buffer objects.
-                const auto& Attribs   = m_pPipelineState->GetResourceSignature(sign)->GetResourceAttribs(PushConstantInfo.ResourceIndex);
-                pPushConstantResource = &pResourceCache->GetDescriptorSet(Attribs.DescrSet).GetResource(Attribs.CacheOffset(ResourceCacheContentType::SRB));
+                // Compatible signatures have matching cache layouts, so these indices
+                // identify the promoted resource in the bound SRB cache as well.
+                const auto& Attribs     = m_pPipelineState->GetResourceSignature(sign)->GetResourceAttribs(PushConstantInfo.ResourceIndex);
+                PushConstantSet         = Attribs.DescrSet;
+                PushConstantCacheOffset = Attribs.CacheOffset(ResourceCacheContentType::SRB);
             }
             auto WriteResult = pResourceCache->WriteDynamicBufferOffsets(this, m_DynamicBufferOffsets,
-                                                                         FirstDynamicOffset + DynamicOffsetCount, pPushConstantResource);
+                                                                         FirstDynamicOffset + DynamicOffsetCount,
+                                                                         PushConstantSet, PushConstantCacheOffset);
             VERIFY_EXPR(WriteResult.NumOffsetsWritten == SetInfo.DynamicOffsetCount);
             DynamicOffsetCount += SetInfo.DynamicOffsetCount;
 

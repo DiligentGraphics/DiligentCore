@@ -325,7 +325,8 @@ public:
         DeviceContextVkImpl*   pCtx,
         std::vector<uint32_t>& Offsets,
         Uint32                 StartInd,
-        const Resource*        pPushConstantResource) const;
+        Uint32                 PushConstantSet,
+        Uint32                 PushConstantCacheOffset) const;
 
 private:
     Resource* GetFirstResourcePtr()
