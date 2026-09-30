@@ -324,7 +324,9 @@ public:
     WriteDynamicBufferOffsetsResult WriteDynamicBufferOffsets(
         DeviceContextVkImpl*   pCtx,
         std::vector<uint32_t>& Offsets,
-        Uint32                 StartInd) const;
+        Uint32                 StartInd,
+        Uint32                 PushConstantSet,
+        Uint32                 PushConstantCacheOffset) const;
 
 private:
     Resource* GetFirstResourcePtr()

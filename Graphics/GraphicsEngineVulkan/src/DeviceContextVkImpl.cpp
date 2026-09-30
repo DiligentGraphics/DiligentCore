@@ -475,6 +475,7 @@ void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint3
     uint32_t     TotalSetCount      = 0;
     const Uint32 FirstSetToBind     = BindInfo.SetInfo[FirstSign].BaseInd;
     const Uint16 FirstDynamicOffset = BindInfo.SetInfo[FirstSign].FirstDynamicOffset;
+    const auto&  PushConstantInfo   = m_pPipelineState->GetPipelineLayout().GetPushConstantInfo();
 
     // Note that in current implementation, if any of the dynamic offsets change,
     // all descriptor sets are rebound. This may be further optimized to only rebind
@@ -511,7 +512,11 @@ void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint3
             VERIFY(m_DynamicBufferOffsets.size() >= size_t{FirstDynamicOffset} + size_t{DynamicOffsetCount} + size_t{SetInfo.DynamicOffsetCount},
                    "m_DynamicBufferOffsets must've been resized by SetPipelineState() to have enough space");
 
-            auto WriteResult = pResourceCache->WriteDynamicBufferOffsets(this, m_DynamicBufferOffsets, FirstDynamicOffset + DynamicOffsetCount);
+            const bool HasPushConstant = PushConstantInfo && sign == PushConstantInfo.SignatureIndex;
+            auto       WriteResult     = pResourceCache->WriteDynamicBufferOffsets(this, m_DynamicBufferOffsets,
+                                                                         FirstDynamicOffset + DynamicOffsetCount,
+                                                                         HasPushConstant ? PushConstantInfo.DescrSet : ~0u,
+                                                                         HasPushConstant ? PushConstantInfo.SRBCacheOffset : ~0u);
             VERIFY_EXPR(WriteResult.NumOffsetsWritten == SetInfo.DynamicOffsetCount);
             DynamicOffsetCount += SetInfo.DynamicOffsetCount;
 

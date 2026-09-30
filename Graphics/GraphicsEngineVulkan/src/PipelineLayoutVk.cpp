@@ -92,6 +92,10 @@ PipelineLayoutVk::PushConstantInfo PipelineLayoutVk::GetPushConstantInfo(
                     PCInfo.SignatureIndex = BindInd;
                     PCInfo.ResourceIndex  = r;
 
+                    const auto& Attribs   = pSignature->GetResourceAttribs(r);
+                    PCInfo.DescrSet       = Attribs.DescrSet;
+                    PCInfo.SRBCacheOffset = Attribs.CacheOffset(ResourceCacheContentType::SRB);
+
                     break;
                 }
             }

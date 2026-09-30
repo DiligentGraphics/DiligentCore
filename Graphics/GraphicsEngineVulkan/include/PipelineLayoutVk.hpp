@@ -71,6 +71,12 @@ public:
         Uint32 SignatureIndex = ~0u;
         Uint32 ResourceIndex  = ~0u;
 
+        // Descriptor-set index local to the signature's SRB cache, not the pipeline-global index.
+        // Compatible SRBs have matching cache layouts and can use the same indices.
+        Uint32 DescrSet = ~0u;
+        // Resource offset within that descriptor set in the SRB cache.
+        Uint32 SRBCacheOffset = ~0u;
+
         constexpr explicit operator bool() const { return vkRange.size != 0; }
     };
     static PushConstantInfo GetPushConstantInfo(const RefCntAutoPtr<PipelineResourceSignatureVkImpl>* ppSignatures,
