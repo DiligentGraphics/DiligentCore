@@ -33,6 +33,7 @@
 #include "../../../Primitives/interface/DebugOutput.h"
 #include "../../../Primitives/interface/MemoryAllocator.h"
 #include "../../../Primitives/interface/FlagEnum.h"
+#include "../../../Graphics/GraphicsEngine/interface/Dearchiver.h"
 #include "../../../Graphics/GraphicsEngine/interface/RenderDevice.h"
 
 #include "SuperResolution.h"
@@ -44,6 +45,31 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_SuperResolutionFactory =
     {0x79a904ec, 0xeb17, 0x4339, {0x86, 0xbc, 0x8a, 0x37, 0x63, 0x2b, 0xb, 0xd1}};
 
 // clang-format off
+
+/// FSR implementation creation attributes.
+struct SuperResolutionFSRCreateInfo
+{
+    /// Dearchiver that contains the FSR pipeline states.
+    IDearchiver* pDearchiver DEFAULT_INITIALIZER(nullptr);
+
+    /// Name of the edge-adaptive upsampling pipeline state in the archive.
+    const Char* EASUPSOName DEFAULT_INITIALIZER(nullptr);
+
+    /// Name of the contrast-adaptive sharpening pipeline state in the archive.
+    const Char* RCASPSOName DEFAULT_INITIALIZER(nullptr);
+};
+typedef struct SuperResolutionFSRCreateInfo SuperResolutionFSRCreateInfo;
+
+/// Super resolution factory creation attributes.
+struct SuperResolutionFactoryCreateInfo
+{
+    /// Render device used by the super resolution implementations.
+    IRenderDevice* pDevice DEFAULT_INITIALIZER(nullptr);
+
+    /// Optional FSR implementation creation attributes.
+    const SuperResolutionFSRCreateInfo* pFSRCreateInfo DEFAULT_INITIALIZER(nullptr);
+};
+typedef struct SuperResolutionFactoryCreateInfo SuperResolutionFactoryCreateInfo;
 
 /// Super resolution upscaler type.
 DILIGENT_TYPED_ENUM(SUPER_RESOLUTION_TYPE, Uint8)
@@ -328,12 +354,17 @@ DILIGENT_END_INTERFACE
 
 #endif
 
-/// Creates a super resolution factory for the specified render device.
+#include "../../../Primitives/interface/DefineGlobalFuncHelperMacros.h"
 
-/// \param [in]  pDevice    - Render device to create the factory for.
+/// Creates a super resolution factory using the specified creation attributes.
+
+/// \param [in]  CreateInfo - Factory creation attributes, see
+///                           Diligent::SuperResolutionFactoryCreateInfo.
 /// \param [out] ppFactory  - Address of the memory location where a pointer to the
 ///                           super resolution factory interface will be written.
-void DILIGENT_GLOBAL_FUNCTION(CreateSuperResolutionFactory)(IRenderDevice*            pDevice,
-                                                            ISuperResolutionFactory** ppFactory);
+void DILIGENT_GLOBAL_FUNCTION(CreateSuperResolutionFactory)(const SuperResolutionFactoryCreateInfo REF CreateInfo,
+                                                            ISuperResolutionFactory**                  ppFactory);
+
+#include "../../../Primitives/interface/UndefGlobalFuncHelperMacros.h"
 
 DILIGENT_END_NAMESPACE // namespace Diligent

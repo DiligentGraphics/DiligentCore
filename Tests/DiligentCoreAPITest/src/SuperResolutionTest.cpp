@@ -48,7 +48,11 @@ static ISuperResolutionFactory* GetFactory()
     auto*                                         pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
     static RefCntAutoPtr<ISuperResolutionFactory> pFactory;
     if (!pFactory)
-        LoadAndCreateSuperResolutionFactory(pDevice, &pFactory);
+    {
+        SuperResolutionFactoryCreateInfo CreateInfo;
+        CreateInfo.pDevice = pDevice;
+        LoadAndCreateSuperResolutionFactory(CreateInfo, &pFactory);
+    }
     return pFactory;
 }
 

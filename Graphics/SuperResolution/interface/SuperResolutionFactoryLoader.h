@@ -44,7 +44,9 @@
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-typedef void (*CreateSuperResolutionFactoryType)(IRenderDevice* pDevice, ISuperResolutionFactory** ppFactory);
+#include "../../../Primitives/interface/DefineGlobalFuncHelperMacros.h"
+
+typedef void (*CreateSuperResolutionFactoryType)(const SuperResolutionFactoryCreateInfo REF CreateInfo, ISuperResolutionFactory** ppFactory);
 
 #if DILIGENT_SUPER_RESOLUTION_EXPLICIT_LOAD
 
@@ -61,15 +63,15 @@ inline CreateSuperResolutionFactoryType DILIGENT_GLOBAL_FUNCTION(LoadSuperResolu
 #else
 
 API_QUALIFIER
-void DILIGENT_GLOBAL_FUNCTION(CreateSuperResolutionFactory)(IRenderDevice*            pDevice,
-                                                            ISuperResolutionFactory** ppFactory);
+void DILIGENT_GLOBAL_FUNCTION(CreateSuperResolutionFactory)(const SuperResolutionFactoryCreateInfo REF CreateInfo,
+                                                            ISuperResolutionFactory**                  ppFactory);
 
 #endif
 
 /// Loads the SuperResolution implementation DLL if necessary and creates a SuperResolution factory
-/// for the specified render device.
-inline void DILIGENT_GLOBAL_FUNCTION(LoadAndCreateSuperResolutionFactory)(IRenderDevice*            pDevice,
-                                                                          ISuperResolutionFactory** ppFactory)
+/// using the specified creation attributes.
+inline void DILIGENT_GLOBAL_FUNCTION(LoadAndCreateSuperResolutionFactory)(const SuperResolutionFactoryCreateInfo REF CreateInfo,
+                                                                          ISuperResolutionFactory**                  ppFactory)
 {
     CreateSuperResolutionFactoryType CreateFactoryFunc = NULL;
 #if DILIGENT_SUPER_RESOLUTION_EXPLICIT_LOAD
@@ -82,7 +84,9 @@ inline void DILIGENT_GLOBAL_FUNCTION(LoadAndCreateSuperResolutionFactory)(IRende
 #else
     CreateFactoryFunc = DILIGENT_GLOBAL_FUNCTION(CreateSuperResolutionFactory);
 #endif
-    CreateFactoryFunc(pDevice, ppFactory);
+    CreateFactoryFunc(CreateInfo, ppFactory);
 }
+
+#include "../../../Primitives/interface/UndefGlobalFuncHelperMacros.h"
 
 DILIGENT_END_NAMESPACE // namespace Diligent

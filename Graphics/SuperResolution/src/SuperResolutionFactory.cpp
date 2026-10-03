@@ -57,7 +57,7 @@ std::unique_ptr<SuperResolutionProvider> CreateMetalFXProvider(IRenderDevice* pD
 #endif
 
 #if DILIGENT_FSR_SUPPORTED
-std::unique_ptr<SuperResolutionProvider> CreateFSRProvider(IRenderDevice* pDevice);
+std::unique_ptr<SuperResolutionProvider> CreateFSRProvider(IRenderDevice* pDevice, const SuperResolutionFSRCreateInfo* pCreateInfo);
 #endif
 
 namespace
@@ -68,16 +68,14 @@ class SuperResolutionFactory : public ObjectBase<ISuperResolutionFactory>
 public:
     using TBase = ObjectBase<ISuperResolutionFactory>;
 
-    SuperResolutionFactory(IReferenceCounters* pRefCounters, IRenderDevice* pDevice) :
+    SuperResolutionFactory(IReferenceCounters* pRefCounters, const SuperResolutionFactoryCreateInfo& CI) :
         TBase{pRefCounters}
     {
-        auto AddProvider = [this](IRenderDevice*                           pDevice,
-                                  std::unique_ptr<SuperResolutionProvider> CreateProvider(IRenderDevice*),
-                                  const char*                              ProviderName) {
+        auto AddProvider = [this](auto&& CreateProvider, const char* ProviderName) {
             try
             {
                 ProviderInfo ProvInfo;
-                ProvInfo.Provider = CreateProvider(pDevice);
+                ProvInfo.Provider = CreateProvider();
                 if (ProvInfo.Provider)
                 {
                     ProvInfo.Provider->EnumerateVariants(ProvInfo.Variants);
@@ -95,22 +93,22 @@ public:
         };
 
 #ifdef DILIGENT_DLSS_D3D11_SUPPORTED
-        AddProvider(pDevice, CreateDLSSProviderD3D11, "DLSS D3D11");
+        AddProvider([&]() { return CreateDLSSProviderD3D11(CI.pDevice); }, "DLSS D3D11");
 #endif
 #ifdef DILIGENT_DLSS_D3D12_SUPPORTED
-        AddProvider(pDevice, CreateDLSSProviderD3D12, "DLSS D3D12");
+        AddProvider([&]() { return CreateDLSSProviderD3D12(CI.pDevice); }, "DLSS D3D12");
 #endif
 #ifdef DILIGENT_DLSS_VK_SUPPORTED
-        AddProvider(pDevice, CreateDLSSProviderVk, "DLSS Vulkan");
+        AddProvider([&]() { return CreateDLSSProviderVk(CI.pDevice); }, "DLSS Vulkan");
 #endif
 #ifdef DILIGENT_DSR_D3D12_SUPPORTED
-        AddProvider(pDevice, CreateDSRProviderD3D12, "DirectSR D3D12");
+        AddProvider([&]() { return CreateDSRProviderD3D12(CI.pDevice); }, "DirectSR D3D12");
 #endif
 #ifdef DILIGENT_METALFX_SUPPORTED
-        AddProvider(pDevice, CreateMetalFXProvider, "MetalFX");
+        AddProvider([&]() { return CreateMetalFXProvider(CI.pDevice); }, "MetalFX");
 #endif
 #ifdef DILIGENT_FSR_SUPPORTED
-        AddProvider(pDevice, CreateFSRProvider, "FSR Spatial");
+        AddProvider([&]() { return CreateFSRProvider(CI.pDevice, CI.pFSRCreateInfo); }, "FSR Spatial");
 #endif
         (void)AddProvider;
     }
@@ -219,7 +217,8 @@ private:
 
 } // namespace
 
-API_QUALIFIER void CreateSuperResolutionFactory(IRenderDevice* pDevice, ISuperResolutionFactory** ppFactory)
+API_QUALIFIER void CreateSuperResolutionFactory(const SuperResolutionFactoryCreateInfo& CreateInfo,
+                                                ISuperResolutionFactory**               ppFactory)
 {
     DEV_CHECK_ERR(ppFactory != nullptr, "ppFactory must not be null");
     if (ppFactory == nullptr)
@@ -227,13 +226,13 @@ API_QUALIFIER void CreateSuperResolutionFactory(IRenderDevice* pDevice, ISuperRe
 
     *ppFactory = nullptr;
 
-    DEV_CHECK_ERR(pDevice != nullptr, "pDevice must not be null");
-    if (pDevice == nullptr)
+    DEV_CHECK_ERR(CreateInfo.pDevice != nullptr, "CreateInfo.pDevice must not be null");
+    if (CreateInfo.pDevice == nullptr)
         return;
 
     try
     {
-        SuperResolutionFactory* pFactory = NEW_RC_OBJ(GetRawAllocator(), "SuperResolutionFactory instance", SuperResolutionFactory)(pDevice);
+        SuperResolutionFactory* pFactory = NEW_RC_OBJ(GetRawAllocator(), "SuperResolutionFactory instance", SuperResolutionFactory)(CreateInfo);
         pFactory->QueryInterface(IID_SuperResolutionFactory, reinterpret_cast<IObject**>(ppFactory));
     }
     catch (...)
@@ -247,9 +246,9 @@ API_QUALIFIER void CreateSuperResolutionFactory(IRenderDevice* pDevice, ISuperRe
 extern "C"
 {
     API_QUALIFIER
-    void Diligent_CreateSuperResolutionFactory(Diligent::IRenderDevice*            pDevice,
-                                               Diligent::ISuperResolutionFactory** ppFactory)
+    void Diligent_CreateSuperResolutionFactory(const Diligent::SuperResolutionFactoryCreateInfo& CreateInfo,
+                                               Diligent::ISuperResolutionFactory**               ppFactory)
     {
-        Diligent::CreateSuperResolutionFactory(pDevice, ppFactory);
+        Diligent::CreateSuperResolutionFactory(CreateInfo, ppFactory);
     }
 }

@@ -25,9 +25,24 @@
  */
 
 #include "DiligentCore/Graphics/SuperResolution/interface/SuperResolutionFactory.h"
+#include "DiligentCore/Graphics/SuperResolution/interface/SuperResolutionFactoryLoader.h"
 
 void TestSuperResolutionFactory_CInterface(ISuperResolutionFactory* pSuperResolutionFactory)
 {
+    SuperResolutionFSRCreateInfo FSRCreateInfo = {0};
+    FSRCreateInfo.pDearchiver                  = NULL;
+    FSRCreateInfo.EASUPSOName                  = NULL;
+    FSRCreateInfo.RCASPSOName                  = NULL;
+
+    SuperResolutionFactoryCreateInfo CreateInfo = {0};
+    CreateInfo.pDevice                          = NULL;
+    CreateInfo.pFSRCreateInfo                   = &FSRCreateInfo;
+    Diligent_CreateSuperResolutionFactory(&CreateInfo, (ISuperResolutionFactory**)NULL);
+
+    CreateSuperResolutionFactoryType CreateFactoryFunc = Diligent_CreateSuperResolutionFactory;
+    CreateFactoryFunc(&CreateInfo, (ISuperResolutionFactory**)NULL);
+    Diligent_LoadAndCreateSuperResolutionFactory(&CreateInfo, (ISuperResolutionFactory**)NULL);
+
     ISuperResolutionFactory_EnumerateVariants(pSuperResolutionFactory, (Uint32*)NULL, (SuperResolutionInfo*)NULL);
     ISuperResolutionFactory_GetSourceSettings(pSuperResolutionFactory, (const SuperResolutionSourceSettingsAttribs*)NULL, (SuperResolutionSourceSettings*)NULL);
     ISuperResolutionFactory_CreateSuperResolution(pSuperResolutionFactory, (const SuperResolutionDesc*)NULL, (ISuperResolution**)NULL);

@@ -25,3 +25,18 @@
  */
 
 #include "DiligentCore/Graphics/SuperResolution/interface/SuperResolutionFactory.h"
+#include "DiligentCore/Graphics/SuperResolution/interface/SuperResolutionFactoryLoader.h"
+
+namespace Diligent
+{
+
+void TestSuperResolutionFactory_CPPInterface(const SuperResolutionFactoryCreateInfo& CreateInfo, ISuperResolutionFactory** ppFactory)
+{
+    CreateSuperResolutionFactory(CreateInfo, ppFactory);
+
+    CreateSuperResolutionFactoryType CreateFactoryFunc = CreateSuperResolutionFactory;
+    CreateFactoryFunc(CreateInfo, ppFactory);
+    LoadAndCreateSuperResolutionFactory(CreateInfo, ppFactory);
+}
+
+} // namespace Diligent
