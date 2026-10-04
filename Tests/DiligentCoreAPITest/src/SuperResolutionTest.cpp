@@ -24,10 +24,19 @@
  *  of the possibility of such damages.
  */
 
+#include <algorithm>
+#include <string>
+
 #include "GPUTestingEnvironment.hpp"
 #include "GraphicsAccessories.hpp"
 #include "SuperResolutionFactory.h"
 #include "SuperResolutionFactoryLoader.h"
+
+#if ARCHIVER_SUPPORTED
+#    include "SerializationDevice.h"
+#    include "GraphicsTypesX.hpp"
+#    include "CommonlyUsedStates.h"
+#endif
 
 #include "gtest/gtest.h"
 
@@ -43,10 +52,16 @@ extern "C"
 namespace
 {
 
+static RefCntAutoPtr<ISuperResolutionFactory>& GetDefaultFactory()
+{
+    static RefCntAutoPtr<ISuperResolutionFactory> pFactory;
+    return pFactory;
+}
+
 static ISuperResolutionFactory* GetFactory()
 {
-    auto*                                         pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
-    static RefCntAutoPtr<ISuperResolutionFactory> pFactory;
+    auto* pDevice  = GPUTestingEnvironment::GetInstance()->GetDevice();
+    auto& pFactory = GetDefaultFactory();
     if (!pFactory)
     {
         SuperResolutionFactoryCreateInfo CreateInfo;
@@ -86,7 +101,227 @@ TEST(SuperResolutionTest, EnumerateVariants)
         EXPECT_NE(Variants[VariantIdx].Name[0], '\0') << "Variant " << VariantIdx << " has empty name";
         EXPECT_NE(Variants[VariantIdx].VariantId, IID_Unknown) << "Variant " << VariantIdx << " has unknown UID";
     }
+
+    // Keep guard elements allocated so capacity regressions are detected without
+    // allowing the test itself to write outside the allocation.
+    SuperResolutionInfo Guard;
+    Guard.VariantId = IID_Unknown;
+    snprintf(Guard.Name, sizeof(Guard.Name), "Enumeration guard");
+    for (Uint32 Capacity = 0; Capacity <= NumVariants + 1; ++Capacity)
+    {
+        std::vector<SuperResolutionInfo> LimitedVariants(NumVariants + 2, Guard);
+        Uint32                           NumWritten = Capacity;
+        pFactory->EnumerateVariants(NumWritten, LimitedVariants.data());
+        EXPECT_EQ(NumWritten, std::min(Capacity, NumVariants));
+
+        for (Uint32 Idx = 0; Idx < std::min(Capacity, NumVariants); ++Idx)
+            EXPECT_EQ(LimitedVariants[Idx], Variants[Idx]);
+        for (Uint32 Idx = std::min(Capacity, NumVariants); Idx < LimitedVariants.size(); ++Idx)
+            EXPECT_EQ(LimitedVariants[Idx], Guard);
+    }
 }
+
+#if ARCHIVER_SUPPORTED
+TEST(SuperResolutionTest, ArchivedFSR)
+{
+    auto* pEnv             = GPUTestingEnvironment::GetInstance();
+    auto* pDevice          = pEnv->GetDevice();
+    auto* pArchiverFactory = pEnv->GetArchiverFactory();
+    if (pArchiverFactory == nullptr)
+        GTEST_SKIP() << "Archiver library is not loaded";
+
+    // Destroy the cached factory before creating another one: destroying a DLSS
+    // provider shuts down NGX for the device.
+    GetDefaultFactory().Release();
+
+    RefCntAutoPtr<IDearchiver> pDearchiver;
+    pDevice->GetEngineFactory()->CreateDearchiver(DearchiverCreateInfo{}, &pDearchiver);
+    ASSERT_NE(pDearchiver, nullptr);
+
+    RefCntAutoPtr<ISuperResolutionFactory> pFactory;
+    {
+        // The factory must retain the dearchiver and own the PSO names.
+        std::string                  EASUPSOName = "Archived FSR EASU";
+        std::string                  RCASPSOName = "Archived FSR RCAS";
+        SuperResolutionFSRCreateInfo FSRCreateInfo;
+        FSRCreateInfo.pDearchiver = pDearchiver;
+        FSRCreateInfo.EASUPSOName = EASUPSOName.c_str();
+        FSRCreateInfo.RCASPSOName = RCASPSOName.c_str();
+        SuperResolutionFactoryCreateInfo CreateInfo;
+        CreateInfo.pDevice        = pDevice;
+        CreateInfo.pFSRCreateInfo = &FSRCreateInfo;
+        LoadAndCreateSuperResolutionFactory(CreateInfo, &pFactory);
+    }
+    ASSERT_NE(pFactory, nullptr);
+
+    Uint32 NumVariants = 0;
+    pFactory->EnumerateVariants(NumVariants, nullptr);
+    std::vector<SuperResolutionInfo> Variants(NumVariants);
+    pFactory->EnumerateVariants(NumVariants, Variants.data());
+    const auto FSRVariant = std::find_if(Variants.begin(), Variants.end(), [](const SuperResolutionInfo& Info) {
+        return strcmp(Info.Name, "Software: FSR Spatial") == 0;
+    });
+    if (FSRVariant == Variants.end())
+        GTEST_SKIP() << "FSR is disabled";
+
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    SuperResolutionDesc Desc;
+    Desc.Name         = "Archived FSR test";
+    Desc.VariantId    = FSRVariant->VariantId;
+    Desc.InputWidth   = 4;
+    Desc.InputHeight  = 4;
+    Desc.OutputWidth  = 8;
+    Desc.OutputHeight = 8;
+    Desc.ColorFormat  = TEX_FORMAT_RGBA8_UNORM;
+    Desc.OutputFormat = TEX_FORMAT_RGBA8_UNORM;
+
+    // Missing archives must fail without throwing through the public API or
+    // caching the incomplete pipeline pair.
+    RefCntAutoPtr<ISuperResolution> pUpscaler;
+    {
+        TestingEnvironment::ErrorScope ExpectedErrors{"Failed to create FSR pipeline states"};
+        ASSERT_NO_THROW(pFactory->CreateSuperResolution(Desc, &pUpscaler));
+        EXPECT_EQ(pUpscaler, nullptr);
+    }
+
+    RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
+    pArchiverFactory->CreateSerializationDevice(SerializationDeviceCreateInfo{}, &pSerializationDevice);
+    ASSERT_NE(pSerializationDevice, nullptr);
+    const auto DeviceFlags = RenderDeviceTypeToArchiveDataFlag(pDevice->GetDeviceInfo().Type);
+    if ((pSerializationDevice->GetSerializationDeviceInfo().SupportedArchiveTargets & DeviceFlags) == 0)
+        GTEST_SKIP() << "Current device is not supported by the serialization device";
+
+    RefCntAutoPtr<IArchiver> pArchiver;
+    pArchiverFactory->CreateArchiver(pSerializationDevice, &pArchiver);
+    ASSERT_NE(pArchiver, nullptr);
+
+    // Small shaders with the FSR resource layout exercise archived PSO creation
+    // and both execution paths without duplicating the FSR algorithm.
+    constexpr char VSSource[] = R"(
+float4 main(uint VertexId : SV_VertexID) : SV_Position
+{
+    return float4(VertexId == 2 ? 3.0 : -1.0, VertexId == 1 ? 3.0 : -1.0, 0.0, 1.0);
+}
+)";
+    constexpr char PSSource[] = R"(
+cbuffer cbFSRAttribs
+{
+    uint4 EASUConstants[4];
+    uint4 RCASConstants;
+    float4 SourceSize;
+};
+Texture2D<float4> g_TextureSource;
+SamplerState g_TextureSource_sampler;
+float4 EASU(float4 Position : SV_Position) : SV_Target
+{
+    return g_TextureSource.SampleLevel(g_TextureSource_sampler, Position.xy * SourceSize.zw, 0.0);
+}
+float4 RCAS(float4 Position : SV_Position) : SV_Target
+{
+    int2 Coord = clamp(int2(Position.xy), int2(0, 0), int2(SourceSize.xy) - 1);
+    return g_TextureSource.Load(int3(Coord, 0));
+}
+)";
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.EntryPoint     = "main";
+    ShaderCI.Source         = VSSource;
+    ShaderCI.Desc           = {"Archived FSR VS", SHADER_TYPE_VERTEX, true};
+    RefCntAutoPtr<IShader> pVS;
+    pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{DeviceFlags}, &pVS);
+    ASSERT_NE(pVS, nullptr);
+
+    for (bool Sharpening : {false, true})
+    {
+        ShaderCI.Source     = PSSource;
+        ShaderCI.EntryPoint = Sharpening ? "RCAS" : "EASU";
+        ShaderCI.Desc       = {Sharpening ? "Archived FSR RCAS PS" : "Archived FSR EASU PS", SHADER_TYPE_PIXEL, true};
+        RefCntAutoPtr<IShader> pPS;
+        pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{DeviceFlags}, &pPS);
+        ASSERT_NE(pPS, nullptr);
+
+        PipelineResourceLayoutDescX ResourceLayout;
+        ResourceLayout
+            .SetDefaultVariableType(SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+            .AddVariable(SHADER_TYPE_PIXEL, "cbFSRAttribs", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
+        if (Sharpening)
+            ResourceLayout.AddVariable(SHADER_TYPE_PIXEL, "g_TextureSource", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
+        else
+            ResourceLayout.AddImmutableSampler(SHADER_TYPE_PIXEL, "g_TextureSource", Sam_PointClamp);
+
+        GraphicsPipelineStateCreateInfoX PSOCI{Sharpening ? "Archived FSR RCAS" : "Archived FSR EASU"};
+        PSOCI
+            .AddShader(pVS)
+            .AddShader(pPS)
+            .AddRenderTarget(TEX_FORMAT_RGBA8_UNORM)
+            .SetRasterizerDesc(RasterizerStateDesc{FILL_MODE_SOLID, CULL_MODE_NONE})
+            .SetDepthStencilDesc(DepthStencilStateDesc{False, False})
+            .SetResourceLayout(ResourceLayout);
+        RefCntAutoPtr<IPipelineState> pPSO;
+        pSerializationDevice->CreateGraphicsPipelineState(PSOCI, PipelineStateArchiveInfo{PSO_ARCHIVE_FLAG_NONE, DeviceFlags}, &pPSO);
+        ASSERT_NE(pPSO, nullptr);
+        ASSERT_TRUE(pArchiver->AddPipelineState(pPSO));
+    }
+
+    constexpr Uint32         ContentVersion = 1;
+    RefCntAutoPtr<IDataBlob> pArchive;
+    ASSERT_TRUE(pArchiver->SerializeToBlob(ContentVersion, &pArchive));
+    ASSERT_NE(pArchive, nullptr);
+    ASSERT_TRUE(pDearchiver->LoadArchive(pArchive, ContentVersion));
+    pDearchiver.Release();
+
+    TextureDesc InputDesc;
+    InputDesc.Name      = "Archived FSR input";
+    InputDesc.Type      = RESOURCE_DIM_TEX_2D;
+    InputDesc.Width     = Desc.InputWidth;
+    InputDesc.Height    = Desc.InputHeight;
+    InputDesc.Format    = Desc.ColorFormat;
+    InputDesc.BindFlags = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET;
+    RefCntAutoPtr<ITexture> pInput;
+    pDevice->CreateTexture(InputDesc, nullptr, &pInput);
+    ASSERT_NE(pInput, nullptr);
+    auto*       pContext  = pEnv->GetDeviceContext();
+    const float Color[]   = {0.25f, 0.5f, 0.75f, 1.0f};
+    auto*       pInputRTV = pInput->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET);
+    pContext->SetRenderTargets(1, &pInputRTV, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->ClearRenderTarget(pInputRTV, Color, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    // Keep the first format's upscaler alive while unpacking the second format.
+    std::vector<RefCntAutoPtr<ISuperResolution>> Upscalers;
+    for (TEXTURE_FORMAT Format : {TEX_FORMAT_RGBA8_UNORM, TEX_FORMAT_RGBA16_FLOAT})
+    {
+        for (bool Sharpening : {false, true})
+        {
+            Desc.OutputFormat = Format;
+            Desc.Flags        = Sharpening ? SUPER_RESOLUTION_FLAG_ENABLE_SHARPENING : SUPER_RESOLUTION_FLAG_NONE;
+            pUpscaler.Release();
+            pFactory->CreateSuperResolution(Desc, &pUpscaler);
+            ASSERT_NE(pUpscaler, nullptr);
+
+            TextureDesc OutputDesc = InputDesc;
+            OutputDesc.Name        = "Archived FSR output";
+            OutputDesc.Width       = Desc.OutputWidth;
+            OutputDesc.Height      = Desc.OutputHeight;
+            OutputDesc.Format      = Format;
+            RefCntAutoPtr<ITexture> pOutput;
+            pDevice->CreateTexture(OutputDesc, nullptr, &pOutput);
+            ASSERT_NE(pOutput, nullptr);
+
+            ExecuteSuperResolutionAttribs Attribs;
+            Attribs.pContext           = pContext;
+            Attribs.pColorTextureSRV   = pInput->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
+            Attribs.pOutputTextureView = pOutput->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET);
+            Attribs.Sharpness          = 0.5f;
+            pUpscaler->Execute(Attribs);
+            Upscalers.push_back(pUpscaler);
+        }
+    }
+    pContext->Flush();
+    pContext->WaitForIdle();
+}
+#endif
 
 TEST(SuperResolutionTest, QuerySourceSettings)
 {

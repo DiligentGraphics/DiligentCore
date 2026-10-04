@@ -123,12 +123,13 @@ public:
             return;
         }
 
-        NumVariants = 0;
+        const Uint32 Capacity = NumVariants;
+        NumVariants           = 0;
         for (const ProviderInfo& Entry : m_Providers)
         {
             for (const SuperResolutionInfo& Info : Entry.Variants)
             {
-                if (NumVariants >= m_TotalVariants)
+                if (NumVariants >= Capacity)
                     return;
                 Variants[NumVariants++] = Info;
             }
