@@ -77,7 +77,7 @@ jobs:
 
     - name: Set up build environment
       if: success()
-      uses: DiligentGraphics/github-action/setup-build-env@v26
+      uses: DiligentGraphics/github-action/setup-build-env@v27
       with:
         platform:        ${{ matrix.platform }}
         cmake-generator: ${{ matrix.cmake_generator }}
@@ -93,7 +93,7 @@ jobs:
 
     - name: Configure CMake
       if: success()
-      uses: DiligentGraphics/github-action/configure-cmake@v26
+      uses: DiligentGraphics/github-action/configure-cmake@v27
       with:
         generator:  ${{ matrix.cmake_generator }}
         vs-arch:    ${{ matrix.toolset }}
@@ -103,25 +103,25 @@ jobs:
     - name: Build
       id:   build
       if:   success()
-      uses: DiligentGraphics/github-action/build@v26
+      uses: DiligentGraphics/github-action/build@v27
       with:
         target: install
 
     - name: DiligentCoreTest
       if:   ${{ success() && matrix.name != 'UWP'}}
-      uses: DiligentGraphics/github-action/run-core-tests@v26
+      uses: DiligentGraphics/github-action/run-core-tests@v27
 
     - name: DiligentCoreAPITest D3D11
       # NB: it is essential to include failure() to override the default status check of success()
       #     that is automatically applied to if conditions that don't contain a status check function.
       if:   ${{ (success() || failure() && steps.build.outcome == 'success') && (matrix.name == 'Win10' || matrix.name == 'Win10-Ninja') }}
-      uses: DiligentGraphics/github-action/run-core-gpu-tests@v26
+      uses: DiligentGraphics/github-action/run-core-gpu-tests@v27
       with:
         mode: d3d11_sw
 
     - name: DiligentCoreAPITest D3D12
       if:   ${{ (success() || failure() && steps.build.outcome == 'success') && (matrix.name == 'Win10' || matrix.name == 'Win10-Ninja') }}
-      uses: DiligentGraphics/github-action/run-core-gpu-tests@v26
+      uses: DiligentGraphics/github-action/run-core-gpu-tests@v27
       with:
         mode: d3d12_sw
         # Temporarily skip flaky RT2/RT4 until WARP and reference AS synchronization are fixed.
@@ -129,7 +129,7 @@ jobs:
 
     - name: DiligentCoreAPITest D3D12 DXC
       if:   ${{ (success() || failure() && steps.build.outcome == 'success') && (matrix.name == 'Win10' || matrix.name == 'Win10-Ninja') }}
-      uses: DiligentGraphics/github-action/run-core-gpu-tests@v26
+      uses: DiligentGraphics/github-action/run-core-gpu-tests@v27
       with:
         mode:    d3d12_sw
         use-dxc: true
@@ -139,7 +139,7 @@ jobs:
 
     - name: DiligentCoreAPITest WebGPU
       if:   ${{ (success() || failure() && steps.build.outcome == 'success') && matrix.name == 'Win10' }}
-      uses: DiligentGraphics/github-action/run-core-gpu-tests@v26
+      uses: DiligentGraphics/github-action/run-core-gpu-tests@v27
       with:
         mode: wgpu
 
