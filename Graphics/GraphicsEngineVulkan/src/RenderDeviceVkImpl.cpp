@@ -797,6 +797,19 @@ Bool RenderDeviceVkImpl::GetSparseTextureFormatInfo(TEXTURE_FORMAT           Tex
     const VkImageUsageFlags     vkDefaultUsage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     const VkSampleCountFlagBits vkSampleCount  = static_cast<VkSampleCountFlagBits>(SampleCount);
 
+    const auto IsSampleCountSupported = [&](VkImageUsageFlags vkUsage) {
+        // The sparse format query requires a sample count supported for the same
+        // format, type, tiling, and usage (VUID-vkGetPhysicalDeviceSparseImageFormatProperties-samples-01094).
+        VkImageFormatProperties ImgFmtProps{};
+
+        const VkResult Result = vkGetPhysicalDeviceImageFormatProperties(
+            vkDevice, vkFormat, vkType, VK_IMAGE_TILING_OPTIMAL, vkUsage, 0, &ImgFmtProps);
+        return (Result == VK_SUCCESS) && (ImgFmtProps.sampleCounts & vkSampleCount) != 0;
+    };
+
+    if (!IsSampleCountSupported(vkDefaultUsage))
+        return false;
+
     // Texture with depth-stencil format may be implemented with two memory blocks per tile.
     VkSparseImageFormatProperties FmtProps[2]   = {};
     Uint32                        FmtPropsCount = 0;
@@ -814,6 +827,9 @@ Bool RenderDeviceVkImpl::GetSparseTextureFormatInfo(TEXTURE_FORMAT           Tex
     Info.Flags       = VkSparseImageFormatFlagsToSparseTextureFlags(FmtProps[0].flags);
 
     const auto CheckUsage = [&](VkImageUsageFlags vkUsage) {
+        if (!IsSampleCountSupported(vkDefaultUsage | vkUsage))
+            return false;
+
         Uint32 Count = 0;
         vkGetPhysicalDeviceSparseImageFormatProperties(vkDevice, vkFormat, vkType, vkSampleCount, vkDefaultUsage | vkUsage, VK_IMAGE_TILING_OPTIMAL, &Count, nullptr);
         return (Count != 0);

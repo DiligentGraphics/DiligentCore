@@ -2073,6 +2073,8 @@ TEST_F(SparseResourceTest, LargeBuffer)
         GTEST_SKIP() << "Sparse buffer is not supported by this device";
     }
 
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
+
     // Limits which is queried from API is not valid, x/4 works on all tested devices.
     Uint64 BuffSize = AlignUp(std::min(MaxResourceSpaceSize, SparseRes.ResourceSpaceSize) >> 2, 4u);
     if (pDevice->GetDeviceInfo().IsD3DDevice())
@@ -2106,6 +2108,8 @@ TEST_F(SparseResourceTest, LargeTexture2D)
     {
         GTEST_SKIP() << "Sparse texture 2D is not supported by this device";
     }
+
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     uint4      TexSize{TexProps.MaxTexture2DDimension, TexProps.MaxTexture2DDimension, 1u, 1u};
     const auto BPP           = 4u;
@@ -2141,6 +2145,8 @@ TEST_F(SparseResourceTest, LargeTexture2DArray)
         GTEST_SKIP() << "Sparse texture 2D array with mip tail is not supported by this device";
     }
 
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
+
     uint4      TexSize{TexProps.MaxTexture2DDimension, TexProps.MaxTexture2DDimension, 1u, TexProps.MaxTexture2DArraySlices};
     const auto BPP           = 4u;
     const auto MaxMemorySize = std::min(MaxResourceSpaceSize, SparseRes.ResourceSpaceSize) >> 1;
@@ -2174,6 +2180,8 @@ TEST_F(SparseResourceTest, LargeTexture3D)
     {
         GTEST_SKIP() << "Sparse texture 3D is not supported by this device";
     }
+
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     uint4      TexSize{TexProps.MaxTexture3DDimension, TexProps.MaxTexture3DDimension, TexProps.MaxTexture3DDimension, 1u};
     const auto BPP           = 4u;
