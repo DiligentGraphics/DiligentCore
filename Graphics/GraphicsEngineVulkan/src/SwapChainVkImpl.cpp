@@ -77,6 +77,9 @@ void SwapChainVkImpl::CreateSurface()
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
     if (m_Window.hWnd != NULL)
     {
+        if (!m_Instance->IsExtensionEnabled(VK_KHR_WIN32_SURFACE_EXTENSION_NAME))
+            LOG_ERROR_AND_THROW("Cannot create Win32 surface: ", VK_KHR_WIN32_SURFACE_EXTENSION_NAME, " is not enabled.");
+
         VkWin32SurfaceCreateInfoKHR surfaceCreateInfo{};
         surfaceCreateInfo.sType     = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
         surfaceCreateInfo.hinstance = GetModuleHandle(NULL);
@@ -87,6 +90,9 @@ void SwapChainVkImpl::CreateSurface()
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
     if (m_Window.pAWindow != nullptr)
     {
+        if (!m_Instance->IsExtensionEnabled(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME))
+            LOG_ERROR_AND_THROW("Cannot create Android surface: ", VK_KHR_ANDROID_SURFACE_EXTENSION_NAME, " is not enabled.");
+
         VkAndroidSurfaceCreateInfoKHR surfaceCreateInfo{};
         surfaceCreateInfo.sType  = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
         surfaceCreateInfo.window = (ANativeWindow*)m_Window.pAWindow;
@@ -96,6 +102,9 @@ void SwapChainVkImpl::CreateSurface()
 #elif defined(VK_USE_PLATFORM_METAL_EXT)
     if (void* pLayer = m_Window.GetLayer())
     {
+        if (!m_Instance->IsExtensionEnabled(VK_EXT_METAL_SURFACE_EXTENSION_NAME))
+            LOG_ERROR_AND_THROW("Cannot create Metal surface: ", VK_EXT_METAL_SURFACE_EXTENSION_NAME, " is not enabled.");
+
         VkMetalSurfaceCreateInfoEXT surfaceCreateInfo{};
         surfaceCreateInfo.sType  = VK_STRUCTURE_TYPE_METAL_SURFACE_CREATE_INFO_EXT;
         surfaceCreateInfo.pLayer = pLayer;
@@ -107,6 +116,9 @@ void SwapChainVkImpl::CreateSurface()
 #    if defined(VK_USE_PLATFORM_XCB_KHR)
     if (m_Window.pXCBConnection != nullptr && m_Window.WindowId != 0)
     {
+        if (!m_Instance->IsExtensionEnabled(VK_KHR_XCB_SURFACE_EXTENSION_NAME))
+            LOG_ERROR_AND_THROW("Cannot create XCB surface: ", VK_KHR_XCB_SURFACE_EXTENSION_NAME, " is not enabled.");
+
         VkXcbSurfaceCreateInfoKHR surfaceCreateInfo{};
         surfaceCreateInfo.sType      = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
         surfaceCreateInfo.connection = static_cast<xcb_connection_t*>(m_Window.pXCBConnection);
@@ -119,6 +131,9 @@ void SwapChainVkImpl::CreateSurface()
 #    if defined(VK_USE_PLATFORM_XLIB_KHR)
     if ((m_Window.pDisplay != nullptr && m_Window.WindowId != 0) && m_VkSurface == VK_NULL_HANDLE)
     {
+        if (!m_Instance->IsExtensionEnabled(VK_KHR_XLIB_SURFACE_EXTENSION_NAME))
+            LOG_ERROR_AND_THROW("Cannot create Xlib surface: ", VK_KHR_XLIB_SURFACE_EXTENSION_NAME, " is not enabled.");
+
         VkXlibSurfaceCreateInfoKHR surfaceCreateInfo{};
         surfaceCreateInfo.sType  = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
         surfaceCreateInfo.dpy    = static_cast<Display*>(m_Window.pDisplay);
@@ -131,6 +146,9 @@ void SwapChainVkImpl::CreateSurface()
 #    if defined(VK_USE_PLATFORM_WAYLAND_KHR)
     if ((m_Window.pDisplay != nullptr && m_Window.pWaylandSurface != nullptr) && m_VkSurface == VK_NULL_HANDLE)
     {
+        if (!m_Instance->IsExtensionEnabled(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME))
+            LOG_ERROR_AND_THROW("Cannot create Wayland surface: ", VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME, " is not enabled.");
+
         VkWaylandSurfaceCreateInfoKHR surfaceCreateInfo{};
         surfaceCreateInfo.sType   = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
         surfaceCreateInfo.display = static_cast<struct wl_display*>(m_Window.pDisplay);

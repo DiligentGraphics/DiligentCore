@@ -376,24 +376,32 @@ Instance::Instance(const CreateInfo& CI) :
     {
         InstanceExtensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 
-        // Enable surface extensions depending on OS
+        // Enable only available surface extensions. Compiled-in window system support does not
+        // imply runtime availability (e.g. RenderDoc may not expose Wayland support).
+        // The extension for the requested window system is checked when creating the surface.
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
-        InstanceExtensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+        if (IsExtensionAvailable(VK_KHR_WIN32_SURFACE_EXTENSION_NAME))
+            InstanceExtensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #endif
 #if defined(VK_USE_PLATFORM_ANDROID_KHR)
-        InstanceExtensions.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
+        if (IsExtensionAvailable(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME))
+            InstanceExtensions.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
 #endif
 #if defined(VK_USE_PLATFORM_WAYLAND_KHR)
-        InstanceExtensions.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
+        if (IsExtensionAvailable(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME))
+            InstanceExtensions.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
 #endif
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
-        InstanceExtensions.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
+        if (IsExtensionAvailable(VK_KHR_XLIB_SURFACE_EXTENSION_NAME))
+            InstanceExtensions.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
 #endif
 #if defined(VK_USE_PLATFORM_XCB_KHR)
-        InstanceExtensions.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+        if (IsExtensionAvailable(VK_KHR_XCB_SURFACE_EXTENSION_NAME))
+            InstanceExtensions.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
 #endif
 #if defined(VK_USE_PLATFORM_METAL_EXT)
-        InstanceExtensions.push_back(VK_EXT_METAL_SURFACE_EXTENSION_NAME);
+        if (IsExtensionAvailable(VK_EXT_METAL_SURFACE_EXTENSION_NAME))
+            InstanceExtensions.push_back(VK_EXT_METAL_SURFACE_EXTENSION_NAME);
 #endif
     };
 
