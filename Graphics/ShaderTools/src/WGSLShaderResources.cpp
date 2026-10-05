@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024-2025 Diligent Graphics LLC
+ *  Copyright 2024-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -82,10 +82,10 @@ SHADER_TYPE TintPipelineStageToShaderType(tint::inspector::PipelineStage Stage)
     }
 }
 
-WGSLShaderResourceAttribs::ResourceType TintResourceTypeToWGSLShaderAttribsResourceType(tint::inspector::ResourceBinding::ResourceType TintResType)
+WGSLShaderResourceAttribs::ResourceType TintBindingToWGSLShaderAttribsResourceType(const tint::inspector::ResourceBinding& TintBinding)
 {
     using TintResourceType = tint::inspector::ResourceBinding::ResourceType;
-    switch (TintResType)
+    switch (TintBinding.resource_type)
     {
         case TintResourceType::kUniformBuffer:
             return WGSLShaderResourceAttribs::ResourceType::UniformBuffer;
@@ -97,10 +97,9 @@ WGSLShaderResourceAttribs::ResourceType TintResourceTypeToWGSLShaderAttribsResou
             return WGSLShaderResourceAttribs::ResourceType::ROStorageBuffer;
 
         case TintResourceType::kSampler:
-            return WGSLShaderResourceAttribs::ResourceType::Sampler;
-
-        case TintResourceType::kComparisonSampler:
-            return WGSLShaderResourceAttribs::ResourceType::ComparisonSampler;
+            return TintBinding.sampler_type == tint::inspector::ResourceBinding::SamplerType::kComparison ?
+                WGSLShaderResourceAttribs::ResourceType::ComparisonSampler :
+                WGSLShaderResourceAttribs::ResourceType::Sampler;
 
         case TintResourceType::kSampledTexture:
             return WGSLShaderResourceAttribs::ResourceType::Texture;
@@ -151,6 +150,10 @@ WGSLShaderResourceAttribs::TextureSampleType TintSampleKindToWGSLShaderAttribsSa
         switch (TintBinding.sampled_kind)
         {
             case TintSampledKind::kFloat:
+            case TintSampledKind::kFilterable:
+            case TintSampledKind::kUnfilterable:
+            case TintSampledKind::kUnknownFilterable:
+                // Filterability is configured through WebGPUResourceAttribs.
                 return WGSLShaderResourceAttribs::TextureSampleType::Float;
 
             case TintSampledKind::kSInt:
@@ -158,9 +161,6 @@ WGSLShaderResourceAttribs::TextureSampleType TintSampleKindToWGSLShaderAttribsSa
 
             case TintSampledKind::kUInt:
                 return WGSLShaderResourceAttribs::TextureSampleType::UInt;
-
-            case TintSampledKind::kUnknown:
-                return WGSLShaderResourceAttribs::TextureSampleType::Unknown;
 
             default:
                 UNEXPECTED("Unexpected sample kind");
@@ -221,7 +221,6 @@ RESOURCE_DIMENSION TintBindingToResourceDimension(const tint::inspector::Resourc
             return RESOURCE_DIM_BUFFER;
 
         case TintResourceType::kSampler:
-        case TintResourceType::kComparisonSampler:
             return RESOURCE_DIM_UNDEFINED;
 
         case TintResourceType::kSampledTexture:
@@ -347,7 +346,7 @@ WGSLShaderResourceAttribs::WGSLShaderResourceAttribs(const char*                
     // clang-format off
     Name             {_Name},
     ArraySize        {static_cast<Uint16>(_ArraySize)},
-    Type             {TintResourceTypeToWGSLShaderAttribsResourceType(TintBinding.resource_type)},
+    Type             {TintBindingToWGSLShaderAttribsResourceType(TintBinding)},
     ResourceDim      {TintBindingToResourceDimension(TintBinding)},
     Format			 {TintTexelFormatToTextureFormat(TintBinding)},
     BindGroup        {static_cast<Uint16>(TintBinding.bind_group)},
@@ -495,7 +494,7 @@ namespace
 bool ResourceBindingsCompatibile(const tint::inspector::ResourceBinding& Binding0,
                                  const tint::inspector::ResourceBinding& Binding1)
 {
-    if (Binding0.resource_type != Binding1.resource_type)
+    if (TintBindingToWGSLShaderAttribsResourceType(Binding0) != TintBindingToWGSLShaderAttribsResourceType(Binding1))
         return false;
 
     if (TintBindingToResourceDimension(Binding0) != TintBindingToResourceDimension(Binding1))
@@ -875,7 +874,6 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
                 break;
 
             case TintResourceType::kSampler:
-            case TintResourceType::kComparisonSampler:
                 ++ResCounters.NumSamplers;
                 break;
 
@@ -960,7 +958,6 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
             break;
 
             case TintResourceType::kSampler:
-            case TintResourceType::kComparisonSampler:
             {
                 new (&GetSampler(CurrRes.NumSamplers++)) WGSLShaderResourceAttribs{Name, Binding, ArraySize};
             }

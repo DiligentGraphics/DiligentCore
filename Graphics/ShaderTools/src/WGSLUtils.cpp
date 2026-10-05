@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024-2025 Diligent Graphics LLC
+ *  Copyright 2024-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -37,6 +37,7 @@
 #define TINT_BUILD_SPV_READER  1
 #define TINT_BUILD_WGSL_WRITER 1
 #include <tint/tint.h>
+#include "src/tint/lang/core/ir/transform/binding_remapper.h"
 #include "src/tint/lang/wgsl/ast/module.h"
 #include "src/tint/lang/wgsl/ast/identifier_expression.h"
 #include "src/tint/lang/wgsl/ast/identifier.h"
@@ -91,23 +92,18 @@ WGSLEmulatedResourceArrayElement GetWGSLEmulatedArrayElement(const std::string& 
 
 std::string ConvertSPIRVtoWGSL(const std::vector<uint32_t>& SPIRV)
 {
-    tint::spirv::reader::Options SPIRVReaderOptions{true, {tint::wgsl::AllowedFeatures::Everything()}};
-    tint::Program                Program = Read(SPIRV, SPIRVReaderOptions);
+    tint::wgsl::writer::Options WGSLWriterOptions;
+    WGSLWriterOptions.allow_non_uniform_derivatives = true;
+    WGSLWriterOptions.allowed_features              = tint::wgsl::AllowedFeatures::Everything();
 
-    if (!Program.IsValid())
-    {
-        LOG_ERROR_MESSAGE("Tint SPIR-V reader failure:\nParser: " + Program.Diagnostics().Str() + "\n");
-        return {};
-    }
-
-    auto GenerationResult = tint::wgsl::writer::Generate(Program, {});
+    auto GenerationResult = tint::SpirvToWgsl(SPIRV, WGSLWriterOptions);
     if (GenerationResult != tint::Success)
     {
-        LOG_ERROR_MESSAGE("Tint WGSL writer failure:\nGeneate: " + GenerationResult.Failure().reason.Str() + "\n");
+        LOG_ERROR_MESSAGE("Tint SPIR-V to WGSL conversion failure:\n", GenerationResult.Failure().reason, "\n");
         return {};
     }
 
-    return GenerationResult->wgsl;
+    return std::move(GenerationResult.Get());
 }
 
 static bool IsAtomic(const tint::core::type::Type* WGSLType)
@@ -280,7 +276,7 @@ std::string RemapWGSLResourceBindings(const std::string&         WGSL,
         return {};
     }
 
-    tint::ast::transform::BindingRemapper::BindingPoints BindingPoints;
+    std::unordered_map<tint::BindingPoint, tint::BindingPoint> BindingPoints;
 
     tint::inspector::Inspector Inspector{Program};
     for (tint::inspector::EntryPoint& EntryPoint : Inspector.GetEntryPoints())
@@ -311,7 +307,7 @@ std::string RemapWGSLResourceBindings(const std::string&         WGSL,
             if (DstBindigIt != ResMapping.end())
             {
                 const WGSLResourceBindingInfo& DstBindig = DstBindigIt->second;
-                BindingPoints.emplace(tint::ast::transform::BindingPoint{Binding.bind_group, Binding.binding}, tint::ast::transform::BindingPoint{DstBindig.Group, DstBindig.Index + ArrayIndex});
+                BindingPoints.emplace(tint::BindingPoint{Binding.bind_group, Binding.binding}, tint::BindingPoint{DstBindig.Group, DstBindig.Index + ArrayIndex});
             }
             else
             {
@@ -320,19 +316,28 @@ std::string RemapWGSLResourceBindings(const std::string&         WGSL,
         }
     }
 
-    tint::ast::transform::Manager Manager;
-    tint::ast::transform::DataMap Inputs;
-    tint::ast::transform::DataMap Outputs;
+    auto IR = tint::wgsl::reader::ProgramToLoweredIR(Program);
+    if (IR != tint::Success)
+    {
+        LOG_ERROR_MESSAGE("Tint WGSL to IR conversion failure:\n", IR.Failure().reason, "\n");
+        return {};
+    }
 
-    Inputs.Add<tint::ast::transform::BindingRemapper::Remappings>(BindingPoints, tint::ast::transform::BindingRemapper::AccessControls{}, false);
-    Manager.Add<tint::ast::transform::BindingRemapper>();
-    tint::ast::transform::Output TransformResult = Manager.Run(Program, Inputs, Outputs);
+    auto RemapResult = tint::core::ir::transform::BindingRemapper(IR.Get(), BindingPoints);
+    if (RemapResult != tint::Success)
+    {
+        LOG_ERROR_MESSAGE("Tint binding remapper failure:\n", RemapResult.Failure().reason, "\n");
+        return {};
+    }
 
-    auto GenerationResult = tint::wgsl::writer::Generate(TransformResult.program, {});
+    tint::wgsl::writer::Options WGSLWriterOptions;
+    WGSLWriterOptions.allow_non_uniform_derivatives = true;
+    WGSLWriterOptions.allowed_features              = tint::wgsl::AllowedFeatures::Everything();
+    auto GenerationResult                           = tint::wgsl::writer::WgslFromIR(IR.Get(), WGSLWriterOptions);
 
     if (GenerationResult != tint::Success)
     {
-        LOG_ERROR_MESSAGE("Tint WGSL writer failure:\nGeneate: ", GenerationResult.Failure().reason.Str(), "\n");
+        LOG_ERROR_MESSAGE("Tint WGSL writer failure:\nGenerate: ", GenerationResult.Failure().reason, "\n");
         return {};
     }
 
