@@ -522,6 +522,12 @@ endfunction()
 # clone. This macro takes care of it.
 macro(FetchContent_DeclareShallowGit Name GIT_REPOSITORY GitRepository GIT_TAG GitTag)
     include(FetchContent)
+    cmake_parse_arguments(_fetch_args "" "" "GIT_SUBMODULES" ${ARGN})
+    set(_fetch_submodules_command)
+    if(_fetch_args_GIT_SUBMODULES)
+        set(_fetch_submodules_command
+            && git submodule update --init --depth=1 -- ${_fetch_args_GIT_SUBMODULES})
+    endif()
     FetchContent_Declare(
         "${Name}"
 
@@ -536,6 +542,7 @@ macro(FetchContent_DeclareShallowGit Name GIT_REPOSITORY GitRepository GIT_TAG G
             git init &&
             git fetch --depth=1 "${GitRepository}" "${GitTag}" &&
             git reset --hard FETCH_HEAD
+            ${_fetch_submodules_command}
     )
 endmacro()
 

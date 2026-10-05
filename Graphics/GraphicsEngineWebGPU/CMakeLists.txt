@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.10)
+cmake_minimum_required (VERSION 3.10...3.22)
 
 project(Diligent-GraphicsEngineWebGPU CXX)
 
@@ -134,7 +134,9 @@ else()
     list(APPEND PRIVATE_DEPENDENCIES SPIRV-Tools-opt)
 endif()
 
-if (NOT PLATFORM_WEB)
+if (PLATFORM_WEB)
+    list(APPEND PRIVATE_DEPENDENCIES emdawnwebgpu_c)
+else()
     list(APPEND PRIVATE_DEPENDENCIES dawn_native dawn_proc)
 endif()
 
@@ -179,7 +181,7 @@ PRIVATE
 )
 
 if (PLATFORM_WEB)
-    target_link_options(Diligent-GraphicsEngineWebGPU-static PUBLIC "SHELL: -s USE_WEBGPU=1 -s USE_PTHREADS=1")
+    target_link_options(Diligent-GraphicsEngineWebGPU-static PUBLIC "-pthread")
 endif()
 
 target_compile_definitions(Diligent-GraphicsEngineWebGPU-shared PUBLIC DILIGENT_WEBGPU_SHARED=1)

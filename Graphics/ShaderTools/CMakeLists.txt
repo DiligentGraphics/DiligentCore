@@ -249,7 +249,11 @@ add_custom_command(OUTPUT ${HLSL_DEFINITIONS_INC} # We must use full path here!
                    VERBATIM
 )
 
-set_common_target_properties(Diligent-ShaderTools)
+if(ENABLE_WGSL)
+    set_common_target_properties(Diligent-ShaderTools 20)
+else()
+    set_common_target_properties(Diligent-ShaderTools)
+endif()
 
 source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})
