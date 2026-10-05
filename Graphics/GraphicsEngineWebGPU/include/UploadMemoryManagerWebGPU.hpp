@@ -30,8 +30,9 @@
 /// Declaration of Diligent::UploadMemoryManagerWebGPU class
 
 #include <mutex>
-#include <vector>
+#include <memory>
 #include <atomic>
+#include <vector>
 
 #include "WebGPUObjectWrappers.hpp"
 #include "BasicTypes.h"
@@ -83,13 +84,14 @@ public:
 
         size_t GetSize() const
         {
-            return m_Data.size();
+            return m_DataSize;
         }
 
     private:
         UploadMemoryManagerWebGPU* m_pMgr = nullptr;
         WebGPUBufferWrapper        m_wgpuBuffer;
-        std::vector<Uint8>         m_Data;
+        std::unique_ptr<Uint8[]>   m_Data;
+        size_t                     m_DataSize   = 0;
         size_t                     m_CurrOffset = 0;
     };
 

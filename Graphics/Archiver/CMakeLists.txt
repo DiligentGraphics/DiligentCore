@@ -171,6 +171,13 @@ if(WEBGPU_SUPPORTED)
     target_link_libraries(Diligent-Archiver-static PRIVATE Diligent-GraphicsEngineWebGPU-static)
     if (NOT PLATFORM_WEB)
         target_link_libraries(Diligent-Archiver-static PRIVATE dawn_native dawn_proc)
+        # dawn_version's generated header propagates here as a source; re-mark it GENERATED in this scope (CMP0118 is OLD).
+        if (TARGET dawn_version)
+            get_target_property(DAWN_VERSION_HEADERS dawn_version INTERFACE_SOURCES)
+            if (DAWN_VERSION_HEADERS)
+                set_source_files_properties(${DAWN_VERSION_HEADERS} PROPERTIES GENERATED TRUE)
+            endif()
+        endif()
     endif()
     target_include_directories(Diligent-Archiver-static
     PRIVATE

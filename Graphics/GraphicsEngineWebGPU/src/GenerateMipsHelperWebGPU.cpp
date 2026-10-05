@@ -247,10 +247,24 @@ std::string_view ConvertWebGPUFormatToString(WGPUTextureFormat TexFmt)
 
         case WGPUTextureFormat_RGBA16Float:
             return "rgba16float";
+        case WGPUTextureFormat_RGBA16Unorm:
+            return "rgba16unorm";
+        case WGPUTextureFormat_RGBA16Snorm:
+            return "rgba16snorm";
+
         case WGPUTextureFormat_RG16Float:
             return "rg16float";
+        case WGPUTextureFormat_RG16Unorm:
+            return "rg16unorm";
+        case WGPUTextureFormat_RG16Snorm:
+            return "rg16snorm";
+
         case WGPUTextureFormat_R16Float:
             return "r16float";
+        case WGPUTextureFormat_R16Unorm:
+            return "r16unorm";
+        case WGPUTextureFormat_R16Snorm:
+            return "r16snorm";
 
         case WGPUTextureFormat_RGBA32Float:
             return "rgba32float";
@@ -259,8 +273,13 @@ std::string_view ConvertWebGPUFormatToString(WGPUTextureFormat TexFmt)
         case WGPUTextureFormat_R32Float:
             return "r32float";
 
+        case WGPUTextureFormat_RG11B10Ufloat:
+            return "rg11b10ufloat";
+        case WGPUTextureFormat_RGB10A2Unorm:
+            return "rgb10a2unorm";
+
         default:
-            UNEXPECTED("Unsupported texture format");
+            UNEXPECTED("Unsupported texture format: ", TexFmt);
             return "rgba8unorm";
     }
 }

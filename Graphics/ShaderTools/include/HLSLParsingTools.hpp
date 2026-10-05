@@ -31,6 +31,7 @@
 #include "ParsingTools.hpp"
 #include "GraphicsTypes.h"
 #include "HashUtils.hpp"
+#include "SPIRVUtils.hpp"
 
 namespace Diligent
 {
@@ -38,21 +39,36 @@ namespace Diligent
 namespace Parsing
 {
 
-/// Parses HLSL source code and extracts image formats from RWTexture comments, for example:
+/// Parses HLSL source code and extracts image formats and access modes
+/// from RWTexture comments. Annotations are expected inside the RWTexture
+/// template argument list, for example:
+///
 /// HLSL:
-///     RWTexture2D<unorm float4 /*format=rgba8*/> g_Tex2D;
-///     RWTexture3D</*format=rg16f*/ float2>       g_Tex3D;
+///     RWTexture2D<unorm float4 /*format=rgba8*/>                    g_Tex2D;
+///     RWTexture3D</*format=rg16f*/ float2 /*access=write*/>         g_Tex3D;
+///     RWTexture2D<unorm float4 /*format=rgba8*/ /*access=read*/>    g_Tex2D_Read;
+///
 /// Output:
 ///     {
-///         {"g_Tex2D", TEX_FORMAT_RGBA8_UNORM},
-///         {"g_Tex3D", TEX_FORMAT_RG16_FLOAT}
-///		}
+///         { "g_Tex2D",      { TEX_FORMAT_RGBA8_UNORM, IMAGE_ACCESS_MODE_READ_WRITE } },
+///         { "g_Tex3D",      { TEX_FORMAT_RG16_FLOAT,  IMAGE_ACCESS_MODE_WRITE      } },
+///         { "g_Tex2D_Read", { TEX_FORMAT_RGBA8_UNORM, IMAGE_ACCESS_MODE_READ       } }
+///     }
+///
+/// The following comment patterns are recognized:
+///     /*format=<glsl_image_format>*/
+///     /*access=read*/
+///     /*access=write*/
+///     /*access=read_write*/
+///
+/// If no access comment is present, the access mode defaults to IMAGE_ACCESS_MODE_UNKNOWN.
 ///
 /// \param[in] HLSLSource - HLSL source code.
-/// \return A map containing image formats extracted from RWTexture comments.
+/// \return A map that associates RWTexture variable names with the image format
+///         and access mode extracted from their comments.
 ///
-/// \remarks	Only texture declarations in global scope are processed.
-std::unordered_map<HashMapStringKey, TEXTURE_FORMAT> ExtractGLSLImageFormatsFromHLSL(const std::string& HLSLSource);
+/// \remarks Only RWTexture declarations in global scope are processed.
+std::unordered_map<HashMapStringKey, ImageFormatAndAccess> ExtractGLSLImageFormatsAndAccessModeFromHLSL(const std::string& HLSLSource);
 
 } // namespace Parsing
 

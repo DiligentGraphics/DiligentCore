@@ -157,9 +157,6 @@ if (VULKAN_SUPPORTED AND (PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS OR 
     list(APPEND THIRD_PARTY_LIBS volk)
 endif()
 
-add_subdirectory(abseil-cpp EXCLUDE_FROM_ALL)
-set_directory_root_folder("abseil-cpp" "DiligentCore/ThirdParty")
-
 if (WEBGPU_SUPPORTED)
     add_subdirectory(dawn EXCLUDE_FROM_ALL)
     set_directory_root_folder("dawn" "DiligentCore/ThirdParty/dawn")
@@ -183,11 +180,6 @@ if ((${DILIGENT_BUILD_GOOGLE_TEST}) AND (NOT TARGET gtest))
 
     get_target_property(GTEST_SOURCE_DIR gtest SOURCE_DIR)
     install(FILES "googletest/LICENSE" DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME googletest-License.txt)
-
-    if (PLATFORM_WEB)
-        find_targets_in_directory(GTEST_TARGETS ${GTEST_SOURCE_DIR})
-        set_targets_emscripten_properties(${GTEST_TARGETS})
-    endif()
 endif()
 
 if (NOT TARGET xxHash::xxhash)

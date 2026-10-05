@@ -192,23 +192,23 @@ void TestingSwapChainWebGPU::TakeSnapshot(ITexture* pCopyFrom)
     WGPUCommandEncoderDescriptor wgpuCmdEncoderDesc{};
     WGPUCommandEncoder           wgpuCmdEncoder = wgpuDeviceCreateCommandEncoder(m_wgpuDevice, &wgpuCmdEncoderDesc);
 
-    WGPUImageCopyTexture wgpuImageCopySrc{};
-    wgpuImageCopySrc.mipLevel = 0;
-    wgpuImageCopySrc.texture  = wgpuSrcTexture;
-    wgpuImageCopySrc.origin   = {0, 0, 0};
+    WGPUTexelCopyTextureInfo wgpuTexelCopySrc{};
+    wgpuTexelCopySrc.mipLevel = 0;
+    wgpuTexelCopySrc.texture  = wgpuSrcTexture;
+    wgpuTexelCopySrc.origin   = {0, 0, 0};
 
-    WGPUImageCopyBuffer wgpuImageCopyDst{};
-    wgpuImageCopyDst.layout.offset       = 0;
-    wgpuImageCopyDst.layout.bytesPerRow  = m_StagingRowPitch;
-    wgpuImageCopyDst.layout.rowsPerImage = m_SwapChainDesc.Height;
-    wgpuImageCopyDst.buffer              = m_wgpuStagingBuffer;
+    WGPUTexelCopyBufferInfo wgpuTexelCopyDst{};
+    wgpuTexelCopyDst.layout.offset       = 0;
+    wgpuTexelCopyDst.layout.bytesPerRow  = m_StagingRowPitch;
+    wgpuTexelCopyDst.layout.rowsPerImage = m_SwapChainDesc.Height;
+    wgpuTexelCopyDst.buffer              = m_wgpuStagingBuffer;
 
     WGPUExtent3D wgpuCopySize{};
     wgpuCopySize.width              = m_SwapChainDesc.Width;
     wgpuCopySize.height             = m_SwapChainDesc.Height;
     wgpuCopySize.depthOrArrayLayers = 1;
 
-    wgpuCommandEncoderCopyTextureToBuffer(wgpuCmdEncoder, &wgpuImageCopySrc, &wgpuImageCopyDst, &wgpuCopySize);
+    wgpuCommandEncoderCopyTextureToBuffer(wgpuCmdEncoder, &wgpuTexelCopySrc, &wgpuTexelCopyDst, &wgpuCopySize);
 
     WGPUCommandBufferDescriptor wgpuCmdBufferDesc{};
     WGPUCommandBuffer           wgpuCmdBuffer = wgpuCommandEncoderFinish(wgpuCmdEncoder, &wgpuCmdBufferDesc);
@@ -217,34 +217,36 @@ void TestingSwapChainWebGPU::TakeSnapshot(ITexture* pCopyFrom)
     wgpuCommandEncoderRelease(wgpuCmdEncoder);
     wgpuCommandBufferRelease(wgpuCmdBuffer);
 
-    const size_t DataSize = size_t{m_StagingRowPitch} * m_SwapChainDesc.Height;
-    wgpuBufferMapAsync(
-        m_wgpuStagingBuffer, WGPUMapMode_Read, 0, DataSize, [](WGPUBufferMapAsyncStatus MapStatus, void* pUserData) {
-            if (MapStatus == WGPUBufferMapAsyncStatus_Success)
+    const size_t              DataSize = size_t{m_StagingRowPitch} * m_SwapChainDesc.Height;
+    WGPUBufferMapCallbackInfo wgpuBufferMapCallbackInfo{};
+    wgpuBufferMapCallbackInfo.mode     = WGPUCallbackMode_AllowSpontaneous;
+    wgpuBufferMapCallbackInfo.callback = [](WGPUMapAsyncStatus MapStatus, WGPUStringView, void* pUserData1, void*) {
+        if (MapStatus == WGPUMapAsyncStatus_Success)
+        {
+            const auto pThis = static_cast<TestingSwapChainWebGPU*>(pUserData1);
+
+            pThis->m_ReferenceDataPitch = pThis->m_SwapChainDesc.Width * 4;
+            pThis->m_ReferenceData.resize(pThis->m_ReferenceDataPitch * pThis->m_SwapChainDesc.Height);
+
+            const auto* pMappedData = static_cast<const Uint8*>(wgpuBufferGetConstMappedRange(
+                pThis->m_wgpuStagingBuffer, 0, size_t{pThis->m_StagingRowPitch} * pThis->m_SwapChainDesc.Height));
+            VERIFY_EXPR(pMappedData != nullptr);
+
+            for (Uint32 Row = 0; Row < pThis->m_SwapChainDesc.Height; ++Row)
             {
-                const auto pThis = static_cast<TestingSwapChainWebGPU*>(pUserData);
-
-                pThis->m_ReferenceDataPitch = pThis->m_SwapChainDesc.Width * 4;
-                pThis->m_ReferenceData.resize(pThis->m_ReferenceDataPitch * pThis->m_SwapChainDesc.Height);
-
-                const auto* pMappedData = static_cast<const Uint8*>(wgpuBufferGetConstMappedRange(
-                    pThis->m_wgpuStagingBuffer, 0, size_t{pThis->m_StagingRowPitch} * pThis->m_SwapChainDesc.Height));
-                VERIFY_EXPR(pMappedData != nullptr);
-
-                for (Uint32 Row = 0; Row < pThis->m_SwapChainDesc.Height; ++Row)
-                {
-                    memcpy(pThis->m_ReferenceData.data() + size_t{Row} * pThis->m_ReferenceDataPitch,
-                           pMappedData + size_t{Row} * pThis->m_StagingRowPitch,
-                           pThis->m_ReferenceDataPitch);
-                }
-                wgpuBufferUnmap(pThis->m_wgpuStagingBuffer);
+                memcpy(pThis->m_ReferenceData.data() + size_t{Row} * pThis->m_ReferenceDataPitch,
+                       pMappedData + size_t{Row} * pThis->m_StagingRowPitch,
+                       pThis->m_ReferenceDataPitch);
             }
-            else
-            {
-                ADD_FAILURE() << "Failing to map staging buffer";
-            }
-        },
-        this);
+            wgpuBufferUnmap(pThis->m_wgpuStagingBuffer);
+        }
+        else
+        {
+            ADD_FAILURE() << "Failing to map staging buffer";
+        }
+    };
+    wgpuBufferMapCallbackInfo.userdata1 = this;
+    wgpuBufferMapAsync(m_wgpuStagingBuffer, WGPUMapMode_Read, 0, DataSize, wgpuBufferMapCallbackInfo);
 
 #if !PLATFORM_WEB
     wgpuDeviceTick(m_wgpuDevice);

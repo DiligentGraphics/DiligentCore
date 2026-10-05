@@ -32,6 +32,7 @@
 #include <vector>
 #include <array>
 #include <string>
+#include <utility>
 
 #include "EngineWebGPUImplTraits.hpp"
 #include "PipelineStateBase.hpp"
@@ -85,11 +86,9 @@ public:
         ShaderWebGPUImpl* const pShader;
         std::string             PatchedWGSL;
 
-        // Per-stage specialization constant entries, built from user input
-        // and WGSL override reflection during InitializePipeline().
-        // Entries reference names in the shader resource name pool,
-        // which is kept alive by ShaderWebGPUImpl.
-        std::vector<WGPUConstantEntry> SpecConstEntries;
+        // Per-stage specialization constants as (override @id string, value)
+        // pairs, materialized into WGPUConstantEntry[] at pipeline creation.
+        std::vector<std::pair<std::string, double>> SpecConstEntries;
 
         ShaderStageInfo(ShaderWebGPUImpl* _pShader) :
             Type{_pShader->GetDesc().ShaderType},
