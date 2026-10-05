@@ -286,7 +286,9 @@
 #define __stdcall
 #define __vectorcall
 #define __thiscall
+#ifndef PLATFORM_FREEBSD
 #define __fastcall
+#endif
 #define __clrcall
 #endif // __GNUC__
 
