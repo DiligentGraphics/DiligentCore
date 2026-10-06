@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2025 Diligent Graphics LLC
+ *  Copyright 2023-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -229,23 +229,16 @@ public:
 
         switch (wgpuSurfaceTexture.status)
         {
-            case WGPUSurfaceGetCurrentTextureStatus_Success:
-            case WGPUSurfaceGetCurrentTextureStatus_Outdated:
+            case WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal:
+            case WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal:
                 break;
 
             case WGPUSurfaceGetCurrentTextureStatus_Timeout:
-                break;
+            case WGPUSurfaceGetCurrentTextureStatus_Outdated:
+                return wgpuSurfaceTexture.status;
 
             case WGPUSurfaceGetCurrentTextureStatus_Lost:
                 LOG_WARNING_MESSAGE("Unable to present: swap chain surface is lost");
-                return wgpuSurfaceTexture.status;
-
-            case WGPUSurfaceGetCurrentTextureStatus_OutOfMemory:
-                LOG_ERROR_MESSAGE("Unable to present: out of memory");
-                return wgpuSurfaceTexture.status;
-
-            case WGPUSurfaceGetCurrentTextureStatus_DeviceLost:
-                LOG_ERROR_MESSAGE("Unable to present: device is lost");
                 return wgpuSurfaceTexture.status;
 
             case WGPUSurfaceGetCurrentTextureStatus_Error:
@@ -407,7 +400,8 @@ void SwapChainWebGPUImpl::Present(Uint32 SyncInterval)
     }
 
     const bool EnableVSync = SyncInterval != 0;
-    if (SurfaceStatus == WGPUSurfaceGetCurrentTextureStatus_Outdated ||
+    if (SurfaceStatus == WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal ||
+        SurfaceStatus == WGPUSurfaceGetCurrentTextureStatus_Outdated ||
         SurfaceStatus == WGPUSurfaceGetCurrentTextureStatus_Lost ||
         m_VSyncEnabled != EnableVSync)
     {
@@ -453,9 +447,9 @@ void SwapChainWebGPUImpl::CreateSurface()
     wgpuSurfaceNativeDesc.chain  = {nullptr, WGPUSType_SurfaceSourceMetalLayer};
     wgpuSurfaceNativeDesc.window = m_NativeWindow.MetalLayer;
 #elif PLATFORM_WEB
-    WGPUSurfaceSourceCanvasHTMLSelector_Emscripten wgpuSurfaceNativeDesc{};
-    wgpuSurfaceNativeDesc.chain    = {nullptr, WGPUSType_SurfaceSourceCanvasHTMLSelector_Emscripten};
-    wgpuSurfaceNativeDesc.selector = m_NativeWindow.pCanvasId;
+    WGPUEmscriptenSurfaceSourceCanvasHTMLSelector wgpuSurfaceNativeDesc{};
+    wgpuSurfaceNativeDesc.chain    = {nullptr, WGPUSType_EmscriptenSurfaceSourceCanvasHTMLSelector};
+    wgpuSurfaceNativeDesc.selector = GetWGPUStringView(m_NativeWindow.pCanvasId);
 #endif
 
     WGPUSurfaceDescriptor wgpuSurfaceDesc{};

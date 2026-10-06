@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -59,24 +59,6 @@ private:
     WGPUDevice m_wgpuDevice = nullptr;
 };
 
-#if PLATFORM_WEB
-
-using WGPUShaderSourceWGSL = WGPUShaderModuleWGSLDescriptor;
-using WGPUStringView       = const char*;
-
-constexpr WGPUSType WGPUSType_ShaderSourceWGSL = WGPUSType_ShaderModuleWGSLDescriptor;
-
-inline WGPUStringView GetWGPUStringView(const char* Str)
-{
-    return Str;
-}
-
-inline WGPUStringView GetWGPUStringView(const std::string& Str)
-{
-    return Str.c_str();
-}
-
-#else
 
 template <size_t Size>
 WGPUStringView GetWGPUStringView(const char (&Str)[Size])
@@ -89,7 +71,6 @@ inline WGPUStringView GetWGPUStringView(const std::string& Str)
     return {Str.c_str(), Str.length()};
 }
 
-#endif
 
 } // namespace Testing
 

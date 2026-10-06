@@ -96,6 +96,9 @@ set(DLL_SOURCE
 add_library(Diligent-GraphicsEngineWebGPUInterface INTERFACE)
 target_link_libraries     (Diligent-GraphicsEngineWebGPUInterface INTERFACE Diligent-GraphicsEngineInterface)
 target_include_directories(Diligent-GraphicsEngineWebGPUInterface INTERFACE interface)
+if(PLATFORM_WEB)
+    target_link_libraries(Diligent-GraphicsEngineWebGPUInterface INTERFACE emdawnwebgpu_c_include)
+endif()
 
 add_library(Diligent-GraphicsEngineWebGPU-static STATIC 
     ${SRC} ${INTERFACE} ${INCLUDE}
@@ -168,7 +171,7 @@ else()
 endif()
 
 set_common_target_properties(Diligent-GraphicsEngineWebGPU-shared)
-set_common_target_properties(Diligent-GraphicsEngineWebGPU-static)
+set_common_target_properties(Diligent-GraphicsEngineWebGPU-static 20)
 
 if (${DILIGENT_NO_GLSLANG})
     message("GLSLang is not being built. WebGPU backend will only be able to consume SPIRV byte code.")

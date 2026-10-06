@@ -68,12 +68,54 @@ class DeviceMemoryWebGPUImpl
 {};
 
 #if PLATFORM_WEB
-static void DebugMessengerCallback(WGPUErrorType MessageType, const char* Message, void* pUserData)
+namespace
 {
-    if (Message != nullptr)
-        LOG_DEBUG_MESSAGE(DEBUG_MESSAGE_SEVERITY_ERROR, "WebGPU: ", Message);
+
+using WebGPUErrorCallbackType = void (*)(const char*);
+
+void ReportWebGPUUncapturedError(const char* Message)
+{
+    LOG_DEBUG_MESSAGE(DEBUG_MESSAGE_SEVERITY_ERROR, "WebGPU: ", Message);
 }
+
+EM_JS_DEPS(WebGPUErrorCallbackDeps, "$WebGPU,$stringToNewUTF8,$getWasmTableEntry,free");
+
+// Imported devices have no creation descriptor through which to register a C callback.
+// Keep one listener per JavaScript device, even when multiple Diligent wrappers share it.
+// clang-format off
+EM_JS(void, AddWebGPUUncapturedErrorCallback, (WGPUDevice wgpuDevice, WebGPUErrorCallbackType Callback), {
+    var device = WebGPU.getJsObject(wgpuDevice);
+    var registration = device['diligentUncapturedErrorCallback'];
+    if (registration) {
+        ++registration.refCount;
+        return;
+    }
+
+    var listener = (event) => {
+        var message = stringToNewUTF8(event.error.message);
+        try {
+            getWasmTableEntry(Callback)(message);
+        } finally {
+            _free(message);
+        }
+    };
+    device.addEventListener('uncapturederror', listener);
+    device['diligentUncapturedErrorCallback'] = {listener: listener, refCount: 1};
+});
+
+EM_JS(void, RemoveWebGPUUncapturedErrorCallback, (WGPUDevice wgpuDevice), {
+    var device = WebGPU.getJsObject(wgpuDevice);
+    var registration = device['diligentUncapturedErrorCallback'];
+    if (--registration.refCount == 0) {
+        device.removeEventListener('uncapturederror', registration.listener);
+        delete device['diligentUncapturedErrorCallback'];
+    }
+});
+// clang-format on
+
+} // namespace
 #endif
+
 
 RenderDeviceWebGPUImpl::RenderDeviceWebGPUImpl(IReferenceCounters* pRefCounters,
                                                const CreateInfo&   CI) :
@@ -92,13 +134,8 @@ RenderDeviceWebGPUImpl::RenderDeviceWebGPUImpl(IReferenceCounters* pRefCounters,
     m_wgpuDevice{CI.wgpuDevice}
 // clang-format on
 {
-    WGPUSupportedLimits wgpuSupportedLimits{};
-    wgpuDeviceGetLimits(m_wgpuDevice, &wgpuSupportedLimits);
-    m_wgpuLimits = wgpuSupportedLimits.limits;
+    wgpuDeviceGetLimits(m_wgpuDevice, &m_wgpuLimits);
 
-#if PLATFORM_WEB
-    wgpuDeviceSetUncapturedErrorCallback(m_wgpuDevice, DebugMessengerCallback, nullptr);
-#endif
     FindSupportedTextureFormats();
 
     m_DeviceInfo.Type = RENDER_DEVICE_TYPE_WEBGPU;
@@ -119,10 +156,17 @@ RenderDeviceWebGPUImpl::RenderDeviceWebGPUImpl(IReferenceCounters* pRefCounters,
 #endif
 
     InitShaderCompilationThreadPool(EngineCI.pAsyncShaderCompilationThreadPool, EngineCI.NumAsyncShaderCompilationThreads);
+
+#if PLATFORM_WEB
+    AddWebGPUUncapturedErrorCallback(m_wgpuDevice, ReportWebGPUUncapturedError);
+#endif
 }
 
 RenderDeviceWebGPUImpl::~RenderDeviceWebGPUImpl()
 {
+#if PLATFORM_WEB
+    RemoveWebGPUUncapturedErrorCallback(m_wgpuDevice);
+#endif
 #if !DILIGENT_NO_GLSLANG
     GLSLangUtils::FinalizeGlslang();
 #endif
@@ -367,7 +411,7 @@ DynamicMemoryManagerWebGPU::Page RenderDeviceWebGPUImpl::GetDynamicMemoryPage(si
 void RenderDeviceWebGPUImpl::DeviceTick()
 {
 #if !PLATFORM_WEB
-    wgpuDeviceTick(m_wgpuDevice);
+    wgpuInstanceProcessEvents(m_wgpuInstance);
 #endif
 }
 
@@ -437,8 +481,10 @@ void RenderDeviceWebGPUImpl::FindSupportedTextureFormats()
     const bool Depth32FloatStencil8Supported    = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_Depth32FloatStencil8);
     const bool TextureCompressionBCSupported    = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_TextureCompressionBC);
     const bool TextureCompressionETC2Supported  = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_TextureCompressionETC2);
-    const bool R16UnormSupported                = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_Unorm16TextureFormats);
-    const bool R16SnormSupported                = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_Snorm16TextureFormats);
+    const bool TextureFormatsTier1Supported     = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_TextureFormatsTier1);
+    const bool Norm16FilterableSupported        = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_Unorm16TextureFormats);
+    const bool R16UnormSupported                = TextureFormatsTier1Supported || Norm16FilterableSupported;
+    const bool R16SnormSupported                = TextureFormatsTier1Supported;
 
     // https://www.w3.org/TR/webgpu/#texture-format-caps
 
@@ -523,16 +569,16 @@ void RenderDeviceWebGPUImpl::FindSupportedTextureFormats()
 
     if (R16UnormSupported)
     {
-        SetTexFormatInfo({TEX_FORMAT_R16_UNORM}, BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
-        SetTexFormatInfo({TEX_FORMAT_RG16_UNORM}, BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
-        SetTexFormatInfo({TEX_FORMAT_RGBA16_UNORM}, BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
+        SetTexFormatInfo({TEX_FORMAT_R16_UNORM}, BIND_SR, Norm16FilterableSupported ? FMT_FLAG_FILTER | FMT_FLAG_MSAA : FMT_FLAG_MSAA);
+        SetTexFormatInfo({TEX_FORMAT_RG16_UNORM}, BIND_SR, Norm16FilterableSupported ? FMT_FLAG_FILTER | FMT_FLAG_MSAA : FMT_FLAG_MSAA);
+        SetTexFormatInfo({TEX_FORMAT_RGBA16_UNORM}, BIND_SR, Norm16FilterableSupported ? FMT_FLAG_FILTER | FMT_FLAG_MSAA : FMT_FLAG_MSAA);
     }
 
     if (R16SnormSupported)
     {
-        SetTexFormatInfo({TEX_FORMAT_R16_SNORM}, BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
-        SetTexFormatInfo({TEX_FORMAT_RG16_SNORM}, BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
-        SetTexFormatInfo({TEX_FORMAT_RGBA16_SNORM}, BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
+        SetTexFormatInfo({TEX_FORMAT_R16_SNORM}, BIND_SR, Norm16FilterableSupported ? FMT_FLAG_FILTER | FMT_FLAG_MSAA : FMT_FLAG_MSAA);
+        SetTexFormatInfo({TEX_FORMAT_RG16_SNORM}, BIND_SR, Norm16FilterableSupported ? FMT_FLAG_FILTER | FMT_FLAG_MSAA : FMT_FLAG_MSAA);
+        SetTexFormatInfo({TEX_FORMAT_RGBA16_SNORM}, BIND_SR, Norm16FilterableSupported ? FMT_FLAG_FILTER | FMT_FLAG_MSAA : FMT_FLAG_MSAA);
     }
 
     if (TextureCompressionETC2Supported)
