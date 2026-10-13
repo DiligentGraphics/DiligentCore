@@ -24,6 +24,8 @@
  *  of the possibility of such damages.
  */
 
+#include <unordered_set>
+
 #include "WGSLUtils.hpp"
 #include "DebugUtilities.hpp"
 #include "ParsingTools.hpp"
@@ -43,6 +45,13 @@
 
 #include <tint/tint.h>
 #include "src/tint/lang/core/ir/module.h"
+#include "src/tint/lang/core/ir/builder.h"
+#include "src/tint/lang/core/ir/core_builtin_call.h"
+#include "src/tint/lang/core/ir/let.h"
+#include "src/tint/lang/core/ir/load.h"
+#include "src/tint/lang/core/ir/var.h"
+#include "src/tint/lang/core/ir/transform/direct_variable_access.h"
+#include "src/tint/lang/core/type/storage_texture.h"
 #include "src/tint/lang/core/ir/transform/binding_remapper.h"
 #include "src/tint/lang/wgsl/ast/module.h"
 #include "src/tint/lang/wgsl/ast/identifier_expression.h"
@@ -96,6 +105,137 @@ WGSLEmulatedResourceArrayElement GetWGSLEmulatedArrayElement(const std::string& 
     return {Name, -1};
 }
 
+#if SPIRV_TO_WGSL_SUPPORTED
+// The legacy Tint SPIR-V reader inferred image access from shader operations.
+// The IR reader defaults storage images without access decorations to read_write,
+// even when they are only loaded or stored. Using these types directly changes
+// WGSL resource reflection and the bind-group layouts expected by Diligent.
+//
+// Restore the legacy mapping per resource: load-only images become sampled textures,
+// store-only images become write-only storage textures, and images used both ways
+// remain read_write. Queries alone do not infer access: keep the declared access,
+// mapping explicitly read-only images to sampled textures. Unknown uses retain
+// their original types. Only the temporary Tint IR is changed, not the source SPIR-V.
+static bool RestoreTextureAccess(tint::core::ir::Module& IR)
+{
+    namespace ir    = tint::core::ir;
+    namespace type  = tint::core::type;
+    using BuiltinFn = tint::core::BuiltinFn;
+
+    // Resolve texture parameters to global resources, including through nested calls.
+    // Helpers called with different resources need separate versions so a shared
+    // parameter does not force all arguments to have the same texture access mode.
+    // Run this only when needed: full handle specialization can duplicate helpers
+    // for distinct resources and also specializes other texture/sampler parameters.
+    bool HasTextureParameters = false;
+    for (const auto* Function : IR.functions)
+    {
+        for (const auto* Param : Function->Params())
+            HasTextureParameters |= Param->Type()->UnwrapPtr()->Is<type::StorageTexture>();
+    }
+    if (HasTextureParameters)
+    {
+        ir::transform::DirectVariableAccessConfig Config;
+        Config.transform_handle = ir::transform::HandleTransformLevel::kFull;
+        auto Result             = ir::transform::DirectVariableAccess(IR, Config);
+        if (Result != tint::Success)
+        {
+            LOG_ERROR_MESSAGE("Failed to specialize texture parameters:\n", Result.Failure().reason);
+            return false;
+        }
+    }
+
+    ir::Builder Builder{IR};
+    auto&       Types = IR.Types();
+    for (auto* Inst : *IR.root_block)
+    {
+        auto* Var = Inst->As<ir::Var>();
+        if (Var == nullptr)
+            continue;
+        const auto* Texture = Var->Result()->Type()->UnwrapPtr()->As<type::StorageTexture>();
+        if (Texture == nullptr)
+            continue;
+
+        // Follow loads and aliases to find this resource's texture operations.
+        // Keep the alias values so their types can be updated together with the variable.
+        std::vector<ir::Value*>           Values{Var->Result()};
+        std::unordered_set<ir::Value*>    Visited{Var->Result()};
+        std::vector<ir::CoreBuiltinCall*> Loads;
+
+        bool HasReads       = false;
+        bool HasWrites      = false;
+        bool HasUnknownUses = false;
+        for (size_t i = 0; i < Values.size(); ++i)
+        {
+            for (const auto& Use : Values[i]->UsagesUnsorted())
+            {
+                if (Use->instruction->Is<ir::Load>() || Use->instruction->Is<ir::Let>())
+                {
+                    auto* Result = Use->instruction->Result();
+                    if (Visited.insert(Result).second)
+                        Values.push_back(Result);
+                }
+                else if (auto* Call = Use->instruction->As<ir::CoreBuiltinCall>())
+                {
+                    switch (Call->Func())
+                    {
+                        case BuiltinFn::kTextureLoad:
+                            HasReads = true;
+                            Loads.push_back(Call);
+                            break;
+                        case BuiltinFn::kTextureStore:
+                            HasWrites = true;
+                            break;
+                        case BuiltinFn::kTextureDimensions:
+                        case BuiltinFn::kTextureNumLayers:
+                            // Metadata queries do not read or write texels.
+                            break;
+                        default:
+                            HasUnknownUses = true;
+                            break;
+                    }
+                }
+                else
+                {
+                    // Retain the declared access for operations we cannot safely narrow.
+                    HasUnknownUses = true;
+                }
+            }
+        }
+        // Preserve the declared type when narrowing is unsafe or both access modes are needed.
+        if (HasUnknownUses || (HasReads && HasWrites))
+            continue;
+
+        const type::Type* NewTextureType = nullptr;
+        if (HasWrites)
+        {
+            NewTextureType = Types.storage_texture(Texture->Dim(), Texture->TexelFormat(), tint::core::Access::kWrite);
+        }
+        else if (HasReads || Texture->Access() == tint::core::Access::kRead)
+        {
+            // The legacy reader used sampled bindings for load-only images and for
+            // query-only images explicitly declared read-only (SPIR-V NonWritable).
+            NewTextureType = Types.sampled_texture(Texture->Dim(), Texture->Type());
+            for (auto* Load : Loads)
+                Load->AppendArg(Builder.Constant(tint::core::i32{0})); // Sampled texture loads require a mip level.
+        }
+        if (NewTextureType == nullptr)
+            continue;
+
+        // Tint types are shared. Assign replacement types to this resource and its
+        // aliases instead of mutating a type that may also describe another resource.
+        for (auto* Value : Values)
+        {
+            if (const auto* Ptr = Value->Type()->As<type::Pointer>())
+                Value->SetType(Types.ptr(Ptr->AddressSpace(), NewTextureType, Ptr->Access()));
+            else
+                Value->SetType(NewTextureType);
+        }
+    }
+    return true;
+}
+#endif
+
 std::string ConvertSPIRVtoWGSL(const std::vector<uint32_t>& SPIRV)
 {
 #if SPIRV_TO_WGSL_SUPPORTED
@@ -115,6 +255,9 @@ std::string ConvertSPIRVtoWGSL(const std::vector<uint32_t>& SPIRV)
         LOG_ERROR_MESSAGE("Tint SPIR-V reader failure:\n", IR.Failure().reason, "\n");
         return {};
     }
+
+    if (!RestoreTextureAccess(IR.Get()))
+        return {};
 
     tint::wgsl::writer::Options WGSLWriterOptions;
     WGSLWriterOptions.allow_non_uniform_derivatives = true;

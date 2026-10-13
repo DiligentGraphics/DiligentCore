@@ -1,0 +1,17 @@
+RWTexture2D<float4> ReadTexture;
+RWTexture2D<float4> WriteTexture;
+RWTexture2D<float4> QueryTexture;
+
+float4 main() : SV_Target
+{
+    uint2 ReadSize;
+    uint2 WriteSize;
+    uint2 QuerySize;
+    ReadTexture.GetDimensions(ReadSize.x, ReadSize.y);
+    WriteTexture.GetDimensions(WriteSize.x, WriteSize.y);
+    QueryTexture.GetDimensions(QuerySize.x, QuerySize.y);
+
+    // Use every query result, but never read or write QueryTexture's texels.
+    WriteTexture[uint2(0, 0)] = ReadTexture[uint2(0, 0)] + float4(ReadSize, QuerySize);
+    return float4(WriteSize, 0.0, 1.0);
+}

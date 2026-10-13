@@ -111,6 +111,31 @@ void TestWGSLResources(const char*                                   FilePath,
 
 using WGSLResourceType = WGSLShaderResourceAttribs::ResourceType;
 using WGSLSampleType   = WGSLShaderResourceAttribs::TextureSampleType;
+
+TEST(WGSLShaderResources, TextureAccessThroughFunctions)
+{
+    // Identical HLSL resource types must retain distinct access modes after conversion.
+    // The source compiler may inline the helpers before Tint processes the SPIR-V.
+    TestWGSLResources("TextureAccessThroughFunctions.psh",
+                      {
+                          {"ReadTexture", WGSLResourceType::Texture, 1, RESOURCE_DIM_TEX_2D, TEX_FORMAT_UNKNOWN, WGSLSampleType::Float},
+                          {"WriteTexture", WGSLResourceType::WOStorageTexture, 1, RESOURCE_DIM_TEX_2D, TEX_FORMAT_RGBA32_FLOAT, WGSLSampleType::Float},
+                          {"ReadWriteTexture", WGSLResourceType::RWStorageTexture, 1, RESOURCE_DIM_TEX_2D, TEX_FORMAT_RGBA32_FLOAT, WGSLSampleType::Float},
+                      });
+}
+
+TEST(WGSLShaderResources, TextureAccessQueries)
+{
+    // Dimension queries must not turn a write-only texture into a read/write texture
+    // or narrow the access of a texture used only for queries.
+    TestWGSLResources("TextureAccessQueries.psh",
+                      {
+                          {"ReadTexture", WGSLResourceType::Texture, 1, RESOURCE_DIM_TEX_2D, TEX_FORMAT_UNKNOWN, WGSLSampleType::Float},
+                          {"WriteTexture", WGSLResourceType::WOStorageTexture, 1, RESOURCE_DIM_TEX_2D, TEX_FORMAT_RGBA32_FLOAT, WGSLSampleType::Float},
+                          {"QueryTexture", WGSLResourceType::RWStorageTexture, 1, RESOURCE_DIM_TEX_2D, TEX_FORMAT_RGBA32_FLOAT, WGSLSampleType::Float},
+                      });
+}
+
 TEST(WGSLShaderResources, UniformBuffers)
 {
     TestWGSLResources("UniformBuffers.psh",

@@ -1,0 +1,21 @@
+RWTexture2D<float4> ReadTexture;
+RWTexture2D<float4> WriteTexture;
+RWTexture2D<float4> ReadWriteTexture;
+
+void CopyTexture(RWTexture2D<float4> Source, RWTexture2D<float4> Dest)
+{
+    Dest[uint2(0, 0)] = Source[uint2(0, 0)];
+}
+
+void ForwardCopy(RWTexture2D<float4> Source, RWTexture2D<float4> Dest)
+{
+    CopyTexture(Source, Dest);
+}
+
+float4 main() : SV_Target
+{
+    // The middle texture is written by the first call and read by the second.
+    ForwardCopy(ReadTexture, ReadWriteTexture);
+    ForwardCopy(ReadWriteTexture, WriteTexture);
+    return float4(0.0, 1.0, 2.0, 3.0);
+}
