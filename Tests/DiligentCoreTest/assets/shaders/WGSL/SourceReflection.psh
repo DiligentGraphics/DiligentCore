@@ -1,0 +1,29 @@
+// These names collide with WGSL keywords and their generated replacements.
+// This is an ordinary user struct, not a Tint-generated matrix stride wrapper.
+struct strided_arr
+{
+    float4 Value;
+};
+
+cbuffer fn
+{
+    row_major float2x3 RowMatrix;
+    column_major float4x3 ColumnMatrix;
+    float ScalarArray[2];
+    strided_arr Items[2];
+};
+
+cbuffer fn_1
+{
+    float4 Extra;
+};
+
+StructuredBuffer<float4> var;
+StructuredBuffer<float4> var_1;
+
+float4 main() : SV_Target
+{
+    return float4(RowMatrix[0], ColumnMatrix[0][0]) +
+        ScalarArray[0] + ScalarArray[1] + Items[0].Value + Items[1].Value +
+        Extra + var[0] + var_1[0];
+}

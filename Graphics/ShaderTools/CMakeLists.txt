@@ -49,8 +49,8 @@ if(ENABLE_HLSL)
 endif()
 
 if(ENABLE_WGSL)
-    list(APPEND SOURCE src/WGSLUtils.cpp src/WGSLShaderResources.cpp)
-    list(APPEND INCLUDE include/WGSLUtils.hpp include/WGSLShaderResources.hpp)
+    list(APPEND SOURCE src/WGSLUtils.cpp src/WGSLShaderResources.cpp src/WGSLShaderReflection.cpp)
+    list(APPEND INCLUDE include/WGSLUtils.hpp include/WGSLShaderResources.hpp include/WGSLShaderReflection.hpp)
 endif()
 
 if(D3D11_SUPPORTED OR D3D12_SUPPORTED)

@@ -206,7 +206,7 @@ void ShaderWebGPUImpl::Initialize(const ShaderCreateInfo& ShaderCI,
             LOG_ERROR_AND_THROW("Shader source must be provided through one of the 'Source', 'FilePath' or 'ByteCode' members");
         }
 
-        m_WGSL = ConvertSPIRVtoWGSL(SPIRV);
+        m_WGSL = ConvertSPIRVtoWGSL(SPIRV, ShaderCI.LoadConstantBufferReflection);
         if (m_WGSL.empty())
         {
             LOG_ERROR_AND_THROW("Failed to convert SPIRV to WGSL for shader '", m_Desc.Name, '\'');

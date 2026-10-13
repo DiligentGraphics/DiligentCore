@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -237,6 +237,11 @@ struct ShaderCodeVariableDescX : ShaderCodeVariableDesc
         return Members[idx];
     }
 
+    const ShaderCodeVariableDescX& GetMember(size_t idx) const
+    {
+        return Members[idx];
+    }
+
     template <typename HandlerType>
     void ProcessMembers(HandlerType&& Handler)
     {
@@ -330,6 +335,11 @@ struct ShaderCodeBufferDescX : ShaderCodeBufferDesc
     }
 
     ShaderCodeVariableDescX& GetVariable(size_t idx)
+    {
+        return Variables[idx];
+    }
+
+    const ShaderCodeVariableDescX& GetVariable(size_t idx) const
     {
         return Variables[idx];
     }

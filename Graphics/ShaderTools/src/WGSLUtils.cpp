@@ -27,12 +27,16 @@
 #include <unordered_set>
 
 #include "WGSLUtils.hpp"
+#include "WGSLShaderReflection.hpp"
 #include "DebugUtilities.hpp"
 #include "ParsingTools.hpp"
 #include "ShaderToolsCommon.hpp"
 #if defined(USE_SPIRV_TOOLS) && TINT_BUILD_SPV_READER
 #    define SPIRV_TO_WGSL_SUPPORTED 1
 #    include "SPIRVTools.hpp"
+#    include "SPIRVShaderResources.hpp"
+#    include "EngineMemory.h"
+#    include "spirv/unified1/spirv.hpp"
 #    include "spirv-tools/libspirv.h"
 #else
 #    define SPIRV_TO_WGSL_SUPPORTED 0
@@ -234,9 +238,77 @@ static bool RestoreTextureAccess(tint::core::ir::Module& IR)
     }
     return true;
 }
+
+static WGSLShaderReflection CaptureSPIRVReflection(const std::vector<uint32_t>&  SPIRV,
+                                                   const tint::core::ir::Module& IR,
+                                                   bool                          LoadUniformBufferReflection)
+{
+    WGSLShaderReflection Reflection;
+    // SPIRVShaderResources uses OpSource to interpret HLSL matrix layouts and buffer
+    // names. Keep the legacy WGSL fallback for binaries stripped of source metadata.
+    bool HasSource = false;
+    for (size_t i = 5; i < SPIRV.size();)
+    {
+        const Uint32 WordCount = SPIRV[i] >> 16;
+        if (WordCount == 0 || WordCount > SPIRV.size() - i)
+            return Reflection;
+        if ((SPIRV[i] & 0xffffu) == static_cast<Uint32>(spv::Op::OpSource))
+            HasSource = true;
+        i += WordCount;
+    }
+    if (!HasSource)
+        return Reflection;
+
+    SPIRVShaderResources::CreateInfo ResCI;
+    ResCI.Name                        = "SPIR-V to WGSL conversion";
+    ResCI.LoadUniformBufferReflection = LoadUniformBufferReflection;
+    for (const auto* Function : IR.functions)
+    {
+        if (!Function->IsEntryPoint())
+            continue;
+        // Conversion normally receives a single shader. Do not infer reflection
+        // from one entry point when supplied bytecode contains several stages.
+        if (ResCI.ShaderType != SHADER_TYPE_UNKNOWN)
+            return Reflection;
+
+        if (Function->IsVertex())
+            ResCI.ShaderType = SHADER_TYPE_VERTEX;
+        else if (Function->IsFragment())
+            ResCI.ShaderType = SHADER_TYPE_PIXEL;
+        else
+            ResCI.ShaderType = SHADER_TYPE_COMPUTE;
+    }
+    if (ResCI.ShaderType == SHADER_TYPE_UNKNOWN)
+        return Reflection;
+
+    const SPIRVShaderResources Resources{GetRawAllocator(), SPIRV, ResCI};
+    for (Uint32 i = 0; i < Resources.GetTotalResources(); ++i)
+    {
+        const auto& Res = Resources.GetResource(i);
+        if (Res.Type == SPIRVShaderResourceAttribs::ResourceType::PushConstant ||
+            Res.Name == nullptr || Res.Name[0] == '\0')
+            continue;
+        const WGSLShaderReflection::BindingPoint Binding{
+            SPIRV[Res.DescriptorSetDecorationOffset],
+            SPIRV[Res.BindingDecorationOffset],
+        };
+        auto& Dst = Reflection.Resources[Binding];
+        Dst.Name  = Res.Name;
+        if (LoadUniformBufferReflection && i < Resources.GetNumUBs())
+        {
+            const ShaderCodeBufferDesc& Buffer = *Resources.GetUniformBufferDesc(i);
+
+            Dst.UniformBuffer       = std::make_unique<ShaderCodeBufferDescX>();
+            Dst.UniformBuffer->Size = Buffer.Size;
+            for (Uint32 v = 0; v < Buffer.NumVariables; ++v)
+                Dst.UniformBuffer->AddVariable(Buffer.pVariables[v]);
+        }
+    }
+    return Reflection;
+}
 #endif
 
-std::string ConvertSPIRVtoWGSL(const std::vector<uint32_t>& SPIRV)
+std::string ConvertSPIRVtoWGSL(const std::vector<uint32_t>& SPIRV, bool LoadUniformBufferReflection)
 {
 #if SPIRV_TO_WGSL_SUPPORTED
     // Tint does not support HLSL reflection extensions. Strip them from a copy
@@ -256,6 +328,10 @@ std::string ConvertSPIRVtoWGSL(const std::vector<uint32_t>& SPIRV)
         return {};
     }
 
+    // Capture source reflection from the unmodified SPIR-V, before Tint raises
+    // buffer layouts or renames resources for WGSL.
+    WGSLShaderReflection Reflection = CaptureSPIRVReflection(SPIRV, IR.Get(), LoadUniformBufferReflection);
+
     if (!RestoreTextureAccess(IR.Get()))
         return {};
 
@@ -270,9 +346,12 @@ std::string ConvertSPIRVtoWGSL(const std::vector<uint32_t>& SPIRV)
         return {};
     }
 
-    return std::move(GenerationResult->wgsl);
+    std::string WGSL = std::move(GenerationResult->wgsl);
+    AppendWGSLShaderReflection(WGSL, Reflection);
+    return WGSL;
 #else
     (void)SPIRV;
+    (void)LoadUniformBufferReflection;
     LOG_ERROR_MESSAGE("SPIR-V to WGSL conversion is not supported in this build; provide WGSL shaders instead.");
     return {};
 #endif
@@ -448,6 +527,13 @@ std::string RemapWGSLResourceBindings(const std::string&         WGSL,
         return {};
     }
 
+    WGSLShaderReflection Reflection;
+    if (!ParseWGSLShaderReflection(WGSL, Reflection))
+    {
+        LOG_ERROR_MESSAGE("Invalid WGSL reflection metadata");
+        return {};
+    }
+
     std::unordered_map<tint::BindingPoint, tint::BindingPoint> BindingPoints;
 
     tint::inspector::Inspector Inspector{Program};
@@ -457,13 +543,17 @@ std::string RemapWGSLResourceBindings(const std::string&         WGSL,
         {
             Uint32 ArrayIndex = 0;
 
-            auto DstBindigIt = ResMapping.find(Binding.variable_name);
+            // Original names take precedence over generated identifiers. Fall back
+            // to the legacy name rules for native WGSL and older shader archives.
+            const auto*        SourceResource = Reflection.Find(Binding.bind_group, Binding.binding);
+            const std::string& ResourceName   = SourceResource != nullptr ? SourceResource->Name : Binding.variable_name;
+            auto               DstBindigIt    = ResMapping.find(ResourceName);
             if (EmulatedArrayIndexSuffix != nullptr && DstBindigIt == ResMapping.end())
             {
-                DstBindigIt = FindResourceAsArrayElement(ResMapping, EmulatedArrayIndexSuffix, Binding.variable_name, ArrayIndex);
+                DstBindigIt = FindResourceAsArrayElement(ResMapping, EmulatedArrayIndexSuffix, ResourceName, ArrayIndex);
             }
 
-            if (DstBindigIt == ResMapping.end())
+            if (DstBindigIt == ResMapping.end() && SourceResource == nullptr)
             {
                 const std::string AltName = GetWGSLResourceAlternativeName(Program, Binding);
                 if (!AltName.empty())
@@ -514,6 +604,17 @@ std::string RemapWGSLResourceBindings(const std::string&         WGSL,
     }
 
     std::string PatchedWGSL = std::move(GenerationResult->wgsl);
+
+    // Tint does not preserve comments. Carry reflection across the rewrite using
+    // the same binding-point mapping as the shader, including emulated arrays.
+    WGSLShaderReflection RemappedReflection;
+    for (auto& Entry : Reflection.Resources)
+    {
+        auto It = BindingPoints.find(tint::BindingPoint{Entry.first.Group, Entry.first.Binding});
+        if (It != BindingPoints.end())
+            RemappedReflection.Resources.emplace(WGSLShaderReflection::BindingPoint{It->second.group, It->second.binding}, std::move(Entry.second));
+    }
+    AppendWGSLShaderReflection(PatchedWGSL, RemappedReflection);
 
     // If original WGSL contains shader source language definition, append it to the patched WGSL
     SHADER_SOURCE_LANGUAGE SrcLang = ParseShaderSourceLanguageDefinition(WGSL);

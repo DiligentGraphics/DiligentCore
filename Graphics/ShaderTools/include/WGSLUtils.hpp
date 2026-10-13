@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -42,7 +42,9 @@ struct ResourceBinding;
 namespace Diligent
 {
 
-std::string ConvertSPIRVtoWGSL(const std::vector<uint32_t>& SPIRV);
+// Preserve original resource names and optionally constant-buffer member descriptions
+// in the generated source, independently of Tint's type and identifier rewrites.
+std::string ConvertSPIRVtoWGSL(const std::vector<uint32_t>& SPIRV, bool LoadUniformBufferReflection = false);
 
 struct WGSLResourceBindingInfo
 {

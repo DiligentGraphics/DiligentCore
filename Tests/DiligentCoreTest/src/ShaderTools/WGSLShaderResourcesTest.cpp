@@ -26,6 +26,8 @@
 
 #include "WGSLShaderResources.hpp"
 #include "WGSLUtils.hpp"
+#include "WGSLShaderReflection.hpp"
+#include "SPIRVShaderResources.hpp"
 #include "GLSLangUtils.hpp"
 #include "DefaultShaderSourceStreamFactory.h"
 #include "RefCntAutoPtr.hpp"
@@ -42,7 +44,7 @@ using namespace Diligent::Testing;
 namespace
 {
 
-std::string HLSLtoWGLS(const char* FilePath)
+std::string HLSLtoWGLS(const char* FilePath, bool LoadUniformBufferReflection = false, std::vector<uint32_t>* pSPIRV = nullptr)
 {
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
@@ -64,7 +66,10 @@ std::string HLSLtoWGLS(const char* FilePath)
     if (SPIRV.empty())
         return {};
 
-    return ConvertSPIRVtoWGSL(SPIRV);
+    std::string WGSL = ConvertSPIRVtoWGSL(SPIRV, LoadUniformBufferReflection);
+    if (pSPIRV != nullptr)
+        *pSPIRV = std::move(SPIRV);
+    return WGSL;
 }
 
 void TestWGSLResources(const char*                                   FilePath,
@@ -134,6 +139,81 @@ TEST(WGSLShaderResources, TextureAccessQueries)
                           {"WriteTexture", WGSLResourceType::WOStorageTexture, 1, RESOURCE_DIM_TEX_2D, TEX_FORMAT_RGBA32_FLOAT, WGSLSampleType::Float},
                           {"QueryTexture", WGSLResourceType::RWStorageTexture, 1, RESOURCE_DIM_TEX_2D, TEX_FORMAT_RGBA32_FLOAT, WGSLSampleType::Float},
                       });
+}
+
+TEST(WGSLShaderResources, PreservesSourceReflection)
+{
+    std::vector<uint32_t> SPIRV;
+    const std::string     WGSL = HLSLtoWGLS("SourceReflection.psh", true, &SPIRV);
+    ASSERT_FALSE(WGSL.empty());
+
+    SPIRVShaderResources::CreateInfo ResCI;
+    ResCI.ShaderType                  = SHADER_TYPE_PIXEL;
+    ResCI.Name                        = "Source reflection test";
+    ResCI.LoadUniformBufferReflection = true;
+    const SPIRVShaderResources SourceResources{GetRawAllocator(), SPIRV, ResCI};
+    ASSERT_EQ(SourceResources.GetNumUBs(), 2u);
+
+    const WGSLResourceMapping Mapping = {
+        {"fn", {2, 5}},
+        {"fn_1", {3, 7}},
+        {"var", {1, 9}},
+        {"var_1", {1, 10}},
+    };
+    auto CheckReflection = [&](const std::string& Text, bool Remapped) {
+        // Reload the emitted text as WGSL, as GetBytecode and shader archives do.
+        const WGSLShaderResources Resources{GetRawAllocator(), Text, SHADER_SOURCE_LANGUAGE_WGSL,
+                                            "Source reflection test", nullptr, nullptr, nullptr, true, nullptr};
+        ASSERT_EQ(Resources.GetTotalResources(), Mapping.size());
+        ASSERT_EQ(Resources.GetNumUBs(), SourceResources.GetNumUBs());
+        for (Uint32 i = 0; i < Resources.GetTotalResources(); ++i)
+        {
+            const auto& Resource = Resources.GetResource(i);
+            auto        It       = Mapping.find(Resource.Name);
+            ASSERT_NE(It, Mapping.end()) << Resource.Name;
+            if (Remapped)
+            {
+                EXPECT_EQ(Resource.BindGroup, It->second.Group);
+                EXPECT_EQ(Resource.BindIndex, It->second.Index);
+            }
+            if (i < Resources.GetNumUBs())
+            {
+                bool Found = false;
+                for (Uint32 j = 0; j < SourceResources.GetNumUBs(); ++j)
+                {
+                    if (strcmp(Resource.Name, SourceResources.GetUB(j).Name) == 0)
+                    {
+                        Found = true;
+                        EXPECT_EQ(*Resources.GetUniformBufferDesc(i), *SourceResources.GetUniformBufferDesc(j)) << Resource.Name;
+                    }
+                }
+                EXPECT_TRUE(Found) << Resource.Name;
+            }
+        }
+    };
+    CheckReflection(WGSL, false);
+    const std::string Remapped = RemapWGSLResourceBindings(WGSL, Mapping, nullptr);
+    ASSERT_FALSE(Remapped.empty());
+    CheckReflection(Remapped, true);
+    // A second rewrite must preserve the same names and layouts as the first.
+    const std::string RemappedAgain = RemapWGSLResourceBindings(Remapped, Mapping, nullptr);
+    ASSERT_FALSE(RemappedAgain.empty());
+    CheckReflection(RemappedAgain, true);
+}
+
+TEST(WGSLShaderResources, ReflectionMetadataRoundTrip)
+{
+    const std::string WGSL = HLSLtoWGLS("SourceReflection.psh", true);
+    ASSERT_FALSE(WGSL.empty());
+    WGSLShaderReflection Reflection;
+    ASSERT_TRUE(ParseWGSLShaderReflection(WGSL, Reflection));
+    ASSERT_EQ(Reflection.Resources.size(), 4u);
+
+    const size_t Start = WGSL.find("/*$DILIGENT_WGSL_REFLECTION=");
+    ASSERT_NE(Start, std::string::npos);
+    std::string Metadata;
+    AppendWGSLShaderReflection(Metadata, Reflection);
+    EXPECT_EQ(Metadata, "\n" + WGSL.substr(Start));
 }
 
 TEST(WGSLShaderResources, UniformBuffers)

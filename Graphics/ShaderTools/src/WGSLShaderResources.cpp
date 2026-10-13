@@ -28,6 +28,7 @@
 #include "Align.hpp"
 #include "StringPool.hpp"
 #include "WGSLUtils.hpp"
+#include "WGSLShaderReflection.hpp"
 #include "DataBlobImpl.hpp"
 #include "ShaderToolsCommon.hpp"
 
@@ -819,33 +820,26 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
     }
     m_ShaderType = TintPipelineStageToShaderType(EntryPoints[EntryPointIdx].stage);
 
-    std::vector<tint::inspector::ResourceBinding> ResourceBindings = Inspector.GetResourceBindings(EntryPoint);
-    if (SourceLanguage != SHADER_SOURCE_LANGUAGE_WGSL)
+    WGSLShaderReflection SourceReflection;
+    if (!ParseWGSLShaderReflection(WGSL, SourceReflection))
     {
-        //   HLSL:
-        //      struct BufferData0
-        //      {
-        //          float4 data;
-        //      };
-        //      StructuredBuffer<BufferData0> g_Buff0;
-        //      StructuredBuffer<BufferData0> g_Buff1;
-        //      StructuredBuffer<int>         g_AtomicBuff0; // Used in atomic operations
-        //      StructuredBuffer<int>         g_AtomicBuff1; // Used in atomic operations
-        //   WGSL:
-        //      struct g_Buff0 {
-        //        x_data : RTArr,
-        //      }
-        //      @group(0) @binding(0) var<storage, read> g_Buff0_1       : g_Buff0;
-        //      @group(0) @binding(1) var<storage, read> g_Buff1         : g_Buff0;
-        //      @group(0) @binding(2) var<storage, read> g_AtomicBuff0_1 : g_AtomicBuff0_atomic;
-        //      @group(0) @binding(3) var<storage, read> g_AtomicBuff1   : g_AtomicBuff0_atomic;
-        for (tint::inspector::ResourceBinding& Binding : ResourceBindings)
+        LOG_ERROR_AND_THROW("Invalid WGSL reflection metadata for shader '", ShaderName, "'");
+    }
+
+    std::vector<tint::inspector::ResourceBinding> ResourceBindings = Inspector.GetResourceBindings(EntryPoint);
+    for (auto& Binding : ResourceBindings)
+    {
+        if (const auto* Resource = SourceReflection.Find(Binding.bind_group, Binding.binding))
         {
+            Binding.variable_name = Resource->Name;
+        }
+        else if (SourceLanguage != SHADER_SOURCE_LANGUAGE_WGSL)
+        {
+            // Older archives have no original names. Keep the legacy type-name
+            // fallback for them, but do not apply it to resources with metadata.
             std::string AltName = GetWGSLResourceAlternativeName(Program, Binding);
             if (!AltName.empty())
-            {
                 Binding.variable_name = std::move(AltName);
-            }
         }
     }
 
@@ -946,7 +940,20 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
                 new (&GetUB(CurrRes.NumUBs++)) WGSLShaderResourceAttribs{Name, Binding, ArraySize};
 
                 if (LoadUniformBufferReflection)
-                    UBReflections.emplace_back(LoadUBReflection(Program, Binding, SourceLanguage));
+                {
+                    auto* SourceResource = SourceReflection.Find(Binding.bind_group, Binding.binding);
+                    if (SourceResource != nullptr && SourceResource->UniformBuffer)
+                    {
+                        // Report source names, matrix orientation, arrays, and member offsets,
+                        // not the padded structs and renamed members produced by Tint.
+                        UBReflections.emplace_back(std::move(*SourceResource->UniformBuffer));
+                    }
+                    else
+                    {
+                        // Native WGSL and older archives have no source buffer metadata.
+                        UBReflections.emplace_back(LoadUBReflection(Program, Binding, SourceLanguage));
+                    }
+                }
             }
             break;
 

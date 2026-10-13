@@ -17,6 +17,7 @@ if(NOT WEBGPU_SUPPORTED)
     list(REMOVE_ITEM SOURCE
         ${CMAKE_CURRENT_SOURCE_DIR}/src/ShaderTools/WGSLUtilsTest.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/ShaderTools/WGSLShaderResourcesTest.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/ShaderTools/WGSLShaderReflectionTest.cpp
     )
 endif()
 
