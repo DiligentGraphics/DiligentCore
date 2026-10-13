@@ -28,15 +28,21 @@
 #include "DebugUtilities.hpp"
 #include "ParsingTools.hpp"
 #include "ShaderToolsCommon.hpp"
+#if defined(USE_SPIRV_TOOLS) && TINT_BUILD_SPV_READER
+#    define SPIRV_TO_WGSL_SUPPORTED 1
+#    include "SPIRVTools.hpp"
+#    include "spirv-tools/libspirv.h"
+#else
+#    define SPIRV_TO_WGSL_SUPPORTED 0
+#endif
 
 #ifdef _MSC_VER
 #    pragma warning(push)
 #    pragma warning(disable : 4324) //  warning C4324: structure was padded due to alignment specifier
 #endif
 
-#define TINT_BUILD_SPV_READER  1
-#define TINT_BUILD_WGSL_WRITER 1
 #include <tint/tint.h>
+#include "src/tint/lang/core/ir/module.h"
 #include "src/tint/lang/core/ir/transform/binding_remapper.h"
 #include "src/tint/lang/wgsl/ast/module.h"
 #include "src/tint/lang/wgsl/ast/identifier_expression.h"
@@ -92,18 +98,41 @@ WGSLEmulatedResourceArrayElement GetWGSLEmulatedArrayElement(const std::string& 
 
 std::string ConvertSPIRVtoWGSL(const std::vector<uint32_t>& SPIRV)
 {
+#if SPIRV_TO_WGSL_SUPPORTED
+    // Tint does not support HLSL reflection extensions. Strip them from a copy
+    // so the original SPIR-V remains available for reflection.
+    // Match the validation environment used by Tint, including relaxed block layouts.
+    auto ConversionSPIRV = OptimizeSPIRV(SPIRV, SPV_ENV_VULKAN_1_1, SPIRV_OPTIMIZATION_FLAG_STRIP_REFLECTION);
+    if (ConversionSPIRV.empty())
+    {
+        LOG_ERROR_MESSAGE("Failed to prepare SPIR-V for Tint conversion");
+        return {};
+    }
+
+    auto IR = tint::spirv::reader::ReadIR(ConversionSPIRV);
+    if (IR != tint::Success)
+    {
+        LOG_ERROR_MESSAGE("Tint SPIR-V reader failure:\n", IR.Failure().reason, "\n");
+        return {};
+    }
+
     tint::wgsl::writer::Options WGSLWriterOptions;
     WGSLWriterOptions.allow_non_uniform_derivatives = true;
     WGSLWriterOptions.allowed_features              = tint::wgsl::AllowedFeatures::Everything();
 
-    auto GenerationResult = tint::SpirvToWgsl(SPIRV, WGSLWriterOptions);
+    auto GenerationResult = tint::wgsl::writer::WgslFromIR(IR.Get(), WGSLWriterOptions);
     if (GenerationResult != tint::Success)
     {
-        LOG_ERROR_MESSAGE("Tint SPIR-V to WGSL conversion failure:\n", GenerationResult.Failure().reason, "\n");
+        LOG_ERROR_MESSAGE("Tint WGSL writer failure:\n", GenerationResult.Failure().reason, "\n");
         return {};
     }
 
-    return std::move(GenerationResult.Get());
+    return std::move(GenerationResult->wgsl);
+#else
+    (void)SPIRV;
+    LOG_ERROR_MESSAGE("SPIR-V to WGSL conversion is not supported in this build; provide WGSL shaders instead.");
+    return {};
+#endif
 }
 
 static bool IsAtomic(const tint::core::type::Type* WGSLType)

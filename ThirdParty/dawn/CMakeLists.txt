@@ -24,7 +24,13 @@ if (MSVC)
 endif()
 
 set(TINT_BUILD_AS_OTHER_OS ${PLATFORM_WEB} CACHE BOOL "" FORCE)
-set(TINT_BUILD_SPV_READER  ON CACHE BOOL "" FORCE)
+# Keep SPIR-V conversion disabled when both source compilers are disabled.
+# Otherwise, require the optimizer target used to strip reflection metadata.
+if (TARGET SPIRV-Tools-opt AND NOT (DILIGENT_NO_GLSLANG AND DILIGENT_NO_HLSL))
+    set(TINT_BUILD_SPV_READER ON CACHE BOOL "" FORCE)
+else()
+    set(TINT_BUILD_SPV_READER OFF CACHE BOOL "" FORCE)
+endif()
 set(TINT_BUILD_WGSL_WRITER ON CACHE BOOL "" FORCE)
 set(TINT_BUILD_WGSL_READER ON CACHE BOOL "" FORCE)
 set(TINT_BUILD_IR_BINARY  OFF CACHE BOOL "" FORCE)

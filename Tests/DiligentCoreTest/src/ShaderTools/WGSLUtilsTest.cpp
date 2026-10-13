@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,9 +25,11 @@
  */
 
 #include "WGSLUtils.hpp"
+#include "SPIRVShaderResources.hpp"
 #include "GLSLangUtils.hpp"
 #include "DefaultShaderSourceStreamFactory.h"
 #include "RefCntAutoPtr.hpp"
+#include "EngineMemory.h"
 
 #include "TestingEnvironment.hpp"
 #include "gtest/gtest.h"
@@ -62,6 +64,52 @@ inline std::ostream& operator<<(std::ostream& os, const WGSLEmulatedResourceArra
 
 namespace
 {
+
+TEST(WGSLUtils, ConvertSPIRVtoWGSLPreservesHLSLReflection)
+{
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.Desc           = {"HLSL reflection preservation test", SHADER_TYPE_VERTEX};
+    ShaderCI.EntryPoint     = "main";
+    ShaderCI.Source         = R"(
+cbuffer Constants
+{
+    float Offset;
+    float3 Scale;
+};
+
+float4 main(float3 Position : ATTRIB0) : SV_Position
+{
+    return float4(Position * Scale + Offset, 1.0);
+}
+)";
+
+    GLSLangUtils::InitializeGlslang();
+    auto SPIRV = GLSLangUtils::HLSLtoSPIRV(ShaderCI, GLSLangUtils::SpirvVersion::Vk110, nullptr, nullptr);
+    GLSLangUtils::FinalizeGlslang();
+    ASSERT_FALSE(SPIRV.empty());
+
+    // This shader only uses SPIR-V 1.0 instructions. Keep its binary version at 1.0
+    // to verify that Vulkan 1.1 relaxed block layout is not inferred from the version.
+    SPIRV[1] = 0x00010000u;
+
+    const auto OriginalSPIRV = SPIRV;
+    const auto WGSL          = ConvertSPIRVtoWGSL(SPIRV);
+    ASSERT_FALSE(WGSL.empty());
+    EXPECT_EQ(SPIRV, OriginalSPIRV);
+
+    tint::Source::File SrcFile{"", WGSL};
+    tint::Program      Program = tint::wgsl::reader::Parse(&SrcFile, {tint::wgsl::AllowedFeatures::Everything()});
+    ASSERT_TRUE(Program.IsValid()) << Program.Diagnostics().Str();
+
+    SPIRVShaderResources::CreateInfo ResCI;
+    ResCI.ShaderType            = SHADER_TYPE_VERTEX;
+    ResCI.Name                  = ShaderCI.Desc.Name;
+    ResCI.LoadShaderStageInputs = true;
+    const SPIRVShaderResources Resources{GetRawAllocator(), SPIRV, ResCI};
+    ASSERT_EQ(Resources.GetNumShaderStageInputs(), 1u);
+    EXPECT_STREQ(Resources.GetShaderStageInputAttribs(0).Semantic, "ATTRIB0");
+}
 
 TEST(WGSLUtils, GetWGSLEmulatedArrayElementInfo)
 {
