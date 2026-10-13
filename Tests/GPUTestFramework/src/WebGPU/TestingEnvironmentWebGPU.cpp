@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2025 Diligent Graphics LLC
+ *  Copyright 2023-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -31,8 +31,6 @@
 
 #if !PLATFORM_WEB
 #    include <dawn/dawn_proc.h>
-#else
-#    include <emscripten.h>
 #endif
 
 
@@ -102,22 +100,30 @@ void TestingEnvironmentWebGPU::SubmitCommandEncoder(WGPUCommandEncoder wgpuCmdEn
 
     if (WaitForIdle)
     {
+#if PLATFORM_WEB
+        LOG_ERROR_MESSAGE("Waiting for submitted WebGPU work is not supported on the Web. Use non-blocking synchronization methods.");
+#else
         bool IsWorkDone       = false;
-        auto WorkDoneCallback = [](WGPUQueueWorkDoneStatus Status, void* pUserData) {
+        auto WorkDoneCallback = [](WGPUQueueWorkDoneStatus Status, WGPUStringView Message, void* pUserData, void* pUserData2) {
             if (bool* pIsWorkDone = static_cast<bool*>(pUserData))
-                *pIsWorkDone = Status == WGPUQueueWorkDoneStatus_Success;
+                *pIsWorkDone = true;
             if (Status != WGPUQueueWorkDoneStatus_Success)
                 DEV_ERROR("Failed wgpuQueueOnSubmittedWorkDone: ", Status);
         };
 
-        wgpuQueueOnSubmittedWorkDone(wgpuCmdQueue, WorkDoneCallback, &IsWorkDone);
+        WGPUQueueWorkDoneCallbackInfo CallbackInfo{};
+        CallbackInfo.mode      = WGPUCallbackMode_AllowProcessEvents;
+        CallbackInfo.callback  = WorkDoneCallback;
+        CallbackInfo.userdata1 = &IsWorkDone;
+        wgpuQueueOnSubmittedWorkDone(wgpuCmdQueue, CallbackInfo);
+
+        RefCntAutoPtr<IRenderDeviceWebGPU> pDeviceWebGPU{m_pDevice, IID_RenderDeviceWebGPU};
 
         while (!IsWorkDone)
         {
-#if !PLATFORM_WEB
-            wgpuDeviceTick(m_wgpuDevice);
-#endif
+            wgpuInstanceProcessEvents(pDeviceWebGPU->GetWebGPUInstance());
         }
+#endif
     }
 
     wgpuQueueRelease(wgpuCmdQueue);

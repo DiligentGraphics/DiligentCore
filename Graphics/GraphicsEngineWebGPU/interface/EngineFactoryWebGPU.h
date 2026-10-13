@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2025 Diligent Graphics LLC
+ *  Copyright 2023-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -67,6 +67,9 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_EngineFactoryWebGPU =
 DILIGENT_BEGIN_INTERFACE(IEngineFactoryWebGPU, IEngineFactory)
 {
     /// Creates a render device and device contexts for WebGPU-based engine implementation.
+
+    /// This synchronous method is not supported on the Web. Create the device asynchronously
+    /// in JavaScript and use IEngineFactoryWebGPU::AttachToWebGPUDevice() instead.
 
     /// \param [in] EngineCI  - Engine creation info.
     /// \param [out] ppDevice - Address of the memory location where pointer to

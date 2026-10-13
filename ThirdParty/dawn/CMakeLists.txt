@@ -77,6 +77,15 @@ set(DAWN_ABSEIL_DIR "${abseil-cpp_SOURCE_DIR}" CACHE STRING "Directory in which 
 
 FetchContent_MakeAvailable(dawn)
 
+if (DAWN_ENABLE_D3D12 AND NOT DAWN_USE_BUILT_DXC)
+    # Dawn guards DXC support with DAWN_USE_BUILT_DXC, even when loading the compiler
+    # dynamically. Enable this code while reusing the Windows SDK DLLs supplied by
+    # Diligent, without adding Dawn's DXC source build.
+    foreach(DAWN_DXC_TARGET IN ITEMS dawn_native dawn_native_objects dawn_platform)
+        target_compile_definitions(${DAWN_DXC_TARGET} PRIVATE DAWN_USE_BUILT_DXC)
+    endforeach()
+endif()
+
 if (PLATFORM_WEB)
     find_targets_in_directory(DAWN_TARGETS ${dawn_SOURCE_DIR})
     set_targets_emscripten_properties(${DAWN_TARGETS})

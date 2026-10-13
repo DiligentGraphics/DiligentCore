@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -183,11 +183,11 @@ void WebGPUResourceBase::FlushPendingWrites(StagingBufferInfo& Buffer)
 
 void WebGPUResourceBase::ProcessAsyncReadback(StagingBufferInfo& Buffer)
 {
-    auto MapAsyncCallback = [](WGPUBufferMapAsyncStatus MapStatus, void* pUserData) {
+    auto MapAsyncCallback = [](WGPUMapAsyncStatus MapStatus, WGPUStringView Message, void* pUserData, void* pUserData2) {
         VERIFY_EXPR(pUserData != nullptr);
         StagingBufferInfo& BufferInfo = *static_cast<StagingBufferInfo*>(pUserData);
 
-        if (MapStatus == WGPUBufferMapAsyncStatus_Success)
+        if (MapStatus == WGPUMapAsyncStatus_Success)
         {
             // Do NOT use WGPU_WHOLE_MAP_SIZE due to https://github.com/emscripten-core/emscripten/issues/20538
             const size_t MappedDataSize = BufferInfo.Resource.m_MappedData.size();
@@ -211,8 +211,12 @@ void WebGPUResourceBase::ProcessAsyncReadback(StagingBufferInfo& Buffer)
     // Keep the resource alive until the callback is called
     m_Owner.AddRef();
     // Do NOT use WGPU_WHOLE_MAP_SIZE due to https://github.com/emscripten-core/emscripten/issues/20538
-    const size_t MappedDataSize = Buffer.Resource.m_MappedData.size();
-    wgpuBufferMapAsync(Buffer.wgpuBuffer, WGPUMapMode_Read, 0, AlignUp(MappedDataSize, MappedRangeAlignment), MapAsyncCallback, &Buffer);
+    const size_t              MappedDataSize = Buffer.Resource.m_MappedData.size();
+    WGPUBufferMapCallbackInfo CallbackInfo{};
+    CallbackInfo.mode      = DefaultWGPUCallbackMode;
+    CallbackInfo.callback  = MapAsyncCallback;
+    CallbackInfo.userdata1 = &Buffer;
+    wgpuBufferMapAsync(Buffer.wgpuBuffer, WGPUMapMode_Read, 0, AlignUp(MappedDataSize, MappedRangeAlignment), CallbackInfo);
 }
 
 } // namespace Diligent

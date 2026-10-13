@@ -110,11 +110,12 @@ if(PLATFORM_WIN32)
         set(DXCOMPILER_REQUIRED NO)
         set(DXCOMPILER_FOR_SPIRV_REQUIRED NO)
         
-        if (D3D11_SUPPORTED OR D3D12_SUPPORTED)
+        # Dawn falls back to FXC on adapters that do not support shader model 6.0.
+        if (D3D11_SUPPORTED OR D3D12_SUPPORTED OR WEBGPU_SUPPORTED)
             set(D3D_COMPILER_REQUIRED YES)
         endif()
 
-        # Dawn uses DXC, so we need to copy the DXC dlls even if DXC_REQUIRED is not set
+        # Dawn uses DXC, so copy the DXC dlls even if DXC_REQUIRED is not set
         # to get consistent shader compilation results
         if((arg_DXC_REQUIRED AND D3D12_SUPPORTED) OR WEBGPU_SUPPORTED)
             set(DXCOMPILER_REQUIRED YES)
