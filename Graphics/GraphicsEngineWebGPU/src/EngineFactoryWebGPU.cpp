@@ -282,15 +282,21 @@ WebGPUDeviceWrapper CreateDeviceForAdapter(const DeviceFeatures& Features, WGPUI
         }
     };
 
-    const char* ToggleNames[] = {
-        "disable_timestamp_query_conversion",
+    // Keep timestamp conversion enabled: QueryWebGPUImpl reports a nanosecond frequency.
+    const char* EnabledToggles[] = {
         "use_dxc",
+    };
+    // Preserve native timestamp precision so short GPU workloads remain measurable.
+    const char* DisabledToggles[] = {
+        "timestamp_quantization",
     };
 
     WGPUDawnTogglesDescriptor wgpuDawnTogglesDesc = {};
     wgpuDawnTogglesDesc.chain.sType               = WGPUSType_DawnTogglesDescriptor;
-    wgpuDawnTogglesDesc.enabledToggleCount        = _countof(ToggleNames);
-    wgpuDawnTogglesDesc.enabledToggles            = ToggleNames;
+    wgpuDawnTogglesDesc.enabledToggleCount        = _countof(EnabledToggles);
+    wgpuDawnTogglesDesc.enabledToggles            = EnabledToggles;
+    wgpuDawnTogglesDesc.disabledToggleCount       = _countof(DisabledToggles);
+    wgpuDawnTogglesDesc.disabledToggles           = DisabledToggles;
 
     WGPUDeviceDescriptor DeviceDesc{};
     DeviceDesc.requiredLimits              = &SupportedLimits;

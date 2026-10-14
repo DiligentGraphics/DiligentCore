@@ -138,7 +138,6 @@ WGPUTextureDescriptor TextureDescToWGPUTextureDescriptor(const TextureDesc&     
     return wgpuTextureDesc;
 }
 
-#if !PLATFORM_EMSCRIPTEN
 static WGPUTextureUsage TextureViewTypeToWGPUTextureUsage(TEXTURE_VIEW_TYPE ViewType)
 {
     static_assert(TEXTURE_VIEW_NUM_VIEWS == 7, "Please update the switch below to handle the new view type");
@@ -149,10 +148,8 @@ static WGPUTextureUsage TextureViewTypeToWGPUTextureUsage(TEXTURE_VIEW_TYPE View
 
         case TEXTURE_VIEW_RENDER_TARGET:
         case TEXTURE_VIEW_DEPTH_STENCIL:
-            return WGPUTextureUsage_RenderAttachment;
-
         case TEXTURE_VIEW_READ_ONLY_DEPTH_STENCIL:
-            return WGPUTextureUsage_TextureBinding;
+            return WGPUTextureUsage_RenderAttachment;
 
         case TEXTURE_VIEW_UNORDERED_ACCESS:
             return WGPUTextureUsage_StorageBinding;
@@ -166,7 +163,6 @@ static WGPUTextureUsage TextureViewTypeToWGPUTextureUsage(TEXTURE_VIEW_TYPE View
             return WGPUTextureUsage_None;
     }
 }
-#endif
 
 WGPUTextureViewDescriptor TextureViewDescToWGPUTextureViewDescriptor(const TextureDesc&            TexDesc,
                                                                      TextureViewDesc&              ViewDesc,
@@ -229,14 +225,12 @@ WGPUTextureViewDescriptor TextureViewDescToWGPUTextureViewDescriptor(const Textu
             wgpuTextureViewDesc.aspect = WGPUTextureAspect_All;
     }
 
-    // TODO: enable this as soon as Emscripten adds the usage member to WGPUTextureViewDescriptor
-    // https://github.com/emscripten-core/emscripten/issues/23945
-#if !PLATFORM_EMSCRIPTEN
-    if (ViewDesc.Format != TexDesc.Format)
+    if (ViewDesc.Format != TexDesc.Format || (TexDesc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS))
     {
+        // Mip generation may use an UNORM storage texture underneath an sRGB texture.
+        // Restrict view usage even when the Diligent texture and view formats match.
         wgpuTextureViewDesc.usage = TextureViewTypeToWGPUTextureUsage(ViewDesc.ViewType);
     }
-#endif
 
     return wgpuTextureViewDesc;
 }
