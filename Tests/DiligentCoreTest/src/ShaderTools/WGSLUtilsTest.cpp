@@ -453,6 +453,102 @@ TEST(WGSLUtils, RWStructBufferArrays)
 }
 
 
+TEST(WGSLUtils, RemapReturnsGeneratedEntryPoint)
+{
+    const struct
+    {
+        const char* Description;
+        const char* WGSL;
+        const char* EntryPoint;
+        bool        Renamed;
+    } Cases[] = {
+        {
+            "Name renamed while writing floating-point IR",
+            "@fragment fn f32() -> @location(0) vec4f { return vec4f(1.0); }",
+            "f32",
+            true,
+        },
+        {
+            "Name renamed while generating the AST",
+            "@compute @workgroup_size(1) fn f32() {}",
+            "f32",
+            true,
+        },
+        {
+            "Ordinary entry point name",
+            "@compute @workgroup_size(1) fn main() {}",
+            "main",
+            false,
+        },
+    };
+    for (const auto& Case : Cases)
+    {
+        SCOPED_TRACE(Case.Description);
+        std::string Current            = Case.WGSL;
+        std::string RemappedEntryPoint = Case.EntryPoint;
+        for (Uint32 Pass = 0; Pass < 2; ++Pass)
+        {
+            SCOPED_TRACE(Pass);
+            // The selected name may alias the output, including on subsequent remaps.
+            Current = RemapWGSLResourceBindings(Current, {}, nullptr, RemappedEntryPoint.c_str(), &RemappedEntryPoint);
+            ASSERT_FALSE(Current.empty());
+
+            tint::Source::File File{"", Current};
+            auto               Program = tint::wgsl::reader::Parse(&File, {tint::wgsl::AllowedFeatures::Everything()});
+            ASSERT_TRUE(Program.IsValid()) << Program.Diagnostics().Str();
+            tint::inspector::Inspector Inspector{Program};
+            const auto                 EntryPoints = Inspector.GetEntryPoints();
+            ASSERT_EQ(EntryPoints.size(), 1u);
+            EXPECT_EQ(RemappedEntryPoint, EntryPoints[0].name);
+            if (Case.Renamed)
+                EXPECT_NE(RemappedEntryPoint, Case.EntryPoint);
+            else
+                EXPECT_EQ(RemappedEntryPoint, Case.EntryPoint);
+        }
+    }
+}
+
+TEST(WGSLUtils, RemapWholeModuleClearsEntryPointOutput)
+{
+    const std::string WGSL               = R"(
+@compute @workgroup_size(1) fn first() {}
+@compute @workgroup_size(1) fn second() {}
+)";
+    std::string       RemappedEntryPoint = "previous_entry_point";
+    const std::string Remapped           = RemapWGSLResourceBindings(WGSL, {}, nullptr, nullptr, &RemappedEntryPoint);
+    ASSERT_FALSE(Remapped.empty());
+    EXPECT_TRUE(RemappedEntryPoint.empty());
+
+    tint::Source::File File{"", Remapped};
+    auto               Program = tint::wgsl::reader::Parse(&File, {tint::wgsl::AllowedFeatures::Everything()});
+    ASSERT_TRUE(Program.IsValid()) << Program.Diagnostics().Str();
+    tint::inspector::Inspector Inspector{Program};
+    const auto                 EntryPoints = Inspector.GetEntryPoints();
+    ASSERT_EQ(EntryPoints.size(), 2u);
+    EXPECT_NE(EntryPoints[0].name, EntryPoints[1].name);
+    for (const auto& EntryPoint : EntryPoints)
+        EXPECT_TRUE(EntryPoint.name == "first" || EntryPoint.name == "second");
+}
+
+TEST(WGSLUtils, RemapPreservesEntryPointOutputOnFailure)
+{
+    const std::string WGSL               = R"(
+@group(0) @binding(0) var<storage, read_write> Output: array<u32>;
+@compute @workgroup_size(1) fn main() { Output[0] = 1; }
+)";
+    std::string       RemappedEntryPoint = "unchanged";
+    {
+        TestingEnvironment::ErrorScope Errors{"Tint WGSL reader failure"};
+        EXPECT_TRUE(RemapWGSLResourceBindings("invalid WGSL", {}, nullptr, "main", &RemappedEntryPoint).empty());
+        EXPECT_EQ(RemappedEntryPoint, "unchanged");
+    }
+    {
+        TestingEnvironment::ErrorScope Errors{"Binding for variable 'Output' is not found"};
+        EXPECT_TRUE(RemapWGSLResourceBindings(WGSL, {}, nullptr, "main", &RemappedEntryPoint).empty());
+        EXPECT_EQ(RemappedEntryPoint, "unchanged");
+    }
+}
+
 TEST(WGSLUtils, RemapSelectedEntryPoint)
 {
     const std::string WGSL = R"(
@@ -469,7 +565,8 @@ override Shared: u32 = 1;
         SCOPED_TRACE(EntryPoint);
         const char*               ResourceName = strcmp(EntryPoint, "first") == 0 ? "FirstOutput" : "SecondOutput";
         const WGSLResourceMapping Mapping{{ResourceName, {2, 3}}};
-        const std::string         Remapped = RemapWGSLResourceBindings(WGSL, Mapping, nullptr, EntryPoint);
+        std::string               RemappedEntryPoint;
+        const std::string         Remapped = RemapWGSLResourceBindings(WGSL, Mapping, nullptr, EntryPoint, &RemappedEntryPoint);
         ASSERT_FALSE(Remapped.empty());
         tint::Source::File File{"", Remapped};
         auto               Program = tint::wgsl::reader::Parse(&File, {tint::wgsl::AllowedFeatures::Everything()});
@@ -478,6 +575,7 @@ override Shared: u32 = 1;
         const auto                 EntryPoints = Inspector.GetEntryPoints();
         ASSERT_EQ(EntryPoints.size(), 1u);
         EXPECT_EQ(EntryPoints[0].name, EntryPoint);
+        EXPECT_EQ(RemappedEntryPoint, EntryPoints[0].name);
         EXPECT_EQ(EntryPoints[0].overrides.size(), 2u);
         const auto Bindings = Inspector.GetResourceBindings(EntryPoint);
         ASSERT_EQ(Bindings.size(), 1u);
@@ -488,11 +586,15 @@ override Shared: u32 = 1;
 
     {
         TestingEnvironment::ErrorScope Errors{"Conflicting remappings for binding"};
-        EXPECT_TRUE(RemapWGSLResourceBindings(WGSL, {{"FirstOutput", {1, 0}}, {"SecondOutput", {2, 0}}}, nullptr).empty());
+        std::string                    RemappedEntryPoint = "unchanged";
+        EXPECT_TRUE(RemapWGSLResourceBindings(WGSL, {{"FirstOutput", {1, 0}}, {"SecondOutput", {2, 0}}}, nullptr, nullptr, &RemappedEntryPoint).empty());
+        EXPECT_EQ(RemappedEntryPoint, "unchanged");
     }
     {
         TestingEnvironment::ErrorScope Errors{"WGSL entry point 'missing' was not found"};
-        EXPECT_TRUE(RemapWGSLResourceBindings(WGSL, {}, nullptr, "missing").empty());
+        std::string                    RemappedEntryPoint = "missing";
+        EXPECT_TRUE(RemapWGSLResourceBindings(WGSL, {}, nullptr, RemappedEntryPoint.c_str(), &RemappedEntryPoint).empty());
+        EXPECT_EQ(RemappedEntryPoint, "missing");
     }
 }
 

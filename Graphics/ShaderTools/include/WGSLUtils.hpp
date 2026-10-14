@@ -57,11 +57,15 @@ using WGSLResourceMapping = std::unordered_map<std::string, WGSLResourceBindingI
 // Remap the selected entry point and discard declarations used only by other
 // entry points. A null EntryPoint remaps the whole module. The IR round trip
 // gives every retained override an explicit @id with its original Tint ID.
+// On success, pRemappedEntryPoint receives the generated entry-point name when
+// EntryPoint is selected, or an empty string for a whole-module rewrite. The
+// output is unchanged on failure and may also supply the input entry-point name.
 // Returns an empty string if an active resource cannot be mapped unambiguously.
 std::string RemapWGSLResourceBindings(const std::string&         WGSL,
                                       const WGSLResourceMapping& ResMapping,
                                       const char*                EmulatedArrayIndexSuffix,
-                                      const char*                EntryPoint = nullptr);
+                                      const char*                EntryPoint          = nullptr,
+                                      std::string*               pRemappedEntryPoint = nullptr);
 
 
 /// When WGSL is generated from SPIR-V, the names of resources may be mangled

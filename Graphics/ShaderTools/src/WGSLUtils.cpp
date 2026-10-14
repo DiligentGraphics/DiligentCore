@@ -61,6 +61,7 @@
 #include "src/tint/lang/core/ir/transform/binding_remapper.h"
 #include "src/tint/lang/core/ir/transform/single_entry_point.h"
 #include "src/tint/lang/wgsl/ast/module.h"
+#include "src/tint/lang/wgsl/ast/function.h"
 #include "src/tint/lang/wgsl/ast/identifier_expression.h"
 #include "src/tint/lang/wgsl/ast/identifier.h"
 #include "src/tint/lang/wgsl/sem/variable.h"
@@ -521,7 +522,8 @@ static WGSLResourceMapping::const_iterator FindResourceAsArrayElement(const WGSL
 std::string RemapWGSLResourceBindings(const std::string&         WGSL,
                                       const WGSLResourceMapping& ResMapping,
                                       const char*                EmulatedArrayIndexSuffix,
-                                      const char*                EntryPoint)
+                                      const char*                EntryPoint,
+                                      std::string*               pRemappedEntryPoint)
 {
     tint::Source::File srcFile("", WGSL);
     tint::Program      Program = tint::wgsl::reader::Parse(&srcFile, {tint::wgsl::AllowedFeatures::Everything()});
@@ -649,8 +651,38 @@ std::string RemapWGSLResourceBindings(const std::string&         WGSL,
     tint::wgsl::writer::Options WGSLWriterOptions;
     WGSLWriterOptions.allow_non_uniform_derivatives = true;
     WGSLWriterOptions.allowed_features              = tint::wgsl::AllowedFeatures::Everything();
-    auto GenerationResult                           = tint::wgsl::writer::WgslFromIR(IR.Get(), WGSLWriterOptions);
+    // WgslFromIR performs these same two steps. Keep the generated program so
+    // we can read the final name: Tint may rename an entry point both in IR and
+    // while creating the WGSL program, without updating the IR name in the latter case.
+    auto RemappedProgram = tint::wgsl::writer::ProgramFromIR(IR.Get(), WGSLWriterOptions);
+    if (RemappedProgram != tint::Success)
+    {
+        LOG_ERROR_MESSAGE("Tint WGSL writer failure:\nProgram: ", RemappedProgram.Failure().reason, "\n");
+        return {};
+    }
 
+    std::string RemappedEntryPoint;
+    if (EntryPoint != nullptr)
+    {
+        for (const auto* Function : RemappedProgram->AST().Functions())
+        {
+            if (!Function->IsEntryPoint())
+                continue;
+            if (!RemappedEntryPoint.empty())
+            {
+                LOG_ERROR_MESSAGE("Remapped WGSL contains more than one entry point");
+                return {};
+            }
+            RemappedEntryPoint = Function->name->symbol.Name();
+        }
+        if (RemappedEntryPoint.empty())
+        {
+            LOG_ERROR_MESSAGE("Remapped WGSL contains no entry point");
+            return {};
+        }
+    }
+
+    auto GenerationResult = tint::wgsl::writer::Generate(RemappedProgram.Get(), WGSLWriterOptions);
     if (GenerationResult != tint::Success)
     {
         LOG_ERROR_MESSAGE("Tint WGSL writer failure:\nGenerate: ", GenerationResult.Failure().reason, "\n");
@@ -674,6 +706,9 @@ std::string RemapWGSLResourceBindings(const std::string&         WGSL,
     SHADER_SOURCE_LANGUAGE SrcLang = ParseShaderSourceLanguageDefinition(WGSL);
     if (SrcLang != SHADER_SOURCE_LANGUAGE_DEFAULT)
         AppendShaderSourceLanguageDefinition(PatchedWGSL, SrcLang);
+
+    if (pRemappedEntryPoint != nullptr)
+        *pRemappedEntryPoint = std::move(RemappedEntryPoint);
 
     return PatchedWGSL;
 }

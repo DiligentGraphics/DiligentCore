@@ -2909,4 +2909,106 @@ TEST(ArchiveTest, MergeArchives)
     }
 }
 
+
+TEST(ArchiveTest, WGSLEntryPointRemapping)
+{
+    GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceInfo().IsWebGPUDevice())
+        GTEST_SKIP() << "WGSL entry point remapping requires WebGPU";
+
+    IArchiverFactory* pArchiverFactory = pEnv->GetArchiverFactory();
+    if (pArchiverFactory == nullptr)
+        GTEST_SKIP() << "Archiver library is not loaded";
+
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    SerializationDeviceCreateInfo       SerDeviceCI;
+    RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
+    pArchiverFactory->CreateSerializationDevice(SerDeviceCI, &pSerializationDevice);
+    ASSERT_NE(pSerializationDevice, nullptr);
+
+    // An archive must store Tint's generated entry point along with the patched
+    // WGSL, including when reflection is stripped and unpacking skips remapping.
+    const SHADER_TYPE ShaderTypes[] = {SHADER_TYPE_VERTEX, SHADER_TYPE_PIXEL, SHADER_TYPE_COMPUTE};
+    const char*       ShaderNames[] = {"WGSLEntryPointRemapping - VS", "WGSLEntryPointRemapping - PS", "WGSLEntryPointRemapping - CS"};
+    const char*       Sources[]     = {
+        "@vertex fn f32() -> @builtin(position) vec4f { return vec4f(0.0, 0.0, 0.0, 1.0); }",
+        "@fragment fn f32() -> @location(0) vec4f { return vec4f(1.0); }",
+        "@compute @workgroup_size(1) fn f32() {}",
+    };
+    RefCntAutoPtr<IShader> Shaders[3];
+    for (Uint32 i = 0; i < _countof(Shaders); ++i)
+    {
+        ShaderCreateInfo ShaderCI;
+        ShaderCI.Desc           = {ShaderNames[i], ShaderTypes[i]};
+        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_WGSL;
+        ShaderCI.Source         = Sources[i];
+        ShaderCI.EntryPoint     = "f32";
+        pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{ARCHIVE_DEVICE_DATA_FLAG_WEBGPU}, &Shaders[i]);
+        ASSERT_NE(Shaders[i], nullptr);
+    }
+
+    for (PSO_ARCHIVE_FLAGS Flags : {PSO_ARCHIVE_FLAG_NONE, PSO_ARCHIVE_FLAG_STRIP_REFLECTION})
+    {
+        SCOPED_TRACE(static_cast<Uint32>(Flags));
+        RefCntAutoPtr<IArchiver> pArchiver;
+        pArchiverFactory->CreateArchiver(pSerializationDevice, &pArchiver);
+        ASSERT_NE(pArchiver, nullptr);
+
+        PipelineStateArchiveInfo ArchiveInfo;
+        ArchiveInfo.DeviceFlags = ARCHIVE_DEVICE_DATA_FLAG_WEBGPU;
+        ArchiveInfo.PSOFlags    = Flags;
+
+        GraphicsPipelineStateCreateInfo GraphicsCI;
+        GraphicsCI.PSODesc.Name                                  = "WGSLEntryPointRemapping - Graphics";
+        GraphicsCI.GraphicsPipeline.NumRenderTargets             = 1;
+        GraphicsCI.GraphicsPipeline.RTVFormats[0]                = pEnv->GetSwapChain()->GetDesc().ColorBufferFormat;
+        GraphicsCI.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        GraphicsCI.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+        GraphicsCI.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+        GraphicsCI.pVS                                           = Shaders[0];
+        GraphicsCI.pPS                                           = Shaders[1];
+
+        RefCntAutoPtr<IPipelineState> pGraphicsPSO;
+        pSerializationDevice->CreateGraphicsPipelineState(GraphicsCI, ArchiveInfo, &pGraphicsPSO);
+        ASSERT_NE(pGraphicsPSO, nullptr);
+        ASSERT_TRUE(pArchiver->AddPipelineState(pGraphicsPSO));
+
+        ComputePipelineStateCreateInfo ComputeCI;
+        ComputeCI.PSODesc.Name         = "WGSLEntryPointRemapping - Compute";
+        ComputeCI.PSODesc.PipelineType = PIPELINE_TYPE_COMPUTE;
+        ComputeCI.pCS                  = Shaders[2];
+
+        RefCntAutoPtr<IPipelineState> pComputePSO;
+        pSerializationDevice->CreateComputePipelineState(ComputeCI, ArchiveInfo, &pComputePSO);
+        ASSERT_NE(pComputePSO, nullptr);
+        ASSERT_TRUE(pArchiver->AddPipelineState(pComputePSO));
+
+        RefCntAutoPtr<IDataBlob> pArchive;
+        pArchiver->SerializeToBlob(ContentVersion, &pArchive);
+        ASSERT_NE(pArchive, nullptr);
+
+        RefCntAutoPtr<IDearchiver> pDearchiver;
+        DearchiverCreateInfo       DearchiverCI;
+        pDevice->GetEngineFactory()->CreateDearchiver(DearchiverCI, &pDearchiver);
+        ASSERT_NE(pDearchiver, nullptr);
+        ASSERT_TRUE(pDearchiver->LoadArchive(pArchive, ContentVersion));
+
+        for (const PipelineStateDesc* pDesc : {&GraphicsCI.PSODesc, &ComputeCI.PSODesc})
+        {
+            SCOPED_TRACE(pDesc->Name);
+            PipelineStateUnpackInfo UnpackInfo;
+            UnpackInfo.Name         = pDesc->Name;
+            UnpackInfo.pDevice      = pDevice;
+            UnpackInfo.PipelineType = pDesc->PipelineType;
+
+            RefCntAutoPtr<IPipelineState> pUnpackedPSO;
+            pDearchiver->UnpackPipelineState(UnpackInfo, &pUnpackedPSO);
+            ASSERT_NE(pUnpackedPSO, nullptr);
+            EXPECT_EQ(pUnpackedPSO->GetStatus(), PIPELINE_STATE_STATUS_READY);
+        }
+    }
+}
+
 } // namespace

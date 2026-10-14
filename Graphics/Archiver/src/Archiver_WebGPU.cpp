@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024-2025 Diligent Graphics LLC
+ *  Copyright 2024-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -203,7 +203,7 @@ void SerializedPipelineStateImpl::PatchShadersWebGPU(const CreateInfoType& Creat
         ShaderCI.Source         = WGSL.c_str();
         ShaderCI.SourceLength   = WGSL.length();
         ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_WGSL;
-        ShaderCI.EntryPoint     = ShaderStagesWebGPU[i].pShader->GetEntryPoint();
+        ShaderCI.EntryPoint     = ShaderStagesWebGPU[i].GetEntryPoint();
         ShaderCI.FilePath       = nullptr;
         ShaderCI.Macros         = {};
         ShaderCI.ByteCode       = nullptr;

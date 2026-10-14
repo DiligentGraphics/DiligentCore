@@ -245,4 +245,60 @@ TEST(ShaderCreationTest, FromBytecode)
     }
 }
 
+
+TEST(ShaderCreationTest, WGSLEntryPointRemapping)
+{
+    GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceInfo().IsWebGPUDevice())
+        GTEST_SKIP() << "WGSL entry point remapping requires WebGPU";
+
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    // Tint renames f32 when generating WGSL. Pipeline creation must use the
+    // generated name for every shader stage, including shaders without resources.
+    const SHADER_TYPE ShaderTypes[] = {SHADER_TYPE_VERTEX, SHADER_TYPE_PIXEL, SHADER_TYPE_COMPUTE};
+    const char*       Sources[]     = {
+        "@vertex fn f32() -> @builtin(position) vec4f { return vec4f(0.0, 0.0, 0.0, 1.0); }",
+        "@fragment fn f32() -> @location(0) vec4f { return vec4f(1.0); }",
+        "@compute @workgroup_size(1) fn f32() {}",
+    };
+    RefCntAutoPtr<IShader> Shaders[3];
+    for (Uint32 i = 0; i < _countof(Shaders); ++i)
+    {
+        ShaderCreateInfo ShaderCI;
+        ShaderCI.Desc           = {"WGSLEntryPointRemapping", ShaderTypes[i]};
+        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_WGSL;
+        ShaderCI.Source         = Sources[i];
+        ShaderCI.EntryPoint     = "f32";
+        pDevice->CreateShader(ShaderCI, &Shaders[i]);
+        ASSERT_NE(Shaders[i], nullptr);
+    }
+
+    GraphicsPipelineStateCreateInfo GraphicsCI;
+    GraphicsCI.PSODesc.Name                                  = "WGSLEntryPointRemapping - Graphics";
+    GraphicsCI.GraphicsPipeline.NumRenderTargets             = 1;
+    GraphicsCI.GraphicsPipeline.RTVFormats[0]                = pEnv->GetSwapChain()->GetDesc().ColorBufferFormat;
+    GraphicsCI.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    GraphicsCI.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+    GraphicsCI.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+    GraphicsCI.pVS                                           = Shaders[0];
+    GraphicsCI.pPS                                           = Shaders[1];
+
+    RefCntAutoPtr<IPipelineState> pGraphicsPSO;
+    pDevice->CreateGraphicsPipelineState(GraphicsCI, &pGraphicsPSO);
+    ASSERT_NE(pGraphicsPSO, nullptr);
+    EXPECT_EQ(pGraphicsPSO->GetStatus(), PIPELINE_STATE_STATUS_READY);
+
+    ComputePipelineStateCreateInfo ComputeCI;
+    ComputeCI.PSODesc.Name         = "WGSLEntryPointRemapping - Compute";
+    ComputeCI.PSODesc.PipelineType = PIPELINE_TYPE_COMPUTE;
+    ComputeCI.pCS                  = Shaders[2];
+
+    RefCntAutoPtr<IPipelineState> pComputePSO;
+    pDevice->CreateComputePipelineState(ComputeCI, &pComputePSO);
+    ASSERT_NE(pComputePSO, nullptr);
+    EXPECT_EQ(pComputePSO->GetStatus(), PIPELINE_STATE_STATUS_READY);
+}
+
 } // namespace

@@ -84,6 +84,7 @@ public:
         const SHADER_TYPE       Type;
         ShaderWebGPUImpl* const pShader;
         std::string             PatchedWGSL;
+        std::string             PatchedEntryPoint;
 
         // Per-stage specialization constant entries, built from user input
         // and WGSL override reflection during InitializePipeline().
@@ -100,6 +101,11 @@ public:
         const std::string& GetWGSL() const
         {
             return PatchedWGSL.empty() ? pShader->GetWGSL() : PatchedWGSL;
+        }
+
+        const char* GetEntryPoint() const
+        {
+            return PatchedEntryPoint.empty() ? pShader->GetEntryPoint() : PatchedEntryPoint.c_str();
         }
 
         friend SHADER_TYPE GetShaderStageType(const ShaderStageInfo& Stage) { return Stage.Type; }

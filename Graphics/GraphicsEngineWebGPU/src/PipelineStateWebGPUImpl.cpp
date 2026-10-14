@@ -342,7 +342,8 @@ void PipelineStateWebGPUImpl::RemapOrVerifyShaderResources(
 
         if (!bVerifyOnly)
         {
-            PatchedWGSL = RemapWGSLResourceBindings(pShader->GetWGSL(), ResMapping, pShader->GetEmulatedArrayIndexSuffix(), pShader->GetEntryPoint());
+            PatchedWGSL = RemapWGSLResourceBindings(pShader->GetWGSL(), ResMapping, pShader->GetEmulatedArrayIndexSuffix(),
+                                                    pShader->GetEntryPoint(), &ShaderStage.PatchedEntryPoint);
             if (PatchedWGSL.empty())
             {
                 LOG_ERROR_AND_THROW("Failed to remap resources for shader '", pShader->GetDesc().Name,
@@ -537,7 +538,7 @@ void PipelineStateWebGPUImpl::InitializeWebGPURenderPipeline(const TShaderStages
             case SHADER_TYPE_VERTEX:
                 VERIFY(wgpuRenderPipelineDesc.vertex.module == nullptr, "Only one vertex shader is allowed");
                 wgpuRenderPipelineDesc.vertex.module        = wgpuShaderModules[ShaderIdx].Get();
-                wgpuRenderPipelineDesc.vertex.entryPoint    = GetWGPUStringView(Stage.pShader->GetEntryPoint());
+                wgpuRenderPipelineDesc.vertex.entryPoint    = GetWGPUStringView(Stage.GetEntryPoint());
                 wgpuRenderPipelineDesc.vertex.constantCount = Stage.SpecConstEntries.size();
                 wgpuRenderPipelineDesc.vertex.constants     = Stage.SpecConstEntries.empty() ? nullptr : Stage.SpecConstEntries.data();
                 break;
@@ -545,7 +546,7 @@ void PipelineStateWebGPUImpl::InitializeWebGPURenderPipeline(const TShaderStages
             case SHADER_TYPE_PIXEL:
                 VERIFY(wgpuFragmentState.module == nullptr, "Only one vertex shader is allowed");
                 wgpuFragmentState.module        = wgpuShaderModules[ShaderIdx].Get();
-                wgpuFragmentState.entryPoint    = GetWGPUStringView(Stage.pShader->GetEntryPoint());
+                wgpuFragmentState.entryPoint    = GetWGPUStringView(Stage.GetEntryPoint());
                 wgpuFragmentState.constantCount = Stage.SpecConstEntries.size();
                 wgpuFragmentState.constants     = Stage.SpecConstEntries.empty() ? nullptr : Stage.SpecConstEntries.data();
                 wgpuRenderPipelineDesc.fragment = &wgpuFragmentState;
@@ -737,7 +738,7 @@ void PipelineStateWebGPUImpl::InitializeWebGPUComputePipeline(const TShaderStage
     WGPUComputePipelineDescriptor wgpuComputePipelineDesc{};
     wgpuComputePipelineDesc.label              = GetWGPUStringView(m_Desc.Name);
     wgpuComputePipelineDesc.compute.module     = wgpuShaderModule.Get();
-    wgpuComputePipelineDesc.compute.entryPoint = GetWGPUStringView(pShaderWebGPU->GetEntryPoint());
+    wgpuComputePipelineDesc.compute.entryPoint = GetWGPUStringView(ShaderStages[0].GetEntryPoint());
     wgpuComputePipelineDesc.layout             = m_PipelineLayout.GetWebGPUPipelineLayout();
 
     const std::vector<WGPUConstantEntry>& SpecConstEntries = ShaderStages[0].SpecConstEntries;
