@@ -542,6 +542,7 @@ std::string RemapWGSLResourceBindings(const std::string&         WGSL,
     }
 
     std::unordered_map<tint::BindingPoint, tint::BindingPoint> BindingPoints;
+    WGSLShaderReflection                                       RemappedReflection;
 
     tint::inspector::Inspector Inspector{Program};
     const auto                 EntryPoints = Inspector.GetEntryPoints();
@@ -555,6 +556,15 @@ std::string RemapWGSLResourceBindings(const std::string&         WGSL,
         if (EntryPoint != nullptr && EP.name != EntryPoint)
             continue;
 
+        // Capture names before Tint's IR and WGSL writers can rename them. IDs
+        // remain stable, including implicitly assigned IDs and workgroup-size overrides.
+        for (const auto& Override : EP.overrides)
+        {
+            const auto It = Reflection.SpecializationConstants.find(Override.id.value);
+            RemappedReflection.SpecializationConstants.emplace(Override.id.value,
+                                                               It != Reflection.SpecializationConstants.end() ? It->second : Override.name);
+        }
+
         // Bindings may be shared by resources in separate entry points, but
         // resources used by the same entry point need distinct destinations.
         std::unordered_map<tint::BindingPoint, tint::BindingPoint> Destinations;
@@ -564,9 +574,9 @@ std::string RemapWGSLResourceBindings(const std::string&         WGSL,
 
             // Original names take precedence over generated identifiers. Fall back
             // to the legacy name rules for native WGSL and older shader archives.
-            const auto*        SourceResource = Reflection.Find(Binding.bind_group, Binding.binding);
-            const std::string& ResourceName   = SourceResource != nullptr ? SourceResource->Name : Binding.variable_name;
-            auto               DstBindigIt    = ResMapping.find(ResourceName);
+            const auto* SourceResource = Reflection.Find(Binding.bind_group, Binding.binding);
+            std::string ResourceName   = SourceResource != nullptr ? SourceResource->Name : Binding.variable_name;
+            auto        DstBindigIt    = ResMapping.find(ResourceName);
             if (EmulatedArrayIndexSuffix != nullptr && DstBindigIt == ResMapping.end())
             {
                 DstBindigIt = FindResourceAsArrayElement(ResMapping, EmulatedArrayIndexSuffix, ResourceName, ArrayIndex);
@@ -582,6 +592,8 @@ std::string RemapWGSLResourceBindings(const std::string&         WGSL,
                     {
                         DstBindigIt = FindResourceAsArrayElement(ResMapping, EmulatedArrayIndexSuffix, AltName, ArrayIndex);
                     }
+                    if (DstBindigIt != ResMapping.end())
+                        ResourceName = AltName;
                 }
             }
 
@@ -613,6 +625,17 @@ std::string RemapWGSLResourceBindings(const std::string&         WGSL,
                     LOG_ERROR_MESSAGE("Resource binding collision for variable '", ResourceName, "' in entry point '", EP.name, "'");
                     return {};
                 }
+
+                // Native WGSL has no input metadata. Save the name used by the
+                // application, including an emulated array element's full suffix.
+                auto NameInsertion = RemappedReflection.Resources.emplace(
+                    WGSLShaderReflection::BindingPoint{DstPoint.group, DstPoint.binding}, WGSLShaderReflection::Resource{});
+                if (!NameInsertion.second && NameInsertion.first->second.Name != ResourceName)
+                {
+                    LOG_ERROR_MESSAGE("Conflicting resource names at remapped binding ", DstPoint.binding, " in group ", DstPoint.group);
+                    return {};
+                }
+                NameInsertion.first->second.Name = std::move(ResourceName);
             }
             else
             {
@@ -693,12 +716,11 @@ std::string RemapWGSLResourceBindings(const std::string&         WGSL,
 
     // Tint does not preserve comments. Carry reflection across the rewrite using
     // the same binding-point mapping as the shader, including emulated arrays.
-    WGSLShaderReflection RemappedReflection;
     for (auto& Entry : Reflection.Resources)
     {
         auto It = BindingPoints.find(tint::BindingPoint{Entry.first.Group, Entry.first.Binding});
         if (It != BindingPoints.end())
-            RemappedReflection.Resources.emplace(WGSLShaderReflection::BindingPoint{It->second.group, It->second.binding}, std::move(Entry.second));
+            RemappedReflection.Resources[{It->second.group, It->second.binding}] = std::move(Entry.second);
     }
     AppendWGSLShaderReflection(PatchedWGSL, RemappedReflection);
 

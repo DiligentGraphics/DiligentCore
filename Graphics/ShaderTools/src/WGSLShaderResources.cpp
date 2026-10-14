@@ -911,12 +911,19 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
     ResourceNamesPoolSize += strlen(ShaderName) + 1;
     ResourceNamesPoolSize += strlen(EntryPoint) + 1;
 
+    // Keep the source name for application lookup, but use Tint's current ID and
+    // is_id_specified flag when addressing the override in the generated WGSL.
+    const auto GetOverrideName = [&SourceReflection](const tint::inspector::Override& Override) -> const std::string& {
+        const auto It = SourceReflection.SpecializationConstants.find(Override.id.value);
+        return It != SourceReflection.SpecializationConstants.end() ? It->second : Override.name;
+    };
+
     // Count override constants (specialization constants)
     const auto& Overrides        = EntryPoints[EntryPointIdx].overrides;
     Uint32      NumSpecConstants = static_cast<Uint32>(Overrides.size());
     for (const tint::inspector::Override& Override : Overrides)
     {
-        ResourceNamesPoolSize += Override.name.length() + 1;
+        ResourceNamesPoolSize += GetOverrideName(Override).length() + 1;
     }
 
     // Resource names pool is only needed to facilitate string allocation.
@@ -1014,7 +1021,7 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
         Uint32 SpecConstIdx = 0;
         for (const tint::inspector::Override& Override : Overrides)
         {
-            const char*            SCName = ResourceNamesPool.CopyString(Override.name);
+            const char*            SCName = ResourceNamesPool.CopyString(GetOverrideName(Override));
             SHADER_CODE_BASIC_TYPE SCType = TintOverrideTypeToShaderCodeBasicType(Override.type);
             new (&GetSpecConstant(SpecConstIdx++)) WGSLSpecializationConstantAttribs{SCName, Override.id.value, SCType, Override.is_id_specified};
         }

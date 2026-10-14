@@ -53,6 +53,10 @@ struct WGSLShaderReflection
     };
     std::map<BindingPoint, Resource> Resources;
 
+    // Tint preserves override IDs through the IR rewrite, but may rename their
+    // identifiers. Keep the application-facing names independently of those names.
+    std::map<Uint32, std::string> SpecializationConstants;
+
     Resource* Find(Uint32 Group, Uint32 Binding)
     {
         auto It = Resources.find({Group, Binding});

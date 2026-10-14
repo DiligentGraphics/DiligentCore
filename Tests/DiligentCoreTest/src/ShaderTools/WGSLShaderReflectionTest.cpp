@@ -82,7 +82,7 @@ WGSLShaderReflection MakeReferenceReflection()
 
 constexpr char ReferencePayload[] =
     "1\n"
-    "0 9 4342 1\n"
+    "0 0 9 4342 1\n"
     "128 2\n"
     "76 56 5 0 0 0 16 3 2\n"
     "73 53 5 0 0 0 0 0 2\n"
@@ -90,10 +90,10 @@ constexpr char ReferencePayload[] =
     "79 - 2 7 1 4 16 2 0\n"
     "6d 666c6f6174327833 3 11 2 3 32 0 0\n"
     "7a 666c6f6174337832 4 11 3 2 96 0 0\n"
-    "1 3 - 1\n"
+    "0 1 3 - 1\n"
     "0 0\n"
-    "1 7 2a2f0a 0\n"
-    "2 0 41 0\n";
+    "0 1 7 2a2f0a 0\n"
+    "0 2 0 41 0\n";
 
 void ExpectVariableEqual(const ShaderCodeVariableDescX& Actual, const ShaderCodeVariableDescX& Expected)
 {
@@ -117,6 +117,7 @@ void ExpectVariableEqual(const ShaderCodeVariableDescX& Actual, const ShaderCode
 
 void ExpectReflectionEqual(const WGSLShaderReflection& Actual, const WGSLShaderReflection& Expected)
 {
+    EXPECT_EQ(Actual.SpecializationConstants, Expected.SpecializationConstants);
     ASSERT_EQ(Actual.Resources.size(), Expected.Resources.size());
     for (const auto& Entry : Expected.Resources)
     {
@@ -151,10 +152,12 @@ void CheckRoundTrip(const WGSLShaderReflection& Expected)
 
 void ExpectRejected(const std::string& Text)
 {
-    const auto  Expected = MakeReferenceReflection();
-    auto        Actual   = MakeReferenceReflection();
-    const auto* Resource = Actual.Find(0, 9);
-    const auto* Buffer   = Resource->UniformBuffer.get();
+    auto Expected                       = MakeReferenceReflection();
+    auto Actual                         = MakeReferenceReflection();
+    Expected.SpecializationConstants[7] = "original";
+    Actual.SpecializationConstants      = Expected.SpecializationConstants;
+    const auto* Resource                = Actual.Find(0, 9);
+    const auto* Buffer                  = Resource->UniformBuffer.get();
     EXPECT_FALSE(ParseWGSLShaderReflection(Text, Actual));
     // Every failure must preserve both the contents and ownership of the result.
     ASSERT_EQ(Actual.Find(0, 9), Resource);
@@ -162,13 +165,13 @@ void ExpectRejected(const std::string& Text)
     ExpectReflectionEqual(Actual, Expected);
 }
 
-using Tokens = std::array<std::string, 16>;
+using Tokens = std::array<std::string, 17>;
 
 Tokens MakeValidTokens()
 {
-    // Version; resource group/binding/name/flag; buffer size/count;
+    // Version; record type; resource group/binding/name/flag; buffer size/count;
     // variable name/type/class/basic type/rows/columns/offset/array size/member count.
-    return {{"1", "0", "1", "52", "1", "64", "1", "56", "54", "1", "11", "1", "1", "0", "0", "0"}};
+    return {{"1", "0", "0", "1", "52", "1", "64", "1", "56", "54", "1", "11", "1", "1", "0", "0", "0"}};
 }
 
 std::string JoinTokens(const Tokens& Fields)
@@ -203,9 +206,11 @@ TEST(WGSLShaderReflection, MissingOrEmptyMetadataClearsOutput)
     for (const auto& Text : Inputs)
     {
         SCOPED_TRACE(Text);
-        auto Reflection = MakeReferenceReflection();
+        auto Reflection                       = MakeReferenceReflection();
+        Reflection.SpecializationConstants[1] = "previous";
         ASSERT_TRUE(ParseWGSLShaderReflection(Text, Reflection));
         EXPECT_TRUE(Reflection.Resources.empty());
+        EXPECT_TRUE(Reflection.SpecializationConstants.empty());
     }
 }
 
@@ -222,7 +227,7 @@ TEST(WGSLShaderReflection, ExactSerialization)
     RepeatedNames.Resources[{2, 7}].Name = "A";
     RepeatedNames.Resources[{1, 7}].Name = "A";
     RepeatedNames.Resources[{1, 2}].Name = "A";
-    EXPECT_EQ(Serialize(RepeatedNames), "\n" + MakeMetadata("1\n1 2 41 0\n1 7 41 0\n2 7 41 0\n") + '\n');
+    EXPECT_EQ(Serialize(RepeatedNames), "\n" + MakeMetadata("1\n0 1 2 41 0\n0 1 7 41 0\n0 2 7 41 0\n") + '\n');
     CheckRoundTrip(RepeatedNames);
 }
 
@@ -240,7 +245,7 @@ TEST(WGSLShaderReflection, ParseKnownMetadataAndOwnStrings)
 TEST(WGSLShaderReflection, SuccessfulParseReplacesPreviousReflection)
 {
     auto Reflection = MakeReferenceReflection();
-    ASSERT_TRUE(ParseWGSLShaderReflection(MakeMetadata("1 10 20 41 0"), Reflection));
+    ASSERT_TRUE(ParseWGSLShaderReflection(MakeMetadata("1 0 10 20 41 0"), Reflection));
     ASSERT_EQ(Reflection.Resources.size(), 1u);
     const auto* Resource = Reflection.Find(10, 20);
     ASSERT_NE(Resource, nullptr);
@@ -283,7 +288,7 @@ TEST(WGSLShaderReflection, StringsRoundTrip)
     Buffer->AddVariable(ShaderCodeVariableDescX{});
     Buffer->GetVariable(0).Name     = nullptr;
     Buffer->GetVariable(0).TypeName = nullptr;
-    EXPECT_EQ(Serialize(NullNames), "\n" + MakeMetadata("1\n0 0 - 1\n0 1\n- - 0 0 0 0 0 0 0\n") + '\n');
+    EXPECT_EQ(Serialize(NullNames), "\n" + MakeMetadata("1\n0 0 0 - 1\n0 1\n- - 0 0 0 0 0 0 0\n") + '\n');
     CheckRoundTrip(NullNames);
 }
 
@@ -296,7 +301,7 @@ TEST(WGSLShaderReflection, AllHexDigitInputs)
         {
             SCOPED_TRACE(::testing::Message{} << "Byte " << Ch << ", nibble " << Position);
             auto Fields         = MakeValidTokens();
-            Fields[3][Position] = static_cast<char>(Ch);
+            Fields[4][Position] = static_cast<char>(Ch);
             WGSLShaderReflection Reflection;
             const bool           IsHex = Digits.find(static_cast<char>(Ch)) != std::string::npos;
             ASSERT_EQ(ParseWGSLShaderReflection(JoinTokens(Fields), Reflection), IsHex);
@@ -324,7 +329,7 @@ TEST(WGSLShaderReflection, Uint32Boundaries)
     {
         SCOPED_TRACE(Value);
         auto Fields = MakeValidTokens();
-        for (size_t Field : {1u, 2u, 5u, 13u, 14u})
+        for (size_t Field : {2u, 3u, 6u, 14u, 15u})
             Fields[Field] = std::to_string(Value);
         WGSLShaderReflection Reflection;
         ASSERT_TRUE(ParseWGSLShaderReflection(JoinTokens(Fields), Reflection));
@@ -337,7 +342,7 @@ TEST(WGSLShaderReflection, Uint32Boundaries)
         EXPECT_EQ(Var.ArraySize, Value);
         // Compare against independent decimal formatting as well as re-parsing.
         const std::string Number = std::to_string(Value);
-        EXPECT_EQ(Serialize(Reflection), "\n" + MakeMetadata("1\n" + Number + ' ' + Number + " 52 1\n" + Number + " 1\n56 54 1 11 1 1 " + Number + ' ' + Number + " 0\n") + '\n');
+        EXPECT_EQ(Serialize(Reflection), "\n" + MakeMetadata("1\n0 " + Number + ' ' + Number + " 52 1\n" + Number + " 1\n56 54 1 11 1 1 " + Number + ' ' + Number + " 0\n") + '\n');
         CheckRoundTrip(Reflection);
     }
 }
@@ -348,8 +353,8 @@ TEST(WGSLShaderReflection, AllUint8Dimensions)
     {
         SCOPED_TRACE(Value);
         auto Fields = MakeValidTokens();
-        Fields[11]  = std::to_string(Value);
-        Fields[12]  = std::to_string(255 - Value);
+        Fields[12]  = std::to_string(Value);
+        Fields[13]  = std::to_string(255 - Value);
         WGSLShaderReflection Reflection;
         ASSERT_TRUE(ParseWGSLShaderReflection(JoinTokens(Fields), Reflection));
         const auto& Var = Reflection.Find(0, 1)->UniformBuffer->GetVariable(0);
@@ -367,8 +372,8 @@ TEST(WGSLShaderReflection, AllVariableClassesAndBasicTypes)
         {
             SCOPED_TRACE(::testing::Message{} << "Class " << Class << ", type " << Type);
             auto Fields = MakeValidTokens();
-            Fields[9]   = std::to_string(Class);
-            Fields[10]  = std::to_string(Type);
+            Fields[10]  = std::to_string(Class);
+            Fields[11]  = std::to_string(Type);
             WGSLShaderReflection Reflection;
             ASSERT_TRUE(ParseWGSLShaderReflection(JoinTokens(Fields), Reflection));
             const auto& Var = Reflection.Find(0, 1)->UniformBuffer->GetVariable(0);
@@ -393,7 +398,7 @@ TEST(WGSLShaderReflection, WhitespaceAndNumericSpelling)
         EXPECT_EQ(Serialize(Reflection), "\n" + MakeMetadata(ReferencePayload) + '\n');
     }
     auto Fields = MakeValidTokens();
-    for (size_t Field : {0u, 1u, 2u, 4u, 5u, 6u, 9u, 10u, 11u, 12u, 13u, 14u, 15u})
+    for (size_t Field : {0u, 1u, 2u, 3u, 5u, 6u, 7u, 10u, 11u, 12u, 13u, 14u, 15u, 16u})
         Fields[Field] = "+000" + Fields[Field];
     WGSLShaderReflection Reflection;
     ASSERT_TRUE(ParseWGSLShaderReflection(JoinTokens(Fields), Reflection));
@@ -412,6 +417,7 @@ TEST(WGSLShaderReflection, RejectMalformedEnvelope)
         MakeMetadata(" \t\n"),
         MakeMetadata("0"),
         MakeMetadata("2"),
+        MakeMetadata("3"),
         MakeMetadata("4294967295"),
         MakeMetadata("1x"),
         MakeMetadata("1") + MakeMetadata("1"),
@@ -429,7 +435,7 @@ TEST(WGSLShaderReflection, RejectMalformedEnvelope)
 TEST(WGSLShaderReflection, RejectInvalidNumberInEveryField)
 {
     const std::string BadNumbers[] = {"", "+", "-", "-0", "-1", "++1", "+-1", "0x1", "1.0", "1e0", "1x", "4294967296", "18446744073709551616", std::string(128, '9'), std::string{"1\0", 2}};
-    for (size_t Field : {0u, 1u, 2u, 4u, 5u, 6u, 9u, 10u, 11u, 12u, 13u, 14u, 15u})
+    for (size_t Field : {0u, 1u, 2u, 3u, 5u, 6u, 7u, 10u, 11u, 12u, 13u, 14u, 15u, 16u})
     {
         for (const auto& Bad : BadNumbers)
         {
@@ -444,18 +450,20 @@ TEST(WGSLShaderReflection, RejectInvalidNumberInEveryField)
 TEST(WGSLShaderReflection, RejectOutOfRangeFields)
 {
     const std::pair<size_t, unsigned> InvalidValues[] = {
-        {4, 2},
-        {4, 255},
-        {9, SHADER_CODE_VARIABLE_CLASS_COUNT},
-        {9, 255},
-        {9, 256},
-        {10, SHADER_CODE_BASIC_TYPE_COUNT},
+        {1, 2},
+        {1, 255},
+        {5, 2},
+        {5, 255},
+        {10, SHADER_CODE_VARIABLE_CLASS_COUNT},
         {10, 255},
         {10, 256},
+        {11, SHADER_CODE_BASIC_TYPE_COUNT},
+        {11, 255},
         {11, 256},
-        {11, 65535},
         {12, 256},
         {12, 65535},
+        {13, 256},
+        {13, 65535},
     };
     for (const auto& Entry : InvalidValues)
     {
@@ -469,7 +477,7 @@ TEST(WGSLShaderReflection, RejectOutOfRangeFields)
 TEST(WGSLShaderReflection, RejectInvalidStringInEveryField)
 {
     const std::string BadStrings[] = {"", "0", "123", "zz", "4g", "g4", "AF", "--", "-0", "00", "410042", "41-42", std::string{"41\0ff", 5}};
-    for (size_t Field : {3u, 7u, 8u})
+    for (size_t Field : {4u, 8u, 9u})
     {
         for (const auto& Bad : BadStrings)
         {
@@ -493,7 +501,7 @@ TEST(WGSLShaderReflection, RejectTruncatedInputAtEveryByte)
     // Keep the closing delimiter, but truncate inside a required resource,
     // buffer, variable, or nested member record. This exercises the reader's
     // bounds independently of the initial check for a closing comment.
-    const std::string    Payload = "1\n0 0 41 1\n64 1\n42 54 5 0 0 0 0 0 1\n43 - 1 11 1 1 0 0 0";
+    const std::string    Payload = "1\n0 0 0 41 1\n64 1\n42 54 5 0 0 0 0 0 1\n43 - 1 11 1 1 0 0 0";
     WGSLShaderReflection Complete;
     ASSERT_TRUE(ParseWGSLShaderReflection(MakeMetadata(Payload), Complete));
     for (size_t Length = 3; Length < Payload.size(); ++Length)
@@ -508,23 +516,23 @@ TEST(WGSLShaderReflection, RejectMismatchedCounts)
     for (const char* Count : {"0", "2", "4294967295"})
     {
         auto Fields = MakeValidTokens();
-        Fields[6]   = Count;
+        Fields[7]   = Count;
         ExpectRejected(JoinTokens(Fields));
     }
     for (const char* Count : {"1", "2", "4294967295"})
     {
         auto Fields = MakeValidTokens();
-        Fields[15]  = Count;
+        Fields[16]  = Count;
         ExpectRejected(JoinTokens(Fields));
     }
-    ExpectRejected(MakeMetadata("1\n0 0 41 1\n64 0\n42 - 1 11 1 1 0 0 0\n"));
+    ExpectRejected(MakeMetadata("1\n0 0 0 41 1\n64 0\n42 - 1 11 1 1 0 0 0\n"));
 }
 
 TEST(WGSLShaderReflection, RejectDuplicateBindings)
 {
-    ExpectRejected(MakeMetadata("1\n0 0 41 0\n0 0 42 0\n"));
-    ExpectRejected(MakeMetadata("1\n0 0 41 1\n0 0\n0 0 41 0\n"));
-    ExpectRejected(MakeMetadata("1\n0 0 41 0\n1 0 42 0\n0 0 43 0\n"));
+    ExpectRejected(MakeMetadata("1\n0 0 0 41 0\n0 0 0 42 0\n"));
+    ExpectRejected(MakeMetadata("1\n0 0 0 41 1\n0 0\n0 0 0 41 0\n"));
+    ExpectRejected(MakeMetadata("1\n0 0 0 41 0\n0 1 0 42 0\n0 0 0 43 0\n"));
 }
 
 TEST(WGSLShaderReflection, NestingLimit)
@@ -532,7 +540,7 @@ TEST(WGSLShaderReflection, NestingLimit)
     for (unsigned Depth : {1u, 63u, 64u, 65u})
     {
         SCOPED_TRACE(Depth);
-        std::string Payload = "1\n0 0 41 1\n16 1\n";
+        std::string Payload = "1\n0 0 0 41 1\n16 1\n";
         for (unsigned Level = 0; Level < Depth; ++Level)
             Payload += Level + 1 == Depth ? "78 - 1 11 1 1 0 0 0\n" : "73 53 5 0 0 0 0 0 1\n";
         if (Depth > 64)
@@ -604,6 +612,62 @@ TEST(WGSLShaderReflection, GeneratedLayoutsRoundTrip)
             }
         }
         CheckRoundTrip(Reflection);
+    }
+}
+
+
+TEST(WGSLShaderReflection, SpecializationConstants)
+{
+    WGSLShaderReflection Reflection;
+    Reflection.Resources[{2, 3}].Name         = "R";
+    Reflection.SpecializationConstants[0]     = "A";
+    Reflection.SpecializationConstants[65535] = "*/\n";
+    const std::string Expected                = "\n" + MakeMetadata("1\n0 2 3 52 0\n1 0 41 \n1 65535 2a2f0a \n") + '\n';
+    EXPECT_EQ(Serialize(Reflection), Expected);
+
+    WGSLShaderReflection Parsed;
+    ASSERT_TRUE(ParseWGSLShaderReflection(Expected, Parsed));
+    ExpectReflectionEqual(Parsed, Reflection);
+    CheckRoundTrip(Reflection);
+
+    // Overrides without resources still require a metadata payload.
+    Reflection.Resources.clear();
+    CheckRoundTrip(Reflection);
+    EXPECT_FALSE(Serialize(Reflection).empty());
+
+    // Exercise both record types with nested buffer metadata, and verify that
+    // reading resource-only metadata clears previous specialization names.
+    auto Mixed                    = MakeReferenceReflection();
+    Mixed.SpecializationConstants = Reflection.SpecializationConstants;
+    CheckRoundTrip(Mixed);
+    ASSERT_TRUE(ParseWGSLShaderReflection(MakeMetadata(ReferencePayload), Parsed));
+    EXPECT_TRUE(Parsed.SpecializationConstants.empty());
+    ExpectReflectionEqual(Parsed, MakeReferenceReflection());
+}
+
+TEST(WGSLShaderReflection, RejectMalformedSpecializationConstants)
+{
+    for (const char* Payload : {
+             "1 2",                     // Unknown record kind.
+             "1 x",                     // Invalid record kind.
+             "1 4294967296",            // Record kind overflow.
+             "1 1",                     // Missing ID and name.
+             "1 1 0",                   // Missing name.
+             "1 1 -1 41",               // Negative ID.
+             "1 1 65536 41",            // Outside the WGSL override ID range.
+             "1 1 4294967296 41",       // ID overflow.
+             "1 1 1x 41",               // Invalid ID.
+             "1 1 0 -",                 // Empty name.
+             "1 1 0 0",                 // Truncated hex pair.
+             "1 1 0 00",                // Embedded null.
+             "1 1 0 gg",                // Invalid hex.
+             "1 1 0 41 1 0 42",         // Duplicate override IDs.
+             "1 0 1 2 52 0 0 1 2 53 0", // Duplicate resource bindings.
+             "1 1 0 41 0",              // Truncated resource following an override.
+         })
+    {
+        SCOPED_TRACE(Payload);
+        ExpectRejected(MakeMetadata(Payload));
     }
 }
 

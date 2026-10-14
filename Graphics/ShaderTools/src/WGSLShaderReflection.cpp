@@ -195,13 +195,15 @@ bool ReadVariable(ReflectionReader& Reader, ShaderCodeVariableDescX& Var, Uint32
 
 void AppendWGSLShaderReflection(std::string& WGSL, const WGSLShaderReflection& Reflection)
 {
-    if (Reflection.Resources.empty())
+    if (Reflection.Resources.empty() && Reflection.SpecializationConstants.empty())
         return;
     WGSL += '\n';
     WGSL += ReflectionMarker;
     WGSL += "1\n";
+    // Each record starts with its type: 0 for a resource, 1 for an override.
     for (const auto& Entry : Reflection.Resources)
     {
+        WriteNumber(WGSL, 0);
         const auto& Resource = Entry.second;
         WriteNumber(WGSL, Entry.first.Group);
         WriteNumber(WGSL, Entry.first.Binding);
@@ -216,6 +218,13 @@ void AppendWGSLShaderReflection(std::string& WGSL, const WGSLShaderReflection& R
                 WriteVariable(WGSL, Buffer.GetVariable(i));
         }
     }
+    for (const auto& Entry : Reflection.SpecializationConstants)
+    {
+        WriteNumber(WGSL, 1);
+        WriteNumber(WGSL, Entry.first);
+        WriteString(WGSL, Entry.second.c_str());
+        WGSL += '\n';
+    }
     WGSL += "*/\n";
 }
 
@@ -224,7 +233,7 @@ bool ParseWGSLShaderReflection(const std::string& WGSL, WGSLShaderReflection& Re
     const size_t Start = WGSL.find(ReflectionMarker);
     if (Start == std::string::npos)
     {
-        Reflection.Resources.clear();
+        Reflection = {};
         return true;
     }
     const size_t End = WGSL.find("*/", Start);
@@ -239,6 +248,19 @@ bool ParseWGSLShaderReflection(const std::string& WGSL, WGSLShaderReflection& Re
     WGSLShaderReflection Parsed;
     while (!Reader.IsAtEnd())
     {
+        Uint32 RecordType = 0;
+        if (!Reader.ReadNumber(RecordType) || RecordType > 1)
+            return false;
+        if (RecordType == 1)
+        {
+            Uint32      Id = 0;
+            std::string Name;
+            if (!Reader.ReadNumber(Id) || Id > 65535 || !Reader.ReadString(Name) || Name.empty() ||
+                !Parsed.SpecializationConstants.emplace(Id, std::move(Name)).second)
+                return false;
+            continue;
+        }
+
         WGSLShaderReflection::BindingPoint Binding;
         WGSLShaderReflection::Resource     Resource;
         Uint32                             HasBuffer = 0;

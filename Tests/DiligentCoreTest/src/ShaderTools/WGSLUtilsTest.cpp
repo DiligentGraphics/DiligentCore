@@ -689,4 +689,108 @@ TEST(WGSLUtils, RemapRejectsInvalidResourceMappings)
     }
 }
 
+
+TEST(WGSLUtils, RemapPreservesNativeNames)
+{
+    // These legal WGSL identifiers shadow predeclared types, so Tint renames them.
+    const std::string         WGSL = R"(
+struct Uniforms { value: u32 }
+@group(0) @binding(0) var<uniform> f32: Uniforms;
+@group(0) @binding(1) var<storage, read_write> vec4f: array<u32>;
+override texture_storage_2d_array: u32 = 1;
+@id(65535) override vec4u: u32 = 2;
+@compute @workgroup_size(texture_storage_2d_array) fn main() {
+    vec4f[0] = f32.value + texture_storage_2d_array + vec4u;
+}
+@group(0) @binding(0) var<storage, read_write> OtherOutput: array<u32>;
+override OtherValue: u32 = 3;
+@compute @workgroup_size(1) fn other() { OtherOutput[0] = OtherValue; }
+)";
+    const WGSLShaderResources Original{GetRawAllocator(), WGSL, SHADER_SOURCE_LANGUAGE_WGSL,
+                                       "Native names", nullptr, "main", nullptr, true, nullptr};
+    ASSERT_EQ(Original.GetNumSpecConstants(), 2u);
+
+    std::string Current = WGSL;
+    for (Uint32 Pass = 0; Pass < 3; ++Pass)
+    {
+        SCOPED_TRACE(Pass);
+        Current = RemapWGSLResourceBindings(Current, {{"f32", {1, 2 + Pass}}, {"vec4f", {2, 3 + Pass}}}, nullptr, "main");
+        ASSERT_FALSE(Current.empty());
+        const WGSLShaderResources Remapped{GetRawAllocator(), Current, SHADER_SOURCE_LANGUAGE_WGSL,
+                                           "Remapped native names", nullptr, "main", nullptr, true, nullptr};
+        ASSERT_EQ(Remapped.GetNumUBs(), 1u);
+        ASSERT_EQ(Remapped.GetNumSBs(), 1u);
+        EXPECT_STREQ(Remapped.GetUB(0).Name, "f32");
+        EXPECT_EQ(Remapped.GetUB(0).BindGroup, 1u);
+        EXPECT_EQ(Remapped.GetUB(0).BindIndex, 2 + Pass);
+        EXPECT_STREQ(Remapped.GetSB(0).Name, "vec4f");
+        EXPECT_EQ(Remapped.GetSB(0).BindGroup, 2u);
+        EXPECT_EQ(Remapped.GetSB(0).BindIndex, 3 + Pass);
+        ASSERT_EQ(Remapped.GetNumSpecConstants(), Original.GetNumSpecConstants());
+        for (Uint32 i = 0; i < Original.GetNumSpecConstants(); ++i)
+        {
+            const auto& Before = Original.GetSpecConstant(i);
+            bool        Found  = false;
+            for (Uint32 j = 0; j < Remapped.GetNumSpecConstants(); ++j)
+            {
+                const auto& After = Remapped.GetSpecConstant(j);
+                if (After.OverrideId == Before.OverrideId)
+                {
+                    Found = true;
+                    EXPECT_STREQ(After.Name, Before.Name);
+                    EXPECT_EQ(After.GetType(), Before.GetType());
+                    EXPECT_TRUE(After.IsIdSpecified);
+                }
+            }
+            EXPECT_TRUE(Found) << Before.Name;
+        }
+        if (::testing::Test::HasFailure())
+            return;
+    }
+}
+
+
+TEST(WGSLUtils, RemapPreservesNamesAcrossEntryPoints)
+{
+    std::string Current = R"(
+@group(0) @binding(0) var<storage, read_write> f32: array<u32>;
+@group(0) @binding(1) var<storage, read_write> vec4f: array<u32>;
+override texture_storage_2d_array: u32 = 1;
+@compute @workgroup_size(1) fn first() { f32[0] = texture_storage_2d_array; }
+@compute @workgroup_size(1) fn second() { vec4f[0] = texture_storage_2d_array; }
+)";
+    for (Uint32 Pass = 0; Pass < 2; ++Pass)
+    {
+        SCOPED_TRACE(Pass);
+        Current = RemapWGSLResourceBindings(Current, {{"f32", {1, 2}}, {"vec4f", {2, 3}}}, nullptr);
+        ASSERT_FALSE(Current.empty());
+        for (const char* EntryPoint : {"first", "second"})
+        {
+            SCOPED_TRACE(EntryPoint);
+            const WGSLShaderResources Resources{GetRawAllocator(), Current, SHADER_SOURCE_LANGUAGE_WGSL,
+                                                "Multiple entry points", nullptr, EntryPoint, nullptr, false, nullptr};
+            ASSERT_EQ(Resources.GetNumSBs(), 1u);
+            EXPECT_STREQ(Resources.GetSB(0).Name, strcmp(EntryPoint, "first") == 0 ? "f32" : "vec4f");
+            ASSERT_EQ(Resources.GetNumSpecConstants(), 1u);
+            EXPECT_STREQ(Resources.GetSpecConstant(0).Name, "texture_storage_2d_array");
+            EXPECT_TRUE(Resources.GetSpecConstant(0).IsIdSpecified);
+        }
+    }
+}
+
+TEST(WGSLUtils, RemapRejectsConflictingResourceNames)
+{
+    const std::string WGSL = R"(
+@group(0) @binding(0) var<storage, read_write> FirstOutput: array<u32>;
+@group(0) @binding(0) var<storage, read_write> SecondOutput: array<u32>;
+@compute @workgroup_size(1) fn first() { FirstOutput[0] = 1; }
+@compute @workgroup_size(1) fn second() { SecondOutput[0] = 2; }
+)";
+    // Binding-point metadata cannot represent different names at one location.
+    // Selecting either entry point is supported; a whole-module rewrite must not
+    // silently publish the first entry point's resource name for the second one.
+    TestingEnvironment::ErrorScope Errors{"Conflicting resource names at remapped binding"};
+    EXPECT_TRUE(RemapWGSLResourceBindings(WGSL, {{"FirstOutput", {1, 0}}, {"SecondOutput", {1, 0}}}, nullptr).empty());
+}
+
 } // namespace

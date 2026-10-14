@@ -3011,4 +3011,125 @@ TEST(ArchiveTest, WGSLEntryPointRemapping)
     }
 }
 
+
+TEST(ArchiveTest, WGSLResourceAndSpecializationNames)
+{
+    GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceInfo().IsWebGPUDevice())
+        GTEST_SKIP() << "WGSL name preservation requires WebGPU";
+
+    IArchiverFactory* pArchiverFactory = pEnv->GetArchiverFactory();
+    if (pArchiverFactory == nullptr)
+        GTEST_SKIP() << "Archiver library is not loaded";
+
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
+    IDeviceContext*                    pContext   = pEnv->GetDeviceContext();
+    ISwapChain*                        pSwapChain = pEnv->GetSwapChain();
+    RefCntAutoPtr<ITestingSwapChain>   pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
+    ASSERT_NE(pTestingSwapChain, nullptr);
+
+    ComputeShaderReference(pSwapChain);
+    pContext->Flush();
+    pContext->InvalidateState();
+
+    SerializationDeviceCreateInfo       SerDeviceCI;
+    RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
+    pArchiverFactory->CreateSerializationDevice(SerDeviceCI, &pSerializationDevice);
+    ASSERT_NE(pSerializationDevice, nullptr);
+
+    // All four application-facing names shadow WGSL predeclared types and are
+    // renamed by Tint. Defaults intentionally produce a different image.
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.Desc           = {"WGSL archive names - CS", SHADER_TYPE_COMPUTE};
+    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_WGSL;
+    ShaderCI.EntryPoint     = "main";
+    ShaderCI.Source         = R"(
+@group(0) @binding(4) var texture_2d: texture_storage_2d<rgba8unorm, write>;
+override vec4f: f32 = -1.0;
+override vec3f: f32 = -1.0;
+@id(65535) override texture_storage_2d_array: f32 = -1.0;
+@compute @workgroup_size(16, 16) fn main(@builtin(global_invocation_id) id: vec3u) {
+    if (any(id.xy >= textureDimensions(texture_2d))) { return; }
+    let uv = vec2<f32>(id.xy % vec2u(256u)) / 256.0;
+    textureStore(texture_2d, id.xy, vec4<f32>(uv.x * vec4f, uv.y * vec3f, uv.x * texture_storage_2d_array, 1.0));
+}
+)";
+    RefCntAutoPtr<IShader> pSerializedCS;
+    pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{ARCHIVE_DEVICE_DATA_FLAG_WEBGPU}, &pSerializedCS);
+    ASSERT_NE(pSerializedCS, nullptr);
+
+    const float                  One          = 1.0f;
+    const float                  Zero         = 0.0f;
+    const SpecializationConstant SpecConsts[] = {
+        {"vec4f", SHADER_TYPE_COMPUTE, sizeof(One), &One},
+        {"vec3f", SHADER_TYPE_COMPUTE, sizeof(One), &One},
+        {"texture_storage_2d_array", SHADER_TYPE_COMPUTE, sizeof(Zero), &Zero},
+    };
+
+    for (Uint32 Pass = 0; Pass < 3; ++Pass)
+    {
+        SCOPED_TRACE(Pass);
+        ComputePipelineStateCreateInfo PsoCI;
+        PsoCI.PSODesc.Name               = "WGSL archive names - PSO";
+        PsoCI.PSODesc.PipelineType       = PIPELINE_TYPE_COMPUTE;
+        PsoCI.pCS                        = pSerializedCS;
+        PsoCI.NumSpecializationConstants = _countof(SpecConsts);
+        PsoCI.pSpecializationConstants   = SpecConsts;
+        PipelineStateArchiveInfo ArchiveInfo;
+        ArchiveInfo.DeviceFlags = ARCHIVE_DEVICE_DATA_FLAG_WEBGPU;
+
+        RefCntAutoPtr<IPipelineState> pSerializedPSO;
+        pSerializationDevice->CreateComputePipelineState(PsoCI, ArchiveInfo, &pSerializedPSO);
+        ASSERT_NE(pSerializedPSO, nullptr);
+        RefCntAutoPtr<IArchiver> pArchiver;
+        pArchiverFactory->CreateArchiver(pSerializationDevice, &pArchiver);
+        ASSERT_NE(pArchiver, nullptr);
+        ASSERT_TRUE(pArchiver->AddPipelineState(pSerializedPSO));
+        RefCntAutoPtr<IDataBlob> pArchive;
+        pArchiver->SerializeToBlob(ContentVersion, &pArchive);
+        ASSERT_NE(pArchive, nullptr);
+
+        RefCntAutoPtr<IDearchiver> pDearchiver;
+        DearchiverCreateInfo       DearchiverCI;
+        pDevice->GetEngineFactory()->CreateDearchiver(DearchiverCI, &pDearchiver);
+        ASSERT_NE(pDearchiver, nullptr);
+        ASSERT_TRUE(pDearchiver->LoadArchive(pArchive, ContentVersion));
+        PipelineStateUnpackInfo UnpackInfo;
+        UnpackInfo.pDevice      = pDevice;
+        UnpackInfo.Name         = PsoCI.PSODesc.Name;
+        UnpackInfo.PipelineType = PIPELINE_TYPE_COMPUTE;
+        RefCntAutoPtr<IPipelineState> pPSO;
+        pDearchiver->UnpackPipelineState(UnpackInfo, &pPSO);
+        ASSERT_NE(pPSO, nullptr);
+        ASSERT_EQ(pPSO->GetStatus(), PIPELINE_STATE_STATUS_READY);
+
+        IShaderResourceVariable* pOutput = pPSO->GetStaticVariableByName(SHADER_TYPE_COMPUTE, "texture_2d");
+        ASSERT_NE(pOutput, nullptr);
+        pOutput->Set(pTestingSwapChain->GetCurrentBackBufferUAV());
+        RefCntAutoPtr<IShaderResourceBinding> pSRB;
+        pPSO->CreateShaderResourceBinding(&pSRB, true);
+        ASSERT_NE(pSRB, nullptr);
+        pContext->SetPipelineState(pPSO);
+        pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        DispatchComputeAttribs Dispatch;
+        Dispatch.ThreadGroupCountX = (pSwapChain->GetDesc().Width + 15) / 16;
+        Dispatch.ThreadGroupCountY = (pSwapChain->GetDesc().Height + 15) / 16;
+        pContext->DispatchCompute(Dispatch);
+        pSwapChain->Present();
+
+        // Re-archive the generated WGSL to verify that another rewrite retains
+        // the original names instead of replacing them with Tint's identifiers.
+        if (Pass < 2)
+        {
+            RefCntAutoPtr<ISerializedPipelineState> pSerialized{pSerializedPSO, IID_SerializedPipelineState};
+            ASSERT_NE(pSerialized, nullptr);
+            ShaderCreateInfo PatchedCI = pSerialized->GetPatchedShaderCreateInfo(ARCHIVE_DEVICE_DATA_FLAG_WEBGPU, 0);
+            pSerializedCS.Release();
+            pSerializationDevice->CreateShader(PatchedCI, ShaderArchiveInfo{ARCHIVE_DEVICE_DATA_FLAG_WEBGPU}, &pSerializedCS);
+            ASSERT_NE(pSerializedCS, nullptr);
+        }
+    }
+}
+
 } // namespace
