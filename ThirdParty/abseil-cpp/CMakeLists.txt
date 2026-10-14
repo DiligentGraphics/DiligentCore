@@ -17,6 +17,8 @@ if(DILIGENT_SANITIZER_COMPILE_OPTIONS)
     add_compile_options(${DILIGENT_SANITIZER_COMPILE_OPTIONS})
 endif()
 
+# Abseil is linked into shared libraries such as the archiver.
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 FetchContent_MakeAvailable(abseil-cpp)
 
 if (PLATFORM_WEB)

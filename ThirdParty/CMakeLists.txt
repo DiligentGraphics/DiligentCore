@@ -117,8 +117,11 @@ if (VULKAN_SUPPORTED OR METAL_SUPPORTED OR WEBGPU_SUPPORTED OR (ARCHIVER_SUPPORT
         set_directory_root_folder("SPIRV-Cross" "DiligentCore/ThirdParty/SPIRV-Cross")
 
         list(APPEND THIRD_PARTY_LIBS spirv-cross-core)
+        # SPIRV-Cross libraries must support the shared memory used by threaded WebAssembly modules.
+        set_targets_emscripten_properties(spirv-cross-core)
         if(SPIRV_CROSS_ENABLE_GLSL)
             list(APPEND THIRD_PARTY_LIBS spirv-cross-glsl)
+            set_targets_emscripten_properties(spirv-cross-glsl)
         endif()
         if (SPIRV_CROSS_ENABLE_MSL)
             list(APPEND THIRD_PARTY_LIBS spirv-cross-msl)

@@ -31,7 +31,8 @@
 #include "DebugUtilities.hpp"
 #include "GraphicsAccessories.hpp"
 
-#define WEBGPU_FORMAT_RANGE_SIZE (WGPUTextureFormat_RGBA16Snorm - WGPUTextureFormat_Undefined + 1)
+// Normalized 16-bit formats precede the compressed formats in the current WebGPU enum.
+#define WEBGPU_FORMAT_RANGE_SIZE (WGPUTextureFormat_ASTC12x12UnormSrgb - WGPUTextureFormat_Undefined + 1)
 
 namespace Diligent
 {
