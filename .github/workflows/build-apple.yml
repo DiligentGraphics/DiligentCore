@@ -57,7 +57,7 @@ jobs:
 
     - name: Set up build environment
       if:   success()
-      uses: DiligentGraphics/github-action/setup-build-env@v27
+      uses: DiligentGraphics/github-action/setup-build-env@v28
       with:
         platform: ${{ matrix.platform }}
 
@@ -71,20 +71,20 @@ jobs:
 
     - name: Configure CMake
       if:   success()
-      uses: DiligentGraphics/github-action/configure-cmake@v27
+      uses: DiligentGraphics/github-action/configure-cmake@v28
       with:
         build-type: ${{ matrix.build_type }}
         cmake-args: ${{ matrix.cmake_args }}
 
     - name: Build
       if:   success()
-      uses: DiligentGraphics/github-action/build@v27
+      uses: DiligentGraphics/github-action/build@v28
       with:
         target: install
 
     - name: DiligentCoreTest
       if:   ${{ success() && matrix.platform == 'MacOS' }}
-      uses: DiligentGraphics/github-action/run-core-tests@v27
+      uses: DiligentGraphics/github-action/run-core-tests@v28
 
     - name: Upload artifact
       uses: actions/upload-artifact@v7
