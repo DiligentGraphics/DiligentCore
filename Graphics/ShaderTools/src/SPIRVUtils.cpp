@@ -108,20 +108,31 @@ std::vector<uint32_t> PatchImageFormats(const std::vector<uint32_t>&            
 
     diligent_spirv_cross::ShaderResources resources = Compiler.get_shader_resources();
 
-    std::unordered_map<uint32_t, uint32_t> ImageTypeIdToFormat;
-    for (uint32_t i = 0; i < SPIRV.size(); ++i)
+    std::unordered_map<uint32_t, size_t> ImageTypeIdToFormat;
+    // Skip the header and walk instruction boundaries: operands may have the same
+    // low bits as OpTypeImage and must not be interpreted as instruction words.
+    constexpr size_t SPIRVHeaderSize = 5;
+    for (size_t i = SPIRVHeaderSize; i < SPIRV.size();)
     {
+        const uint32_t WordCount = SPIRV[i] >> 16;
+        if (WordCount == 0 || WordCount > SPIRV.size() - i)
+        {
+            LOG_ERROR_MESSAGE("Invalid SPIR-V instruction size at word ", i);
+            return {};
+        }
+
         // OpTypeImage
         //      0          1          2          3      4        5      6       7           8               9
         // |  OpCode  | Result | Sampled Type | Dim | Depth | Arrayed | MS | Sampled | Image Format | Access Qualifier
         constexpr uint32_t ImageFormatOffset = 8;
 
-        uint32_t OpCode = SPIRV[i] & 0xFFFF;
-        if (OpCode == spv::OpTypeImage && i + ImageFormatOffset < SPIRV.size())
+        const uint32_t OpCode = SPIRV[i] & 0xFFFF;
+        if (OpCode == spv::OpTypeImage && WordCount > ImageFormatOffset)
         {
             const uint32_t ImageTypeId       = SPIRV[i + 1];
             ImageTypeIdToFormat[ImageTypeId] = i + ImageFormatOffset;
         }
+        i += WordCount;
     }
 
     std::vector<uint32_t> PatchedSPIRV = SPIRV;
@@ -141,8 +152,8 @@ std::vector<uint32_t> PatchImageFormats(const std::vector<uint32_t>&            
                     auto FormatOffsetIt = ImageTypeIdToFormat.find(Img.base_type_id);
                     if (FormatOffsetIt != ImageTypeIdToFormat.end())
                     {
-                        const uint32_t ImageFormatOffset = FormatOffsetIt->second;
-                        uint32_t&      FormatWord        = PatchedSPIRV[ImageFormatOffset];
+                        const size_t ImageFormatOffset = FormatOffsetIt->second;
+                        uint32_t&    FormatWord        = PatchedSPIRV[ImageFormatOffset];
                         if (FormatWord != static_cast<uint32_t>(type.image.format) &&
                             FormatWord != static_cast<uint32_t>(spvFormat))
                         {

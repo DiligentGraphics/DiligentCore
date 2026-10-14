@@ -21,6 +21,12 @@ if(NOT WEBGPU_SUPPORTED)
     )
 endif()
 
+if(NOT ${DILIGENT_USE_SPIRV_TOOLCHAIN})
+    list(REMOVE_ITEM SOURCE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/ShaderTools/SPIRVUtilsTest.cpp
+    )
+endif()
+
 if(NOT ${DILIGENT_USE_SPIRV_TOOLCHAIN} OR ${DILIGENT_NO_GLSLANG})
     list(REMOVE_ITEM SOURCE
         ${CMAKE_CURRENT_SOURCE_DIR}/src/ShaderTools/SPIRVShaderResourcesTest.cpp
