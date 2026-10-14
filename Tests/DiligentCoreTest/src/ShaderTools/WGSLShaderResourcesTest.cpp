@@ -487,6 +487,78 @@ struct Constants {
     }
 }
 
+TEST(WGSLShaderResources, NativeNonStructUniforms)
+{
+    const ShaderCodeVariableDesc ElementMembers[] = {
+        {"xy", "vec2<f32>", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 2, 1, 0},
+        {"z", "u32", SHADER_CODE_BASIC_TYPE_UINT, 8},
+    };
+    const struct
+    {
+        const char*            Type;
+        const char*            Expression;
+        Uint32                 Size;
+        ShaderCodeVariableDesc Variable;
+    } Cases[] = {
+        {"f32", "value", 4, {"value", "f32", SHADER_CODE_BASIC_TYPE_FLOAT, 0}},
+        {"i32", "f32(value)", 4, {"value", "i32", SHADER_CODE_BASIC_TYPE_INT, 0}},
+        {"u32", "f32(value)", 4, {"value", "u32", SHADER_CODE_BASIC_TYPE_UINT, 0}},
+        {"f16", "f32(value)", 2, {"value", "f16", SHADER_CODE_BASIC_TYPE_FLOAT16, 0}},
+        {"vec3f", "value.x", 12, {"value", "vec3<f32>", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 3, 1, 0}},
+        {"vec4h", "f32(value.x)", 8, {"value", "vec4<f16>", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT16, 4, 1, 0}},
+        {"mat2x4f", "value[1].x", 32, {"value", "mat2x4<f32>", SHADER_CODE_VARIABLE_CLASS_MATRIX_ROWS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 2, 0}},
+        {"array<vec4i, 3>", "f32(value[2].x)", 48, {"value", "vec4<i32>", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_INT, 4, 1, 0, 3}},
+        {"array<Element, 2>", "value[1].xy.x + f32(value[1].z)", 32, {"value", "Element", 2, ElementMembers, 0, 2}},
+    };
+    for (const auto& Test : Cases)
+    {
+        SCOPED_TRACE(Test.Type);
+        const std::string Source = std::string{R"(
+enable f16;
+struct Element { xy: vec2f, z: u32 }
+@group(2) @binding(3) var<uniform> value: )"} +
+            Test.Type + R"(;
+@fragment fn main() -> @location(0) vec4f { return vec4f()" +
+            Test.Expression + "); }";
+
+        for (bool HasMetadata : {false, true})
+        {
+            SCOPED_TRACE(HasMetadata);
+            std::string WGSL = Source;
+            if (HasMetadata)
+            {
+                // Names-only metadata must still load the native layout safely.
+                WGSLShaderReflection Metadata;
+                Metadata.Resources[{2, 3}].Name = "OriginalValue";
+                AppendWGSLShaderReflection(WGSL, Metadata);
+            }
+
+            for (bool LoadReflection : {false, true})
+            {
+                SCOPED_TRACE(LoadReflection);
+                const WGSLShaderResources Resources{GetRawAllocator(), WGSL, SHADER_SOURCE_LANGUAGE_WGSL,
+                                                    "Non-struct uniform", nullptr, "main", nullptr, LoadReflection, nullptr};
+                ASSERT_EQ(Resources.GetNumUBs(), 1u);
+                EXPECT_EQ(Resources.GetTotalResources(), 1u);
+                const char* Name = HasMetadata ? "OriginalValue" : "value";
+                EXPECT_STREQ(Resources.GetUB(0).Name, Name);
+                EXPECT_EQ(Resources.GetUB(0).BufferStaticSize, Test.Size);
+                EXPECT_EQ(Resources.GetUB(0).BindGroup, 2u);
+                EXPECT_EQ(Resources.GetUB(0).BindIndex, 3u);
+                if (LoadReflection)
+                {
+                    const auto* Buffer = Resources.GetUniformBufferDesc(0);
+                    ASSERT_NE(Buffer, nullptr);
+                    ShaderCodeVariableDesc ExpectedVariable = Test.Variable;
+                    ExpectedVariable.Name                   = Name;
+                    const ShaderCodeBufferDesc Expected{Test.Size, 1, &ExpectedVariable};
+                    EXPECT_EQ(*Buffer, Expected);
+                }
+            }
+        }
+    }
+}
+
 TEST(WGSLShaderResources, NativeHalfPrecisionUniforms)
 {
     const std::string         WGSL = R"(

@@ -739,19 +739,31 @@ ShaderCodeBufferDescX LoadUBReflection(const tint::Program& Program, const tint:
     VERIFY(Variable, "Unexpected error");
 
 
-    const tint::core::type::Struct* WGSLType = Program.TypeOf(Variable->type)->As<tint::core::type::Struct>();
-    const uint32_t                  Size     = WGSLType->Size();
+    const tint::core::type::Type* WGSLType = Program.TypeOf(Variable->type);
 
     ShaderCodeBufferDescX UBDesc;
-    UBDesc.Size = Size;
-    for (const tint::core::type::StructMember* Member : WGSLType->Members())
+    UBDesc.Size = WGSLType->Size();
+    if (const auto* WGSLStruct = WGSLType->As<tint::core::type::Struct>())
     {
+        for (const tint::core::type::StructMember* Member : WGSLStruct->Members())
+        {
+            ShaderCodeVariableDesc VarDesc;
+            VarDesc.Name   = Member->Name().NameView().data();
+            VarDesc.Offset = Member->Offset();
+
+            size_t VariableIdx = UBDesc.AddVariable(VarDesc);
+            LoadShaderCodeVariableDesc(Program, Member->Type(), Language, UBDesc.GetVariable(VariableIdx));
+        }
+    }
+    else
+    {
+        // WGSL also permits non-struct uniforms. Expose the whole value as one
+        // variable at offset zero, retaining the resource name restored from metadata.
         ShaderCodeVariableDesc VarDesc;
-        VarDesc.Name   = Member->Name().NameView().data();
-        VarDesc.Offset = Member->Offset();
+        VarDesc.Name = UB.variable_name.c_str();
 
         size_t VariableIdx = UBDesc.AddVariable(VarDesc);
-        LoadShaderCodeVariableDesc(Program, Member->Type(), Language, UBDesc.GetVariable(VariableIdx));
+        LoadShaderCodeVariableDesc(Program, WGSLType, Language, UBDesc.GetVariable(VariableIdx));
     }
 
     return UBDesc;
