@@ -1016,7 +1016,7 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
         {
             const char*            SCName = ResourceNamesPool.CopyString(Override.name);
             SHADER_CODE_BASIC_TYPE SCType = TintOverrideTypeToShaderCodeBasicType(Override.type);
-            new (&GetSpecConstant(SpecConstIdx++)) WGSLSpecializationConstantAttribs{SCName, Override.id.value, SCType};
+            new (&GetSpecConstant(SpecConstIdx++)) WGSLSpecializationConstantAttribs{SCName, Override.id.value, SCType, Override.is_id_specified};
         }
         VERIFY_EXPR(SpecConstIdx == GetNumSpecConstants());
     }

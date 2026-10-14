@@ -25,6 +25,7 @@
  */
 
 #include "WGSLUtils.hpp"
+#include "WGSLShaderResources.hpp"
 #include "SPIRVShaderResources.hpp"
 #include "GLSLangUtils.hpp"
 #include "DefaultShaderSourceStreamFactory.h"
@@ -119,6 +120,9 @@ TEST(WGSLUtils, GetWGSLEmulatedArrayElementInfo)
     EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D", "_"), WGSLEmulatedResourceArrayElement{"Tex2D"});
     EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_", "_"), WGSLEmulatedResourceArrayElement{"Tex2D_"});
     EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_X", "_"), WGSLEmulatedResourceArrayElement{"Tex2D_X"});
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_-1", "_"), WGSLEmulatedResourceArrayElement{"Tex2D_-1"});
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_+1", "_"), WGSLEmulatedResourceArrayElement{"Tex2D_+1"});
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_2147483648", "_"), WGSLEmulatedResourceArrayElement{"Tex2D_2147483648"});
     EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_123x", "_"), WGSLEmulatedResourceArrayElement{"Tex2D_123x"});
     EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_123_", "_"), WGSLEmulatedResourceArrayElement{"Tex2D_123_"});
 
@@ -446,6 +450,141 @@ TEST(WGSLUtils, RWStructBufferArrays)
             {"g_RWBuffArr2_1", {5, 7}},
             // clang-format on
         });
+}
+
+
+TEST(WGSLUtils, RemapSelectedEntryPoint)
+{
+    const std::string WGSL = R"(
+@group(0) @binding(0) var<storage, read_write> FirstOutput: array<u32>;
+@group(0) @binding(0) var<storage, read_write> SecondOutput: array<u32>;
+override Shared: u32 = 1;
+@id(7) override FirstValue: u32 = 2;
+@id(9) override SecondValue: u32 = 3;
+@compute @workgroup_size(1) fn first() { FirstOutput[0] = Shared + FirstValue; }
+@compute @workgroup_size(1) fn second() { SecondOutput[0] = Shared + SecondValue; }
+)";
+    for (const char* EntryPoint : {"first", "second"})
+    {
+        SCOPED_TRACE(EntryPoint);
+        const char*               ResourceName = strcmp(EntryPoint, "first") == 0 ? "FirstOutput" : "SecondOutput";
+        const WGSLResourceMapping Mapping{{ResourceName, {2, 3}}};
+        const std::string         Remapped = RemapWGSLResourceBindings(WGSL, Mapping, nullptr, EntryPoint);
+        ASSERT_FALSE(Remapped.empty());
+        tint::Source::File File{"", Remapped};
+        auto               Program = tint::wgsl::reader::Parse(&File, {tint::wgsl::AllowedFeatures::Everything()});
+        ASSERT_TRUE(Program.IsValid()) << Program.Diagnostics().Str();
+        tint::inspector::Inspector Inspector{Program};
+        const auto                 EntryPoints = Inspector.GetEntryPoints();
+        ASSERT_EQ(EntryPoints.size(), 1u);
+        EXPECT_EQ(EntryPoints[0].name, EntryPoint);
+        EXPECT_EQ(EntryPoints[0].overrides.size(), 2u);
+        const auto Bindings = Inspector.GetResourceBindings(EntryPoint);
+        ASSERT_EQ(Bindings.size(), 1u);
+        EXPECT_EQ(Bindings[0].bind_group, 2u);
+        EXPECT_EQ(Bindings[0].binding, 3u);
+        EXPECT_EQ(Bindings[0].variable_name, ResourceName);
+    }
+
+    {
+        TestingEnvironment::ErrorScope Errors{"Conflicting remappings for binding"};
+        EXPECT_TRUE(RemapWGSLResourceBindings(WGSL, {{"FirstOutput", {1, 0}}, {"SecondOutput", {2, 0}}}, nullptr).empty());
+    }
+    {
+        TestingEnvironment::ErrorScope Errors{"WGSL entry point 'missing' was not found"};
+        EXPECT_TRUE(RemapWGSLResourceBindings(WGSL, {}, nullptr, "missing").empty());
+    }
+}
+
+TEST(WGSLUtils, RemapPreservesOverrideIds)
+{
+    const std::string         WGSL = R"(
+@id(0) override Explicit: u32 = 2;
+override Named: u32 = 1;
+override Required: u32;
+override Size: u32 = 4;
+@id(65535) override Unused: u32 = 7;
+var<workgroup> Shared: array<u32, Size>;
+@group(0) @binding(0) var<storage, read_write> Output: array<u32>;
+@compute @workgroup_size(Size) fn main() {
+    Shared[0] = Named + Explicit + Required;
+    Output[0] = Shared[0];
+}
+)";
+    const WGSLShaderResources Original{GetRawAllocator(), WGSL, SHADER_SOURCE_LANGUAGE_WGSL,
+                                       "Override remapping", nullptr, "main", nullptr, false, nullptr};
+    ASSERT_EQ(Original.GetNumSpecConstants(), 4u);
+    for (Uint32 i = 0; i < Original.GetNumSpecConstants(); ++i)
+        EXPECT_EQ(Original.GetSpecConstant(i).IsIdSpecified, strcmp(Original.GetSpecConstant(i).Name, "Explicit") == 0);
+
+    std::string Current = WGSL;
+    for (Uint32 Pass = 0; Pass < 2; ++Pass)
+    {
+        Current = RemapWGSLResourceBindings(Current, {{"Output", {1, 2 + Pass}}}, nullptr, "main");
+        ASSERT_FALSE(Current.empty());
+        const WGSLShaderResources Remapped{GetRawAllocator(), Current, SHADER_SOURCE_LANGUAGE_WGSL,
+                                           "Remapped overrides", nullptr, "main", nullptr, false, nullptr};
+        ASSERT_EQ(Remapped.GetNumSpecConstants(), Original.GetNumSpecConstants());
+        for (Uint32 i = 0; i < Original.GetNumSpecConstants(); ++i)
+        {
+            const auto& Before = Original.GetSpecConstant(i);
+            bool        Found  = false;
+            for (Uint32 j = 0; j < Remapped.GetNumSpecConstants(); ++j)
+            {
+                const auto& After = Remapped.GetSpecConstant(j);
+                if (After.OverrideId == Before.OverrideId)
+                {
+                    Found = true;
+                    EXPECT_STREQ(After.Name, Before.Name);
+                    EXPECT_EQ(After.GetType(), Before.GetType());
+                    EXPECT_TRUE(After.IsIdSpecified);
+                }
+            }
+            EXPECT_TRUE(Found) << Before.Name;
+        }
+        tint::Source::File File{"", Current};
+        auto               Program = tint::wgsl::reader::Parse(&File, {tint::wgsl::AllowedFeatures::Everything()});
+        ASSERT_TRUE(Program.IsValid()) << Program.Diagnostics().Str();
+        tint::inspector::Inspector Inspector{Program};
+        const auto                 EntryPoints = Inspector.GetEntryPoints();
+        ASSERT_EQ(EntryPoints.size(), 1u);
+        for (const auto& Override : EntryPoints[0].overrides)
+            EXPECT_EQ(Override.is_initialized, Override.name != "Required");
+    }
+}
+
+TEST(WGSLUtils, RemapRejectsInvalidResourceMappings)
+{
+    const std::string WGSL = R"(
+@group(0) @binding(0) var<storage, read_write> A: array<u32>;
+@group(0) @binding(1) var<storage, read_write> B: array<u32>;
+@compute @workgroup_size(1) fn main() { A[0] = B[0]; }
+)";
+    {
+        TestingEnvironment::ErrorScope Errors{"Binding for variable 'B' is not found"};
+        EXPECT_TRUE(RemapWGSLResourceBindings(WGSL, {{"A", {0, 2}}}, nullptr, "main").empty());
+    }
+    {
+        TestingEnvironment::ErrorScope Errors{"Resource binding collision"};
+        EXPECT_TRUE(RemapWGSLResourceBindings(WGSL, {{"A", {0, 2}}, {"B", {0, 2}}}, nullptr, "main").empty());
+    }
+    {
+        TestingEnvironment::ErrorScope Errors{"Invalid resource array size"};
+        EXPECT_TRUE(RemapWGSLResourceBindings(WGSL, {{"A", {0, 2, 0}}, {"B", {0, 3}}}, nullptr, "main").empty());
+    }
+
+    const std::string ArrayWGSL = R"(
+@group(0) @binding(0) var<storage, read_write> Buffers_1: array<u32>;
+@compute @workgroup_size(1) fn main() { Buffers_1[0] = 1; }
+)";
+    {
+        TestingEnvironment::ErrorScope Errors{"Binding index overflows"};
+        EXPECT_TRUE(RemapWGSLResourceBindings(ArrayWGSL, {{"Buffers", {0, 0xffffffffu, 2}}}, "_", "main").empty());
+    }
+    {
+        TestingEnvironment::ErrorScope Errors{"Binding for variable 'Buffers_1' is not found"};
+        EXPECT_TRUE(RemapWGSLResourceBindings(ArrayWGSL, {{"Buffers", {0, 0, 1}}}, "_", "main").empty());
+    }
 }
 
 } // namespace

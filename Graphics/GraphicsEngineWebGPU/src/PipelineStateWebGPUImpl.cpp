@@ -103,6 +103,9 @@ void BuildSpecializationDataWebGPU(PipelineStateWebGPUImpl::TShaderStages& Shade
         if (!pShaderResources)
             continue;
 
+        // Reserve before taking c_str() pointers, including for short strings.
+        Stage.SpecConstKeys.reserve(pShaderResources->GetNumSpecConstants());
+        Stage.SpecConstEntries.reserve(pShaderResources->GetNumSpecConstants());
         for (Uint32 r = 0; r < pShaderResources->GetNumSpecConstants(); ++r)
         {
             const WGSLSpecializationConstantAttribs& ReflectedSC = pShaderResources->GetSpecConstant(r);
@@ -141,7 +144,18 @@ void BuildSpecializationDataWebGPU(PipelineStateWebGPUImpl::TShaderStages& Shade
             }
 
             WGPUConstantEntry Entry{};
-            Entry.key   = GetWGPUStringView(ReflectedSC.Name);
+            // WGSL overrides with @id are addressed by decimal ID, not name.
+            // Tint's IR rewrite materializes IDs even for originally named-only
+            // overrides; it preserves the IDs assigned by the original parser.
+            if (!Stage.PatchedWGSL.empty() || ReflectedSC.IsIdSpecified)
+            {
+                Stage.SpecConstKeys.emplace_back(std::to_string(ReflectedSC.OverrideId));
+                Entry.key = GetWGPUStringView(Stage.SpecConstKeys.back().c_str());
+            }
+            else
+            {
+                Entry.key = GetWGPUStringView(ReflectedSC.Name);
+            }
             Entry.value = ConvertSpecConstantToDouble(pUserConst->pData, pUserConst->Size, ReflectedType);
 
             Stage.SpecConstEntries.push_back(Entry);
@@ -328,7 +342,12 @@ void PipelineStateWebGPUImpl::RemapOrVerifyShaderResources(
 
         if (!bVerifyOnly)
         {
-            PatchedWGSL = RemapWGSLResourceBindings(pShader->GetWGSL(), ResMapping, pShader->GetEmulatedArrayIndexSuffix());
+            PatchedWGSL = RemapWGSLResourceBindings(pShader->GetWGSL(), ResMapping, pShader->GetEmulatedArrayIndexSuffix(), pShader->GetEntryPoint());
+            if (PatchedWGSL.empty())
+            {
+                LOG_ERROR_AND_THROW("Failed to remap resources for shader '", pShader->GetDesc().Name,
+                                    "' in pipeline '", PipelineName, "'.");
+            }
         }
     }
 }

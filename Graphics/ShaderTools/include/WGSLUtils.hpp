@@ -54,9 +54,14 @@ struct WGSLResourceBindingInfo
 };
 using WGSLResourceMapping = std::unordered_map<std::string, WGSLResourceBindingInfo>;
 
+// Remap the selected entry point and discard declarations used only by other
+// entry points. A null EntryPoint remaps the whole module. The IR round trip
+// gives every retained override an explicit @id with its original Tint ID.
+// Returns an empty string if an active resource cannot be mapped unambiguously.
 std::string RemapWGSLResourceBindings(const std::string&         WGSL,
                                       const WGSLResourceMapping& ResMapping,
-                                      const char*                EmulatedArrayIndexSuffix);
+                                      const char*                EmulatedArrayIndexSuffix,
+                                      const char*                EntryPoint = nullptr);
 
 
 /// When WGSL is generated from SPIR-V, the names of resources may be mangled

@@ -329,6 +329,8 @@ protected:
         pSwapChain->Present();
     }
 
+    void TestComputePath(PSO_CREATE_FLAGS Flags = PSO_CREATE_FLAG_NONE, bool ExplicitIds = false, bool MultipleEntryPoints = false);
+
     static FastRandFloat sm_Rnd;
 };
 
@@ -341,13 +343,16 @@ FastRandFloat SpecializationConstants::sm_Rnd{0, 0.f, 1.f};
 // InlineConstantsTest::ComputeResourceLayout.
 // ---------------------------------------------------------------------------
 
-TEST_F(SpecializationConstants, ComputePath)
+void SpecializationConstants::TestComputePath(PSO_CREATE_FLAGS Flags, bool ExplicitIds, bool MultipleEntryPoints)
 {
     GPUTestingEnvironment*  pEnv       = GPUTestingEnvironment::GetInstance();
     IRenderDevice*          pDevice    = pEnv->GetDevice();
     IDeviceContext*         pContext   = pEnv->GetDeviceContext();
     ISwapChain*             pSwapChain = pEnv->GetSwapChain();
     const RenderDeviceInfo& DeviceInfo = pDevice->GetDeviceInfo();
+
+    if ((Flags != PSO_CREATE_FLAG_NONE || ExplicitIds || MultipleEntryPoints) && !DeviceInfo.IsWebGPUDevice())
+        GTEST_SKIP() << "This variant tests WebGPU override and entry point handling";
 
     if (DeviceInfo.Features.SpecializationConstants != DEVICE_FEATURE_STATE_ENABLED)
         GTEST_SKIP() << "Specialization constants are not supported by this device";
@@ -369,6 +374,21 @@ TEST_F(SpecializationConstants, ComputePath)
 
     // --- Spec-const pass: same gradient, channel multipliers via specialization constants ---
     {
+        std::string WebGPUSource = ComputeCS_WGSL;
+        if (ExplicitIds)
+        {
+            // Mix explicit IDs (including the maximum ID) with a named override.
+            WebGPUSource.insert(WebGPUSource.find("override sc_MulR"), "@id(0) ");
+            WebGPUSource.insert(WebGPUSource.find("override sc_MulB"), "@id(65535) ");
+        }
+        if (MultipleEntryPoints)
+        {
+            WebGPUSource += R"(
+@group(0) @binding(0) var<storage, read_write> OtherOutput: array<u32>;
+@compute @workgroup_size(1) fn other() { OtherOutput[0] = 42; }
+)";
+        }
+
         ShaderCreateInfo ShaderCI;
         ShaderCI.Desc       = {"SpecConst Compute CS", SHADER_TYPE_COMPUTE, true};
         ShaderCI.EntryPoint = "main";
@@ -376,7 +396,7 @@ TEST_F(SpecializationConstants, ComputePath)
         if (DeviceInfo.IsWebGPUDevice())
         {
             ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_WGSL;
-            ShaderCI.Source         = ComputeCS_WGSL;
+            ShaderCI.Source         = WebGPUSource.c_str();
         }
         else
         {
@@ -405,12 +425,14 @@ TEST_F(SpecializationConstants, ComputePath)
         PsoCI.PSODesc.Name               = "SpecConst Compute Test";
         PsoCI.PSODesc.PipelineType       = PIPELINE_TYPE_COMPUTE;
         PsoCI.pCS                        = pCS;
+        PsoCI.Flags                      = Flags;
         PsoCI.NumSpecializationConstants = _countof(SpecConsts);
         PsoCI.pSpecializationConstants   = SpecConsts;
 
         RefCntAutoPtr<IPipelineState> pPSO;
         pDevice->CreateComputePipelineState(PsoCI, &pPSO);
         ASSERT_NE(pPSO, nullptr);
+        ASSERT_EQ(pPSO->GetStatus(true), PIPELINE_STATE_STATUS_READY);
 
         pPSO->GetStaticVariableByName(SHADER_TYPE_COMPUTE, "g_tex2DUAV")->Set(pTestingSwapChain->GetCurrentBackBufferUAV());
 
@@ -428,6 +450,37 @@ TEST_F(SpecializationConstants, ComputePath)
     }
 
     Present();
+}
+
+
+TEST_F(SpecializationConstants, ComputePath)
+{
+    TestComputePath();
+}
+
+TEST_F(SpecializationConstants, ComputePath_ExplicitIds)
+{
+    TestComputePath(PSO_CREATE_FLAG_NONE, true);
+}
+
+TEST_F(SpecializationConstants, ComputePath_NoRemap)
+{
+    TestComputePath(PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES);
+}
+
+TEST_F(SpecializationConstants, ComputePath_NoRemap_ExplicitIds)
+{
+    TestComputePath(PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES, true);
+}
+
+TEST_F(SpecializationConstants, ComputePath_Async_ExplicitIds)
+{
+    TestComputePath(PSO_CREATE_FLAG_ASYNCHRONOUS, true);
+}
+
+TEST_F(SpecializationConstants, ComputePath_MultipleEntryPoints)
+{
+    TestComputePath(PSO_CREATE_FLAG_NONE, true, true);
 }
 
 

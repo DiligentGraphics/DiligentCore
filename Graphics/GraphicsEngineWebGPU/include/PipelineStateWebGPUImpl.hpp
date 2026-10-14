@@ -87,9 +87,10 @@ public:
 
         // Per-stage specialization constant entries, built from user input
         // and WGSL override reflection during InitializePipeline().
-        // Entries reference names in the shader resource name pool,
-        // which is kept alive by ShaderWebGPUImpl.
+        // Keys reference either the shader's name pool or SpecConstKeys below.
+        // Both remain alive when the stages are moved into AsyncPipelineBuilder.
         std::vector<WGPUConstantEntry> SpecConstEntries;
+        std::vector<std::string>       SpecConstKeys;
 
         ShaderStageInfo(ShaderWebGPUImpl* _pShader) :
             Type{_pShader->GetDesc().ShaderType},

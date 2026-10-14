@@ -403,10 +403,10 @@ TEST(WGSLShaderResources, SpecializationConstants)
     EXPECT_EQ(Resources.GetNumSBs(), 1u);
 
     const std::vector<WGSLSpecializationConstantAttribs> RefSpecConstants = {
-        {"sc_float", 0, SHADER_CODE_BASIC_TYPE_FLOAT},
-        {"sc_int", 0, SHADER_CODE_BASIC_TYPE_INT},
-        {"sc_uint", 0, SHADER_CODE_BASIC_TYPE_UINT},
-        {"sc_bool", 0, SHADER_CODE_BASIC_TYPE_BOOL},
+        {"sc_float", 0, SHADER_CODE_BASIC_TYPE_FLOAT, false},
+        {"sc_int", 0, SHADER_CODE_BASIC_TYPE_INT, false},
+        {"sc_uint", 0, SHADER_CODE_BASIC_TYPE_UINT, false},
+        {"sc_bool", 0, SHADER_CODE_BASIC_TYPE_BOOL, false},
     };
 
     const WGSLShaderResources& ConstResources = Resources;
@@ -425,6 +425,7 @@ TEST(WGSLShaderResources, SpecializationConstants)
 
         const WGSLSpecializationConstantAttribs* pRef = it->second;
         EXPECT_EQ(SC.GetType(), pRef->GetType()) << SC.Name;
+        EXPECT_EQ(SC.IsIdSpecified, pRef->IsIdSpecified) << SC.Name;
     }
 }
 

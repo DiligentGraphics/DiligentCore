@@ -24,6 +24,8 @@
  *  of the possibility of such damages.
  */
 
+#include <algorithm>
+#include <limits>
 #include <unordered_set>
 
 #include "WGSLUtils.hpp"
@@ -57,6 +59,7 @@
 #include "src/tint/lang/core/ir/transform/direct_variable_access.h"
 #include "src/tint/lang/core/type/storage_texture.h"
 #include "src/tint/lang/core/ir/transform/binding_remapper.h"
+#include "src/tint/lang/core/ir/transform/single_entry_point.h"
 #include "src/tint/lang/wgsl/ast/module.h"
 #include "src/tint/lang/wgsl/ast/identifier_expression.h"
 #include "src/tint/lang/wgsl/ast/identifier.h"
@@ -97,7 +100,8 @@ WGSLEmulatedResourceArrayElement GetWGSLEmulatedArrayElement(const std::string& 
     if (SuffixPos != std::string::npos && SuffixPos + Suffix.length() < Name.length())
     {
         int Index = 0;
-        if (Parsing::ParseInteger(Name.begin() + SuffixPos + Suffix.length(), Name.end(), Index) == Name.end())
+        if (Parsing::IsDigit(Name[SuffixPos + Suffix.length()]) &&
+            Parsing::ParseInteger(Name.begin() + SuffixPos + Suffix.length(), Name.end(), Index) == Name.end())
         {
             // g_Tex2DArr_15
             //            ^
@@ -504,7 +508,7 @@ static WGSLResourceMapping::const_iterator FindResourceAsArrayElement(const WGSL
         if (BindigIt == ResMapping.end())
             return ResMapping.end();
 
-        if (ArrayElem.Index < static_cast<int>(BindigIt->second.ArraySize))
+        if (static_cast<Uint32>(ArrayElem.Index) < BindigIt->second.ArraySize)
         {
             ArrayIndex = static_cast<Uint32>(ArrayElem.Index);
             return BindigIt;
@@ -516,7 +520,8 @@ static WGSLResourceMapping::const_iterator FindResourceAsArrayElement(const WGSL
 
 std::string RemapWGSLResourceBindings(const std::string&         WGSL,
                                       const WGSLResourceMapping& ResMapping,
-                                      const char*                EmulatedArrayIndexSuffix)
+                                      const char*                EmulatedArrayIndexSuffix,
+                                      const char*                EntryPoint)
 {
     tint::Source::File srcFile("", WGSL);
     tint::Program      Program = tint::wgsl::reader::Parse(&srcFile, {tint::wgsl::AllowedFeatures::Everything()});
@@ -537,9 +542,21 @@ std::string RemapWGSLResourceBindings(const std::string&         WGSL,
     std::unordered_map<tint::BindingPoint, tint::BindingPoint> BindingPoints;
 
     tint::inspector::Inspector Inspector{Program};
-    for (tint::inspector::EntryPoint& EntryPoint : Inspector.GetEntryPoints())
+    const auto                 EntryPoints = Inspector.GetEntryPoints();
+    if (EntryPoint != nullptr && std::none_of(EntryPoints.begin(), EntryPoints.end(), [EntryPoint](const auto& EP) { return EP.name == EntryPoint; }))
     {
-        for (tint::inspector::ResourceBinding& Binding : Inspector.GetResourceBindings(EntryPoint.name))
+        LOG_ERROR_MESSAGE("WGSL entry point '", EntryPoint, "' was not found");
+        return {};
+    }
+    for (const tint::inspector::EntryPoint& EP : EntryPoints)
+    {
+        if (EntryPoint != nullptr && EP.name != EntryPoint)
+            continue;
+
+        // Bindings may be shared by resources in separate entry points, but
+        // resources used by the same entry point need distinct destinations.
+        std::unordered_map<tint::BindingPoint, tint::BindingPoint> Destinations;
+        for (const tint::inspector::ResourceBinding& Binding : Inspector.GetResourceBindings(EP.name))
         {
             Uint32 ArrayIndex = 0;
 
@@ -569,11 +586,36 @@ std::string RemapWGSLResourceBindings(const std::string&         WGSL,
             if (DstBindigIt != ResMapping.end())
             {
                 const WGSLResourceBindingInfo& DstBindig = DstBindigIt->second;
-                BindingPoints.emplace(tint::BindingPoint{Binding.bind_group, Binding.binding}, tint::BindingPoint{DstBindig.Group, DstBindig.Index + ArrayIndex});
+                if (DstBindig.ArraySize == 0 || ArrayIndex >= DstBindig.ArraySize)
+                {
+                    LOG_ERROR_MESSAGE("Invalid resource array size for variable '", ResourceName, "'");
+                    return {};
+                }
+                if (ArrayIndex > (std::numeric_limits<Uint32>::max)() - DstBindig.Index)
+                {
+                    LOG_ERROR_MESSAGE("Binding index overflows for variable '", ResourceName, "'");
+                    return {};
+                }
+
+                const tint::BindingPoint SrcPoint{Binding.bind_group, Binding.binding};
+                const tint::BindingPoint DstPoint{DstBindig.Group, DstBindig.Index + ArrayIndex};
+                const auto               SrcInsertion = BindingPoints.emplace(SrcPoint, DstPoint);
+                if (!SrcInsertion.second && !(SrcInsertion.first->second == DstPoint))
+                {
+                    LOG_ERROR_MESSAGE("Conflicting remappings for binding ", SrcPoint.binding, " in group ", SrcPoint.group);
+                    return {};
+                }
+                const auto DstInsertion = Destinations.emplace(DstPoint, SrcPoint);
+                if (!DstInsertion.second && !(DstInsertion.first->second == SrcPoint))
+                {
+                    LOG_ERROR_MESSAGE("Resource binding collision for variable '", ResourceName, "' in entry point '", EP.name, "'");
+                    return {};
+                }
             }
             else
             {
-                LOG_ERROR_MESSAGE("Binding for variable '", Binding.variable_name, "' is not found in the remap indices");
+                LOG_ERROR_MESSAGE("Binding for variable '", ResourceName, "' is not found in the remap indices");
+                return {};
             }
         }
     }
@@ -583,6 +625,18 @@ std::string RemapWGSLResourceBindings(const std::string&         WGSL,
     {
         LOG_ERROR_MESSAGE("Tint WGSL to IR conversion failure:\n", IR.Failure().reason, "\n");
         return {};
+    }
+
+    if (EntryPoint != nullptr)
+    {
+        // Reflection and the pipeline signature describe only the selected entry
+        // point. Remove the other resources before changing their shared bindings.
+        auto SelectionResult = tint::core::ir::transform::SingleEntryPoint(IR.Get(), EntryPoint);
+        if (SelectionResult != tint::Success)
+        {
+            LOG_ERROR_MESSAGE("Tint entry point selection failure:\n", SelectionResult.Failure().reason, "\n");
+            return {};
+        }
     }
 
     auto RemapResult = tint::core::ir::transform::BindingRemapper(IR.Get(), BindingPoints);
