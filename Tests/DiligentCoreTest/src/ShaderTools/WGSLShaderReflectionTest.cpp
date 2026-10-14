@@ -233,13 +233,15 @@ TEST(WGSLShaderReflection, ExactSerialization)
 
 TEST(WGSLShaderReflection, ParseKnownMetadataAndOwnStrings)
 {
-    std::string          Text = "// Earlier comment */\n" + MakeMetadata(ReferencePayload) + "\n/*$SHADER_SOURCE_LANGUAGE=1*/";
+    std::string Text                     = "// Earlier comment */\n" + MakeMetadata(std::string{ReferencePayload} + "1 23 6f726967696e616c\n") + "\n/*$SHADER_SOURCE_LANGUAGE=1*/";
+    auto        Expected                 = MakeReferenceReflection();
+    Expected.SpecializationConstants[23] = "original";
     WGSLShaderReflection Reflection;
     ASSERT_TRUE(ParseWGSLShaderReflection(Text, Reflection));
     Text.assign(Text.size(), 'x');
     Text.clear();
     Text.shrink_to_fit();
-    ExpectReflectionEqual(Reflection, MakeReferenceReflection());
+    ExpectReflectionEqual(Reflection, Expected);
 }
 
 TEST(WGSLShaderReflection, SuccessfulParseReplacesPreviousReflection)
@@ -271,6 +273,8 @@ TEST(WGSLShaderReflection, StringsRoundTrip)
         WGSLShaderReflection Reflection;
         auto&                Resource = Reflection.Resources[{0, 0}];
         Resource.Name                 = Names[i];
+        if (!Names[i].empty())
+            Reflection.SpecializationConstants[0] = Names[i];
         Resource.UniformBuffer.reset(new ShaderCodeBufferDescX{});
         ShaderCodeVariableDescX Var;
         Var.SetName(Names[i]);
@@ -611,6 +615,14 @@ TEST(WGSLShaderReflection, GeneratedLayoutsRoundTrip)
                     Resource.UniformBuffer->AddVariable(MakeRandomVariable(Random));
             }
         }
+        const unsigned NumOverrides = Case == 99 ? 128 : Random() % 17;
+        for (unsigned i = 0; i < NumOverrides; ++i)
+        {
+            std::string Name = MakeRandomName(Random);
+            if (Name.empty())
+                Name = "override";
+            Reflection.SpecializationConstants[Random() % 65536] = std::move(Name);
+        }
         CheckRoundTrip(Reflection);
     }
 }
@@ -645,6 +657,44 @@ TEST(WGSLShaderReflection, SpecializationConstants)
     ExpectReflectionEqual(Parsed, MakeReferenceReflection());
 }
 
+TEST(WGSLShaderReflection, InterleavedResourceAndOverrideRecords)
+{
+    // Record order is not part of resource or override identity. The same ID
+    // can also occur in the resource binding coordinates without a collision.
+    const std::string Payload =
+        "1\n"
+        "1 65535 4d6178\n"
+        "0 2 1 41 0\n"
+        "1 0 5a65726f\n"
+        "0 0 0 42 1\n"
+        "16 1\n"
+        "78 - 1 11 1 1 0 0 0\n"
+        "1 +0007 536576656e\n";
+    WGSLShaderReflection Expected;
+    Expected.Resources[{2, 1}].Name = "A";
+    auto& BufferResource            = Expected.Resources[{0, 0}];
+    BufferResource.Name             = "B";
+    BufferResource.UniformBuffer.reset(new ShaderCodeBufferDescX{});
+    BufferResource.UniformBuffer->Size = 16;
+    BufferResource.UniformBuffer->AddVariable(ShaderCodeVariableDesc{"x", nullptr, SHADER_CODE_BASIC_TYPE_FLOAT, 0});
+    Expected.SpecializationConstants = {{0, "Zero"}, {7, "Seven"}, {65535, "Max"}};
+
+    WGSLShaderReflection Parsed;
+    ASSERT_TRUE(ParseWGSLShaderReflection(MakeMetadata(Payload), Parsed));
+    ExpectReflectionEqual(Parsed, Expected);
+    EXPECT_EQ(Serialize(Parsed), Serialize(Expected));
+
+    // An override-only payload replaces both maps, including previous layout
+    // ownership, instead of merging with the previously parsed reflection.
+    ASSERT_TRUE(ParseWGSLShaderReflection(MakeMetadata("1 1 9 4e6577"), Parsed));
+    WGSLShaderReflection Replacement;
+    Replacement.SpecializationConstants[9] = "New";
+    ExpectReflectionEqual(Parsed, Replacement);
+
+    // A late duplicate must discard the entire newly parsed mixed payload.
+    ExpectRejected(MakeMetadata(Payload + "1 65535 4f74686572"));
+}
+
 TEST(WGSLShaderReflection, RejectMalformedSpecializationConstants)
 {
     for (const char* Payload : {
@@ -668,6 +718,9 @@ TEST(WGSLShaderReflection, RejectMalformedSpecializationConstants)
     {
         SCOPED_TRACE(Payload);
         ExpectRejected(MakeMetadata(Payload));
+        // Also fail after successfully decoding nested buffers and an override;
+        // partial mixed results must never replace the caller's prior state.
+        ExpectRejected(MakeMetadata(std::string{ReferencePayload} + "1 7 76616c6964\n" + (Payload + 2)));
     }
 }
 

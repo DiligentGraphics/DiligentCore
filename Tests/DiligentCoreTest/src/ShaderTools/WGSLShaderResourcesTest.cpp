@@ -33,6 +33,7 @@
 #include "RefCntAutoPtr.hpp"
 #include "EngineMemory.h"
 
+#include <stdexcept>
 #include <unordered_map>
 
 #include "TestingEnvironment.hpp"
@@ -426,6 +427,338 @@ TEST(WGSLShaderResources, SpecializationConstants)
         const WGSLSpecializationConstantAttribs* pRef = it->second;
         EXPECT_EQ(SC.GetType(), pRef->GetType()) << SC.Name;
         EXPECT_EQ(SC.IsIdSpecified, pRef->IsIdSpecified) << SC.Name;
+    }
+}
+
+
+TEST(WGSLShaderResources, NativeUniformBufferLayout)
+{
+    const std::string WGSL = R"(
+struct Nested { uv: vec2u, signed_value: i32 }
+struct Constants {
+    scalar: f32,
+    vector: vec3f,
+    tail: u32,
+    transform: mat2x4f,
+    values: array<vec4i, 2>,
+    nested: Nested,
+}
+@group(2) @binding(3) var<uniform> constants: Constants;
+@fragment fn main() -> @location(0) vec4f {
+    return constants.transform[0] + vec4f(constants.scalar + constants.vector.x +
+        f32(constants.tail + constants.nested.uv.x) +
+        f32(constants.values[1].x + constants.nested.signed_value));
+}
+)";
+    // Independently specified offsets exercise WGSL alignment, nested members,
+    // arrays, and matrix orientation without source-language metadata.
+    const ShaderCodeVariableDesc NestedMembers[] = {
+        {"uv", "vec2<u32>", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_UINT, 2, 1, 0},
+        {"signed_value", "i32", SHADER_CODE_BASIC_TYPE_INT, 8},
+    };
+    const ShaderCodeVariableDesc Variables[] = {
+        {"scalar", "f32", SHADER_CODE_BASIC_TYPE_FLOAT, 0},
+        {"vector", "vec3<f32>", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 3, 1, 16},
+        {"tail", "u32", SHADER_CODE_BASIC_TYPE_UINT, 28},
+        {"transform", "mat2x4<f32>", SHADER_CODE_VARIABLE_CLASS_MATRIX_ROWS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 2, 32},
+        {"values", "vec4<i32>", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_INT, 4, 1, 64, 2},
+        {"nested", "Nested", 2, NestedMembers, 96},
+    };
+    const ShaderCodeBufferDesc Expected{112, 6, Variables};
+    for (bool LoadReflection : {false, true})
+    {
+        SCOPED_TRACE(LoadReflection);
+        const WGSLShaderResources Resources{GetRawAllocator(), WGSL, SHADER_SOURCE_LANGUAGE_WGSL,
+                                            "Native uniform layout", nullptr, nullptr, nullptr, LoadReflection, nullptr};
+        ASSERT_EQ(Resources.GetTotalResources(), 1u);
+        ASSERT_EQ(Resources.GetNumUBs(), 1u);
+        EXPECT_STREQ(Resources.GetEntryPoint(), "main");
+        EXPECT_EQ(Resources.GetShaderType(), SHADER_TYPE_PIXEL);
+        EXPECT_STREQ(Resources.GetUB(0).Name, "constants");
+        EXPECT_EQ(Resources.GetUB(0).BindGroup, 2u);
+        EXPECT_EQ(Resources.GetUB(0).BindIndex, 3u);
+        EXPECT_EQ(Resources.GetUB(0).BufferStaticSize, 112u);
+        if (LoadReflection)
+        {
+            const auto* Buffer = Resources.GetUniformBufferDesc(0);
+            ASSERT_NE(Buffer, nullptr);
+            EXPECT_EQ(*Buffer, Expected);
+        }
+    }
+}
+
+TEST(WGSLShaderResources, NativeHalfPrecisionUniforms)
+{
+    const std::string         WGSL = R"(
+enable f16;
+struct Constants { @align(16) value: vec4h }
+@group(0) @binding(0) var<uniform> constants: Constants;
+@fragment fn main() -> @location(0) vec4f { return vec4f(constants.value); }
+)";
+    const WGSLShaderResources Resources{GetRawAllocator(), WGSL, SHADER_SOURCE_LANGUAGE_WGSL,
+                                        "Half precision uniforms", nullptr, "main", nullptr, true, nullptr};
+    ASSERT_EQ(Resources.GetNumUBs(), 1u);
+    const auto* Buffer = Resources.GetUniformBufferDesc(0);
+    ASSERT_NE(Buffer, nullptr);
+    EXPECT_EQ(Buffer->Size, 16u);
+    ASSERT_EQ(Buffer->NumVariables, 1u);
+    const ShaderCodeVariableDesc Expected{"value", "vec4<f16>", SHADER_CODE_VARIABLE_CLASS_VECTOR,
+                                          SHADER_CODE_BASIC_TYPE_FLOAT16, 4, 1, 0};
+    EXPECT_EQ(Buffer->pVariables[0], Expected);
+}
+
+TEST(WGSLShaderResources, PartialMetadataOverridesNamesAndLayout)
+{
+    std::string                  WGSL = R"(
+struct Generated { generated_member: vec4f }
+struct Native { native_member: vec4f }
+@group(1) @binding(4) var<uniform> generated: Generated;
+@group(2) @binding(4) var<uniform> native: Native;
+@id(7) override generated_scale: f32 = 1.0;
+@id(8) override native_scale: f32 = 2.0;
+@id(9) override unused: f32 = 3.0;
+@fragment fn main() -> @location(0) vec4f {
+    return generated.generated_member * generated_scale + native.native_member * native_scale;
+}
+)";
+    const ShaderCodeVariableDesc OriginalMember{"original_member", "float4", SHADER_CODE_VARIABLE_CLASS_VECTOR,
+                                                SHADER_CODE_BASIC_TYPE_FLOAT, 1, 4, 0};
+    const ShaderCodeBufferDesc   OriginalBuffer{16, 1, &OriginalMember};
+    WGSLShaderReflection         Metadata;
+    auto&                        Resource = Metadata.Resources[{1, 4}];
+    Resource.Name                         = "OriginalConstants";
+    Resource.UniformBuffer.reset(new ShaderCodeBufferDescX{});
+    Resource.UniformBuffer->Size = 16;
+    Resource.UniformBuffer->AddVariable(OriginalMember);
+    Metadata.Resources[{3, 4}].Name     = "NotInShader";
+    Metadata.SpecializationConstants[7] = "OriginalScale";
+    Metadata.SpecializationConstants[9] = "UnusedScale";
+    AppendWGSLShaderReflection(WGSL, Metadata);
+
+    // A metadata record applies to the complete binding point. Missing records
+    // fall back to WGSL reflection; unrelated records do not create resources.
+    for (bool LoadReflection : {false, true})
+    {
+        SCOPED_TRACE(LoadReflection);
+        const WGSLShaderResources Resources{GetRawAllocator(), WGSL, SHADER_SOURCE_LANGUAGE_WGSL,
+                                            "Partial reflection metadata", nullptr, "main", nullptr, LoadReflection, nullptr};
+        ASSERT_EQ(Resources.GetNumUBs(), 2u);
+        EXPECT_EQ(Resources.GetTotalResources(), 2u);
+        for (Uint32 i = 0; i < Resources.GetNumUBs(); ++i)
+        {
+            const auto& UB = Resources.GetUB(i);
+            ASSERT_TRUE(UB.BindGroup == 1 || UB.BindGroup == 2);
+            EXPECT_EQ(UB.BindIndex, 4u);
+            EXPECT_STREQ(UB.Name, UB.BindGroup == 1 ? "OriginalConstants" : "native");
+            if (LoadReflection)
+            {
+                const auto* Buffer = Resources.GetUniformBufferDesc(i);
+                ASSERT_NE(Buffer, nullptr);
+                if (UB.BindGroup == 1)
+                    EXPECT_EQ(*Buffer, OriginalBuffer);
+                else
+                {
+                    ASSERT_EQ(Buffer->NumVariables, 1u);
+                    EXPECT_STREQ(Buffer->pVariables[0].Name, "native_member");
+                    EXPECT_STREQ(Buffer->pVariables[0].TypeName, "vec4<f32>");
+                    EXPECT_EQ(Buffer->pVariables[0].NumRows, 4u);
+                    EXPECT_EQ(Buffer->pVariables[0].NumColumns, 1u);
+                }
+            }
+        }
+        ASSERT_EQ(Resources.GetNumSpecConstants(), 2u);
+        for (Uint32 i = 0; i < Resources.GetNumSpecConstants(); ++i)
+        {
+            const auto& SC = Resources.GetSpecConstant(i);
+            ASSERT_TRUE(SC.OverrideId == 7 || SC.OverrideId == 8);
+            EXPECT_STREQ(SC.Name, SC.OverrideId == 7 ? "OriginalScale" : "native_scale");
+            EXPECT_TRUE(SC.IsIdSpecified);
+            EXPECT_EQ(SC.GetType(), SHADER_CODE_BASIC_TYPE_FLOAT);
+        }
+    }
+}
+
+TEST(WGSLShaderResources, MetadataNamesAreRestoredBeforeArrayMerging)
+{
+    std::string          WGSL = R"(
+@group(0) @binding(3) var generated_a: texture_2d<f32>;
+@group(0) @binding(8) var generated_b: texture_2d<f32>;
+@group(1) @binding(3) var native_texture: texture_2d<f32>;
+@fragment fn main() -> @location(0) vec4f {
+    return textureLoad(generated_a, vec2i(0), 0) +
+        textureLoad(generated_b, vec2i(0), 0) + textureLoad(native_texture, vec2i(0), 0);
+}
+)";
+    WGSLShaderReflection Metadata;
+    Metadata.Resources[{0, 3}].Name = "Textures_element_2";
+    Metadata.Resources[{0, 8}].Name = "Textures_element_5";
+    AppendWGSLShaderReflection(WGSL, Metadata);
+    for (const char* Suffix : {static_cast<const char*>(nullptr), "", "_element_"})
+    {
+        SCOPED_TRACE(Suffix != nullptr ? Suffix : "null");
+        const bool                Merge = Suffix != nullptr && Suffix[0] != '\0';
+        const WGSLShaderResources Resources{GetRawAllocator(), WGSL, SHADER_SOURCE_LANGUAGE_WGSL,
+                                            "Metadata resource arrays", nullptr, "main", Suffix, false, nullptr};
+        ASSERT_EQ(Resources.GetNumTextures(), Merge ? 2u : 3u);
+        for (Uint32 i = 0; i < Resources.GetNumTextures(); ++i)
+        {
+            const auto& Texture = Resources.GetTexture(i);
+            EXPECT_EQ(Texture.Type, WGSLResourceType::Texture);
+            if (Texture.BindGroup == 1)
+            {
+                EXPECT_STREQ(Texture.Name, "native_texture");
+                EXPECT_EQ(Texture.ArraySize, 1u);
+            }
+            else if (Merge)
+            {
+                EXPECT_STREQ(Texture.Name, "Textures");
+                EXPECT_EQ(Texture.ArraySize, 6u);
+            }
+            else
+            {
+                EXPECT_STREQ(Texture.Name, Texture.BindIndex == 3 ? "Textures_element_2" : "Textures_element_5");
+                EXPECT_EQ(Texture.ArraySize, 1u);
+            }
+        }
+    }
+}
+
+TEST(WGSLShaderResources, SelectedEntryPointReflection)
+{
+    const std::string WGSL = R"(
+struct Uniforms { value: vec4f }
+@group(0) @binding(0) var<uniform> vertex_uniforms: Uniforms;
+@group(0) @binding(0) var<uniform> fragment_uniforms: Uniforms;
+@group(0) @binding(1) var<uniform> shared_uniforms: Uniforms;
+@group(0) @binding(2) var<storage, read_write> output: array<vec4f>;
+@id(7) override VertexScale: f32 = 1.0;
+@id(9) override FragmentScale: f32 = 2.0;
+@id(11) override Width: u32 = 4;
+override Unused: u32 = 1;
+fn read_vertex() -> vec4f { return vertex_uniforms.value * VertexScale; }
+fn read_fragment() -> vec4f { return fragment_uniforms.value * FragmentScale; }
+@vertex fn vs() -> @builtin(position) vec4f { return read_vertex() + shared_uniforms.value; }
+@fragment fn fs() -> @location(0) vec4f { return read_fragment() + shared_uniforms.value; }
+@compute @workgroup_size(Width) fn cs() { output[0] = shared_uniforms.value; }
+)";
+    const struct
+    {
+        const char* EntryPoint;
+        SHADER_TYPE Stage;
+        const char* ResourceName;
+        const char* ConstantName;
+        Uint32      ConstantId;
+    } Cases[] = {
+        {"vs", SHADER_TYPE_VERTEX, "vertex_uniforms", "VertexScale", 7},
+        {"fs", SHADER_TYPE_PIXEL, "fragment_uniforms", "FragmentScale", 9},
+        {"cs", SHADER_TYPE_COMPUTE, "output", "Width", 11},
+    };
+    for (const auto& Test : Cases)
+    {
+        SCOPED_TRACE(Test.EntryPoint);
+        const WGSLShaderResources Resources{GetRawAllocator(), WGSL, SHADER_SOURCE_LANGUAGE_WGSL,
+                                            "Selected entry point", nullptr, Test.EntryPoint, nullptr, false, nullptr};
+        EXPECT_STREQ(Resources.GetEntryPoint(), Test.EntryPoint);
+        EXPECT_EQ(Resources.GetShaderType(), Test.Stage);
+        ASSERT_EQ(Resources.GetTotalResources(), 2u);
+        EXPECT_EQ(Resources.GetNumUBs(), Test.Stage == SHADER_TYPE_COMPUTE ? 1u : 2u);
+        EXPECT_EQ(Resources.GetNumSBs(), Test.Stage == SHADER_TYPE_COMPUTE ? 1u : 0u);
+        for (Uint32 i = 0; i < Resources.GetTotalResources(); ++i)
+        {
+            const auto& Resource = Resources.GetResource(i);
+            EXPECT_STREQ(Resource.Name, Resource.BindIndex == 1 ? "shared_uniforms" : Test.ResourceName);
+        }
+        ASSERT_EQ(Resources.GetNumSpecConstants(), 1u);
+        EXPECT_STREQ(Resources.GetSpecConstant(0).Name, Test.ConstantName);
+        EXPECT_EQ(Resources.GetSpecConstant(0).OverrideId, Test.ConstantId);
+        EXPECT_TRUE(Resources.GetSpecConstant(0).IsIdSpecified);
+    }
+}
+
+TEST(WGSLShaderResources, NativeStorageAndMultisampledTextures)
+{
+    const std::string               WGSL       = R"(
+@group(0) @binding(0) var Read: texture_storage_2d_array<rgba8unorm, read>;
+@group(0) @binding(1) var Write: texture_storage_3d<rgba32uint, write>;
+@group(0) @binding(2) var ReadWrite: texture_storage_2d<r32sint, read_write>;
+@group(0) @binding(3) var Depth: texture_depth_multisampled_2d;
+@group(0) @binding(4) var MS: texture_multisampled_2d<i32>;
+@group(0) @binding(5) var<storage, read_write> Output: array<f32>;
+@group(0) @binding(6) var External: texture_external;
+@compute @workgroup_size(1) fn main() {
+    Output[0] = textureLoad(Read, vec2i(0), 0).x + textureLoad(Depth, vec2i(0), 0) +
+        f32(textureLoad(MS, vec2i(0), 0).x) + textureLoad(External, vec2i(0)).x;
+    textureStore(Write, vec3i(0), vec4u(1));
+    textureStore(ReadWrite, vec2i(0), textureLoad(ReadWrite, vec2i(0)));
+}
+)";
+    const WGSLShaderResourceAttribs Expected[] = {
+        {"Read", WGSLResourceType::ROStorageTexture, 1, RESOURCE_DIM_TEX_2D_ARRAY, TEX_FORMAT_RGBA8_UNORM, WGSLSampleType::Float},
+        {"Write", WGSLResourceType::WOStorageTexture, 1, RESOURCE_DIM_TEX_3D, TEX_FORMAT_RGBA32_UINT, WGSLSampleType::UInt},
+        {"ReadWrite", WGSLResourceType::RWStorageTexture, 1, RESOURCE_DIM_TEX_2D, TEX_FORMAT_R32_SINT, WGSLSampleType::SInt},
+        {"Depth", WGSLResourceType::DepthTextureMS, 1, RESOURCE_DIM_TEX_2D, TEX_FORMAT_UNKNOWN, WGSLSampleType::Depth},
+        {"MS", WGSLResourceType::TextureMS, 1, RESOURCE_DIM_TEX_2D, TEX_FORMAT_UNKNOWN, WGSLSampleType::SInt},
+        {"Output", WGSLResourceType::RWStorageBuffer, 1, RESOURCE_DIM_BUFFER},
+        {"External", WGSLResourceType::ExternalTexture, 1, RESOURCE_DIM_TEX_2D, TEX_FORMAT_UNKNOWN, WGSLSampleType::Float},
+    };
+    const WGSLShaderResources Resources{GetRawAllocator(), WGSL, SHADER_SOURCE_LANGUAGE_WGSL,
+                                        "Native texture reflection", nullptr, "main", nullptr, false, nullptr};
+    ASSERT_EQ(Resources.GetTotalResources(), 7u);
+    EXPECT_EQ(Resources.GetNumStTextures(), 3u);
+    EXPECT_EQ(Resources.GetNumTextures(), 2u);
+    EXPECT_EQ(Resources.GetNumExtTextures(), 1u);
+    EXPECT_EQ(Resources.GetNumSBs(), 1u);
+    for (Uint32 i = 0; i < Resources.GetTotalResources(); ++i)
+    {
+        const auto& Resource = Resources.GetResource(i);
+        SCOPED_TRACE(Resource.Name);
+        ASSERT_LT(Resource.BindIndex, 7u);
+        const auto& Ref = Expected[Resource.BindIndex];
+        EXPECT_STREQ(Resource.Name, Ref.Name);
+        EXPECT_EQ(Resource.Type, Ref.Type);
+        EXPECT_EQ(Resource.ResourceDim, Ref.ResourceDim);
+        EXPECT_EQ(Resource.Format, Ref.Format);
+        EXPECT_EQ(Resource.SampleType, Ref.SampleType);
+        EXPECT_EQ(Resource.IsMultisample(), Resource.BindIndex == 3 || Resource.BindIndex == 4);
+    }
+}
+
+TEST(WGSLShaderResources, InvalidSourceAndReflectionDiagnostics)
+{
+    const struct
+    {
+        const char* Source;
+        const char* EntryPoint;
+        const char* Error;
+        bool        HasTintDiagnostics;
+    } Cases[] = {
+        {"invalid WGSL", "main", "Failed to parse shader source", true},
+        {"fn helper() {}", nullptr, "does not contain any entry points", false},
+        {"@compute @workgroup_size(1) fn main() {}", "missing", "Entry point 'missing' is not found", false},
+        {"@compute @workgroup_size(1) fn main() {}\n/*$DILIGENT_WGSL_REFLECTION=invalid*/",
+         "main", "Invalid WGSL reflection metadata", false},
+    };
+    for (const auto& Test : Cases)
+    {
+        SCOPED_TRACE(Test.Error);
+        RefCntAutoPtr<IDataBlob>       Diagnostics;
+        TestingEnvironment::ErrorScope Errors{Test.Error};
+        EXPECT_THROW((WGSLShaderResources{GetRawAllocator(), Test.Source, SHADER_SOURCE_LANGUAGE_WGSL,
+                                          "Invalid reflection input", nullptr, Test.EntryPoint, nullptr, false, &Diagnostics}),
+                     std::runtime_error);
+        if (Test.HasTintDiagnostics)
+        {
+            ASSERT_NE(Diagnostics, nullptr);
+            const char*       Text = static_cast<const char*>(Diagnostics->GetConstDataPtr());
+            const std::string Message{Text};
+            EXPECT_FALSE(Message.empty());
+            ASSERT_EQ(Diagnostics->GetSize(), Message.size() + 1 + strlen(Test.Source) + 1);
+            EXPECT_STREQ(Text + Message.size() + 1, Test.Source);
+        }
+        else
+        {
+            EXPECT_EQ(Diagnostics, nullptr);
+        }
     }
 }
 

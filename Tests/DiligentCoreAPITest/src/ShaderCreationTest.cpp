@@ -246,7 +246,7 @@ TEST(ShaderCreationTest, FromBytecode)
 }
 
 
-TEST(ShaderCreationTest, WGSLEntryPointRemapping)
+void TestWGSLEntryPointRemapping(PSO_CREATE_FLAGS Flags)
 {
     GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
     IRenderDevice*         pDevice = pEnv->GetDevice();
@@ -282,23 +282,39 @@ TEST(ShaderCreationTest, WGSLEntryPointRemapping)
     GraphicsCI.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     GraphicsCI.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
     GraphicsCI.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+    GraphicsCI.Flags                                         = Flags;
     GraphicsCI.pVS                                           = Shaders[0];
     GraphicsCI.pPS                                           = Shaders[1];
 
     RefCntAutoPtr<IPipelineState> pGraphicsPSO;
     pDevice->CreateGraphicsPipelineState(GraphicsCI, &pGraphicsPSO);
     ASSERT_NE(pGraphicsPSO, nullptr);
-    EXPECT_EQ(pGraphicsPSO->GetStatus(), PIPELINE_STATE_STATUS_READY);
+    EXPECT_EQ(pGraphicsPSO->GetStatus(true), PIPELINE_STATE_STATUS_READY);
 
     ComputePipelineStateCreateInfo ComputeCI;
     ComputeCI.PSODesc.Name         = "WGSLEntryPointRemapping - Compute";
     ComputeCI.PSODesc.PipelineType = PIPELINE_TYPE_COMPUTE;
+    ComputeCI.Flags                = Flags;
     ComputeCI.pCS                  = Shaders[2];
 
     RefCntAutoPtr<IPipelineState> pComputePSO;
     pDevice->CreateComputePipelineState(ComputeCI, &pComputePSO);
     ASSERT_NE(pComputePSO, nullptr);
-    EXPECT_EQ(pComputePSO->GetStatus(), PIPELINE_STATE_STATUS_READY);
+    EXPECT_EQ(pComputePSO->GetStatus(true), PIPELINE_STATE_STATUS_READY);
+}
+
+TEST(ShaderCreationTest, WGSLEntryPointRemapping)
+{
+    TestWGSLEntryPointRemapping(PSO_CREATE_FLAG_NONE);
+}
+
+TEST(ShaderCreationTest, WGSLEntryPointRemapping_Async)
+{
+#if PLATFORM_WEB
+    GTEST_SKIP() << "The synchronous test harness cannot wait for browser asynchronous pipelines";
+#else
+    TestWGSLEntryPointRemapping(PSO_CREATE_FLAG_ASYNCHRONOUS);
+#endif
 }
 
 } // namespace

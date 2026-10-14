@@ -954,4 +954,145 @@ TEST_F(SpecializationConstants, RenderStateCacheTest_DistinctEntries_Async)
     TestDistinctEntries(/*CompileAsync = */ true);
 }
 
+
+void TestWebGPUScalarSpecializationConstants(PSO_CREATE_FLAGS Flags, bool UseFloat16 = false)
+{
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    const auto&            Features = pDevice->GetDeviceInfo().Features;
+    if (!pDevice->GetDeviceInfo().IsWebGPUDevice() || !Features.SpecializationConstants)
+        GTEST_SKIP() << "This test requires WebGPU specialization constants";
+    if (UseFloat16 && !Features.ShaderFloat16)
+        GTEST_SKIP() << "16-bit shader floats are not supported by this device";
+
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
+    IDeviceContext*                    pContext   = pEnv->GetDeviceContext();
+    ISwapChain*                        pSwapChain = pEnv->GetSwapChain();
+    RefCntAutoPtr<ITestingSwapChain>   pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
+    ASSERT_NE(pTestingSwapChain, nullptr);
+    ComputeShaderReference(pSwapChain);
+    pContext->Flush();
+    pContext->InvalidateState();
+
+    // Detect incomplete dispatch coverage if the workgroup-size override is lost,
+    // even when a previous test left the expected gradient in the output texture.
+    ITextureView* pRTV         = pSwapChain->GetCurrentBackBufferRTV();
+    const float   ClearColor[] = {1.0f, 0.0f, 1.0f, 1.0f};
+    pContext->SetRenderTargets(1, &pRTV, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->ClearRenderTarget(pRTV, ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    // Check scalar conversion, a required override, a retained default, and an
+    // override used only by the workgroup size. The large unsigned value detects
+    // signed conversion; the negative value detects unsigned conversion.
+    std::string Source = R"(
+@id(0) override sc_True: bool = false;
+override sc_False: bool = true;
+override sc_Int: i32 = 0;
+@id(65535) override sc_Uint: u32 = 0;
+override sc_Float: f32 = 0.0;
+override sc_Required: u32;
+override sc_Default: f32 = 0.5;
+override sc_LocalX: u32 = 1;
+@group(0) @binding(0) var Output: texture_storage_2d<rgba8unorm, write>;
+@compute @workgroup_size(sc_LocalX, 16) fn vec4u(@builtin(global_invocation_id) id: vec3u) {
+    if (any(id.xy >= textureDimensions(Output))) { return; }
+    var color = vec4<f32>(vec2<f32>(id.xy % vec2u(256u)) / 256.0, 0.0, 1.0);
+    if (!sc_True || sc_False || sc_Int != -1234567 || sc_Uint != 0xf1234567u ||
+        sc_Float != 0.25 || sc_Required != 17u || sc_Default != 0.5 /* HALF_CHECK */) {
+        color = vec4<f32>(1.0, 0.0, 1.0, 1.0);
+    }
+    textureStore(Output, id.xy, color);
+}
+)";
+    if (UseFloat16)
+    {
+        Source.insert(0, "enable f16;\noverride sc_Half: f16 = 0.0h;\n");
+        const std::string Marker = "/* HALF_CHECK */";
+        Source.replace(Source.find(Marker), Marker.length(), "|| sc_Half != 1.5h");
+    }
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.Desc           = {"WebGPU scalar specialization constants", SHADER_TYPE_COMPUTE};
+    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_WGSL;
+    ShaderCI.EntryPoint     = "vec4u"; // Tint renames this entry point on the remapping path.
+    ShaderCI.Source         = Source.c_str();
+    RefCntAutoPtr<IShader> pCS;
+    pDevice->CreateShader(ShaderCI, &pCS);
+    ASSERT_NE(pCS, nullptr);
+
+    const Uint32                 TrueValue     = 0x10000; // Every non-zero bit pattern must convert to true.
+    const Uint32                 FalseValue    = 0;
+    const Int32                  IntValue      = -1234567;
+    const Uint32                 UintValue     = 0xf1234567u;
+    const float                  FloatValue    = 0.25f;
+    const Uint32                 RequiredValue = 17;
+    const Uint32                 LocalX        = 16;
+    const Uint16                 HalfValue     = 0x3e00; // IEEE 754 half-precision 1.5.
+    const SpecializationConstant SpecConsts[]  = {
+        {"sc_True", SHADER_TYPE_COMPUTE, sizeof(TrueValue), &TrueValue},
+        {"sc_False", SHADER_TYPE_COMPUTE, sizeof(FalseValue), &FalseValue},
+        {"sc_Int", SHADER_TYPE_COMPUTE, sizeof(IntValue), &IntValue},
+        {"sc_Uint", SHADER_TYPE_COMPUTE, sizeof(UintValue), &UintValue},
+        {"sc_Float", SHADER_TYPE_COMPUTE, sizeof(FloatValue), &FloatValue},
+        {"sc_Required", SHADER_TYPE_COMPUTE, sizeof(RequiredValue), &RequiredValue},
+        {"sc_LocalX", SHADER_TYPE_COMPUTE, sizeof(LocalX), &LocalX},
+        {"sc_Half", SHADER_TYPE_COMPUTE, sizeof(HalfValue), &HalfValue},
+    };
+    ComputePipelineStateCreateInfo PsoCI;
+    PsoCI.PSODesc.Name               = "WebGPU scalar specialization constants";
+    PsoCI.PSODesc.PipelineType       = PIPELINE_TYPE_COMPUTE;
+    PsoCI.pCS                        = pCS;
+    PsoCI.Flags                      = Flags;
+    PsoCI.NumSpecializationConstants = static_cast<Uint32>(_countof(SpecConsts)) - (UseFloat16 ? 0u : 1u);
+    PsoCI.pSpecializationConstants   = SpecConsts;
+    RefCntAutoPtr<IPipelineState> pPSO;
+    pDevice->CreateComputePipelineState(PsoCI, &pPSO);
+    ASSERT_NE(pPSO, nullptr);
+    ASSERT_EQ(pPSO->GetStatus(true), PIPELINE_STATE_STATUS_READY);
+
+    IShaderResourceVariable* pOutput = pPSO->GetStaticVariableByName(SHADER_TYPE_COMPUTE, "Output");
+    ASSERT_NE(pOutput, nullptr);
+    pOutput->Set(pTestingSwapChain->GetCurrentBackBufferUAV());
+    RefCntAutoPtr<IShaderResourceBinding> pSRB;
+    pPSO->CreateShaderResourceBinding(&pSRB, true);
+    ASSERT_NE(pSRB, nullptr);
+    pContext->SetPipelineState(pPSO);
+    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    DispatchComputeAttribs Dispatch;
+    Dispatch.ThreadGroupCountX = (pSwapChain->GetDesc().Width + 15) / 16;
+    Dispatch.ThreadGroupCountY = (pSwapChain->GetDesc().Height + 15) / 16;
+    pContext->DispatchCompute(Dispatch);
+    pSwapChain->Present();
+}
+
+TEST_F(SpecializationConstants, WebGPUScalarValues)
+{
+    TestWebGPUScalarSpecializationConstants(PSO_CREATE_FLAG_NONE);
+}
+
+TEST_F(SpecializationConstants, WebGPUScalarValues_NoRemap)
+{
+    TestWebGPUScalarSpecializationConstants(PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES);
+}
+
+TEST_F(SpecializationConstants, WebGPUScalarValues_Async)
+{
+#if PLATFORM_WEB
+    GTEST_SKIP() << "The synchronous test harness cannot wait for browser asynchronous pipelines";
+#else
+    TestWebGPUScalarSpecializationConstants(PSO_CREATE_FLAG_ASYNCHRONOUS);
+#endif
+}
+
+TEST_F(SpecializationConstants, WebGPUFloat16Value)
+{
+    TestWebGPUScalarSpecializationConstants(PSO_CREATE_FLAG_NONE, true);
+}
+
+TEST_F(SpecializationConstants, WebGPUFloat16Value_NoRemap)
+{
+    TestWebGPUScalarSpecializationConstants(PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES, true);
+}
+
 } // namespace
