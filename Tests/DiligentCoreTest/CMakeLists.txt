@@ -66,7 +66,7 @@ PRIVATE
 )
 
 if(WEBGPU_SUPPORTED)
-    target_link_libraries(DiligentCoreTest PRIVATE libtint)
+    target_link_libraries(DiligentCoreTest PRIVATE libtint dawn_utils_config)
 endif()
 
 if (PLATFORM_WIN32)

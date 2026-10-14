@@ -8,9 +8,9 @@ set(DAWN_SUBMODULES
 
 FetchContent_DeclareShallowGit(
     dawn
-    GIT_REPOSITORY  https://dawn.googlesource.com/dawn
-    # Dawn and Emdawnwebgpu snapshot v20261002.154047.
-    GIT_TAG         b1236a9bb4a47f1262bc3acb253bb1c2181e90dd
+    GIT_REPOSITORY  https://github.com/DiligentGraphics/dawn.git
+    # Work around the MSVC x86 queue serial return miscompilation.
+    GIT_TAG         msvc-x86-queue-serial-fix
     GIT_SUBMODULES  "${DAWN_SUBMODULES}"
 )
 

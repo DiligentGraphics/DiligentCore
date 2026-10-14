@@ -218,6 +218,8 @@ if(ENABLE_WGSL)
     target_link_libraries(Diligent-ShaderTools
     PRIVATE
         libtint
+        # Tint's internal headers require Dawn's utility build configuration.
+        dawn_utils_config
         # We include this library because when building for Emscripten, libtint does not include this library in the dependency list
         tint_lang_wgsl_inspector 
     ) 
