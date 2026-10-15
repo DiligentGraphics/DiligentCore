@@ -442,10 +442,10 @@ void SwapChainWebGPUImpl::CreateSurface()
     wgpuSurfaceNativeDesc.chain = {nullptr, WGPUSType_SurfaceSourceXCBWindow};
     wgpuSurfaceNativeDesc.connection = m_NativeWindow.pXCBConnection;
     wgpuSurfaceNativeDesc.window = m_NativeWindow.WindowId;
-#elif PLATFROM_MACOS
+#elif PLATFORM_MACOS
     WGPUSurfaceSourceMetalLayer wgpuSurfaceNativeDesc{};
-    wgpuSurfaceNativeDesc.chain  = {nullptr, WGPUSType_SurfaceSourceMetalLayer};
-    wgpuSurfaceNativeDesc.window = m_NativeWindow.MetalLayer;
+    wgpuSurfaceNativeDesc.chain = {nullptr, WGPUSType_SurfaceSourceMetalLayer};
+    wgpuSurfaceNativeDesc.layer = m_NativeWindow.GetLayer();
 #elif PLATFORM_WEB
     WGPUEmscriptenSurfaceSourceCanvasHTMLSelector wgpuSurfaceNativeDesc{};
     wgpuSurfaceNativeDesc.chain    = {nullptr, WGPUSType_EmscriptenSurfaceSourceCanvasHTMLSelector};
@@ -523,12 +523,14 @@ void SwapChainWebGPUImpl::ConfigureSurface()
 
         m_SwapChainDesc.Width  = WindowRect.right - WindowRect.left;
         m_SwapChainDesc.Height = WindowRect.bottom - WindowRect.top;
+#elif PLATFORM_MACOS
+        m_NativeWindow.GetBackingSize(m_SwapChainDesc.Width, m_SwapChainDesc.Height);
 #elif PLATFORM_WEB
-        int32_t CanvasWidth = 0;
+        int32_t CanvasWidth  = 0;
         int32_t CanvasHeight = 0;
         emscripten_get_canvas_element_size(m_NativeWindow.pCanvasId, &CanvasWidth, &CanvasHeight);
 
-        m_SwapChainDesc.Width = static_cast<Uint32>(CanvasWidth);
+        m_SwapChainDesc.Width  = static_cast<Uint32>(CanvasWidth);
         m_SwapChainDesc.Height = static_cast<Uint32>(CanvasHeight);
 #endif
 

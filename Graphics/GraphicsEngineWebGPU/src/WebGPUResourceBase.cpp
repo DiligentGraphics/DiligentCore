@@ -201,6 +201,10 @@ void WebGPUResourceBase::ProcessAsyncReadback(StagingBufferInfo& Buffer)
             }
             wgpuBufferUnmap(BufferInfo.wgpuBuffer.Get());
         }
+        else
+        {
+            LOG_DEBUG_MESSAGE(DEBUG_MESSAGE_SEVERITY_ERROR, "WebGPU: Failed to map staging readback buffer: ", WGPUStringViewToString(Message));
+        }
 
         BufferInfo.pSyncPoint->Trigger();
 

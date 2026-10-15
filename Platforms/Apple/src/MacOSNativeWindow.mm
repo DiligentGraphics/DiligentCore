@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -32,6 +32,22 @@ namespace Diligent
 void* MacOSNativeWindow::GetLayer() const
 {
     return pNSView ? (__bridge void*)((__bridge NSView*)pNSView).layer : nullptr;
+}
+
+void MacOSNativeWindow::GetBackingSize(Uint32& Width, Uint32& Height) const
+{
+    if (pNSView)
+    {
+        NSView* const pView          = (__bridge NSView*)pNSView;
+        const NSRect  ViewRectPixels = [pView convertRectToBacking:[pView bounds]];
+        Width                        = static_cast<Uint32>(ViewRectPixels.size.width);
+        Height                       = static_cast<Uint32>(ViewRectPixels.size.height);
+    }
+    else
+    {
+        Width  = 0;
+        Height = 0;
+    }
 }
 
 } // namespace Diligent
