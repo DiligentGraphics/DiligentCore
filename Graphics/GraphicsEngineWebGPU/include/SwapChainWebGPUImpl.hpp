@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2024 Diligent Graphics LLC
+ *  Copyright 2023-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -29,8 +29,6 @@
 /// \file
 /// Declaration of Diligent::SwapChainWebGPUImpl class
 
-#include <memory>
-
 #include "SwapChainBase.hpp"
 #include "SwapChainWebGPU.h"
 #include "EngineWebGPUImplTraits.hpp"
@@ -55,10 +53,10 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_SwapChainWebGPU, TSwapChainBase)
 
-    /// Implementation of ISwapChain::Present() in Direct3D11 backend.
+    /// Implementation of ISwapChain::Present() in WebGPU backend.
     void DILIGENT_CALL_TYPE Present(Uint32 SyncInterval) override final;
 
-    /// Implementation of ISwapChain::Resize() in Direct3D11 backend.
+    /// Implementation of ISwapChain::Resize() in WebGPU backend.
     void DILIGENT_CALL_TYPE Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFORM NewPreTransform) override final;
 
     /// Implementation of ISwapChain::SetFullscreenMode() in WebGPU backend.
@@ -68,7 +66,7 @@ public:
     void DILIGENT_CALL_TYPE SetWindowedMode() override final;
 
     /// Implementation of ISwapChainWebGPU::GetCurrentBackBufferRTV() in WebGPU backend.
-    ITextureViewWebGPU* DILIGENT_CALL_TYPE GetCurrentBackBufferRTV() override final { return m_pBackBufferRTV; }
+    ITextureViewWebGPU* DILIGENT_CALL_TYPE GetCurrentBackBufferRTV() override final;
 
     /// Implementation of ISwapChainWebGPU::GetDepthBufferDSV() in WebGPU backend.
     ITextureViewWebGPU* DILIGENT_CALL_TYPE GetDepthBufferDSV() override final { return m_pDepthBufferDSV; }
@@ -77,26 +75,21 @@ public:
     WGPUSurface DILIGENT_CALL_TYPE GetWebGPUSurface() override final { return m_wgpuSurface.Get(); }
 
 private:
-    void CreateSurface();
-
-    void ConfigureSurface();
-
-    void CreateBuffersAndViews();
-
+    bool CreateSurface();
+    bool ConfigureSurface();
+    bool AcquireSurfaceTexture();
+    bool CreateDepthBufferView();
     void ReleaseSwapChainResources();
-
-    void RecreateSwapChain();
-
-private:
-    class PresentCommand;
+    bool RecreateSwapChain();
 
     NativeWindow                      m_NativeWindow;
     WebGPUSurfaceWrapper              m_wgpuSurface;
+    WebGPUTextureWrapper              m_wgpuCurrentTexture;
     RefCntAutoPtr<ITextureViewWebGPU> m_pBackBufferRTV;
-    RefCntAutoPtr<ITextureViewWebGPU> m_pBackBufferSRV;
     RefCntAutoPtr<ITextureViewWebGPU> m_pDepthBufferDSV;
-    std::unique_ptr<PresentCommand>   m_pCmdPresent;
-    bool                              m_VSyncEnabled = true;
+    bool                              m_VSyncEnabled       = true;
+    bool                              m_SurfaceConfigured  = false;
+    bool                              m_ReconfigureSurface = false;
 };
 
 } // namespace Diligent

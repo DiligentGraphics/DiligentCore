@@ -29,11 +29,10 @@
 #include "SwapChainWebGPUImpl.hpp"
 #include "RenderDeviceWebGPUImpl.hpp"
 #include "DeviceContextWebGPUImpl.hpp"
-#include "TextureViewWebGPU.h"
+#include "TextureWebGPUImpl.hpp"
 #include "WebGPUTypeConversions.hpp"
-#include "WebGPUDefinitions.hpp"
 
-#ifdef PLATFORM_WIN32
+#if PLATFORM_WIN32
 #    include <Windows.h>
 #endif
 
@@ -44,320 +43,13 @@
 namespace Diligent
 {
 
-namespace
-{
-
-constexpr char VSSource[] = R"(
-struct VertexOutput 
-{
-    @builtin(position) Position: vec4f,
-}
-
-@vertex
-fn VSMain(@builtin(vertex_index) VertexId: u32) -> VertexOutput 
-{
-    let Texcoord: vec2f = vec2f(f32((VertexId << 1u) & 2u), f32(VertexId & 2u));
-    let Position: vec4f = vec4f(Texcoord * vec2f(2.0f, -2.0f) + vec2f(-1.0f, 1.0f), 1.0f, 1.0f);
-    return VertexOutput(Position);
-}
-)";
-
-constexpr char PSSource[] = R"(
-@group(0) @binding(0) var TextureSrc: texture_2d<f32>;
-
-struct VertexOutput 
-{
-    @builtin(position) Position: vec4f,
-}
-
-@fragment
-fn PSMain(Input: VertexOutput) -> @location(0) vec4f 
-{
-    return textureLoad(TextureSrc, vec2i(Input.Position.xy), 0);
-}
-)";
-
-constexpr char PSSourceGamma[] = R"(
-@group(0) @binding(0) var TextureSrc: texture_2d<f32>;
-
-struct VertexOutput 
-{
-    @builtin(position) Position: vec4f,
-}
-
-fn LinearToSRGB(RGB: vec3<f32>) -> vec3<f32> {
-    let threshold = vec3<f32>(0.0031308);
-    let bGreater = step(threshold, RGB);
-    let linearPart = RGB * 12.92;
-    let sRGBPart = (pow(RGB, vec3<f32>(1.0 / 2.4)) * 1.055) - vec3<f32>(0.055);
-    return mix(linearPart, sRGBPart, bGreater);
-}
-
-@fragment
-fn PSMain(Input: VertexOutput) -> @location(0) vec4f 
-{
-    var Color: vec4f = textureLoad(TextureSrc, vec2i(Input.Position.xy), 0);
-    return vec4f(LinearToSRGB(Color.rgb), Color.a);
-}
-)";
-
-WGPUTextureFormat WGPUConvertUnormToSRGB(WGPUTextureFormat Format)
-{
-    switch (Format)
-    {
-        case WGPUTextureFormat_RGBA8Unorm:
-            return WGPUTextureFormat_RGBA8UnormSrgb;
-        case WGPUTextureFormat_BGRA8Unorm:
-            return WGPUTextureFormat_BGRA8UnormSrgb;
-        default:
-            UNEXPECTED("Unexpected texture format");
-            return Format;
-    }
-}
-
-} // namespace
-
-class SwapChainWebGPUImpl::PresentCommand
-{
-public:
-    PresentCommand(IRenderDeviceWebGPU* pRenderDevice) :
-        m_pRenderDevice{pRenderDevice}
-    {
-    }
-
-    bool InitializePipelineState(WGPUTextureFormat wgpuFormat, bool ConvertToGamma)
-    {
-        if (m_wgpuRenderPipeline)
-            return true;
-
-        WGPUDevice wgpuDevice = m_pRenderDevice->GetWebGPUDevice();
-
-        WebGPUShaderModuleWrapper wgpuVSShaderModule{};
-        {
-            WGPUShaderSourceWGSL wgpuShaderCodeDesc{};
-            wgpuShaderCodeDesc.chain.sType = WGPUSType_ShaderSourceWGSL;
-            wgpuShaderCodeDesc.code        = GetWGPUStringView(VSSource);
-
-            WGPUShaderModuleDescriptor wgpuShaderModuleDesc{};
-            wgpuShaderModuleDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuShaderCodeDesc);
-            wgpuVSShaderModule.Reset(wgpuDeviceCreateShaderModule(wgpuDevice, &wgpuShaderModuleDesc));
-            if (!wgpuVSShaderModule)
-            {
-                LOG_ERROR_MESSAGE("Failed to create shader module for swap chain present command");
-                return false;
-            }
-        }
-
-        WebGPUShaderModuleWrapper wgpuPSShaderModule{};
-        {
-            WGPUShaderSourceWGSL wgpuShaderCodeDesc{};
-            wgpuShaderCodeDesc.chain.sType = WGPUSType_ShaderSourceWGSL;
-            wgpuShaderCodeDesc.code        = GetWGPUStringView(ConvertToGamma ? PSSourceGamma : PSSource);
-
-            WGPUShaderModuleDescriptor wgpuShaderModuleDesc{};
-            wgpuShaderModuleDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuShaderCodeDesc);
-            wgpuPSShaderModule.Reset(wgpuDeviceCreateShaderModule(wgpuDevice, &wgpuShaderModuleDesc));
-            if (!wgpuPSShaderModule)
-            {
-                LOG_ERROR_MESSAGE("Failed to create shader module for swap chain present command");
-                return false;
-            }
-        }
-
-        WGPUBindGroupLayoutEntry wgpuBindGroupLayoutEntries[1]{};
-        wgpuBindGroupLayoutEntries[0].binding               = 0;
-        wgpuBindGroupLayoutEntries[0].visibility            = WGPUShaderStage_Fragment;
-        wgpuBindGroupLayoutEntries[0].texture.sampleType    = WGPUTextureSampleType_Float;
-        wgpuBindGroupLayoutEntries[0].texture.viewDimension = WGPUTextureViewDimension_2D;
-
-        WGPUBindGroupLayoutDescriptor wgpuBindGroupLayoutDesc{};
-        wgpuBindGroupLayoutDesc.entryCount = _countof(wgpuBindGroupLayoutEntries);
-        wgpuBindGroupLayoutDesc.entries    = wgpuBindGroupLayoutEntries;
-        m_wgpuBindGroupLayout.Reset(wgpuDeviceCreateBindGroupLayout(wgpuDevice, &wgpuBindGroupLayoutDesc));
-        if (!m_wgpuBindGroupLayout)
-        {
-            LOG_ERROR_MESSAGE("Failed to create bind group layout for swap chain present command");
-            return false;
-        }
-
-        WGPUPipelineLayoutDescriptor wgpuPipelineLayoutDesc{};
-        wgpuPipelineLayoutDesc.bindGroupLayoutCount = 1;
-        wgpuPipelineLayoutDesc.bindGroupLayouts     = &m_wgpuBindGroupLayout.Get();
-        m_wgpuPipelineLayout.Reset(wgpuDeviceCreatePipelineLayout(wgpuDevice, &wgpuPipelineLayoutDesc));
-        if (!m_wgpuPipelineLayout)
-        {
-            LOG_ERROR_MESSAGE("Failed to create pipeline layout for swap chain present command");
-            return false;
-        }
-
-        WGPUColorTargetState wgpuColorTargetState{};
-        wgpuColorTargetState.format    = wgpuFormat;
-        wgpuColorTargetState.blend     = nullptr;
-        wgpuColorTargetState.writeMask = WGPUColorWriteMask_All;
-
-        WGPUFragmentState wgpuFragmentState{};
-        wgpuFragmentState.module      = wgpuPSShaderModule;
-        wgpuFragmentState.entryPoint  = GetWGPUStringView("PSMain");
-        wgpuFragmentState.targets     = &wgpuColorTargetState;
-        wgpuFragmentState.targetCount = 1;
-
-        WGPURenderPipelineDescriptor wgpuRenderPipelineDesc{};
-        wgpuRenderPipelineDesc.label              = GetWGPUStringView("SwapChainPresentPSO");
-        wgpuRenderPipelineDesc.layout             = m_wgpuPipelineLayout;
-        wgpuRenderPipelineDesc.primitive.topology = WGPUPrimitiveTopology_TriangleList;
-        wgpuRenderPipelineDesc.primitive.cullMode = WGPUCullMode_None;
-        wgpuRenderPipelineDesc.vertex.module      = wgpuVSShaderModule;
-        wgpuRenderPipelineDesc.vertex.entryPoint  = GetWGPUStringView("VSMain");
-        wgpuRenderPipelineDesc.fragment           = &wgpuFragmentState;
-        wgpuRenderPipelineDesc.multisample.count  = 1;
-        wgpuRenderPipelineDesc.multisample.mask   = 0xFFFFFFFF;
-        m_wgpuRenderPipeline.Reset(wgpuDeviceCreateRenderPipeline(wgpuDevice, &wgpuRenderPipelineDesc));
-        if (!m_wgpuPipelineLayout)
-        {
-            LOG_ERROR_MESSAGE("Failed to create render pipeline for swap chain present command");
-            return false;
-        }
-
-        return true;
-    }
-
-    WGPUSurfaceGetCurrentTextureStatus Execute(ITextureViewWebGPU* pTexture, ISwapChainWebGPU* pSwapChain, IDeviceContextWebGPU* pDeviceContext)
-    {
-        WGPUSurfaceTexture wgpuSurfaceTexture{};
-        wgpuSurfaceGetCurrentTexture(pSwapChain->GetWebGPUSurface(), &wgpuSurfaceTexture);
-        WebGPUTextureWrapper wgpuTexture{wgpuSurfaceTexture.texture};
-
-        switch (wgpuSurfaceTexture.status)
-        {
-            case WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal:
-            case WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal:
-                break;
-
-            case WGPUSurfaceGetCurrentTextureStatus_Timeout:
-            case WGPUSurfaceGetCurrentTextureStatus_Outdated:
-                return wgpuSurfaceTexture.status;
-
-            case WGPUSurfaceGetCurrentTextureStatus_Lost:
-                LOG_WARNING_MESSAGE("Unable to present: swap chain surface is lost");
-                return wgpuSurfaceTexture.status;
-
-            case WGPUSurfaceGetCurrentTextureStatus_Error:
-                LOG_ERROR_MESSAGE("Unable to present: unknown error");
-                return wgpuSurfaceTexture.status;
-
-            default:
-                UNEXPECTED("Unexpected status");
-                return wgpuSurfaceTexture.status;
-        }
-
-        WGPUTextureFormat ViewFormat = wgpuTextureGetFormat(wgpuTexture);
-
-        // Simplify this code once the bug for sRGB texture view is fixed in Dawn
-        bool ConvertToGamma = false;
-#if !PLATFORM_WEB
-        if (IsSRGBFormat(pSwapChain->GetDesc().ColorBufferFormat))
-            ViewFormat = WGPUConvertUnormToSRGB(ViewFormat);
-#else
-        ConvertToGamma = IsSRGBFormat(pSwapChain->GetDesc().ColorBufferFormat);
-#endif
-        if (!InitializePipelineState(ViewFormat, ConvertToGamma))
-            return WGPUSurfaceGetCurrentTextureStatus_Error;
-
-        WGPUTextureViewDescriptor wgpuTextureViewDesc{};
-        wgpuTextureViewDesc.nextInChain     = nullptr;
-        wgpuTextureViewDesc.label           = GetWGPUStringView("SwapChainPresentTextureView");
-        wgpuTextureViewDesc.format          = ViewFormat;
-        wgpuTextureViewDesc.dimension       = WGPUTextureViewDimension_2D;
-        wgpuTextureViewDesc.baseMipLevel    = 0;
-        wgpuTextureViewDesc.mipLevelCount   = 1;
-        wgpuTextureViewDesc.baseArrayLayer  = 0;
-        wgpuTextureViewDesc.arrayLayerCount = 1;
-        wgpuTextureViewDesc.aspect          = WGPUTextureAspect_All;
-
-        WebGPUTextureViewWrapper wgpuTextureView{wgpuTextureCreateView(wgpuTexture, &wgpuTextureViewDesc)};
-        if (!wgpuTextureView)
-        {
-            LOG_ERROR_MESSAGE("Failed to create texture view for WGPU surface texture");
-            return WGPUSurfaceGetCurrentTextureStatus_Error;
-        }
-
-        if (!m_wgpuBindGroup)
-        {
-            WGPUBindGroupEntry wgpuBindGroupEntries[1]{};
-            wgpuBindGroupEntries[0].binding     = 0;
-            wgpuBindGroupEntries[0].textureView = pTexture->GetWebGPUTextureView();
-
-            WGPUBindGroupDescriptor wgpuBindGroupDesc{};
-            wgpuBindGroupDesc.entries    = wgpuBindGroupEntries;
-            wgpuBindGroupDesc.entryCount = _countof(wgpuBindGroupEntries);
-            wgpuBindGroupDesc.layout     = m_wgpuBindGroupLayout;
-
-            m_wgpuBindGroup.Reset(wgpuDeviceCreateBindGroup(m_pRenderDevice->GetWebGPUDevice(), &wgpuBindGroupDesc));
-        }
-
-        WGPUCommandEncoderDescriptor wgpuCmdEncoderDesc{};
-        WebGPUCommandEncoderWrapper  wgpuCmdEncoder{wgpuDeviceCreateCommandEncoder(m_pRenderDevice->GetWebGPUDevice(), &wgpuCmdEncoderDesc)};
-
-        WGPURenderPassColorAttachment wgpuRenderPassColorAttachments[1]{};
-        wgpuRenderPassColorAttachments[0].clearValue = WGPUColor{0.0, 0.0, 0.0, 1.0};
-        wgpuRenderPassColorAttachments[0].loadOp     = WGPULoadOp_Clear;
-        wgpuRenderPassColorAttachments[0].storeOp    = WGPUStoreOp_Store;
-        wgpuRenderPassColorAttachments[0].view       = wgpuTextureView;
-        wgpuRenderPassColorAttachments[0].depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
-
-        WGPURenderPassDescriptor wgpuRenderPassDesc{};
-        wgpuRenderPassDesc.colorAttachmentCount = _countof(wgpuRenderPassColorAttachments);
-        wgpuRenderPassDesc.colorAttachments     = wgpuRenderPassColorAttachments;
-
-        WebGPURenderPassEncoderWrapper wgpuRenderPassEncoder{wgpuCommandEncoderBeginRenderPass(wgpuCmdEncoder, &wgpuRenderPassDesc)};
-        wgpuRenderPassEncoderSetPipeline(wgpuRenderPassEncoder, m_wgpuRenderPipeline);
-        wgpuRenderPassEncoderSetBindGroup(wgpuRenderPassEncoder, 0, m_wgpuBindGroup, 0, nullptr);
-        wgpuRenderPassEncoderDraw(wgpuRenderPassEncoder, 3, 1, 0, 0);
-        wgpuRenderPassEncoderEnd(wgpuRenderPassEncoder);
-
-        WGPUCommandBufferDescriptor wgpuCmdBufferDesc{};
-        WebGPUCommandBufferWrapper  wgpuCmdBuffer{wgpuCommandEncoderFinish(wgpuCmdEncoder, &wgpuCmdBufferDesc)};
-
-        wgpuQueueSubmit(pDeviceContext->GetWebGPUQueue(), 1, &wgpuCmdBuffer.Get());
-
-#if PLATFORM_WEB
-        emscripten_request_animation_frame([](double Time, void* pUserData) -> EM_BOOL { return EM_FALSE; }, nullptr);
-#else
-        wgpuSurfacePresent(pSwapChain->GetWebGPUSurface());
-#endif
-
-        return wgpuSurfaceTexture.status;
-    }
-
-    void ReleaseSwapChainResources()
-    {
-        m_wgpuBindGroup.Reset();
-    }
-
-private:
-    RefCntAutoPtr<IRenderDeviceWebGPU> m_pRenderDevice;
-    WebGPUBindGroupLayoutWrapper       m_wgpuBindGroupLayout;
-    WebGPUBindGroupWrapper             m_wgpuBindGroup;
-    WebGPUPipelineLayoutWrapper        m_wgpuPipelineLayout;
-    WebGPURenderPipelineWrapper        m_wgpuRenderPipeline;
-};
-
 SwapChainWebGPUImpl::SwapChainWebGPUImpl(IReferenceCounters*      pRefCounters,
                                          const SwapChainDesc&     SCDesc,
                                          RenderDeviceWebGPUImpl*  pRenderDevice,
                                          DeviceContextWebGPUImpl* pDeviceContext,
                                          const NativeWindow&      Window) :
-    // clang-format off
-    TSwapChainBase
-    {
-        pRefCounters,
-        pRenderDevice,
-        pDeviceContext,
-        SCDesc
-    },
-    m_NativeWindow{Window},
-    m_pCmdPresent{std::make_unique<PresentCommand>(pRenderDevice)}
-// clang-format on
+    TSwapChainBase{pRefCounters, pRenderDevice, pDeviceContext, SCDesc},
+    m_NativeWindow{Window}
 {
     if (m_DesiredPreTransform != SURFACE_TRANSFORM_OPTIMAL && m_DesiredPreTransform != SURFACE_TRANSFORM_IDENTITY)
     {
@@ -368,12 +60,40 @@ SwapChainWebGPUImpl::SwapChainWebGPUImpl(IReferenceCounters*      pRefCounters,
     m_DesiredPreTransform        = SURFACE_TRANSFORM_OPTIMAL;
     m_SwapChainDesc.PreTransform = SURFACE_TRANSFORM_IDENTITY;
 
-    CreateSurface();
-    ConfigureSurface();
-    CreateBuffersAndViews();
+    if (!CreateSurface() || !ConfigureSurface() || !CreateDepthBufferView())
+        LOG_ERROR_AND_THROW("Failed to initialize WebGPU swap chain");
+
+    // Acquire lazily: a browser canvas texture expires at the end of its rendering frame.
 }
 
-SwapChainWebGPUImpl::~SwapChainWebGPUImpl() = default;
+SwapChainWebGPUImpl::~SwapChainWebGPUImpl()
+{
+    ReleaseSwapChainResources();
+    if (m_wgpuSurface)
+        wgpuSurfaceUnconfigure(m_wgpuSurface);
+}
+
+ITextureViewWebGPU* SwapChainWebGPUImpl::GetCurrentBackBufferRTV()
+{
+    if (m_pBackBufferRTV)
+        return m_pBackBufferRTV;
+
+    try
+    {
+        if ((!m_SurfaceConfigured || m_ReconfigureSurface) && !RecreateSwapChain())
+            return nullptr;
+
+        if (!AcquireSurfaceTexture())
+            return nullptr;
+    }
+    catch (const std::exception& e)
+    {
+        LOG_ERROR_MESSAGE("Failed to acquire WebGPU swap chain texture: ", e.what());
+        return nullptr;
+    }
+
+    return m_pBackBufferRTV;
+}
 
 void SwapChainWebGPUImpl::Present(Uint32 SyncInterval)
 {
@@ -381,32 +101,40 @@ void SwapChainWebGPUImpl::Present(Uint32 SyncInterval)
         LOG_WARNING_MESSAGE_ONCE("WebGPU only supports 0 and 1 present intervals");
 
     RefCntAutoPtr<IDeviceContext> pDeviceContext = m_wpDeviceContext.Lock();
-    RenderDeviceWebGPUImpl*       pRenderDevice  = m_pRenderDevice.RawPtr<RenderDeviceWebGPUImpl>();
     if (!pDeviceContext)
     {
         LOG_ERROR_MESSAGE("Immediate context has been released");
         return;
     }
 
-    DeviceContextWebGPUImpl* pImmediateCtxWebGPU = pDeviceContext.RawPtr<DeviceContextWebGPUImpl>();
+    DeviceContextWebGPUImpl* pImmediateCtx = pDeviceContext.RawPtr<DeviceContextWebGPUImpl>();
+    pImmediateCtx->Flush();
 
-    pImmediateCtxWebGPU->Flush();
-    WGPUSurfaceGetCurrentTextureStatus SurfaceStatus = m_pCmdPresent->Execute(m_pBackBufferSRV, this, pImmediateCtxWebGPU);
+    if (m_pBackBufferRTV)
+    {
+        pImmediateCtx->UnbindTextureFromFramebuffer(ClassPtrCast<TextureWebGPUImpl>(m_pBackBufferRTV->GetTexture()), false);
+#if !PLATFORM_WEB
+        if (wgpuSurfacePresent(m_wgpuSurface) != WGPUStatus_Success)
+            m_ReconfigureSurface = true;
+#endif
+    }
+
+    // The browser presents when control returns to its event loop. Do not acquire the
+    // next texture or reconfigure the canvas here, as that would invalidate this frame.
+    m_pBackBufferRTV.Release();
+    m_wgpuCurrentTexture.Reset();
 
     if (m_SwapChainDesc.IsPrimary)
     {
-        pImmediateCtxWebGPU->FinishFrame();
-        pRenderDevice->ReleaseStaleResources();
+        pImmediateCtx->FinishFrame();
+        m_pRenderDevice->ReleaseStaleResources();
     }
 
     const bool EnableVSync = SyncInterval != 0;
-    if (SurfaceStatus == WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal ||
-        SurfaceStatus == WGPUSurfaceGetCurrentTextureStatus_Outdated ||
-        SurfaceStatus == WGPUSurfaceGetCurrentTextureStatus_Lost ||
-        m_VSyncEnabled != EnableVSync)
+    if (m_VSyncEnabled != EnableVSync)
     {
-        m_VSyncEnabled = EnableVSync;
-        RecreateSwapChain();
+        m_VSyncEnabled       = EnableVSync;
+        m_ReconfigureSurface = true;
     }
 }
 
@@ -428,7 +156,7 @@ void SwapChainWebGPUImpl::SetWindowedMode()
     UNSUPPORTED("WebGPU does not support switching to the windowed mode");
 }
 
-void SwapChainWebGPUImpl::CreateSurface()
+bool SwapChainWebGPUImpl::CreateSurface()
 {
     const RenderDeviceWebGPUImpl* pRenderDeviceWebGPU = m_pRenderDevice.RawPtr<RenderDeviceWebGPUImpl>();
 
@@ -439,9 +167,9 @@ void SwapChainWebGPUImpl::CreateSurface()
     wgpuSurfaceNativeDesc.hinstance = GetModuleHandle(nullptr);
 #elif PLATFORM_LINUX
     WGPUSurfaceSourceXCBWindow wgpuSurfaceNativeDesc{};
-    wgpuSurfaceNativeDesc.chain = {nullptr, WGPUSType_SurfaceSourceXCBWindow};
+    wgpuSurfaceNativeDesc.chain      = {nullptr, WGPUSType_SurfaceSourceXCBWindow};
     wgpuSurfaceNativeDesc.connection = m_NativeWindow.pXCBConnection;
-    wgpuSurfaceNativeDesc.window = m_NativeWindow.WindowId;
+    wgpuSurfaceNativeDesc.window     = m_NativeWindow.WindowId;
 #elif PLATFORM_MACOS
     WGPUSurfaceSourceMetalLayer wgpuSurfaceNativeDesc{};
     wgpuSurfaceNativeDesc.chain = {nullptr, WGPUSType_SurfaceSourceMetalLayer};
@@ -459,168 +187,266 @@ void SwapChainWebGPUImpl::CreateSurface()
     if (!m_wgpuSurface)
     {
         LOG_ERROR_MESSAGE("Failed to create OS-specific surface");
+        return false;
     }
+    return true;
 }
 
-void SwapChainWebGPUImpl::ConfigureSurface()
+bool SwapChainWebGPUImpl::ConfigureSurface()
 {
-    const RenderDeviceWebGPUImpl* pRenderDeviceWebGPU = m_pRenderDevice.RawPtr<RenderDeviceWebGPUImpl>();
+    m_SurfaceConfigured                   = false;
+    const RenderDeviceWebGPUImpl* pDevice = m_pRenderDevice.RawPtr<RenderDeviceWebGPUImpl>();
 
-    WGPUSurfaceCapabilities wgpuSurfaceCapabilities{};
-    wgpuSurfaceGetCapabilities(m_wgpuSurface.Get(), pRenderDeviceWebGPU->GetWebGPUAdapter(), &wgpuSurfaceCapabilities);
+    struct SurfaceCapabilities
+    {
+        WGPUSurfaceCapabilities Caps{};
+        ~SurfaceCapabilities() { wgpuSurfaceCapabilitiesFreeMembers(Caps); }
+    } Capabilities;
+    WGPUSurfaceCapabilities& Caps = Capabilities.Caps;
+    if (wgpuSurfaceGetCapabilities(m_wgpuSurface, pDevice->GetWebGPUAdapter(), &Caps) != WGPUStatus_Success ||
+        Caps.formatCount == 0 || Caps.presentModeCount == 0 || Caps.alphaModeCount == 0)
+    {
+        LOG_ERROR_MESSAGE("Failed to query WebGPU surface capabilities");
+        return false;
+    }
 
-    auto SelectPresentMode = [&](bool IsVSyncEnabled) -> WGPUPresentMode {
-        WGPUPresentMode Result = WGPUPresentMode_Fifo;
+    const bool        IsSRGB         = IsSRGBFormat(m_SwapChainDesc.ColorBufferFormat);
+    WGPUTextureFormat SurfaceFormat  = TextureFormatToWGPUFormat(SRGBFormatToUnorm(m_SwapChainDesc.ColorBufferFormat));
+    auto              SupportsFormat = [&](WGPUTextureFormat Format) {
+        return std::find(Caps.formats, Caps.formats + Caps.formatCount, Format) != Caps.formats + Caps.formatCount;
+    };
+    if (!SupportsFormat(SurfaceFormat))
+    {
+        // Match Vulkan's RGBA/BGRA fallback without changing precision or sRGB encoding.
+        WGPUTextureFormat Replacement = WGPUTextureFormat_Undefined;
+        if (SurfaceFormat == WGPUTextureFormat_RGBA8Unorm)
+            Replacement = WGPUTextureFormat_BGRA8Unorm;
+        else if (SurfaceFormat == WGPUTextureFormat_BGRA8Unorm)
+            Replacement = WGPUTextureFormat_RGBA8Unorm;
 
-        std::vector<WGPUPresentMode> PreferredPresentModes;
-        if (IsVSyncEnabled)
+        if (Replacement == WGPUTextureFormat_Undefined || !SupportsFormat(Replacement))
         {
-            PreferredPresentModes.push_back(WGPUPresentMode_Fifo);
+            LOG_ERROR_MESSAGE("Requested color buffer format ", GetTextureFormatAttribs(m_SwapChainDesc.ColorBufferFormat).Name,
+                              " is not supported by the WebGPU surface");
+            return false;
         }
-        else
-        {
-            PreferredPresentModes.push_back(WGPUPresentMode_Mailbox);
-            PreferredPresentModes.push_back(WGPUPresentMode_Immediate);
-            PreferredPresentModes.push_back(WGPUPresentMode_Fifo);
-        }
 
-        const WGPUPresentMode* FindBegin = wgpuSurfaceCapabilities.presentModes;
-        const WGPUPresentMode* FindEnd   = wgpuSurfaceCapabilities.presentModes + wgpuSurfaceCapabilities.presentModeCount;
+        SurfaceFormat            = Replacement;
+        TEXTURE_FORMAT NewFormat = WGPUFormatToTextureFormat(Replacement);
+        if (IsSRGB)
+            NewFormat = UnormFormatToSRGB(NewFormat);
+        LOG_INFO_MESSAGE("Requested color buffer format ", GetTextureFormatAttribs(m_SwapChainDesc.ColorBufferFormat).Name,
+                         " is not supported by the surface and will be replaced with ", GetTextureFormatAttribs(NewFormat).Name);
+        m_SwapChainDesc.ColorBufferFormat = NewFormat;
+    }
 
-        for (WGPUPresentMode PreferredMode : PreferredPresentModes)
+    static_assert(SWAP_CHAIN_USAGE_LAST == 8, "Please update this function to handle the new swap chain usage");
+    if ((m_SwapChainDesc.Usage & SWAP_CHAIN_USAGE_RENDER_TARGET) == 0 ||
+        (m_SwapChainDesc.Usage & SWAP_CHAIN_USAGE_INPUT_ATTACHMENT) != 0)
+    {
+        LOG_ERROR_MESSAGE("WebGPU swap chains require render target usage and do not support input attachments");
+        return false;
+    }
+
+    WGPUTextureUsage Usage = WGPUTextureUsage_RenderAttachment;
+    if (m_SwapChainDesc.Usage & SWAP_CHAIN_USAGE_SHADER_RESOURCE)
+        Usage |= WGPUTextureUsage_TextureBinding;
+    if (m_SwapChainDesc.Usage & SWAP_CHAIN_USAGE_COPY_SOURCE)
+        Usage |= WGPUTextureUsage_CopySrc;
+#if !PLATFORM_WEB
+    // Emdawnwebgpu does not populate the surface usage capabilities on the Web.
+    if ((Usage & Caps.usages) != Usage)
+    {
+        LOG_ERROR_MESSAGE("Requested swap chain usage is not supported by the WebGPU surface");
+        return false;
+    }
+#endif
+    // Preserve copy-destination support where available without requiring it to present.
+#if !PLATFORM_WEB
+    if ((Caps.usages & WGPUTextureUsage_CopyDst) != 0)
+#endif
+        Usage |= WGPUTextureUsage_CopyDst;
+
+    WGPUPresentMode       PresentMode      = WGPUPresentMode_Fifo;
+    const WGPUPresentMode PreferredModes[] = {WGPUPresentMode_Mailbox, WGPUPresentMode_Immediate, WGPUPresentMode_Fifo};
+    if (!m_VSyncEnabled)
+    {
+        for (WGPUPresentMode Mode : PreferredModes)
         {
-            if (std::find(FindBegin, FindEnd, PreferredMode) != FindEnd)
+            if (std::find(Caps.presentModes, Caps.presentModes + Caps.presentModeCount, Mode) != Caps.presentModes + Caps.presentModeCount)
             {
-                Result = PreferredMode;
+                PresentMode = Mode;
                 break;
             }
         }
-
-        return Result;
-    };
-
-    auto SelectUsage = [&](SWAP_CHAIN_USAGE_FLAGS Flags) -> WGPUTextureUsage {
-        WGPUTextureUsage Result = {};
-
-        DEV_CHECK_ERR(Flags != 0, "No swap chain usage flags defined");
-        static_assert(SWAP_CHAIN_USAGE_LAST == 8, "Please update this function to handle the new swap chain usage");
-
-        if (Flags & SWAP_CHAIN_USAGE_RENDER_TARGET)
-            Result = static_cast<WGPUTextureUsage>(Result | WGPUTextureUsage_RenderAttachment | WGPUTextureUsage_CopyDst);
-        if (Flags & SWAP_CHAIN_USAGE_SHADER_RESOURCE)
-            Result = static_cast<WGPUTextureUsage>(Result | WGPUTextureUsage_TextureBinding);
-        if (Flags & SWAP_CHAIN_USAGE_COPY_SOURCE)
-            Result = static_cast<WGPUTextureUsage>(Result | WGPUTextureUsage_CopySrc);
-
-        return Result;
-    };
+    }
 
     if (m_SwapChainDesc.Width == 0 || m_SwapChainDesc.Height == 0)
     {
 #if PLATFORM_WIN32
-        RECT WindowRect;
+        RECT WindowRect{};
         GetClientRect(static_cast<HWND>(m_NativeWindow.hWnd), &WindowRect);
-
         m_SwapChainDesc.Width  = WindowRect.right - WindowRect.left;
         m_SwapChainDesc.Height = WindowRect.bottom - WindowRect.top;
 #elif PLATFORM_MACOS
         m_NativeWindow.GetBackingSize(m_SwapChainDesc.Width, m_SwapChainDesc.Height);
 #elif PLATFORM_WEB
-        int32_t CanvasWidth  = 0;
-        int32_t CanvasHeight = 0;
+        int CanvasWidth  = 0;
+        int CanvasHeight = 0;
         emscripten_get_canvas_element_size(m_NativeWindow.pCanvasId, &CanvasWidth, &CanvasHeight);
-
         m_SwapChainDesc.Width  = static_cast<Uint32>(CanvasWidth);
         m_SwapChainDesc.Height = static_cast<Uint32>(CanvasHeight);
 #endif
-
         m_SwapChainDesc.Width  = (std::max)(m_SwapChainDesc.Width, 1u);
         m_SwapChainDesc.Height = (std::max)(m_SwapChainDesc.Height, 1u);
     }
 
-    const WGPUTextureFormat wgpuPreferredFormat = wgpuSurfaceCapabilities.formats[0];
+    WGPUCompositeAlphaMode AlphaMode = Caps.alphaModes[0];
+    if (std::find(Caps.alphaModes, Caps.alphaModes + Caps.alphaModeCount, WGPUCompositeAlphaMode_Opaque) != Caps.alphaModes + Caps.alphaModeCount)
+        AlphaMode = WGPUCompositeAlphaMode_Opaque;
 
-    WGPUTextureFormat wgpuRTVFormats[] = {
-        wgpuPreferredFormat,
-        WGPUConvertUnormToSRGB(wgpuPreferredFormat),
-    };
-
-    WGPUSurfaceConfiguration wgpuSurfaceConfig{};
-    wgpuSurfaceConfig.nextInChain     = nullptr;
-    wgpuSurfaceConfig.device          = pRenderDeviceWebGPU->GetWebGPUDevice();
-    wgpuSurfaceConfig.usage           = SelectUsage(m_SwapChainDesc.Usage);
-    wgpuSurfaceConfig.width           = m_SwapChainDesc.Width;
-    wgpuSurfaceConfig.height          = m_SwapChainDesc.Height;
-    wgpuSurfaceConfig.format          = wgpuPreferredFormat;
-    wgpuSurfaceConfig.presentMode     = SelectPresentMode(m_VSyncEnabled);
-    wgpuSurfaceConfig.alphaMode       = WGPUCompositeAlphaMode_Auto;
-    wgpuSurfaceConfig.viewFormats     = wgpuRTVFormats;
-    wgpuSurfaceConfig.viewFormatCount = _countof(wgpuRTVFormats);
-
-    wgpuSurfaceConfigure(m_wgpuSurface, &wgpuSurfaceConfig);
-    wgpuSurfaceCapabilitiesFreeMembers(wgpuSurfaceCapabilities);
+    const WGPUTextureFormat  ViewFormat = TextureFormatToWGPUFormat(m_SwapChainDesc.ColorBufferFormat);
+    WGPUSurfaceConfiguration Config{};
+    Config.device          = pDevice->GetWebGPUDevice();
+    Config.usage           = Usage;
+    Config.width           = m_SwapChainDesc.Width;
+    Config.height          = m_SwapChainDesc.Height;
+    Config.format          = SurfaceFormat;
+    Config.presentMode     = PresentMode;
+    Config.alphaMode       = AlphaMode;
+    Config.viewFormatCount = IsSRGB ? 1 : 0;
+    Config.viewFormats     = IsSRGB ? &ViewFormat : nullptr;
+    wgpuSurfaceConfigure(m_wgpuSurface, &Config);
+    m_SurfaceConfigured = true;
+    return true;
 }
 
-void SwapChainWebGPUImpl::CreateBuffersAndViews()
+bool SwapChainWebGPUImpl::AcquireSurfaceTexture()
 {
-    TextureDesc BackBufferDesc{};
-    BackBufferDesc.Type        = RESOURCE_DIM_TEX_2D;
-    BackBufferDesc.Width       = m_SwapChainDesc.Width;
-    BackBufferDesc.Height      = m_SwapChainDesc.Height;
-    BackBufferDesc.Format      = m_SwapChainDesc.ColorBufferFormat;
-    BackBufferDesc.SampleCount = 1;
-    BackBufferDesc.Usage       = USAGE_DEFAULT;
-    BackBufferDesc.BindFlags   = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET;
-    BackBufferDesc.Name        = "Main back buffer";
-
-    RefCntAutoPtr<ITexture> pBackBufferTex;
-    m_pRenderDevice->CreateTexture(BackBufferDesc, nullptr, &pBackBufferTex);
-    m_pBackBufferRTV = RefCntAutoPtr<ITextureViewWebGPU>{pBackBufferTex->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET), IID_TextureViewWebGPU};
-    m_pBackBufferSRV = RefCntAutoPtr<ITextureViewWebGPU>{pBackBufferTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE), IID_TextureViewWebGPU};
-
-    if (m_SwapChainDesc.DepthBufferFormat != TEX_FORMAT_UNKNOWN)
+    // Retry once after recovering an outdated or lost surface. A timeout skips this
+    // acquisition instead of blocking; the next GetCurrentBackBufferRTV() can retry.
+    for (Uint32 Attempt = 0; Attempt < 2; ++Attempt)
     {
-        TextureDesc DepthBufferDesc{};
-        DepthBufferDesc.Type        = RESOURCE_DIM_TEX_2D;
-        DepthBufferDesc.Width       = BackBufferDesc.Width;
-        DepthBufferDesc.Height      = BackBufferDesc.Height;
-        DepthBufferDesc.Format      = m_SwapChainDesc.DepthBufferFormat;
-        DepthBufferDesc.SampleCount = 1;
-        DepthBufferDesc.Usage       = USAGE_DEFAULT;
-        DepthBufferDesc.BindFlags   = BIND_DEPTH_STENCIL;
+        WGPUSurfaceTexture SurfaceTexture{};
+        wgpuSurfaceGetCurrentTexture(m_wgpuSurface, &SurfaceTexture);
+        WebGPUTextureWrapper Texture{SurfaceTexture.texture};
 
-        DepthBufferDesc.ClearValue.Format               = DepthBufferDesc.Format;
-        DepthBufferDesc.ClearValue.DepthStencil.Depth   = m_SwapChainDesc.DefaultDepthValue;
-        DepthBufferDesc.ClearValue.DepthStencil.Stencil = m_SwapChainDesc.DefaultStencilValue;
-        DepthBufferDesc.Name                            = "Main depth buffer";
-        RefCntAutoPtr<ITexture> pDepthBufferTex;
-        m_pRenderDevice->CreateTexture(DepthBufferDesc, nullptr, &pDepthBufferTex);
-        m_pDepthBufferDSV = RefCntAutoPtr<ITextureViewWebGPU>{pDepthBufferTex->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL), IID_TextureViewWebGPU};
+        switch (SurfaceTexture.status)
+        {
+            case WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal:
+            case WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal:
+                break;
+
+            case WGPUSurfaceGetCurrentTextureStatus_Timeout:
+                return false;
+
+            case WGPUSurfaceGetCurrentTextureStatus_Outdated:
+            case WGPUSurfaceGetCurrentTextureStatus_Lost:
+                Texture.Reset();
+                m_ReconfigureSurface = true;
+                if (Attempt == 0 && RecreateSwapChain())
+                    continue;
+                return false;
+
+            default:
+                LOG_ERROR_MESSAGE("Failed to acquire WebGPU surface texture");
+                return false;
+        }
+
+        if (!Texture)
+        {
+            LOG_ERROR_MESSAGE("WebGPU surface returned a null texture");
+            return false;
+        }
+
+        TextureDesc Desc;
+        Desc.Name      = "Swap chain back buffer";
+        Desc.Type      = RESOURCE_DIM_TEX_2D;
+        Desc.Width     = wgpuTextureGetWidth(Texture);
+        Desc.Height    = wgpuTextureGetHeight(Texture);
+        Desc.Format    = m_SwapChainDesc.ColorBufferFormat;
+        Desc.BindFlags = BIND_RENDER_TARGET;
+        if (m_SwapChainDesc.Usage & SWAP_CHAIN_USAGE_SHADER_RESOURCE)
+            Desc.BindFlags |= BIND_SHADER_RESOURCE;
+
+        RefCntAutoPtr<ITexture> pBackBuffer;
+        m_pRenderDevice.RawPtr<RenderDeviceWebGPUImpl>()->CreateTextureFromWebGPUTexture(Texture, Desc, RESOURCE_STATE_UNDEFINED, &pBackBuffer);
+        if (!pBackBuffer)
+            return false;
+        RefCntAutoPtr<ITextureViewWebGPU> pRTV{pBackBuffer->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET), IID_TextureViewWebGPU};
+        if (!pRTV)
+        {
+            LOG_ERROR_MESSAGE("Failed to create WebGPU surface render target view");
+            return false;
+        }
+
+        // Imported textures borrow their native handle. Retain the acquired reference
+        // until all rendering for this frame has been submitted and presented.
+        m_wgpuCurrentTexture = std::move(Texture);
+        m_pBackBufferRTV     = std::move(pRTV);
+        m_ReconfigureSurface = SurfaceTexture.status == WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal;
+        return true;
     }
+    return false;
+}
+
+bool SwapChainWebGPUImpl::CreateDepthBufferView()
+{
+    if (m_SwapChainDesc.DepthBufferFormat == TEX_FORMAT_UNKNOWN)
+        return true;
+
+    TextureDesc Desc;
+    Desc.Name                            = "Main depth buffer";
+    Desc.Type                            = RESOURCE_DIM_TEX_2D;
+    Desc.Width                           = m_SwapChainDesc.Width;
+    Desc.Height                          = m_SwapChainDesc.Height;
+    Desc.Format                          = m_SwapChainDesc.DepthBufferFormat;
+    Desc.BindFlags                       = BIND_DEPTH_STENCIL;
+    Desc.ClearValue.Format               = Desc.Format;
+    Desc.ClearValue.DepthStencil.Depth   = m_SwapChainDesc.DefaultDepthValue;
+    Desc.ClearValue.DepthStencil.Stencil = m_SwapChainDesc.DefaultStencilValue;
+    RefCntAutoPtr<ITexture> pDepthBuffer;
+    m_pRenderDevice->CreateTexture(Desc, nullptr, &pDepthBuffer);
+    if (!pDepthBuffer)
+        return false;
+    m_pDepthBufferDSV = RefCntAutoPtr<ITextureViewWebGPU>{pDepthBuffer->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL), IID_TextureViewWebGPU};
+    return m_pDepthBufferDSV != nullptr;
 }
 
 void SwapChainWebGPUImpl::ReleaseSwapChainResources()
 {
-    if (!m_wgpuSurface)
-        return;
-
-    m_pCmdPresent->ReleaseSwapChainResources();
-    m_pBackBufferSRV.Release();
+    if (RefCntAutoPtr<IDeviceContext> pContext = m_wpDeviceContext.Lock())
+    {
+        // Reconfiguration invalidates acquired textures. Submit any pending clears
+        // and draws before releasing them, and remove stale framebuffer bindings.
+        DeviceContextWebGPUImpl* pImmediateCtx = pContext.RawPtr<DeviceContextWebGPUImpl>();
+        if (m_pBackBufferRTV || m_pDepthBufferDSV)
+            pImmediateCtx->Flush();
+        if (m_pBackBufferRTV)
+            pImmediateCtx->UnbindTextureFromFramebuffer(ClassPtrCast<TextureWebGPUImpl>(m_pBackBufferRTV->GetTexture()), false);
+        if (m_pDepthBufferDSV)
+            pImmediateCtx->UnbindTextureFromFramebuffer(ClassPtrCast<TextureWebGPUImpl>(m_pDepthBufferDSV->GetTexture()), false);
+    }
     m_pBackBufferRTV.Release();
+    m_wgpuCurrentTexture.Reset();
     m_pDepthBufferDSV.Release();
 }
 
-void SwapChainWebGPUImpl::RecreateSwapChain()
+bool SwapChainWebGPUImpl::RecreateSwapChain()
 {
+    m_ReconfigureSurface = true;
     try
     {
         ReleaseSwapChainResources();
-        ConfigureSurface();
-        CreateBuffersAndViews();
+        if (!ConfigureSurface() || !CreateDepthBufferView())
+            return false;
+        m_ReconfigureSurface = false;
+        return true;
     }
-    catch (const std::runtime_error&)
+    catch (const std::exception& e)
     {
-        LOG_ERROR("Failed to recreate the swap chain");
+        LOG_ERROR_MESSAGE("Failed to recreate WebGPU swap chain: ", e.what());
+        return false;
     }
 }
 

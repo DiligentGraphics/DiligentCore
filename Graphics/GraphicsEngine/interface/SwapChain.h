@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -106,6 +106,12 @@ DILIGENT_BEGIN_INTERFACE(ISwapChain, IObject)
     /// (flipped by every call to ISwapChain::Present()). For Direct3D11
     /// backend it always returns the same pointer. For OpenGL/GLES backends
     /// the method returns null.
+    ///
+    /// For WebGPU, the back buffer is acquired on demand and is valid until Present()
+    /// or Resize(). The method may return null if no surface texture is available;
+    /// the application should skip rendering and retry on a subsequent frame.
+    /// On the Web, acquire, render, and present within the same browser animation
+    /// frame, since canvas textures expire when control returns to the browser.
     ///
     /// The method does **NOT** increment the reference counter of the returned object,
     /// so Release() **must not** be called.
