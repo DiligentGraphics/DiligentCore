@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024-2025 Diligent Graphics LLC
+ *  Copyright 2024-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -244,6 +244,25 @@ std::string_view ConvertWebGPUFormatToString(WGPUTextureFormat TexFmt)
 
         case WGPUTextureFormat_BGRA8Unorm:
             return "bgra8unorm";
+
+        case WGPUTextureFormat_RGBA16Unorm:
+            return "rgba16unorm";
+        case WGPUTextureFormat_RG16Unorm:
+            return "rg16unorm";
+        case WGPUTextureFormat_R16Unorm:
+            return "r16unorm";
+
+        case WGPUTextureFormat_RGBA16Snorm:
+            return "rgba16snorm";
+        case WGPUTextureFormat_RG16Snorm:
+            return "rg16snorm";
+        case WGPUTextureFormat_R16Snorm:
+            return "r16snorm";
+
+        case WGPUTextureFormat_RGB10A2Unorm:
+            return "rgb10a2unorm";
+        case WGPUTextureFormat_RG11B10Ufloat:
+            return "rg11b10ufloat";
 
         case WGPUTextureFormat_RGBA16Float:
             return "rgba16float";

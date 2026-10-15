@@ -264,6 +264,9 @@ WebGPUDeviceWrapper CreateDeviceForAdapter(const DeviceFeatures& Features, WGPUI
 
         if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_TextureFormatsTier1))
             wgpuFeatures.push_back(WGPUFeatureName_TextureFormatsTier1);
+
+        if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_TextureFormatsTier2))
+            wgpuFeatures.push_back(WGPUFeatureName_TextureFormatsTier2);
     }
 
     struct CallbackUserData

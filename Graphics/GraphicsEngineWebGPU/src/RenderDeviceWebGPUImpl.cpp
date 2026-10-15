@@ -482,35 +482,41 @@ void RenderDeviceWebGPUImpl::FindSupportedTextureFormats()
     const bool TextureCompressionBCSupported    = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_TextureCompressionBC);
     const bool TextureCompressionETC2Supported  = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_TextureCompressionETC2);
     const bool TextureFormatsTier1Supported     = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_TextureFormatsTier1);
-    const bool Norm16FilterableSupported        = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_Unorm16TextureFormats);
-    const bool R16UnormSupported                = TextureFormatsTier1Supported || Norm16FilterableSupported;
-    const bool R16SnormSupported                = TextureFormatsTier1Supported;
+    const bool Unorm16TextureFormatsSupported   = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_Unorm16TextureFormats);
+
+    // Tier 1 enables normalized 16-bit formats without guaranteeing filtering support.
+    bool Norm16FilterableSupported = Unorm16TextureFormatsSupported;
+#if !PLATFORM_WEB
+    Norm16FilterableSupported = Norm16FilterableSupported || wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_Unorm16Filterable);
+#endif
+    const bool R16UnormSupported = TextureFormatsTier1Supported || Unorm16TextureFormatsSupported;
+    const bool R16SnormSupported = TextureFormatsTier1Supported;
 
     // https://www.w3.org/TR/webgpu/#texture-format-caps
 
     // Color formats with 8-bits per channel
-    SetTexFormatInfo({TEX_FORMAT_R8_TYPELESS, TEX_FORMAT_R8_UNORM}, BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
-    SetTexFormatInfo({TEX_FORMAT_R8_SNORM}, BIND_S, FMT_FLAG_FILTER);
-    SetTexFormatInfo({TEX_FORMAT_R8_UINT, TEX_FORMAT_R8_SINT}, BIND_SR, FMT_FLAG_MSAA);
+    SetTexFormatInfo({TEX_FORMAT_R8_TYPELESS, TEX_FORMAT_R8_UNORM}, TextureFormatsTier1Supported ? BIND_SRU : BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
+    SetTexFormatInfo({TEX_FORMAT_R8_SNORM}, TextureFormatsTier1Supported ? BIND_SRU : BIND_S, TextureFormatsTier1Supported ? FMT_FLAG_FILTER | FMT_FLAG_MSAA : FMT_FLAG_FILTER);
+    SetTexFormatInfo({TEX_FORMAT_R8_UINT, TEX_FORMAT_R8_SINT}, TextureFormatsTier1Supported ? BIND_SRU : BIND_SR, FMT_FLAG_MSAA);
 
-    SetTexFormatInfo({TEX_FORMAT_RG8_TYPELESS, TEX_FORMAT_RG8_UNORM}, BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
-    SetTexFormatInfo({TEX_FORMAT_RG8_SNORM}, BIND_S, FMT_FLAG_FILTER);
-    SetTexFormatInfo({TEX_FORMAT_RG8_UINT, TEX_FORMAT_RG8_SINT}, BIND_SR, FMT_FLAG_MSAA);
+    SetTexFormatInfo({TEX_FORMAT_RG8_TYPELESS, TEX_FORMAT_RG8_UNORM}, TextureFormatsTier1Supported ? BIND_SRU : BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
+    SetTexFormatInfo({TEX_FORMAT_RG8_SNORM}, TextureFormatsTier1Supported ? BIND_SRU : BIND_S, TextureFormatsTier1Supported ? FMT_FLAG_FILTER | FMT_FLAG_MSAA : FMT_FLAG_FILTER);
+    SetTexFormatInfo({TEX_FORMAT_RG8_UINT, TEX_FORMAT_RG8_SINT}, TextureFormatsTier1Supported ? BIND_SRU : BIND_SR, FMT_FLAG_MSAA);
 
     SetTexFormatInfo({TEX_FORMAT_RGBA8_TYPELESS, TEX_FORMAT_RGBA8_UNORM}, BIND_SRU, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
     SetTexFormatInfo({TEX_FORMAT_RGBA8_UNORM_SRGB}, BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
-    SetTexFormatInfo({TEX_FORMAT_RGBA8_SNORM}, BIND_SU, FMT_FLAG_FILTER);
+    SetTexFormatInfo({TEX_FORMAT_RGBA8_SNORM}, TextureFormatsTier1Supported ? BIND_SRU : BIND_SU, TextureFormatsTier1Supported ? FMT_FLAG_FILTER | FMT_FLAG_MSAA : FMT_FLAG_FILTER);
     SetTexFormatInfo({TEX_FORMAT_RGBA8_UINT, TEX_FORMAT_RGBA8_SINT}, BIND_SRU, FMT_FLAG_MSAA);
 
     SetTexFormatInfo({TEX_FORMAT_BGRA8_TYPELESS, TEX_FORMAT_BGRA8_UNORM}, BGRA8UnormStorageSupported ? BIND_SRU : BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
     SetTexFormatInfo({TEX_FORMAT_BGRA8_UNORM_SRGB}, BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
 
     // Color formats with 16-bits per channel
-    SetTexFormatInfo({TEX_FORMAT_R16_UINT, TEX_FORMAT_R16_SINT}, BIND_SR, FMT_FLAG_MSAA);
-    SetTexFormatInfo({TEX_FORMAT_R16_FLOAT, TEX_FORMAT_R16_TYPELESS}, BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
+    SetTexFormatInfo({TEX_FORMAT_R16_UINT, TEX_FORMAT_R16_SINT}, TextureFormatsTier1Supported ? BIND_SRU : BIND_SR, FMT_FLAG_MSAA);
+    SetTexFormatInfo({TEX_FORMAT_R16_FLOAT, TEX_FORMAT_R16_TYPELESS}, TextureFormatsTier1Supported ? BIND_SRU : BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
 
-    SetTexFormatInfo({TEX_FORMAT_RG16_UINT, TEX_FORMAT_RG16_SINT}, BIND_SR, FMT_FLAG_MSAA);
-    SetTexFormatInfo({TEX_FORMAT_RG16_FLOAT, TEX_FORMAT_RG16_TYPELESS}, BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
+    SetTexFormatInfo({TEX_FORMAT_RG16_UINT, TEX_FORMAT_RG16_SINT}, TextureFormatsTier1Supported ? BIND_SRU : BIND_SR, FMT_FLAG_MSAA);
+    SetTexFormatInfo({TEX_FORMAT_RG16_FLOAT, TEX_FORMAT_RG16_TYPELESS}, TextureFormatsTier1Supported ? BIND_SRU : BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
 
     SetTexFormatInfo({TEX_FORMAT_RGBA16_UINT, TEX_FORMAT_RGBA16_SINT}, BIND_SRU, FMT_FLAG_MSAA);
     SetTexFormatInfo({TEX_FORMAT_RGBA16_FLOAT, TEX_FORMAT_RGBA16_TYPELESS}, BIND_SRU, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
@@ -526,10 +532,10 @@ void RenderDeviceWebGPUImpl::FindSupportedTextureFormats()
     SetTexFormatInfo({TEX_FORMAT_RGBA32_FLOAT}, BIND_SRU, Float32FilterableSupported ? FMT_FLAG_FILTER : FMT_FLAG_NONE);
 
     // Color formats with mixed width
-    SetTexFormatInfo({TEX_FORMAT_RGB10A2_TYPELESS, TEX_FORMAT_RGB10A2_UNORM}, BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
-    SetTexFormatInfo({TEX_FORMAT_RGB10A2_UINT}, BIND_SR, FMT_FLAG_MSAA);
+    SetTexFormatInfo({TEX_FORMAT_RGB10A2_TYPELESS, TEX_FORMAT_RGB10A2_UNORM}, TextureFormatsTier1Supported ? BIND_SRU : BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
+    SetTexFormatInfo({TEX_FORMAT_RGB10A2_UINT}, TextureFormatsTier1Supported ? BIND_SRU : BIND_SR, FMT_FLAG_MSAA);
 
-    SetTexFormatInfo({TEX_FORMAT_R11G11B10_FLOAT}, RG11B10UfloatRenderableSupported ? BIND_SR : BIND_S, RG11B10UfloatRenderableSupported ? FMT_FLAG_FILTER | FMT_FLAG_MSAA : FMT_FLAG_FILTER);
+    SetTexFormatInfo({TEX_FORMAT_R11G11B10_FLOAT}, TextureFormatsTier1Supported ? BIND_SRU : (RG11B10UfloatRenderableSupported ? BIND_SR : BIND_S), RG11B10UfloatRenderableSupported ? FMT_FLAG_FILTER | FMT_FLAG_MSAA : FMT_FLAG_FILTER);
 
     // Depth-stencil formats
     SetTexFormatInfo({TEX_FORMAT_D16_UNORM}, BIND_D, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
@@ -569,16 +575,16 @@ void RenderDeviceWebGPUImpl::FindSupportedTextureFormats()
 
     if (R16UnormSupported)
     {
-        SetTexFormatInfo({TEX_FORMAT_R16_UNORM}, BIND_SR, Norm16FilterableSupported ? FMT_FLAG_FILTER | FMT_FLAG_MSAA : FMT_FLAG_MSAA);
-        SetTexFormatInfo({TEX_FORMAT_RG16_UNORM}, BIND_SR, Norm16FilterableSupported ? FMT_FLAG_FILTER | FMT_FLAG_MSAA : FMT_FLAG_MSAA);
-        SetTexFormatInfo({TEX_FORMAT_RGBA16_UNORM}, BIND_SR, Norm16FilterableSupported ? FMT_FLAG_FILTER | FMT_FLAG_MSAA : FMT_FLAG_MSAA);
+        SetTexFormatInfo({TEX_FORMAT_R16_UNORM}, TextureFormatsTier1Supported ? BIND_SRU : BIND_SR, Norm16FilterableSupported ? FMT_FLAG_FILTER | FMT_FLAG_MSAA : FMT_FLAG_MSAA);
+        SetTexFormatInfo({TEX_FORMAT_RG16_UNORM}, TextureFormatsTier1Supported ? BIND_SRU : BIND_SR, Norm16FilterableSupported ? FMT_FLAG_FILTER | FMT_FLAG_MSAA : FMT_FLAG_MSAA);
+        SetTexFormatInfo({TEX_FORMAT_RGBA16_UNORM}, TextureFormatsTier1Supported ? BIND_SRU : BIND_SR, Norm16FilterableSupported ? FMT_FLAG_FILTER | FMT_FLAG_MSAA : FMT_FLAG_MSAA);
     }
 
     if (R16SnormSupported)
     {
-        SetTexFormatInfo({TEX_FORMAT_R16_SNORM}, BIND_SR, Norm16FilterableSupported ? FMT_FLAG_FILTER | FMT_FLAG_MSAA : FMT_FLAG_MSAA);
-        SetTexFormatInfo({TEX_FORMAT_RG16_SNORM}, BIND_SR, Norm16FilterableSupported ? FMT_FLAG_FILTER | FMT_FLAG_MSAA : FMT_FLAG_MSAA);
-        SetTexFormatInfo({TEX_FORMAT_RGBA16_SNORM}, BIND_SR, Norm16FilterableSupported ? FMT_FLAG_FILTER | FMT_FLAG_MSAA : FMT_FLAG_MSAA);
+        SetTexFormatInfo({TEX_FORMAT_R16_SNORM}, BIND_SRU, Norm16FilterableSupported ? FMT_FLAG_FILTER | FMT_FLAG_MSAA : FMT_FLAG_MSAA);
+        SetTexFormatInfo({TEX_FORMAT_RG16_SNORM}, BIND_SRU, Norm16FilterableSupported ? FMT_FLAG_FILTER | FMT_FLAG_MSAA : FMT_FLAG_MSAA);
+        SetTexFormatInfo({TEX_FORMAT_RGBA16_SNORM}, BIND_SRU, Norm16FilterableSupported ? FMT_FLAG_FILTER | FMT_FLAG_MSAA : FMT_FLAG_MSAA);
     }
 
     if (TextureCompressionETC2Supported)
