@@ -521,6 +521,20 @@ void TextureWebGPUImpl::CreateViewInternal(const TextureViewDesc& ViewDesc, ITex
         ValidatedAndCorrectTextureViewDesc(m_Desc, UpdatedViewDesc);
         WGPUTextureViewDescriptor wgpuTextureViewDesc = TextureViewDescToWGPUTextureViewDescriptor(m_Desc, UpdatedViewDesc, m_pDevice);
 
+        WGPUTextureComponentSwizzleDescriptor wgpuSwizzleDesc{};
+        if (!IsIdentityComponentMapping(UpdatedViewDesc.Swizzle))
+        {
+            if (!m_pDevice->GetDeviceInfo().Features.TextureComponentSwizzle)
+            {
+                LOG_ERROR_MESSAGE("Texture component swizzle is not enabled for this device");
+                return;
+            }
+
+            wgpuSwizzleDesc.chain.sType     = WGPUSType_TextureComponentSwizzleDescriptor;
+            wgpuSwizzleDesc.swizzle         = TextureComponentMappingToWGPUTextureComponentSwizzle(UpdatedViewDesc.Swizzle);
+            wgpuTextureViewDesc.nextInChain = &wgpuSwizzleDesc.chain;
+        }
+
         WebGPUTextureViewWrapper wgpuTextureView{wgpuTextureCreateView(m_wgpuTexture.Get(), &wgpuTextureViewDesc)};
         if (!wgpuTextureView)
             LOG_ERROR_AND_THROW("Failed to create WebGPU texture view ", " '", ViewDesc.Name ? ViewDesc.Name : "", '\'');

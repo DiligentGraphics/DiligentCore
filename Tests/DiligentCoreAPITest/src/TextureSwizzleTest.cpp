@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -317,6 +317,57 @@ TEST_F(TextureSwizzleTest, Zero)
                 TEXTURE_COMPONENT_SWIZZLE_ZERO,
                 TEXTURE_COMPONENT_SWIZZLE_ZERO},
             float4{0, 0, 0, 0});
+}
+
+TEST_F(TextureSwizzleTest, MixedComponents)
+{
+    constexpr Uint32 RGBA = 0x00FF00FFu;
+
+    // Exercise per-channel identity defaults inside non-identity mappings.
+    RunTest(RGBA,
+            TextureComponentMapping{
+                TEXTURE_COMPONENT_SWIZZLE_IDENTITY,
+                TEXTURE_COMPONENT_SWIZZLE_B,
+                TEXTURE_COMPONENT_SWIZZLE_G,
+                TEXTURE_COMPONENT_SWIZZLE_ONE},
+            float4{1, 1, 0, 1});
+
+    RunTest(RGBA,
+            TextureComponentMapping{
+                TEXTURE_COMPONENT_SWIZZLE_ZERO,
+                TEXTURE_COMPONENT_SWIZZLE_IDENTITY,
+                TEXTURE_COMPONENT_SWIZZLE_IDENTITY,
+                TEXTURE_COMPONENT_SWIZZLE_R},
+            float4{0, 0, 1, 1});
+
+    RunTest(RGBA,
+            TextureComponentMapping{
+                TEXTURE_COMPONENT_SWIZZLE_B,
+                TEXTURE_COMPONENT_SWIZZLE_R,
+                TEXTURE_COMPONENT_SWIZZLE_ONE,
+                TEXTURE_COMPONENT_SWIZZLE_IDENTITY},
+            float4{1, 1, 1, 0});
+}
+
+TEST_F(TextureSwizzleTest, Identity)
+{
+    auto* const pEnv = GPUTestingEnvironment::GetInstance();
+
+    auto pTex = pEnv->CreateTexture("Identity texture swizzle test", TEX_FORMAT_RGBA8_UNORM, BIND_SHADER_RESOURCE, 16, 16);
+    ASSERT_TRUE(pTex);
+    EXPECT_NE(pTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE), nullptr);
+
+    // Explicit RGBA is also identity and must not require texture component swizzle support.
+    TextureViewDesc ViewDesc;
+    ViewDesc.ViewType = TEXTURE_VIEW_SHADER_RESOURCE;
+    ViewDesc.Swizzle  = TextureComponentMapping{
+        TEXTURE_COMPONENT_SWIZZLE_R,
+        TEXTURE_COMPONENT_SWIZZLE_G,
+        TEXTURE_COMPONENT_SWIZZLE_B,
+        TEXTURE_COMPONENT_SWIZZLE_A};
+    RefCntAutoPtr<ITextureView> pIdentityView;
+    pTex->CreateView(ViewDesc, &pIdentityView);
+    ASSERT_TRUE(pIdentityView);
 }
 
 } // namespace
