@@ -349,7 +349,7 @@ void TestConvertUBOToPushConstant_InvalidBlockName(SHADER_COMPILER Compiler)
 
     TestingEnvironment* pEnv = TestingEnvironment::GetInstance();
     pEnv->SetErrorAllowance(1, "No worries, errors are expected: testing invalid input\n");
-    pEnv->PushExpectedErrorSubstring("Failed to convert UBO block 'CB5': no OpName found.");
+    pEnv->PushExpectedErrorSubstring("convert-ubo-to-push-constant: no matching uniform buffer");
 
     SPIRV = ConvertUBOToPushConstants(SPIRV, PatchedAttribName);
     EXPECT_TRUE(SPIRV.empty());
@@ -377,7 +377,7 @@ void TestConvertUBOToPushConstant_InvalidResourceType(SHADER_COMPILER Compiler)
 
     TestingEnvironment* pEnv = TestingEnvironment::GetInstance();
     pEnv->SetErrorAllowance(1, "No worries, errors are expected: testing invalid input\n");
-    pEnv->PushExpectedErrorSubstring("Failed to convert UBO block 'g_ROBuffer': no matching UniformBuffer found.");
+    pEnv->PushExpectedErrorSubstring("convert-ubo-to-push-constant: no matching uniform buffer");
 
     SPIRV = ConvertUBOToPushConstants(SPIRV, PatchedAttribName);
     EXPECT_TRUE(SPIRV.empty());
