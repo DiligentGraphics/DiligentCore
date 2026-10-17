@@ -834,6 +834,7 @@ bool RenderStateCacheImpl::CreatePipelineStateInternal(const CreateInfoType& PSO
         UnpackInfo.PipelineType                  = PSOCreateInfo.PSODesc.PipelineType;
         UnpackInfo.Name                          = HashStr.c_str();
         UnpackInfo.pDevice                       = m_pDevice;
+        UnpackInfo.pCache                        = PSOCreateInfo.pPSOCache;
         UnpackInfo.ModifyPipelineStateCreateInfo = Callback;
         UnpackInfo.pUserData                     = Callback;
         RefCntAutoPtr<IPipelineState> pPSO;
