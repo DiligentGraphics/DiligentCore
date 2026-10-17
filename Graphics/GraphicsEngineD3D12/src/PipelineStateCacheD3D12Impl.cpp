@@ -46,15 +46,39 @@ PipelineStateCacheD3D12Impl::PipelineStateCacheD3D12Impl(IReferenceCounters*    
     }
 // clang-format on
 {
-    HRESULT hr = pRenderDeviceD3D12->GetD3D12Device1()->CreatePipelineLibrary(nullptr, 0, IID_PPV_ARGS(&m_pLibrary));
+    auto* pDevice1 = pRenderDeviceD3D12->GetD3D12Device1();
+    if (pDevice1 == nullptr)
+    {
+        LOG_WARNING_MESSAGE("D3D12 pipeline libraries are unavailable; native caching is disabled.");
+        return;
+    }
+
+    // D3D12 does not copy the serialized data: retain our own copy until the library is released.
+    if (CreateInfo.pCacheData != nullptr && CreateInfo.CacheDataSize != 0)
+    {
+        m_pInitialData = DataBlobImpl::Create(CreateInfo.CacheDataSize, CreateInfo.pCacheData);
+        const HRESULT LoadResult = pDevice1->CreatePipelineLibrary(m_pInitialData->GetConstDataPtr(), m_pInitialData->GetSize(), IID_PPV_ARGS(&m_pLibrary));
+        if (FAILED(LoadResult))
+        {
+            LOG_WARNING_MESSAGE("D3D12 pipeline library data is invalid or incompatible; using an empty cache (HRESULT ", LoadResult, ").");
+            m_pInitialData.Release();
+        }
+    }
+
+    HRESULT hr = m_pLibrary ? S_OK : pDevice1->CreatePipelineLibrary(nullptr, 0, IID_PPV_ARGS(&m_pLibrary));
     if (FAILED(hr))
-        LOG_ERROR_AND_THROW("Failed to create D3D12 pipeline library");
+    {
+        LOG_WARNING_MESSAGE("D3D12 pipeline library is unavailable; native caching is disabled (HRESULT ", hr, ").");
+        return;
+    }
+    m_pLibrary->QueryInterface(IID_PPV_ARGS(&m_pLibrary1));
 }
 
 PipelineStateCacheD3D12Impl::~PipelineStateCacheD3D12Impl()
 {
     // D3D12 object can only be destroyed when it is no longer used by the GPU
-    GetDevice()->SafeReleaseDeviceObject(std::move(m_pLibrary), ~Uint64{0});
+    m_pLibrary1.Release();
+    GetDevice()->SafeReleaseDeviceObject(std::make_pair(std::move(m_pInitialData), std::move(m_pLibrary)), ~Uint64{0});
 }
 
 CComPtr<ID3D12DeviceChild> PipelineStateCacheD3D12Impl::LoadComputePipeline(const wchar_t* Name, const D3D12_COMPUTE_PIPELINE_STATE_DESC& Desc)
@@ -66,11 +90,12 @@ CComPtr<ID3D12DeviceChild> PipelineStateCacheD3D12Impl::LoadComputePipeline(cons
     }
 
     CComPtr<ID3D12DeviceChild> d3d12PSO;
-    if ((m_Desc.Mode & PSO_CACHE_MODE_LOAD) != 0)
+    if (m_pLibrary && (m_Desc.Mode & PSO_CACHE_MODE_LOAD) != 0)
     {
+        std::lock_guard<std::mutex> Lock{m_LibraryMtx};
         HRESULT hr = m_pLibrary->LoadComputePipeline(Name, &Desc, IID_PPV_ARGS(&d3d12PSO));
-        if (FAILED(hr) && (m_Desc.Flags & PSO_CACHE_FLAG_VERBOSE) != 0)
-            LOG_ERROR_MESSAGE("Failed to load compute pipeline '", NarrowString(Name), "' from the library");
+        if ((m_Desc.Flags & PSO_CACHE_FLAG_VERBOSE) != 0)
+            LOG_INFO_MESSAGE(SUCCEEDED(hr) ? "PSO cache hit (compute): " : "PSO cache miss (compute): ", NarrowString(Name));
     }
     return d3d12PSO;
 }
@@ -84,24 +109,42 @@ CComPtr<ID3D12DeviceChild> PipelineStateCacheD3D12Impl::LoadGraphicsPipeline(con
     }
 
     CComPtr<ID3D12DeviceChild> d3d12PSO;
-    if ((m_Desc.Mode & PSO_CACHE_MODE_LOAD) != 0)
+    if (m_pLibrary && (m_Desc.Mode & PSO_CACHE_MODE_LOAD) != 0)
     {
+        std::lock_guard<std::mutex> Lock{m_LibraryMtx};
         HRESULT hr = m_pLibrary->LoadGraphicsPipeline(Name, &Desc, IID_PPV_ARGS(&d3d12PSO));
-        if (FAILED(hr) && (m_Desc.Flags & PSO_CACHE_FLAG_VERBOSE) != 0)
-            LOG_ERROR_MESSAGE("Failed to load graphics pipeline '", NarrowString(Name), "' from the library");
+        if ((m_Desc.Flags & PSO_CACHE_FLAG_VERBOSE) != 0)
+            LOG_INFO_MESSAGE(SUCCEEDED(hr) ? "PSO cache hit (graphics): " : "PSO cache miss (graphics): ", NarrowString(Name));
     }
     return d3d12PSO;
 }
 
+#ifdef D3D12_H_HAS_MESH_SHADER
+CComPtr<ID3D12DeviceChild> PipelineStateCacheD3D12Impl::LoadPipeline(const wchar_t* Name, const D3D12_PIPELINE_STATE_STREAM_DESC& Desc)
+{
+    VERIFY_EXPR(Name != nullptr);
+    CComPtr<ID3D12PipelineState> d3d12PSO;
+    if (m_pLibrary1 && (m_Desc.Mode & PSO_CACHE_MODE_LOAD) != 0)
+    {
+        std::lock_guard<std::mutex> Lock{m_LibraryMtx};
+        const HRESULT hr = m_pLibrary1->LoadPipeline(Name, &Desc, IID_PPV_ARGS(&d3d12PSO));
+        if ((m_Desc.Flags & PSO_CACHE_FLAG_VERBOSE) != 0)
+            LOG_INFO_MESSAGE(SUCCEEDED(hr) ? "PSO cache hit (mesh): " : "PSO cache miss (mesh): ", NarrowString(Name), " (HRESULT ", hr, ")");
+    }
+    return CComPtr<ID3D12DeviceChild>{d3d12PSO.p};
+}
+#endif
+
 bool PipelineStateCacheD3D12Impl::StorePipeline(const wchar_t* Name, ID3D12DeviceChild* pPSO)
 {
     VERIFY_EXPR(Name != nullptr);
-    if ((m_Desc.Mode & PSO_CACHE_MODE_STORE) == 0)
+    if (!m_pLibrary || (m_Desc.Mode & PSO_CACHE_MODE_STORE) == 0)
         return false;
 
+    std::lock_guard<std::mutex> Lock{m_LibraryMtx};
     HRESULT hr = m_pLibrary->StorePipeline(Name, static_cast<ID3D12PipelineState*>(pPSO));
     if (FAILED(hr) && (m_Desc.Flags & PSO_CACHE_FLAG_VERBOSE) != 0)
-        LOG_ERROR_MESSAGE("Failed to add pipeline '", NarrowString(Name), "' to the library");
+        LOG_INFO_MESSAGE("PSO cache store failed: ", NarrowString(Name), " (HRESULT ", hr, "; it may already be stored).");
 
     return SUCCEEDED(hr);
 }
@@ -110,6 +153,10 @@ void PipelineStateCacheD3D12Impl::GetData(IDataBlob** ppBlob)
 {
     DEV_CHECK_ERR(ppBlob != nullptr, "ppBlob must not be null");
     *ppBlob = nullptr;
+    if (!m_pLibrary)
+        return;
+
+    std::lock_guard<std::mutex> Lock{m_LibraryMtx};
 
     RefCntAutoPtr<DataBlobImpl> pDataBlob = DataBlobImpl::Create(m_pLibrary->GetSerializedSize());
 

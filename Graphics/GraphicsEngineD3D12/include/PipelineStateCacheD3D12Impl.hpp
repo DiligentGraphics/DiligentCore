@@ -31,6 +31,7 @@
 
 #include "EngineD3D12ImplTraits.hpp"
 #include "PipelineStateCacheBase.hpp"
+#include <mutex>
 
 namespace Diligent
 {
@@ -53,11 +54,17 @@ public:
 
     CComPtr<ID3D12DeviceChild> LoadComputePipeline(const wchar_t* Name, const D3D12_COMPUTE_PIPELINE_STATE_DESC& Desc);
     CComPtr<ID3D12DeviceChild> LoadGraphicsPipeline(const wchar_t* Name, const D3D12_GRAPHICS_PIPELINE_STATE_DESC& Desc);
+#ifdef D3D12_H_HAS_MESH_SHADER
+    CComPtr<ID3D12DeviceChild> LoadPipeline(const wchar_t* Name, const D3D12_PIPELINE_STATE_STREAM_DESC& Desc);
+#endif
 
     bool StorePipeline(const wchar_t* Name, ID3D12DeviceChild* pPSO);
 
 private:
+    RefCntAutoPtr<IDataBlob> m_pInitialData;
     CComPtr<ID3D12PipelineLibrary> m_pLibrary;
+    CComPtr<ID3D12PipelineLibrary1> m_pLibrary1;
+    std::mutex m_LibraryMtx;
 };
 
 } // namespace Diligent

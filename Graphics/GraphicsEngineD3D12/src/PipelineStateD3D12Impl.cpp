@@ -51,6 +51,7 @@
 #include "DynamicLinearAllocator.hpp"
 #include "D3DShaderResourceValidation.hpp"
 #include "DataBlobImpl.hpp"
+#include "HashUtils.hpp"
 
 #include "DXBCUtils.hpp"
 #include "DXCompiler.hpp"
@@ -63,6 +64,66 @@ constexpr INTERFACE_ID PipelineStateD3D12Impl::IID_InternalImpl;
 
 namespace
 {
+struct PipelineCacheHasher
+{
+    template <typename T>
+    void Update(const T& Value)
+    {
+        if constexpr (std::is_fundamental<T>::value || std::is_enum<T>::value)
+            UpdateRaw(&Value, sizeof(Value));
+        else
+            HashCombiner<PipelineCacheHasher, T>{*this}(Value);
+    }
+
+    void Update(const char* Value)
+    {
+        const Uint64 Length = Value != nullptr ? std::strlen(Value) : 0;
+        Update(Length);
+        UpdateRaw(Value, Length);
+    }
+
+    template <typename... Args>
+    void operator()(const Args&... Values)
+    {
+        (Update(Values), ...);
+    }
+
+    void UpdateRaw(const void* pData, Uint64 Size)
+    {
+        const auto* Bytes = static_cast<const Uint8*>(pData);
+        for (Uint64 i = 0; i < Size; ++i)
+        {
+            m_Hash ^= Bytes[i];
+            m_Hash *= FNVPrime;
+        }
+    }
+
+    Uint64 Get() const { return m_Hash; }
+
+private:
+    static constexpr Uint64 FNVOffsetBasis = 14695981039346656037ull;
+    static constexpr Uint64 FNVPrime       = 1099511628211ull;
+    Uint64 m_Hash = FNVOffsetBasis;
+};
+
+template <typename ShaderStagesType>
+std::wstring GetPipelineCacheName(const RootSignatureD3D12& RootSig, const ShaderStagesType& ShaderStages, const GraphicsPipelineDesc* pGraphics = nullptr)
+{
+    // Hash the effective pipeline after binding remapping. Archive unpacking changes
+    // create-info flags/signatures and shader bindings, but not the native pipeline.
+    PipelineCacheHasher Hasher;
+    Hasher(RootSig.GetHash(), pGraphics != nullptr);
+    if (pGraphics != nullptr)
+        Hasher(*pGraphics);
+    for (const auto& Stage : ShaderStages)
+    {
+        Hasher(Stage.Type);
+        for (const auto& Bytecode : Stage.ByteCodes)
+            Hasher.UpdateRaw(Bytecode->GetConstDataPtr(), Bytecode->GetSize());
+    }
+    return L"PSO_2_" + std::to_wstring(Hasher.Get());
+}
+
 #ifdef _MSC_VER
 #    pragma warning(push)
 #    pragma warning(disable : 4324) //  warning C4324: structure was padded due to alignment specifier
@@ -641,6 +702,9 @@ void PipelineStateD3D12Impl::InitializePipeline(const GraphicsPipelineStateCreat
     TShaderStages ShaderStages;
     InitInternalObjects(CreateInfo, ShaderStages);
 
+    PipelineStateCacheD3D12Impl* const pPSOCacheD3D12 = ClassPtrCast<PipelineStateCacheD3D12Impl>(CreateInfo.pPSOCache);
+    const std::wstring CacheName = pPSOCacheD3D12 ? GetPipelineCacheName(*m_RootSig, ShaderStages, &m_pGraphicsPipelineData->Desc) : std::wstring{};
+
     ID3D12Device* pd3d12Device = m_pDevice->GetD3D12Device();
     if (m_Desc.PipelineType == PIPELINE_TYPE_GRAPHICS)
     {
@@ -727,9 +791,8 @@ void PipelineStateD3D12Impl::InitializePipeline(const GraphicsPipelineStateCreat
         d3d12PSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 
         // Try to load from the cache
-        PipelineStateCacheD3D12Impl* const pPSOCacheD3D12 = ClassPtrCast<PipelineStateCacheD3D12Impl>(CreateInfo.pPSOCache);
-        if (pPSOCacheD3D12 != nullptr && !WName.empty())
-            m_pd3d12PSO = pPSOCacheD3D12->LoadGraphicsPipeline(WName.c_str(), d3d12PSODesc);
+        if (pPSOCacheD3D12 != nullptr)
+            m_pd3d12PSO = pPSOCacheD3D12->LoadGraphicsPipeline(CacheName.c_str(), d3d12PSODesc);
         if (!m_pd3d12PSO)
         {
             // Note: renderdoc frame capture fails if any interface but IID_ID3D12PipelineState is requested
@@ -738,8 +801,8 @@ void PipelineStateD3D12Impl::InitializePipeline(const GraphicsPipelineStateCreat
                 LOG_ERROR_AND_THROW("Failed to create pipeline state");
 
             // Add to the cache
-            if (pPSOCacheD3D12 != nullptr && !WName.empty())
-                pPSOCacheD3D12->StorePipeline(WName.c_str(), m_pd3d12PSO);
+            if (pPSOCacheD3D12 != nullptr)
+                pPSOCacheD3D12->StorePipeline(CacheName.c_str(), m_pd3d12PSO);
         }
     }
 #ifdef D3D12_H_HAS_MESH_SHADER
@@ -760,6 +823,7 @@ void PipelineStateD3D12Impl::InitializePipeline(const GraphicsPipelineStateCreat
             PSS_SubObject<D3D12_RASTERIZER_DESC, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RASTERIZER>            RasterizerState;
             PSS_SubObject<DXGI_SAMPLE_DESC, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_SAMPLE_DESC>                SampleDesc;
             PSS_SubObject<UINT, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_SAMPLE_MASK>                            SampleMask;
+            PSS_SubObject<D3D12_PRIMITIVE_TOPOLOGY_TYPE, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_PRIMITIVE_TOPOLOGY> PrimitiveTopologyType;
             PSS_SubObject<DXGI_FORMAT, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL_FORMAT>            DSVFormat;
             PSS_SubObject<D3D12_RT_FORMAT_ARRAY, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RENDER_TARGET_FORMATS> RTVFormatArray;
             PSS_SubObject<D3D12_CACHED_PIPELINE_STATE, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_CACHED_PSO>      CachedPSO;
@@ -791,6 +855,11 @@ void PipelineStateD3D12Impl::InitializePipeline(const GraphicsPipelineStateCreat
         BlendStateDesc_To_D3D12_BLEND_DESC(GraphicsPipeline.BlendDesc, *d3d12PSODesc.BlendState);
         d3d12PSODesc.SampleMask = GraphicsPipeline.SampleMask;
 
+        // Explicit topology keeps CreatePipelineState and PipelineLibrary::LoadPipeline
+        // descriptions identical; creation may infer topology from the mesh shader.
+        static const PrimitiveTopology_To_D3D12_PRIMITIVE_TOPOLOGY_TYPE PrimTopologyToD3D12TopologyType;
+        d3d12PSODesc.PrimitiveTopologyType = PrimTopologyToD3D12TopologyType[GraphicsPipeline.PrimitiveTopology];
+
         RasterizerStateDesc_To_D3D12_RASTERIZER_DESC(GraphicsPipeline.RasterizerDesc, *d3d12PSODesc.RasterizerState);
         DepthStencilStateDesc_To_D3D12_DEPTH_STENCIL_DESC(GraphicsPipeline.DepthStencilDesc, *d3d12PSODesc.DepthStencilState);
 
@@ -819,11 +888,18 @@ void PipelineStateD3D12Impl::InitializePipeline(const GraphicsPipelineStateCreat
         streamDesc.SizeInBytes                   = sizeof(d3d12PSODesc);
         streamDesc.pPipelineStateSubobjectStream = &d3d12PSODesc;
 
-        ID3D12Device2* pd3d12Device2 = m_pDevice->GetD3D12Device2();
-        // Note: renderdoc frame capture fails if any interface but IID_ID3D12PipelineState is requested
-        HRESULT hr = pd3d12Device2->CreatePipelineState(&streamDesc, __uuidof(ID3D12PipelineState), IID_PPV_ARGS_Helper(&m_pd3d12PSO));
-        if (FAILED(hr))
-            LOG_ERROR_AND_THROW("Failed to create pipeline state");
+        if (pPSOCacheD3D12 != nullptr)
+            m_pd3d12PSO = pPSOCacheD3D12->LoadPipeline(CacheName.c_str(), streamDesc);
+        if (!m_pd3d12PSO)
+        {
+            ID3D12Device2* pd3d12Device2 = m_pDevice->GetD3D12Device2();
+            // Note: renderdoc frame capture fails if any interface but IID_ID3D12PipelineState is requested
+            HRESULT hr = pd3d12Device2->CreatePipelineState(&streamDesc, __uuidof(ID3D12PipelineState), IID_PPV_ARGS_Helper(&m_pd3d12PSO));
+            if (FAILED(hr))
+                LOG_ERROR_AND_THROW("Failed to create pipeline state");
+            if (pPSOCacheD3D12 != nullptr)
+                pPSOCacheD3D12->StorePipeline(CacheName.c_str(), m_pd3d12PSO);
+        }
     }
 #endif // D3D12_H_HAS_MESH_SHADER
     else
@@ -868,8 +944,9 @@ void PipelineStateD3D12Impl::InitializePipeline(const ComputePipelineStateCreate
     // Try to load from the cache
     const std::wstring                 WName          = WidenString(m_Desc.Name);
     PipelineStateCacheD3D12Impl* const pPSOCacheD3D12 = ClassPtrCast<PipelineStateCacheD3D12Impl>(CreateInfo.pPSOCache);
-    if (pPSOCacheD3D12 != nullptr && !WName.empty())
-        m_pd3d12PSO = pPSOCacheD3D12->LoadComputePipeline(WName.c_str(), d3d12PSODesc);
+    const std::wstring CacheName = pPSOCacheD3D12 ? GetPipelineCacheName(*m_RootSig, ShaderStages) : std::wstring{};
+    if (pPSOCacheD3D12 != nullptr)
+        m_pd3d12PSO = pPSOCacheD3D12->LoadComputePipeline(CacheName.c_str(), d3d12PSODesc);
     if (!m_pd3d12PSO)
     {
         // Note: renderdoc frame capture fails if any interface but IID_ID3D12PipelineState is requested
@@ -878,8 +955,8 @@ void PipelineStateD3D12Impl::InitializePipeline(const ComputePipelineStateCreate
             LOG_ERROR_AND_THROW("Failed to create pipeline state");
 
         // Add to the cache
-        if (pPSOCacheD3D12 != nullptr && !WName.empty())
-            pPSOCacheD3D12->StorePipeline(WName.c_str(), m_pd3d12PSO);
+        if (pPSOCacheD3D12 != nullptr)
+            pPSOCacheD3D12->StorePipeline(CacheName.c_str(), m_pd3d12PSO);
     }
 
     if (!WName.empty())
