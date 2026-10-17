@@ -56,7 +56,7 @@ PipelineStateCacheD3D12Impl::PipelineStateCacheD3D12Impl(IReferenceCounters*    
     // D3D12 does not copy the serialized data: retain our own copy until the library is released.
     if (CreateInfo.pCacheData != nullptr && CreateInfo.CacheDataSize != 0)
     {
-        m_pInitialData = DataBlobImpl::Create(CreateInfo.CacheDataSize, CreateInfo.pCacheData);
+        m_pInitialData           = DataBlobImpl::Create(CreateInfo.CacheDataSize, CreateInfo.pCacheData);
         const HRESULT LoadResult = pDevice1->CreatePipelineLibrary(m_pInitialData->GetConstDataPtr(), m_pInitialData->GetSize(), IID_PPV_ARGS(&m_pLibrary));
         if (FAILED(LoadResult))
         {
@@ -93,7 +93,7 @@ CComPtr<ID3D12DeviceChild> PipelineStateCacheD3D12Impl::LoadComputePipeline(cons
     if (m_pLibrary && (m_Desc.Mode & PSO_CACHE_MODE_LOAD) != 0)
     {
         std::lock_guard<std::mutex> Lock{m_LibraryMtx};
-        HRESULT hr = m_pLibrary->LoadComputePipeline(Name, &Desc, IID_PPV_ARGS(&d3d12PSO));
+        HRESULT                     hr = m_pLibrary->LoadComputePipeline(Name, &Desc, IID_PPV_ARGS(&d3d12PSO));
         if ((m_Desc.Flags & PSO_CACHE_FLAG_VERBOSE) != 0)
             LOG_INFO_MESSAGE(SUCCEEDED(hr) ? "PSO cache hit (compute): " : "PSO cache miss (compute): ", NarrowString(Name));
     }
@@ -112,7 +112,7 @@ CComPtr<ID3D12DeviceChild> PipelineStateCacheD3D12Impl::LoadGraphicsPipeline(con
     if (m_pLibrary && (m_Desc.Mode & PSO_CACHE_MODE_LOAD) != 0)
     {
         std::lock_guard<std::mutex> Lock{m_LibraryMtx};
-        HRESULT hr = m_pLibrary->LoadGraphicsPipeline(Name, &Desc, IID_PPV_ARGS(&d3d12PSO));
+        HRESULT                     hr = m_pLibrary->LoadGraphicsPipeline(Name, &Desc, IID_PPV_ARGS(&d3d12PSO));
         if ((m_Desc.Flags & PSO_CACHE_FLAG_VERBOSE) != 0)
             LOG_INFO_MESSAGE(SUCCEEDED(hr) ? "PSO cache hit (graphics): " : "PSO cache miss (graphics): ", NarrowString(Name));
     }
@@ -127,7 +127,7 @@ CComPtr<ID3D12DeviceChild> PipelineStateCacheD3D12Impl::LoadPipeline(const wchar
     if (m_pLibrary1 && (m_Desc.Mode & PSO_CACHE_MODE_LOAD) != 0)
     {
         std::lock_guard<std::mutex> Lock{m_LibraryMtx};
-        const HRESULT hr = m_pLibrary1->LoadPipeline(Name, &Desc, IID_PPV_ARGS(&d3d12PSO));
+        const HRESULT               hr = m_pLibrary1->LoadPipeline(Name, &Desc, IID_PPV_ARGS(&d3d12PSO));
         if ((m_Desc.Flags & PSO_CACHE_FLAG_VERBOSE) != 0)
             LOG_INFO_MESSAGE(SUCCEEDED(hr) ? "PSO cache hit (mesh): " : "PSO cache miss (mesh): ", NarrowString(Name), " (HRESULT ", hr, ")");
     }
@@ -142,7 +142,7 @@ bool PipelineStateCacheD3D12Impl::StorePipeline(const wchar_t* Name, ID3D12Devic
         return false;
 
     std::lock_guard<std::mutex> Lock{m_LibraryMtx};
-    HRESULT hr = m_pLibrary->StorePipeline(Name, static_cast<ID3D12PipelineState*>(pPSO));
+    HRESULT                     hr = m_pLibrary->StorePipeline(Name, static_cast<ID3D12PipelineState*>(pPSO));
     if (FAILED(hr) && (m_Desc.Flags & PSO_CACHE_FLAG_VERBOSE) != 0)
         LOG_INFO_MESSAGE("PSO cache store failed: ", NarrowString(Name), " (HRESULT ", hr, "; it may already be stored).");
 

@@ -61,10 +61,10 @@ public:
     bool StorePipeline(const wchar_t* Name, ID3D12DeviceChild* pPSO);
 
 private:
-    RefCntAutoPtr<IDataBlob> m_pInitialData;
-    CComPtr<ID3D12PipelineLibrary> m_pLibrary;
+    RefCntAutoPtr<IDataBlob>        m_pInitialData;
+    CComPtr<ID3D12PipelineLibrary>  m_pLibrary;
     CComPtr<ID3D12PipelineLibrary1> m_pLibrary1;
-    std::mutex m_LibraryMtx;
+    std::mutex                      m_LibraryMtx;
 };
 
 } // namespace Diligent
