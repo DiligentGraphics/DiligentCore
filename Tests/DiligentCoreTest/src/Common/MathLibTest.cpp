@@ -27,6 +27,7 @@
 
 #include <algorithm>
 #include <climits>
+#include <limits>
 #include <sstream>
 #include <array>
 
@@ -1240,9 +1241,158 @@ TEST(Common_BasicMath, MatrixDecompose)
     ExpectQuaternionNear(DecomposedRotation, Rotation);
 
     const float4x4 Singular = float4x4::Scale(0.f, 1.f, 1.f);
-    EXPECT_FALSE(Singular.Decompose(DecomposedTranslation, DecomposedRotation, DecomposedScale));
+    EXPECT_TRUE(Singular.Decompose(DecomposedTranslation, DecomposedRotation, DecomposedScale));
 }
 
+
+template <typename T>
+void TestMatrixDecomposeZeroScale()
+{
+    const Vector3<T> Translation{5, 6, 7};
+    const Vector3<T> Scales[] = {
+        {0, 1, 1},
+        {2, 0, 4},
+        {2, 3, 0},
+        {2, 0, 0},
+        {0, 3, 0},
+        {0, 0, 4},
+        {0, 0, 0},
+        {0, -3, 4},
+        {-2, 0, 4},
+        {2, -3, 0},
+        {-2, 0, 0},
+        {0, -3, 0},
+        {0, 0, -4},
+        {0, -3, -4},
+        {-2, 0, -4},
+        {-2, -3, 0},
+    };
+    const Quaternion<T> Rotations[] = {
+        {},
+        Quaternion<T>::RotationFromAxisAngle(Vector3<T>{0, 0, 1}, static_cast<T>(PI / 2)),
+        Quaternion<T>::RotationFromAxisAngle(Vector3<T>{1, 2, 3}, static_cast<T>(0.7)),
+    };
+    const T Tolerance = 64 * std::numeric_limits<T>::epsilon();
+
+    for (const Vector3<T>& Scale : Scales)
+    {
+        SCOPED_TRACE(testing::Message() << "Scale: " << Scale.x << ", " << Scale.y << ", " << Scale.z);
+        for (const Quaternion<T>& Rotation : Rotations)
+        {
+            SCOPED_TRACE(testing::Message() << "Rotation: " << Rotation.q.x << ", " << Rotation.q.y << ", " << Rotation.q.z << ", " << Rotation.q.w);
+            const Matrix4x4<T> Matrix =
+                Matrix4x4<T>::Scale(Scale) * Rotation.ToMatrix() * Matrix4x4<T>::Translation(Translation);
+            Vector3<T>    DecomposedTranslation;
+            Vector3<T>    DecomposedScale;
+            Quaternion<T> DecomposedRotation;
+            ASSERT_TRUE(Matrix.Decompose(DecomposedTranslation, DecomposedRotation, DecomposedScale));
+            EXPECT_EQ(DecomposedTranslation, Translation);
+            for (Uint32 Component = 0; Component < 4; ++Component)
+            {
+                EXPECT_TRUE(std::isfinite(DecomposedRotation.q[Component]));
+            }
+            EXPECT_NEAR(length(DecomposedRotation.q), T{1}, Tolerance);
+
+            // A zero scale makes rotation and signed scales nonunique; compare the resulting matrix.
+            const Matrix4x4<T> Reconstructed =
+                Matrix4x4<T>::Scale(DecomposedScale) * DecomposedRotation.ToMatrix() * Matrix4x4<T>::Translation(DecomposedTranslation);
+            for (Uint32 Row = 0; Row < 4; ++Row)
+            {
+                for (Uint32 Column = 0; Column < 4; ++Column)
+                {
+                    EXPECT_NEAR(Reconstructed[Row][Column], Matrix[Row][Column], Tolerance) << "Element " << Row << ", " << Column;
+                }
+            }
+        }
+    }
+}
+
+TEST(Common_BasicMath, MatrixDecomposeZeroScaleFloat)
+{
+    TestMatrixDecomposeZeroScale<float>();
+}
+
+TEST(Common_BasicMath, MatrixDecomposeZeroScaleDouble)
+{
+    TestMatrixDecomposeZeroScale<double>();
+}
+
+
+template <typename T>
+void TestMatrixDecomposeFailureFallback()
+{
+    constexpr T SmallScale     = static_cast<T>(0.5e-8);
+    constexpr T UnderflowScale = std::numeric_limits<T>::min();
+    // Each group covers all three placements of the failing axis or missing row.
+    // clang-format off
+    const Matrix3x3<T> LinearParts[] = {
+        {SmallScale, 0, 0,  0, 2, 0,           0, 0, 3},
+        {1, 0, 0,           0, SmallScale, 0,  0, 0, 3},
+        {1, 0, 0,           0, 2, 0,           0, 0, SmallScale},
+        // A nonzero row whose squared length underflows must not count as a missing axis.
+        {UnderflowScale, 0, 0,  0, 2, 0,  0, 0, 3},
+        // Collinear surviving rows cannot define two independent rotation axes.
+        {0, 0, 0,  1, 0, 0,  2, 0, 0},
+        {2, 0, 0,  0, 0, 0,  1, 0, 0},
+        {1, 0, 0,  2, 0, 0,  0, 0, 0},
+        // Nonorthogonal surviving rows cannot be represented by rotation and scale.
+        {0, 0, 0,  1, 0, 0,  1, 1, 0},
+        {1, 1, 0,  0, 0, 0,  1, 0, 0},
+        {1, 0, 0,  1, 1, 0,  0, 0, 0},
+    };
+    // clang-format on
+    const Vector3<T> Translation{5, 6, 7};
+    for (size_t Case = 0; Case < _countof(LinearParts); ++Case)
+    {
+        SCOPED_TRACE(testing::Message() << "Case " << Case);
+        Matrix4x4<T> Matrix = Matrix4x4<T>::Translation(Translation);
+        Vector3<T>   ExpectedScale;
+        for (Uint32 Row = 0; Row < 3; ++Row)
+        {
+            Vector3<T> RowValues;
+            for (Uint32 Column = 0; Column < 3; ++Column)
+            {
+                RowValues[Column] = Matrix[Row][Column] = LinearParts[Case][Row][Column];
+            }
+            ExpectedScale[Row] = length(RowValues);
+        }
+
+        Vector3<T>    DecomposedTranslation{-8, 9, 10};
+        Vector3<T>    DecomposedScale{-2, 3, 4};
+        Quaternion<T> DecomposedRotation = Quaternion<T>::RotationFromAxisAngle(Vector3<T>{1, 2, 3}, static_cast<T>(0.7));
+        EXPECT_FALSE(Matrix.Decompose(DecomposedTranslation, DecomposedRotation, DecomposedScale));
+        EXPECT_EQ(DecomposedTranslation, Translation);
+        EXPECT_EQ(DecomposedScale, ExpectedScale);
+        EXPECT_EQ(DecomposedRotation, Quaternion<T>{});
+    }
+
+    // Increasing the minimum scale must not relax the orthogonality requirement.
+    const Matrix4x4<T> Collinear // clang-format off
+    {
+        0, 0, 0, 0,
+        2, 0, 0, 0,
+        2, 0, 0, 0,
+        5, 6, 7, 1
+    };
+    // clang-format on
+    Vector3<T>    DecomposedTranslation{-8, 9, 10};
+    Vector3<T>    DecomposedScale{-2, 3, 4};
+    Quaternion<T> DecomposedRotation{1, 0, 0, 0};
+    EXPECT_FALSE(Collinear.Decompose(DecomposedTranslation, DecomposedRotation, DecomposedScale, T{1}));
+    EXPECT_EQ(DecomposedTranslation, Translation);
+    EXPECT_EQ(DecomposedScale, (Vector3<T>{0, 2, 2}));
+    EXPECT_EQ(DecomposedRotation, Quaternion<T>{});
+}
+
+TEST(Common_BasicMath, MatrixDecomposeFailureFallbackFloat)
+{
+    TestMatrixDecomposeFailureFallback<float>();
+}
+
+TEST(Common_BasicMath, MatrixDecomposeFailureFallbackDouble)
+{
+    TestMatrixDecomposeFailureFallback<double>();
+}
 
 TEST(Common_BasicMath, Hash)
 {

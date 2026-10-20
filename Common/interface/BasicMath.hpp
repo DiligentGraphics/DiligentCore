@@ -2034,6 +2034,8 @@ template <class T> struct Matrix4x4
         return true;
     }
 
+    /// Zero scale components are supported; the resulting rotation may not be unique.
+    /// On failure, returns translation and scale magnitudes with identity rotation.
     bool Decompose(Vector3<T>&    Translation,
                    Quaternion<T>& Rotation,
                    Vector3<T>&    Scale,
@@ -2559,12 +2561,70 @@ bool Matrix4x4<T>::Decompose(Vector3<T>&    Translation,
     if (Scale.x <= Epsilon || Scale.y <= Epsilon || Scale.z <= Epsilon)
     {
         Rotation = Quaternion<T>{};
-        return false;
-    }
 
-    Row0 /= Scale.x;
-    Row1 /= Scale.y;
-    Row2 /= Scale.z;
+        // A zero scale removes a row from S * R. Complete the missing rotation
+        // axes from the remaining rows; the reconstructed rotation is not unique.
+        Vector3<T> Rows[]          = {Row0, Row1, Row2};
+        int        NonZeroRowCount = 0;
+        int        NonZeroRowIndex = 0;
+        for (int RowIndex = 0; RowIndex < 3; ++RowIndex)
+        {
+            if (Rows[RowIndex] == Vector3<T>{})
+                continue;
+
+            // Preserve failure behavior for nonzero rows too small to normalize.
+            if (!(Scale[RowIndex] > Epsilon) || !std::isfinite(Scale[RowIndex]))
+                return false;
+
+            Rows[RowIndex] /= Scale[RowIndex];
+            ++NonZeroRowCount;
+            NonZeroRowIndex = RowIndex;
+        }
+
+        if (NonZeroRowCount == 0)
+            return true;
+
+        if (NonZeroRowCount == 2)
+        {
+            const int MissingRow = Scale.x == T{0} ? 0 : (Scale.y == T{0} ? 1 : 2);
+            const int NextRow    = (MissingRow + 1) % 3;
+            const int LastRow    = (MissingRow + 2) % 3;
+            // The surviving rows must be perpendicular. Allow roundoff from
+            // constructing a rotation matrix, including with float components.
+            const T OrthogonalityTolerance = T{8} * std::numeric_limits<T>::epsilon();
+            if (std::abs(dot(Rows[NextRow], Rows[LastRow])) > OrthogonalityTolerance)
+                return false;
+
+            Rows[MissingRow] = normalize(cross(Rows[NextRow], Rows[LastRow]));
+        }
+        else
+        {
+            const int         NextRow = (NonZeroRowIndex + 1) % 3;
+            const int         LastRow = (NonZeroRowIndex + 2) % 3;
+            const Vector3<T>& Row     = Rows[NonZeroRowIndex];
+            // Choose the least-aligned coordinate axis to keep the cross
+            // product well away from zero, then complete a right-handed basis.
+            int Axis = 0;
+            if (std::abs(Row.y) < std::abs(Row.x))
+                Axis = 1;
+            if (std::abs(Row.z) < std::abs(Row[Axis]))
+                Axis = 2;
+            Vector3<T> HelperAxis{};
+            HelperAxis[Axis] = T{1};
+            Rows[NextRow]    = normalize(cross(HelperAxis, Row));
+            Rows[LastRow]    = cross(Row, Rows[NextRow]);
+        }
+
+        Row0 = Rows[0];
+        Row1 = Rows[1];
+        Row2 = Rows[2];
+    }
+    else
+    {
+        Row0 /= Scale.x;
+        Row1 /= Scale.y;
+        Row2 /= Scale.z;
+    }
 
     if (dot(cross(Row0, Row1), Row2) < T{0})
     {
