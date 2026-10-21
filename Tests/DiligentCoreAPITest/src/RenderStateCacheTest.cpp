@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -845,6 +845,147 @@ void TestGraphicsPSO(bool UseRenderPass, bool CompileAsync = false)
                 EXPECT_EQ(pCache->Reload(), 0u);
         }
     }
+}
+
+void TestWebGPUEntryPoints(bool LoadShadersFromArchive, bool MultipleEntryPoints)
+{
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceInfo().IsWebGPUDevice())
+        GTEST_SKIP() << "WGSL entry points require WebGPU";
+    if (pEnv->GetArchiverFactory() == nullptr)
+        GTEST_SKIP() << "Archiver library is not loaded";
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    const SHADER_TYPE ShaderTypes[] = {SHADER_TYPE_VERTEX, SHADER_TYPE_PIXEL, SHADER_TYPE_COMPUTE};
+    const char*       EntryPoints[] = {"vertexMain", "fragmentMain", "computeMain"};
+    const char*       Sources[]     = {
+        "@vertex fn vertexMain() -> @builtin(position) vec4f { return vec4f(0.0, 0.0, 0.0, 1.0); }",
+        "@fragment fn fragmentMain() -> @location(0) vec4f { return vec4f(1.0); }",
+        "@compute @workgroup_size(1) fn computeMain() {}",
+    };
+    const char* OtherEntryPoints[] = {
+        "@group(0) @binding(0) var<uniform> unusedValue: vec4f;\n"
+        "@vertex fn unusedVertex() -> @builtin(position) vec4f { return unusedValue; }\n",
+        "@group(0) @binding(0) var<uniform> unusedValue: vec4f;\n"
+        "@fragment fn unusedFragment() -> @location(0) vec4f { return unusedValue; }\n",
+        "@group(0) @binding(0) var<storage, read_write> unusedValue: array<u32>;\n"
+        "@compute @workgroup_size(1) fn unusedCompute() { unusedValue[0] = 1u; }\n",
+    };
+
+    std::string      ShaderSources[_countof(ShaderTypes)];
+    ShaderCreateInfo ShaderCIs[_countof(ShaderTypes)];
+    for (Uint32 i = 0; i < _countof(ShaderTypes); ++i)
+    {
+        // Put another entry point of the same stage first, so inferring a single
+        // entry point or selecting the first one cannot replace the selected name.
+        ShaderSources[i] = MultipleEntryPoints ? OtherEntryPoints[i] : "";
+        ShaderSources[i] += Sources[i];
+        ShaderCIs[i].Desc           = {EntryPoints[i], ShaderTypes[i]};
+        ShaderCIs[i].SourceLanguage = SHADER_SOURCE_LANGUAGE_WGSL;
+        ShaderCIs[i].Source         = ShaderSources[i].c_str();
+        ShaderCIs[i].EntryPoint     = EntryPoints[i];
+    }
+
+    RefCntAutoPtr<IDataBlob> pData;
+    if (LoadShadersFromArchive)
+    {
+        // Save shaders without a PSO. Reloading them must exercise device-shader
+        // reserialization when the PSO is first added to the new cache.
+        auto pCache = CreateCache(pDevice, false);
+        ASSERT_NE(nullptr, pCache);
+        for (const auto& ShaderCI : ShaderCIs)
+        {
+            RefCntAutoPtr<IShader> pShader;
+            EXPECT_FALSE(pCache->CreateShader(ShaderCI, &pShader));
+            ASSERT_NE(nullptr, pShader);
+            ASSERT_EQ(SHADER_STATUS_READY, pShader->GetStatus());
+        }
+        ASSERT_TRUE(pCache->WriteToBlob(ContentVersion, &pData));
+        ASSERT_NE(nullptr, pData);
+    }
+
+    for (Uint32 Pass = 0; Pass < 2; ++Pass)
+    {
+        SCOPED_TRACE(Pass);
+        auto pCache = CreateCache(pDevice, false, pData);
+        ASSERT_NE(nullptr, pCache);
+
+        RefCntAutoPtr<IShader> Shaders[_countof(ShaderTypes)];
+        for (Uint32 i = 0; i < _countof(ShaderTypes); ++i)
+        {
+            if (LoadShadersFromArchive)
+                EXPECT_TRUE(pCache->CreateShader(ShaderCIs[i], &Shaders[i]));
+            else
+                pDevice->CreateShader(ShaderCIs[i], &Shaders[i]);
+            ASSERT_NE(nullptr, Shaders[i]);
+            ASSERT_EQ(SHADER_STATUS_READY, Shaders[i]->GetStatus());
+        }
+
+        GraphicsPipelineStateCreateInfo GraphicsCI;
+        GraphicsCI.PSODesc.Name                                  = "RenderStateCache - WGSL Graphics";
+        GraphicsCI.GraphicsPipeline.NumRenderTargets             = 1;
+        GraphicsCI.GraphicsPipeline.RTVFormats[0]                = pEnv->GetSwapChain()->GetDesc().ColorBufferFormat;
+        GraphicsCI.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        GraphicsCI.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+        GraphicsCI.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+        GraphicsCI.pVS                                           = Shaders[0];
+        GraphicsCI.pPS                                           = Shaders[1];
+
+        RefCntAutoPtr<IPipelineState> pGraphicsPSO;
+        EXPECT_EQ(Pass != 0, pCache->CreateGraphicsPipelineState(GraphicsCI, &pGraphicsPSO));
+        ASSERT_NE(nullptr, pGraphicsPSO);
+        ASSERT_EQ(PIPELINE_STATE_STATUS_READY, pGraphicsPSO->GetStatus());
+
+        ComputePipelineStateCreateInfo ComputeCI;
+        ComputeCI.PSODesc.Name         = "RenderStateCache - WGSL Compute";
+        ComputeCI.PSODesc.PipelineType = PIPELINE_TYPE_COMPUTE;
+        ComputeCI.pCS                  = Shaders[2];
+
+        RefCntAutoPtr<IPipelineState> pComputePSO;
+        EXPECT_EQ(Pass != 0, pCache->CreateComputePipelineState(ComputeCI, &pComputePSO));
+        ASSERT_NE(nullptr, pComputePSO);
+        ASSERT_EQ(PIPELINE_STATE_STATUS_READY, pComputePSO->GetStatus());
+
+        // Only the unused entry points access resources. Selecting one of them
+        // while serializing would change the restored pipeline's resource layout.
+        for (IPipelineState* pPSO : {pGraphicsPSO.RawPtr(), pComputePSO.RawPtr()})
+        {
+            for (Uint32 i = 0; i < pPSO->GetResourceSignatureCount(); ++i)
+            {
+                if (auto* pSignature = pPSO->GetResourceSignature(i))
+                    EXPECT_EQ(0u, pSignature->GetDesc().NumResources);
+            }
+        }
+
+        // A ready device PSO alone is insufficient: serialization failures are
+        // caught by the cache. Require archive hits after destroying this cache.
+        RefCntAutoPtr<IDataBlob> pNextData;
+        ASSERT_TRUE(pCache->WriteToBlob(ContentVersion, &pNextData));
+        ASSERT_NE(nullptr, pNextData);
+        pData = std::move(pNextData);
+    }
+}
+
+TEST(RenderStateCacheTest, WebGPUEntryPoints_DeviceShaders)
+{
+    TestWebGPUEntryPoints(/*LoadShadersFromArchive = */ false, /*MultipleEntryPoints = */ false);
+}
+
+TEST(RenderStateCacheTest, WebGPUEntryPoints_ArchivedShaders)
+{
+    TestWebGPUEntryPoints(/*LoadShadersFromArchive = */ true, /*MultipleEntryPoints = */ false);
+}
+
+TEST(RenderStateCacheTest, WebGPUEntryPoints_MultipleDeviceShaders)
+{
+    TestWebGPUEntryPoints(/*LoadShadersFromArchive = */ false, /*MultipleEntryPoints = */ true);
+}
+
+TEST(RenderStateCacheTest, WebGPUEntryPoints_MultipleArchivedShaders)
+{
+    TestWebGPUEntryPoints(/*LoadShadersFromArchive = */ true, /*MultipleEntryPoints = */ true);
 }
 
 TEST(RenderStateCacheTest, CreateGraphicsPSO)

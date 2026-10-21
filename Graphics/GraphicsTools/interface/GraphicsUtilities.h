@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -226,6 +226,10 @@ IBufferView* DILIGENT_GLOBAL_FUNCTION(GetBufferDefaultUAV)(IObject* pBuffer);
 /// the indexed array element name.
 /// For other shader types, returns null.
 const char* DILIGENT_GLOBAL_FUNCTION(GetWebGPUEmulatedArrayIndexSuffix)(IShader* pShader);
+
+/// For WebGPU shaders, returns the name of the selected entry point in the WGSL source code.
+/// For other shader types, returns null.
+const char* DILIGENT_GLOBAL_FUNCTION(GetWebGPUShaderEntryPoint)(IShader* pShader);
 
 /// Returns the native texture format (e.g. DXGI_FORMAT, VkFormat) for the given texture format and device type.
 int64_t DILIGENT_GLOBAL_FUNCTION(GetNativeTextureFormat)(TEXTURE_FORMAT TexFormat, enum RENDER_DEVICE_TYPE DeviceType);

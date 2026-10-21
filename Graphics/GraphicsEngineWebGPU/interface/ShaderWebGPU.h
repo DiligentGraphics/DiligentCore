@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024-2025 Diligent Graphics LLC
+ *  Copyright 2024-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -63,6 +63,9 @@ public:
     /// This value is defined by `ShaderCI.WebGPUEmulatedArrayIndexSuffix`,
     /// see Diligent::ShaderCreateInfo::WebGPUEmulatedArrayIndexSuffix.
     virtual const char* DILIGENT_CALL_TYPE GetEmulatedArrayIndexSuffix() const = 0;
+
+    /// Returns the name of the selected entry point in the WGSL source code.
+    virtual const char* DILIGENT_CALL_TYPE GetEntryPoint() const = 0;
 };
 
 #endif

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -45,6 +45,15 @@ const char* GetWebGPUEmulatedArrayIndexSuffix(IShader* pShader)
     if (RefCntAutoPtr<IShaderWebGPU> pShaderWGPU{pShader, IID_ShaderWebGPU})
     {
         return pShaderWGPU->GetEmulatedArrayIndexSuffix();
+    }
+    return nullptr;
+}
+
+const char* GetWebGPUShaderEntryPoint(IShader* pShader)
+{
+    if (RefCntAutoPtr<IShaderWebGPU> pShaderWGPU{pShader, IID_ShaderWebGPU})
+    {
+        return pShaderWGPU->GetEntryPoint();
     }
     return nullptr;
 }
