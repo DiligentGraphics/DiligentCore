@@ -87,7 +87,8 @@ public:
         return m_pShaderResources->GetEmulatedArrayIndexSuffix();
     }
 
-    const char* GetEntryPoint() const;
+    /// Implementation of IShaderWebGPU::GetEntryPoint().
+    const char* DILIGENT_CALL_TYPE GetEntryPoint() const override final;
 
     const std::shared_ptr<const WGSLShaderResources>& GetShaderResources() const
     {

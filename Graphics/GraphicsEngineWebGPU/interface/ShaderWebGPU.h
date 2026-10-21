@@ -63,6 +63,9 @@ public:
     /// This value is defined by `ShaderCI.WebGPUEmulatedArrayIndexSuffix`,
     /// see Diligent::ShaderCreateInfo::WebGPUEmulatedArrayIndexSuffix.
     virtual const char* DILIGENT_CALL_TYPE GetEmulatedArrayIndexSuffix() const = 0;
+
+    /// Returns the name of the selected entry point in the WGSL source code.
+    virtual const char* DILIGENT_CALL_TYPE GetEntryPoint() const = 0;
 };
 
 #endif

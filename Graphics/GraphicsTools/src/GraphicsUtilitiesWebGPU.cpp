@@ -49,6 +49,15 @@ const char* GetWebGPUEmulatedArrayIndexSuffix(IShader* pShader)
     return nullptr;
 }
 
+const char* GetWebGPUShaderEntryPoint(IShader* pShader)
+{
+    if (RefCntAutoPtr<IShaderWebGPU> pShaderWGPU{pShader, IID_ShaderWebGPU})
+    {
+        return pShaderWGPU->GetEntryPoint();
+    }
+    return nullptr;
+}
+
 int64_t GetNativeTextureFormatWebGPU(TEXTURE_FORMAT TexFormat)
 {
     return static_cast<int64_t>(TextureFormatToWGPUFormat(TexFormat));
