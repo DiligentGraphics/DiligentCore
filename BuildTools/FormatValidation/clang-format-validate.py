@@ -22,6 +22,7 @@ import sys
 import traceback
 
 from functools import partial
+from multiprocessing.pool import ThreadPool
 
 try:
     from subprocess import DEVNULL  # py3k
@@ -109,6 +110,49 @@ class UnexpectedError(Exception):
         super(UnexpectedError, self).__init__(message)
         self.formatted_traceback = traceback.format_exc()
         self.exc = exc
+
+
+def make_batches(executable, files):
+    # Bound both the number of files and the quoted command length. The latter
+    # keeps batches below Windows' 32767-character process command-line limit.
+    base_size = len(subprocess.list2cmdline(
+        [executable, '--dry-run', '--Werror']).encode('utf-8')) + 1
+    batch = []
+    command_size = base_size
+    for file in files:
+        file_size = len(subprocess.list2cmdline([file]).encode('utf-8')) + 1
+        if batch and (len(batch) >= 128 or command_size + file_size > 30000):
+            yield batch
+            batch = []
+            command_size = base_size
+        batch.append(file)
+        command_size += file_size
+    if batch:
+        yield batch
+
+
+def check_clang_format_batch(args, files):
+    # Most runs are clean: check many files in one formatter process, without
+    # transferring formatted source or constructing diffs for every file.
+    try:
+        # Preserve the UTF-8 source validation performed by the diff path.
+        for file in files:
+            with io.open(file, 'r', encoding='utf-8') as f:
+                f.read()
+        proc = subprocess.Popen(
+            [args.clang_format_executable, '--dry-run', '--Werror'] + files,
+            stdout=DEVNULL, stderr=subprocess.PIPE)
+        _, errs = proc.communicate()
+        if proc.returncode == 0:
+            errs = errs.decode('utf-8').replace('\r\n', '\n').replace('\r', '\n')
+            return [], errs.splitlines(True)
+    except (EnvironmentError, UnicodeError):
+        pass
+
+    # Check these files individually to retain the original unified diffs
+    # and distinguish formatting differences from tool or input errors.
+    # This also supports formatters without the dry-run options.
+    return files, []
 
 
 def run_clang_format_diff_wrapper(args, file):
@@ -262,7 +306,7 @@ def main():
         type=int,
         default=0,
         help='run N clang-format jobs in parallel'
-        ' (default number of cpus + 1)')
+        ' (default up to 4, limited by the number of cpus)')
     parser.add_argument(
         '--color',
         default='auto',
@@ -329,20 +373,23 @@ def main():
     if not files:
         return
 
+    batches = list(make_batches(args.clang_format_executable, files))
     njobs = args.j
     if njobs == 0:
-        njobs = multiprocessing.cpu_count() + 1
-    njobs = min(len(files), njobs)
+        njobs = min(4, multiprocessing.cpu_count())
+    njobs = min(len(batches), njobs)
 
-    if njobs == 1:
-        # execute directly instead of in a pool,
-        # less overhead, simpler stacktraces
-        it = (run_clang_format_diff_wrapper(args, file) for file in files)
-        pool = None
-    else:
-        pool = multiprocessing.Pool(njobs)
-        it = pool.imap_unordered(
-            partial(run_clang_format_diff_wrapper, args), files)
+    # The formatter does the work in external processes. Threads avoid spawning
+    # a Python interpreter per worker, particularly expensive on Windows.
+    pool = ThreadPool(njobs)
+    failed_files = []
+    for batch_files, errs in pool.imap_unordered(
+            partial(check_clang_format_batch, args), batches):
+        failed_files.extend(batch_files)
+        sys.stderr.writelines(errs)
+
+    it = pool.imap_unordered(
+        partial(run_clang_format_diff_wrapper, args), failed_files)
     while True:
         try:
             outs, errs = next(it)
@@ -359,8 +406,7 @@ def main():
             # stop at the first unexpected error,
             # something could be very wrong,
             # don't process all files unnecessarily
-            if pool:
-                pool.terminate()
+            pool.terminate()
             break
         else:
             sys.stderr.writelines(errs)
@@ -370,6 +416,9 @@ def main():
                 print_diff(outs, use_color=colored_stdout)
             if retcode == ExitStatus.SUCCESS:
                 retcode = ExitStatus.DIFF
+
+    pool.close()
+    pool.join()
 
     if retcode == ExitStatus.SUCCESS:
         sys.stdout.write("clang-format validation passed: no issues found in " + str(len(files)) + " files\n")
