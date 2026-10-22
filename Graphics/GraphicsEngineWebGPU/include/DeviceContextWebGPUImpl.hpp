@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2025 Diligent Graphics LLC
+ *  Copyright 2023-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -430,8 +430,9 @@ private:
             *this = WebGPUEncoderState{};
         }
 
-        Uint32 CmdEncoderUpToDateStates = CMD_ENCODER_STATE_NONE;
-        bool   HasDynamicVertexBuffers  = false;
+        Uint32     CmdEncoderUpToDateStates = CMD_ENCODER_STATE_NONE;
+        bool       HasDynamicVertexBuffers  = false;
+        VALUE_TYPE IndexType                = VT_UNDEFINED;
 
         std::array<Uint64, MAX_BUFFER_SLOTS> VertexBufferOffsets = []() {
             std::array<Uint64, MAX_BUFFER_SLOTS> InvalidOffsets;

@@ -2138,7 +2138,8 @@ WGPURenderPassEncoder DeviceContextWebGPUImpl::PrepareForIndexedDraw(DRAW_FLAGS 
 
     WGPURenderPassEncoder wgpuRenderCmdEncoder = PrepareForDraw(Flags);
 
-    if (!m_EncoderState.IsUpToDate((WebGPUEncoderState::CMD_ENCODER_STATE_INDEX_BUFFER)))
+    if (!m_EncoderState.IsUpToDate(WebGPUEncoderState::CMD_ENCODER_STATE_INDEX_BUFFER) ||
+        m_EncoderState.IndexType != IndexType)
         CommitIndexBuffer(wgpuRenderCmdEncoder, IndexType);
 
     return wgpuRenderCmdEncoder;
@@ -2271,6 +2272,7 @@ void DeviceContextWebGPUImpl::CommitIndexBuffer(WGPURenderPassEncoder CmdEncoder
     VERIFY_EXPR(IndexBuffDesc.Size >= m_IndexDataStartOffset);
     const Uint64 Size = IndexBuffDesc.Size - m_IndexDataStartOffset;
     wgpuRenderPassEncoderSetIndexBuffer(CmdEncoder, m_pIndexBuffer->GetWebGPUBuffer(), IndexTypeToWGPUIndexFormat(IndexType), Offset, Size);
+    m_EncoderState.IndexType = IndexType;
     if (IndexBuffDesc.Usage != USAGE_DYNAMIC)
         m_EncoderState.SetUpToDate(WebGPUEncoderState::CMD_ENCODER_STATE_INDEX_BUFFER);
 }

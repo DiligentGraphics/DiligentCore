@@ -1146,6 +1146,63 @@ TEST_F(DrawCommandTest, DrawIndexed)
 }
 
 
+TEST_F(DrawCommandTest, DrawIndexed_MixedIndexTypes)
+{
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
+
+    const Vertex           Triangles[] = {{}, {}, Vert[0], Vert[1], Vert[2], Vert[3], Vert[4], Vert[5]};
+    RefCntAutoPtr<IBuffer> pVB         = CreateVertexBuffer(Triangles, sizeof(Triangles));
+
+    struct IndexData
+    {
+        Uint32 Padding[2]   = {};
+        Uint16 Indices16[6] = {0, 1, 2, 3, 4, 5};
+        Uint32 Indices32[6] = {0, 1, 2, 3, 4, 5};
+    };
+    const IndexData Indices;
+
+    BufferDesc IBDesc;
+    IBDesc.Name      = "Mixed 16-bit and 32-bit indices";
+    IBDesc.BindFlags = BIND_INDEX_BUFFER;
+    IBDesc.Size      = sizeof(Indices);
+    BufferData             InitialData{&Indices, sizeof(Indices)};
+    RefCntAutoPtr<IBuffer> pIB;
+    pDevice->CreateBuffer(IBDesc, &InitialData, &pIB);
+    ASSERT_NE(pIB, nullptr);
+
+    constexpr Uint64 BufferOffset = sizeof(Uint32);
+    constexpr Uint32 FirstIndex16 = (offsetof(IndexData, Indices16) - BufferOffset) / sizeof(Uint16);
+    constexpr Uint32 FirstIndex32 = (offsetof(IndexData, Indices32) - BufferOffset) / sizeof(Uint32);
+
+    // Exercise both format transitions without rebinding the buffer. Each frame
+    // draws one reference triangle with DrawIndexed and the other with MultiDrawIndexed.
+    for (VALUE_TYPE FirstIndexType : {VT_UINT16, VT_UINT32})
+    {
+        SCOPED_TRACE(FirstIndexType == VT_UINT16 ? "UINT16 to UINT32" : "UINT32 to UINT16");
+        SetRenderTargets(sm_pDrawPSO);
+
+        IBuffer* pVBs[] = {pVB};
+        pContext->SetVertexBuffers(0, 1, pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+        pContext->SetIndexBuffer(pIB, BufferOffset, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+        DrawIndexedAttribs DrawAttrs{3, FirstIndexType, DRAW_FLAG_VERIFY_ALL};
+        DrawAttrs.FirstIndexLocation = FirstIndexType == VT_UINT16 ? FirstIndex16 : FirstIndex32;
+        DrawAttrs.BaseVertex         = 2;
+        pContext->DrawIndexed(DrawAttrs);
+
+        const VALUE_TYPE           SecondIndexType  = FirstIndexType == VT_UINT16 ? VT_UINT32 : VT_UINT16;
+        const Uint32               SecondFirstIndex = (SecondIndexType == VT_UINT16 ? FirstIndex16 : FirstIndex32) + 3;
+        const MultiDrawIndexedItem DrawItem{3, SecondFirstIndex, 2};
+        MultiDrawIndexedAttribs    MultiDrawAttrs{1, &DrawItem, SecondIndexType, DRAW_FLAG_VERIFY_ALL};
+        pContext->MultiDrawIndexed(MultiDrawAttrs);
+
+        Present();
+    }
+}
+
+
 TEST_F(DrawCommandTest, DrawIndexed_StripCut)
 {
     GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
