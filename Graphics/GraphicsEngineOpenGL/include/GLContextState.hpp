@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -76,6 +76,7 @@ public:
     void SetDepthBias           (float DepthBias, float fSlopeScaledDepthBias);
     void SetDepthClamp          (bool bEnableDepthClamp);
     void EnableScissorTest      (bool bEnableScissorTest);
+    void EnablePrimitiveRestart (bool Enable);
 
     void SetBlendFactors(const float* BlendFactors);
     void SetBlendState(const BlendStateDesc& BSDsc, Uint32 RenderTargetMask, Uint32 SampleMask);
@@ -313,8 +314,10 @@ private:
     Uint32            m_ColorWriteMasks[MAX_RENDER_TARGETS] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     EnableStateHelper m_bIndexedWriteMasks;
     EnableStateHelper m_bFramebufferSRGB;
-    Int32             m_iActiveTexture   = -1;
-    Int32             m_NumPatchVertices = -1;
+    EnableStateHelper m_PrimitiveRestartEnabled;
+    GLenum            m_PrimitiveRestartMode = 0;
+    Int32             m_iActiveTexture       = -1;
+    Int32             m_NumPatchVertices     = -1;
 
     GLContext::NativeGLContextType m_CurrentGLContext = {};
 };
