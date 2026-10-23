@@ -95,6 +95,190 @@ TEST(GPUUploadManagerTest, Creation)
     EXPECT_EQ(pQueriedManager.RawPtr(), pUploadManager.RawPtr());
 }
 
+TEST(GPUUploadManagerTest, RejectsOversizedPageSizes)
+{
+    GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice = pEnv->GetDevice();
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    constexpr Uint32 MaxPageSize = Uint32{1} << 31;
+    for (Uint32 PageSize : {MaxPageSize + 1, ~0u})
+    {
+        for (bool UseLargePage : {false, true})
+        {
+            SCOPED_TRACE(PageSize);
+            SCOPED_TRACE(UseLargePage);
+
+            GPUUploadManagerCreateInfo CreateInfo{pDevice, nullptr};
+            CreateInfo.InitialPageCount      = 0;
+            CreateInfo.InitialLargePageCount = 0;
+            if (UseLargePage)
+                CreateInfo.LargePageSize = PageSize;
+            else
+                CreateInfo.PageSize = PageSize;
+
+            RefCntAutoPtr<IGPUUploadManager> pUploadManager;
+            TestingEnvironment::ErrorScope   ExpectedError{"GPUUploadManagerCreateInfo page sizes must not exceed"};
+            CreateGPUUploadManager(CreateInfo, &pUploadManager);
+            EXPECT_EQ(pUploadManager, nullptr);
+        }
+    }
+
+    // The largest representable page and a non-power-of-two size rounding up to
+    // it remain valid. No context or initial pages means no large GPU allocation.
+    for (Uint32 PageSize : {MaxPageSize - 1, MaxPageSize})
+    {
+        GPUUploadManagerCreateInfo CreateInfo{pDevice, nullptr};
+        CreateInfo.PageSize              = PageSize;
+        CreateInfo.InitialPageCount      = 0;
+        CreateInfo.InitialLargePageCount = 0;
+
+        RefCntAutoPtr<IGPUUploadManager> pUploadManager;
+        CreateGPUUploadManager(CreateInfo, &pUploadManager);
+        ASSERT_NE(pUploadManager, nullptr);
+
+        GPUUploadManagerStats Stats;
+        pUploadManager->GetStats(Stats);
+        ASSERT_EQ(Stats.NumStreams, 2u);
+        EXPECT_EQ(Stats.pStreamStats[0].PageSize, MaxPageSize);
+        EXPECT_EQ(Stats.pStreamStats[1].PageSize, MaxPageSize);
+    }
+}
+
+TEST(GPUUploadManagerTest, RejectsOversizedBufferUpdates)
+{
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    Uint32 WriteCount = 0;
+    Uint32 CopyCount  = 0;
+
+    GPUUploadManagerCreateInfo CreateInfo{pDevice, nullptr};
+    CreateInfo.InitialPageCount      = 0;
+    CreateInfo.InitialLargePageCount = 0;
+    RefCntAutoPtr<IGPUUploadManager> pUploadManager;
+    CreateGPUUploadManager(CreateInfo, &pUploadManager);
+    ASSERT_NE(pUploadManager, nullptr);
+
+    // The callbacks let us submit oversized ranges without allocating or reading
+    // source storage. Both scheduling paths must reject before waiting for a page.
+    for (IDeviceContext* pUpdateContext : {static_cast<IDeviceContext*>(nullptr), pContext})
+    {
+        for (Uint32 NumBytes : {(Uint32{1} << 31) + 1, ~0u})
+        {
+            SCOPED_TRACE(pUpdateContext != nullptr);
+            SCOPED_TRACE(NumBytes);
+
+            ScheduleBufferUpdateInfo UpdateInfo;
+            UpdateInfo.pContext                   = pUpdateContext;
+            UpdateInfo.NumBytes                   = NumBytes;
+            UpdateInfo.pWriteDataCallbackUserData = &WriteCount;
+            UpdateInfo.WriteDataCallback          = [](void*, Uint32, void* pUserData) {
+                ++*static_cast<Uint32*>(pUserData);
+            };
+            UpdateInfo.pCopyBufferData = &CopyCount;
+            UpdateInfo.CopyBuffer      = [](IDeviceContext* pCopyContext, IBuffer* pSrcBuffer, Uint32 SrcOffset, Uint32 CopySize, void* pUserData) {
+                EXPECT_EQ(pCopyContext, nullptr);
+                EXPECT_EQ(pSrcBuffer, nullptr);
+                EXPECT_EQ(SrcOffset, ~0u);
+                EXPECT_GT(CopySize, Uint32{1} << 31);
+                ++*static_cast<Uint32*>(pUserData);
+            };
+
+            const Uint32                   PreviousCopyCount = CopyCount;
+            TestingEnvironment::ErrorScope ExpectedError{"ScheduleBufferUpdate() NumBytes must not exceed"};
+            EXPECT_FALSE(pUploadManager->ScheduleBufferUpdate(UpdateInfo));
+            EXPECT_EQ(WriteCount, 0u);
+            EXPECT_EQ(CopyCount, PreviousCopyCount + 1);
+        }
+    }
+    pUploadManager.Release();
+    EXPECT_EQ(CopyCount, 4u);
+}
+
+TEST(GPUUploadManagerTest, PageAllocationDoesNotOverflow)
+{
+    // The size-only constructor has no backing allocation. Exercise the actual
+    // writer allocation logic at the 2-GiB boundary without using large storage.
+    constexpr Uint32                   MaxPageSize = Uint32{1} << 31;
+    GPUUploadManagerImpl::Page         Page{MaxPageSize};
+    GPUUploadManagerImpl::Page::Writer Writer = Page.TryBeginWriting();
+    ASSERT_TRUE(Writer);
+
+    ScheduleBufferUpdateInfo UpdateInfo;
+    UpdateInfo.NumBytes = MaxPageSize;
+    EXPECT_TRUE(Writer.ScheduleBufferUpdate(UpdateInfo));
+
+    // A second 2-GiB allocation would wrap Offset + Size to zero.
+    EXPECT_FALSE(Writer.ScheduleBufferUpdate(UpdateInfo));
+
+    // Rounding UINT32_MAX to the minimum alignment must not wrap to zero either.
+    UpdateInfo.NumBytes = ~0u;
+    EXPECT_FALSE(Writer.ScheduleBufferUpdate(UpdateInfo));
+    EXPECT_EQ(Page.GetNumPendingOps(), 1u);
+    EXPECT_EQ(Writer.EndWriting(), GPUUploadManagerImpl::Page::WritingStatus::NotSealed);
+}
+
+TEST(GPUUploadManagerTest, RejectsOversizedTextureUpdates)
+{
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
+    if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D11)
+        GTEST_SKIP() << "D3D11 texture uploads use texture-backed pages";
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    Uint32 WriteCount = 0;
+    Uint32 CopyCount  = 0;
+
+    GPUUploadManagerCreateInfo CreateInfo{pDevice, nullptr};
+    CreateInfo.InitialPageCount      = 0;
+    CreateInfo.InitialLargePageCount = 0;
+    RefCntAutoPtr<IGPUUploadManager> pUploadManager;
+    CreateGPUUploadManager(CreateInfo, &pUploadManager);
+    ASSERT_NE(pUploadManager, nullptr);
+
+    // These regions require 3 and 4 GiB of staging memory. In particular, the
+    // second size must be rejected before narrowing the 64-bit size to Uint32.
+    for (IDeviceContext* pUpdateContext : {static_cast<IDeviceContext*>(nullptr), pContext})
+    {
+        for (Uint32 Depth : {3u, 4u})
+        {
+            SCOPED_TRACE(pUpdateContext != nullptr);
+            SCOPED_TRACE(Depth);
+
+            ScheduleTextureUpdateInfo UpdateInfo;
+            UpdateInfo.pContext                   = pUpdateContext;
+            UpdateInfo.Format                     = TEX_FORMAT_RGBA32_FLOAT;
+            UpdateInfo.DstBox                     = {0, 8192, 0, 8192, 0, Depth};
+            UpdateInfo.pWriteDataCallbackUserData = &WriteCount;
+            UpdateInfo.WriteDataCallback          = [](void*, Uint32, Uint32, const Box&, void* pUserData) {
+                ++*static_cast<Uint32*>(pUserData);
+            };
+            UpdateInfo.pCopyTextureData = &CopyCount;
+            UpdateInfo.CopyTexture      = [](IDeviceContext* pCopyContext, Uint32, Uint32, const Box&, const TextureSubResData& SrcData, void* pUserData) {
+                EXPECT_EQ(pCopyContext, nullptr);
+                EXPECT_EQ(SrcData.pData, nullptr);
+                EXPECT_EQ(SrcData.pSrcBuffer, nullptr);
+                ++*static_cast<Uint32*>(pUserData);
+            };
+
+            const Uint32                   PreviousCopyCount = CopyCount;
+            TestingEnvironment::ErrorScope ExpectedError{"ScheduleTextureUpdate() staging data size must not exceed"};
+            EXPECT_FALSE(pUploadManager->ScheduleTextureUpdate(UpdateInfo));
+            EXPECT_EQ(WriteCount, 0u);
+            EXPECT_EQ(CopyCount, PreviousCopyCount + 1);
+        }
+    }
+    pUploadManager.Release();
+    EXPECT_EQ(CopyCount, 4u);
+}
+
 void VerifyBufferContents(IBuffer* pBuffer, const std::vector<Uint8>& ExpectedData)
 {
     GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
