@@ -41,10 +41,6 @@ namespace Diligent
 namespace
 {
 
-// Buffer pages grow by powers of two. A larger page would require a size
-// of at least 4 GiB, which cannot be represented by the Uint32 page offsets.
-constexpr Uint32 MaxBufferPageSize = Uint32{1} << 31;
-
 class BufferUpdateCancelGuard
 {
 public:
@@ -133,9 +129,9 @@ bool ValidateBufferUpdate(const ScheduleBufferUpdateInfo& UpdateInfo)
 {
     // Reject before scheduling: a worker must not wait for a page that can
     // never be created, and the cancellation guard must release its callback data.
-    if (UpdateInfo.NumBytes > MaxBufferPageSize)
+    if (UpdateInfo.NumBytes > GPU_UPLOAD_MAX_BUFFER_SIZE)
     {
-        LOG_ERROR_MESSAGE("ScheduleBufferUpdate() NumBytes must not exceed ", MaxBufferPageSize, " (2 GiB)");
+        LOG_ERROR_MESSAGE("ScheduleBufferUpdate() NumBytes must not exceed ", GPU_UPLOAD_MAX_BUFFER_SIZE, " (2 GiB)");
         return false;
     }
 
@@ -1167,7 +1163,7 @@ GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, con
 
     // At the maximum size both streams use 2 GiB pages; doubling the normal
     // page size would overflow or round to an unrepresentable 4 GiB page.
-    const Uint32 MinLargePageSize = PageSize <= MaxBufferPageSize / 2 ? PageSize * 2 : MaxBufferPageSize;
+    const Uint32 MinLargePageSize = PageSize <= GPU_UPLOAD_MAX_BUFFER_SIZE / 2 ? PageSize * 2 : GPU_UPLOAD_MAX_BUFFER_SIZE;
 
     m_Streams.reserve(2);
     m_Streams.push_back(std::make_unique<UploadStream>(
@@ -1597,9 +1593,9 @@ bool GPUUploadManagerImpl::ScheduleTextureUpdate(const ScheduleTextureUpdateInfo
 
     // Buffer-backed texture uploads share the same page-size limit. Check
     // before narrowing the 64-bit footprint to the stream's Uint32 update size.
-    if (UpdateData.CopyInfo.MemorySize > MaxBufferPageSize)
+    if (UpdateData.CopyInfo.MemorySize > GPU_UPLOAD_MAX_BUFFER_SIZE)
     {
-        LOG_ERROR_MESSAGE("ScheduleTextureUpdate() staging data size must not exceed ", MaxBufferPageSize, " (2 GiB)");
+        LOG_ERROR_MESSAGE("ScheduleTextureUpdate() staging data size must not exceed ", GPU_UPLOAD_MAX_BUFFER_SIZE, " (2 GiB)");
         return false;
     }
 
@@ -1645,7 +1641,7 @@ GPUUploadManagerImpl::Page* GPUUploadManagerImpl::UploadStream::CreatePage(IDevi
     Uint32 PageSize = m_PageSize;
     while (PageSize < RequiredSize)
     {
-        if (PageSize >= MaxBufferPageSize)
+        if (PageSize >= GPU_UPLOAD_MAX_BUFFER_SIZE)
         {
             LOG_ERROR_MESSAGE("GPU upload page size overflows Uint32 when growing to ", RequiredSize);
             return nullptr;
@@ -1973,9 +1969,9 @@ void CreateGPUUploadManager(const GPUUploadManagerCreateInfo& CreateInfo,
     }
 
     *ppManager = nullptr;
-    if (CreateInfo.PageSize > MaxBufferPageSize || CreateInfo.LargePageSize > MaxBufferPageSize)
+    if (CreateInfo.PageSize > GPU_UPLOAD_MAX_BUFFER_SIZE || CreateInfo.LargePageSize > GPU_UPLOAD_MAX_BUFFER_SIZE)
     {
-        LOG_ERROR_MESSAGE("GPUUploadManagerCreateInfo page sizes must not exceed ", MaxBufferPageSize, " (2 GiB)");
+        LOG_ERROR_MESSAGE("GPUUploadManagerCreateInfo page sizes must not exceed ", GPU_UPLOAD_MAX_BUFFER_SIZE, " (2 GiB)");
         return;
     }
 
