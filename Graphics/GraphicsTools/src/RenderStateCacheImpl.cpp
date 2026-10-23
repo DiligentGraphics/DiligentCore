@@ -594,6 +594,7 @@ protected:
                 ShaderCI.Source                         = static_cast<const char*>(ShaderCI.ByteCode);
                 ShaderCI.ByteCode                       = nullptr;
                 ShaderCI.SourceLanguage                 = SHADER_SOURCE_LANGUAGE_WGSL;
+                ShaderCI.EntryPoint                     = GetWebGPUShaderEntryPoint(pShader);
                 ShaderCI.WebGPUEmulatedArrayIndexSuffix = GetWebGPUEmulatedArrayIndexSuffix(pShader);
             }
             ShaderArchiveInfo ArchiveInfo;

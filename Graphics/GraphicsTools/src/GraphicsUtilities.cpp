@@ -578,6 +578,11 @@ const char* GetWebGPUEmulatedArrayIndexSuffix(IShader* pShader)
 {
     return nullptr;
 }
+
+const char* GetWebGPUShaderEntryPoint(IShader* pShader)
+{
+    return nullptr;
+}
 #endif
 
 int64_t GetNativeTextureFormat(TEXTURE_FORMAT TexFormat, RENDER_DEVICE_TYPE DeviceType)
