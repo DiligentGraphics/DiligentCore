@@ -33,6 +33,10 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 #include "../../../Primitives/interface/DefineRefMacro.h"
 
+/// Maximum staging buffer page size and per-update staging buffer data size, in bytes (2 GiB).
+/// Applies to buffer uploads and buffer-backed texture uploads, including row padding.
+static DILIGENT_CONSTEXPR Uint32 GPU_UPLOAD_MAX_BUFFER_SIZE = 0x80000000u;
+
 /// Create info structure for GPU upload manager
 struct GPUUploadManagerCreateInfo
 {
@@ -44,10 +48,10 @@ struct GPUUploadManagerCreateInfo
     /// RenderThreadUpdate() with a valid device context pointer.
     IDeviceContext* pContext DEFAULT_INITIALIZER(nullptr);
 
-    /// Size of the upload page.
+    /// Size of the upload page in bytes. Rounded up to a power of two; must not exceed GPU_UPLOAD_MAX_BUFFER_SIZE.
     Uint32 PageSize DEFAULT_INITIALIZER(4 * 1024 * 1024);
 
-    /// Size of the large upload page.
+    /// Size of the large upload page in bytes. Rounded up to a power of two; must not exceed GPU_UPLOAD_MAX_BUFFER_SIZE.
     Uint32 LargePageSize DEFAULT_INITIALIZER(16 * 1024 * 1024);
 
     /// Initial number of upload pages. If the manager runs out of pages to write to,
@@ -182,7 +186,7 @@ struct ScheduleBufferUpdateInfo
     /// Otherwise, this offset will be used as the destination offset for the copy operation.
     Uint32 DstOffset DEFAULT_INITIALIZER(0);
 
-    /// Number of bytes to copy from the source data to the destination buffer.
+    /// Number of bytes to copy from the source data to the destination buffer. Must not exceed GPU_UPLOAD_MAX_BUFFER_SIZE.
     Uint32 NumBytes DEFAULT_INITIALIZER(0);
 
     /// Pointer to the source data to copy to the destination buffer.
@@ -623,6 +627,9 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
 
 
     /// Schedules an asynchronous texture update operation.
+    ///
+    /// On backends that stage texture uploads through buffers, the required staging storage,
+    /// including row padding, must not exceed GPU_UPLOAD_MAX_BUFFER_SIZE per update.
     ///
     /// \param [in] UpdateInfo - Structure describing the texture update operation. See ScheduleTextureUpdateInfo for details.
     ///

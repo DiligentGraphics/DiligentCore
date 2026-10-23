@@ -94,6 +94,17 @@ void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)
     else if (Desc.PipelineType == PIPELINE_TYPE_GRAPHICS)
     {
         const GraphicsPipelineDesc& GraphicsPipeline = m_pPipelineState->GetGraphicsPipelineDesc();
+
+        // OpenGL applies primitive restart to list topologies as well as strips.
+        // Enable it only for strips to match Diligent's other backends.
+        // Leaving it enabled for lists also breaks gl_DrawID in llvmpipe's
+        // indexed multi-draw restart path.
+        m_ContextState.EnablePrimitiveRestart(
+            GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP ||
+            GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_ADJ ||
+            GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_LINE_STRIP ||
+            GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_LINE_STRIP_ADJ);
+
         // Set rasterizer state
         {
             const RasterizerStateDesc& RasterizerDesc = GraphicsPipeline.RasterizerDesc;

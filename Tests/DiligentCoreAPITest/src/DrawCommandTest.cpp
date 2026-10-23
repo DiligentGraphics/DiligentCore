@@ -1146,6 +1146,63 @@ TEST_F(DrawCommandTest, DrawIndexed)
 }
 
 
+TEST_F(DrawCommandTest, DrawIndexed_MixedIndexTypes)
+{
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
+
+    const Vertex           Triangles[] = {{}, {}, Vert[0], Vert[1], Vert[2], Vert[3], Vert[4], Vert[5]};
+    RefCntAutoPtr<IBuffer> pVB         = CreateVertexBuffer(Triangles, sizeof(Triangles));
+
+    struct IndexData
+    {
+        Uint32 Padding[2]   = {};
+        Uint16 Indices16[6] = {0, 1, 2, 3, 4, 5};
+        Uint32 Indices32[6] = {0, 1, 2, 3, 4, 5};
+    };
+    const IndexData Indices;
+
+    BufferDesc IBDesc;
+    IBDesc.Name      = "Mixed 16-bit and 32-bit indices";
+    IBDesc.BindFlags = BIND_INDEX_BUFFER;
+    IBDesc.Size      = sizeof(Indices);
+    BufferData             InitialData{&Indices, sizeof(Indices)};
+    RefCntAutoPtr<IBuffer> pIB;
+    pDevice->CreateBuffer(IBDesc, &InitialData, &pIB);
+    ASSERT_NE(pIB, nullptr);
+
+    constexpr Uint64 BufferOffset = sizeof(Uint32);
+    constexpr Uint32 FirstIndex16 = (offsetof(IndexData, Indices16) - BufferOffset) / sizeof(Uint16);
+    constexpr Uint32 FirstIndex32 = (offsetof(IndexData, Indices32) - BufferOffset) / sizeof(Uint32);
+
+    // Exercise both format transitions without rebinding the buffer. Each frame
+    // draws one reference triangle with DrawIndexed and the other with MultiDrawIndexed.
+    for (VALUE_TYPE FirstIndexType : {VT_UINT16, VT_UINT32})
+    {
+        SCOPED_TRACE(FirstIndexType == VT_UINT16 ? "UINT16 to UINT32" : "UINT32 to UINT16");
+        SetRenderTargets(sm_pDrawPSO);
+
+        IBuffer* pVBs[] = {pVB};
+        pContext->SetVertexBuffers(0, 1, pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+        pContext->SetIndexBuffer(pIB, BufferOffset, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+        DrawIndexedAttribs DrawAttrs{3, FirstIndexType, DRAW_FLAG_VERIFY_ALL};
+        DrawAttrs.FirstIndexLocation = FirstIndexType == VT_UINT16 ? FirstIndex16 : FirstIndex32;
+        DrawAttrs.BaseVertex         = 2;
+        pContext->DrawIndexed(DrawAttrs);
+
+        const VALUE_TYPE           SecondIndexType  = FirstIndexType == VT_UINT16 ? VT_UINT32 : VT_UINT16;
+        const Uint32               SecondFirstIndex = (SecondIndexType == VT_UINT16 ? FirstIndex16 : FirstIndex32) + 3;
+        const MultiDrawIndexedItem DrawItem{3, SecondFirstIndex, 2};
+        MultiDrawIndexedAttribs    MultiDrawAttrs{1, &DrawItem, SecondIndexType, DRAW_FLAG_VERIFY_ALL};
+        pContext->MultiDrawIndexed(MultiDrawAttrs);
+
+        Present();
+    }
+}
+
+
 TEST_F(DrawCommandTest, DrawIndexed_StripCut)
 {
     GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
@@ -1171,6 +1228,9 @@ TEST_F(DrawCommandTest, DrawIndexed_StripCut)
     pContext->SetVertexBuffers(0, 1, pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
     pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
+    // Switching to a list and back must restore restart for the cut index.
+    pContext->SetPipelineState(sm_pDrawPSO);
+    pContext->SetPipelineState(sm_pDrawStripPSO);
     DrawIndexedAttribs drawAttrs{7, VT_UINT32, DRAW_FLAG_VERIFY_ALL};
     pContext->DrawIndexed(drawAttrs);
 
@@ -4001,7 +4061,7 @@ TEST_F(DrawCommandTest, MultiDrawIndexed)
     Present();
 }
 
-RefCntAutoPtr<IPipelineState> CreateNativeMultiDrawPSO()
+RefCntAutoPtr<IPipelineState> CreateNativeMultiDrawPSO(const char* VSSource = GLSL::DrawTest_VS_DrawId.c_str())
 {
     GPUTestingEnvironment* const pEnv       = GPUTestingEnvironment::GetInstance();
     IRenderDevice* const         pDevice    = pEnv->GetDevice();
@@ -4027,7 +4087,7 @@ RefCntAutoPtr<IPipelineState> CreateNativeMultiDrawPSO()
     {
         ShaderCI.Desc       = {"Draw command test - native multi draw", SHADER_TYPE_VERTEX, true};
         ShaderCI.EntryPoint = "main";
-        ShaderCI.Source     = GLSL::DrawTest_VS_DrawId.c_str();
+        ShaderCI.Source     = VSSource;
         if (pDevice->GetDeviceInfo().IsGLDevice())
         {
             ShaderCI.GLSLExtensions = "#extension GL_ARB_shader_draw_parameters : enable\n";
@@ -4110,6 +4170,97 @@ TEST_F(DrawCommandTest, NativeMultiDrawIndexed)
     pContext->MultiDrawIndexed(drawAttrs);
 
     Present();
+}
+
+
+TEST_F(DrawCommandTest, NativeMultiDrawIndexed_LargeBaseVertex)
+{
+    GPUTestingEnvironment* const pEnv    = GPUTestingEnvironment::GetInstance();
+    IRenderDevice* const         pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceInfo().Features.NativeMultiDraw ||
+        (pDevice->GetAdapterInfo().DrawCommand.CapFlags & DRAW_COMMAND_CAP_FLAG_BASE_VERTEX) == 0)
+        GTEST_SKIP() << "Native multi draw with base vertex is not supported by this device";
+
+    // Use vertex IDs to verify the base vertex without allocating a large VB.
+    // Each draw must also select its own triangle using the native draw ID.
+    const char* VSSource = R"(
+#ifndef GL_ES
+out gl_PerVertex { vec4 gl_Position; };
+#endif
+#ifdef VULKAN
+#   define VERTEX_ID gl_VertexIndex
+#   define OUT_LOCATION(X) layout(location=X)
+#else
+#   define VERTEX_ID gl_VertexID
+#   define OUT_LOCATION(X)
+#endif
+#if __VERSION__ >= 460
+#   define DRAW_ID gl_DrawID
+#else
+#   define DRAW_ID gl_DrawIDARB
+#endif
+OUT_LOCATION(0) out vec3 _PSIn_Color;
+void main()
+{
+    vec4 Verts[6] = vec4[6](
+        vec4(-1.0, -0.5, 0.0, 1.0), vec4(-0.5, 0.5, 0.0, 1.0), vec4(0.0, -0.5, 0.0, 1.0),
+        vec4( 0.0, -0.5, 0.0, 1.0), vec4( 0.5, 0.5, 0.0, 1.0), vec4(1.0, -0.5, 0.0, 1.0));
+    vec3 Colors[3] = vec3[3](vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, 1.0));
+    int VertexID = VERTEX_ID - (65536 + DRAW_ID * BASE_VERTEX_STEP);
+    if (DRAW_ID < 0 || DRAW_ID >= 2 || VertexID < 0 || VertexID >= 3)
+    {
+        gl_Position = vec4(2.0, 2.0, 0.0, 1.0);
+        _PSIn_Color = vec3(0.0);
+        return;
+    }
+    gl_Position = Verts[DRAW_ID * 3 + VertexID];
+    _PSIn_Color = Colors[VertexID];
+}
+)";
+    struct IndexData
+    {
+        Uint32 Padding[2]    = {};
+        Uint16 Indices16[12] = {0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 1, 2};
+        Uint32 Indices32[12] = {0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 1, 2};
+    };
+    const IndexData Indices;
+    BufferDesc      IBDesc;
+    IBDesc.Name      = "Native multi draw mixed index data";
+    IBDesc.BindFlags = BIND_INDEX_BUFFER;
+    IBDesc.Size      = sizeof(Indices);
+    BufferData             InitialData{&Indices, sizeof(Indices)};
+    RefCntAutoPtr<IBuffer> pIB;
+    pDevice->CreateBuffer(IBDesc, &InitialData, &pIB);
+    ASSERT_NE(pIB, nullptr);
+
+    IDeviceContext* const pContext     = pEnv->GetDeviceContext();
+    constexpr Uint64      BufferOffset = sizeof(Uint32);
+    for (Uint32 BaseVertexStep : {0u, 4u})
+    {
+        SCOPED_TRACE(BaseVertexStep);
+        const std::string             Source = "#define BASE_VERTEX_STEP " + std::to_string(BaseVertexStep) + "\n" + VSSource;
+        RefCntAutoPtr<IPipelineState> pPSO   = CreateNativeMultiDrawPSO(Source.c_str());
+        ASSERT_TRUE(pPSO);
+
+        for (VALUE_TYPE IndexType : {VT_UINT16, VT_UINT32})
+        {
+            SCOPED_TRACE(IndexType == VT_UINT16 ? "UINT16" : "UINT32");
+            // A strip pipeline must not leave restart enabled for triangle lists.
+            SetRenderTargets(sm_pDrawStripPSO);
+            pContext->SetPipelineState(pPSO);
+            pContext->SetIndexBuffer(pIB, BufferOffset, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+            const Uint32               FirstIndex = static_cast<Uint32>(IndexType == VT_UINT16 ?
+                                                              (offsetof(IndexData, Indices16) - BufferOffset) / sizeof(Uint16) :
+                                                              (offsetof(IndexData, Indices32) - BufferOffset) / sizeof(Uint32));
+            const MultiDrawIndexedItem DrawItems[] =
+                {
+                    {3, FirstIndex + 3, 65536},
+                    {3, FirstIndex + 9, 65536 + BaseVertexStep},
+                };
+            pContext->MultiDrawIndexed({_countof(DrawItems), DrawItems, IndexType, DRAW_FLAG_VERIFY_ALL});
+            Present();
+        }
+    }
 }
 
 } // namespace

@@ -50,6 +50,13 @@ GLContextState::GLContextState(RenderDeviceGLImpl* pDeviceGL)
     m_Caps.IsDepthClampSupported           = AdapterInfo.Features.DepthClamp;
     m_Caps.IsFramebufferSRGBSupported      = pDeviceGL->GetGLCaps().FramebufferSRGB;
 
+#if PLATFORM_WIN32 || PLATFORM_LINUX || PLATFORM_MACOS
+    m_PrimitiveRestartMode =
+        pDeviceGL->GetDeviceInfo().APIVersion >= Version{4, 3} || pDeviceGL->CheckExtension("GL_ARB_ES3_compatibility") ?
+        GL_PRIMITIVE_RESTART_FIXED_INDEX :
+        GL_PRIMITIVE_RESTART;
+#endif
+
     {
         m_Caps.MaxCombinedTexUnits = 0;
         glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &m_Caps.MaxCombinedTexUnits);
@@ -116,8 +123,9 @@ void GLContextState::Invalidate()
     for (Uint32 rt = 0; rt < _countof(m_ColorWriteMasks); ++rt)
         m_ColorWriteMasks[rt] = 0xFF;
 
-    m_bIndexedWriteMasks = EnableStateHelper{};
-    m_bFramebufferSRGB   = EnableStateHelper{};
+    m_bIndexedWriteMasks      = EnableStateHelper{};
+    m_bFramebufferSRGB        = EnableStateHelper{};
+    m_PrimitiveRestartEnabled = EnableStateHelper{};
 
     m_iActiveTexture   = -1;
     m_NumPatchVertices = -1;
@@ -929,6 +937,33 @@ void GLContextState::EnableFramebufferSRGB(Bool bEnable)
         }
         m_bFramebufferSRGB = bEnable;
     }
+}
+
+void GLContextState::EnablePrimitiveRestart(bool Enable)
+{
+#if PLATFORM_WIN32 || PLATFORM_LINUX || PLATFORM_MACOS
+    if (m_PrimitiveRestartEnabled != Enable)
+    {
+        if (Enable)
+        {
+            glEnable(m_PrimitiveRestartMode);
+            if (m_PrimitiveRestartMode == GL_PRIMITIVE_RESTART)
+                glPrimitiveRestartIndex(0xFFFFFFFFu);
+        }
+        else
+        {
+            glDisable(m_PrimitiveRestartMode);
+            // External GL code may have enabled the other restart mode.
+            if (m_PrimitiveRestartMode == GL_PRIMITIVE_RESTART_FIXED_INDEX)
+                glDisable(GL_PRIMITIVE_RESTART);
+        }
+        DEV_CHECK_GL_ERROR("Failed to set primitive restart state");
+        m_PrimitiveRestartEnabled = Enable;
+    }
+#else
+    // Primitive restart is always enabled in OpenGL ES and WebGL.
+    (void)Enable;
+#endif
 }
 
 void GLContextState::SetNumPatchVertices(Int32 NumVertices)
