@@ -24,6 +24,9 @@
  *  of the possibility of such damages.
  */
 
+#include <chrono>
+#include <thread>
+
 #include "GPUTestingEnvironment.hpp"
 #include "TestingSwapChainBase.hpp"
 #include "BasicMath.hpp"
@@ -325,6 +328,44 @@ TEST_F(FenceTest, ContextWaitForAnotherContext)
 
     pGraphicsCtx->WaitForIdle();
     pSwapChain->Present();
+}
+
+
+TEST_F(FenceTest, RepeatedCPUWait)
+{
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceInfo().Features.NativeFence)
+    {
+        GTEST_SKIP() << "NativeFence feature is not supported";
+    }
+
+    FenceDesc FenceCI;
+    FenceCI.Name = "Repeated CPU wait";
+    FenceCI.Type = FENCE_TYPE_GENERAL;
+
+    RefCntAutoPtr<IFence> pFence;
+    pDevice->CreateFence(FenceCI, &pFence);
+    ASSERT_NE(pFence, nullptr);
+
+    // Gives Wait() time to start blocking before the fence is signaled
+    static constexpr std::chrono::milliseconds SignalDelay{20};
+    // Every wait after the first blocking one must also block until its own value is reached
+    static constexpr Uint64 NumWaits = 4;
+
+    for (Uint64 Value = 1; Value <= NumWaits; ++Value)
+    {
+        std::thread SignalThread{
+            [&pFence, Value]() {
+                std::this_thread::sleep_for(SignalDelay);
+                pFence->Signal(Value);
+            }};
+
+        pFence->Wait(Value);
+        EXPECT_GE(pFence->GetCompletedValue(), Value) << "Wait() returned before the fence reached the value";
+
+        SignalThread.join();
+    }
 }
 
 } // namespace
