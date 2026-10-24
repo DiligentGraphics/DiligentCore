@@ -73,6 +73,7 @@ public:
 
     ~SwapChainD3DBase()
     {
+        ReleaseFrameLatencyWaitableObject();
         if (m_pSwapChain)
         {
             // Swap chain must be in windowed mode when it is destroyed
@@ -85,6 +86,15 @@ public:
     }
 
 protected:
+    void ReleaseFrameLatencyWaitableObject()
+    {
+        if (m_FrameLatencyWaitableObject != NULL)
+        {
+            CloseHandle(m_FrameLatencyWaitableObject);
+            m_FrameLatencyWaitableObject = NULL;
+        }
+    }
+
     virtual void UpdateSwapChain(bool CreateNew) = 0;
 
     bool Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFORM NewPreTransform, Int32 Dummy = 0 /*To be different from virtual function*/)
@@ -103,6 +113,9 @@ protected:
 
     void CreateDXGISwapChain(IUnknown* pD3D11DeviceOrD3D12CmdQueue)
     {
+        // The previous swap chain, if any, has already been released. Close its waitable object.
+        ReleaseFrameLatencyWaitableObject();
+
 #if PLATFORM_WIN32
         HWND hWnd = reinterpret_cast<HWND>(m_Window.hWnd);
         if (m_SwapChainDesc.Width == 0 || m_SwapChainDesc.Height == 0)
@@ -282,7 +295,6 @@ protected:
         }
         else
         {
-            m_FrameLatencyWaitableObject = NULL;
             SetDXGIDeviceMaximumFrameLatency();
         }
     }
