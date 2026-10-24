@@ -64,8 +64,6 @@ public:
 private:
     /// Access to the fence internal data is thread safe.
     CComPtr<ID3D12Fence> m_pd3d12Fence; ///< D3D12 Fence object
-
-    const HANDLE m_FenceCompleteEvent;
 };
 
 } // namespace Diligent
