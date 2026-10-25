@@ -108,10 +108,11 @@ std::vector<uint32_t> PatchImageFormats(const std::vector<uint32_t>&            
 
     diligent_spirv_cross::ShaderResources resources = Compiler.get_shader_resources();
 
+    constexpr size_t                     SPIRVHeaderSize = 5;
     std::unordered_map<uint32_t, size_t> ImageTypeIdToFormat;
+    bool                                 HasStorageImageExtendedFormatsCapability = false;
     // Skip the header and walk instruction boundaries: operands may have the same
     // low bits as OpTypeImage and must not be interpreted as instruction words.
-    constexpr size_t SPIRVHeaderSize = 5;
     for (size_t i = SPIRVHeaderSize; i < SPIRV.size();)
     {
         const uint32_t WordCount = SPIRV[i] >> 16;
@@ -120,6 +121,10 @@ std::vector<uint32_t> PatchImageFormats(const std::vector<uint32_t>&            
             LOG_ERROR_MESSAGE("Invalid SPIR-V instruction size at word ", i);
             return {};
         }
+        // OpCapability
+        //      0           1
+        // |  OpCode  | Capability |
+        constexpr uint32_t CapabilityOffset = 1;
 
         // OpTypeImage
         //      0          1          2          3      4        5      6       7           8               9
@@ -127,7 +132,9 @@ std::vector<uint32_t> PatchImageFormats(const std::vector<uint32_t>&            
         constexpr uint32_t ImageFormatOffset = 8;
 
         const uint32_t OpCode = SPIRV[i] & 0xFFFF;
-        if (OpCode == spv::OpTypeImage && WordCount > ImageFormatOffset)
+        if (OpCode == spv::OpCapability && WordCount > CapabilityOffset)
+            HasStorageImageExtendedFormatsCapability |= SPIRV[i + CapabilityOffset] == spv::CapabilityStorageImageExtendedFormats;
+        else if (OpCode == spv::OpTypeImage && WordCount > ImageFormatOffset)
         {
             const uint32_t ImageTypeId       = SPIRV[i + 1];
             ImageTypeIdToFormat[ImageTypeId] = i + ImageFormatOffset;
@@ -167,6 +174,12 @@ std::vector<uint32_t> PatchImageFormats(const std::vector<uint32_t>&            
                 }
             }
         }
+    }
+
+    if (!HasStorageImageExtendedFormatsCapability)
+    {
+        constexpr uint32_t WordCount = 2;
+        PatchedSPIRV.insert(PatchedSPIRV.begin() + SPIRVHeaderSize, {(WordCount << 16) | spv::OpCapability, spv::CapabilityStorageImageExtendedFormats});
     }
 
     return PatchedSPIRV;

@@ -259,25 +259,47 @@ TEXTURE_FORMAT TintTexelFormatToTextureFormat(const tint::inspector::ResourceBin
     switch (TintBinding.image_format)
     {
             // clang-format off
-        case TintTexelFormat::kBgra8Unorm:  return TEX_FORMAT_BGRA8_UNORM;
-        case TintTexelFormat::kRgba8Unorm:  return TEX_FORMAT_RGBA8_UNORM;
-        case TintTexelFormat::kRgba8Snorm:  return TEX_FORMAT_RGBA8_SNORM;
-        case TintTexelFormat::kRgba8Uint:   return TEX_FORMAT_RGBA8_UINT;
-        case TintTexelFormat::kRgba8Sint:   return TEX_FORMAT_RGBA8_SINT;
-        case TintTexelFormat::kRgba16Uint:  return TEX_FORMAT_RGBA16_UINT;
-        case TintTexelFormat::kRgba16Sint:  return TEX_FORMAT_RGBA16_SINT;
-        case TintTexelFormat::kRgba16Float: return TEX_FORMAT_RGBA16_FLOAT;
-        case TintTexelFormat::kR32Uint:     return TEX_FORMAT_R32_UINT;
-        case TintTexelFormat::kR32Sint:     return TEX_FORMAT_R32_SINT;
-        case TintTexelFormat::kR32Float:    return TEX_FORMAT_R32_FLOAT;
-        case TintTexelFormat::kRg32Uint:    return TEX_FORMAT_RG32_UINT;
-        case TintTexelFormat::kRg32Sint:    return TEX_FORMAT_RG32_SINT;
-        case TintTexelFormat::kRg32Float:   return TEX_FORMAT_RG32_FLOAT;
-        case TintTexelFormat::kRgba32Uint:  return TEX_FORMAT_RGBA32_UINT;
-        case TintTexelFormat::kRgba32Sint:  return TEX_FORMAT_RGBA32_SINT;
-        case TintTexelFormat::kRgba32Float: return TEX_FORMAT_RGBA32_FLOAT;
-        case TintTexelFormat::kR8Unorm:     return TEX_FORMAT_R8_UNORM;
-        case TintTexelFormat::kNone:        return TEX_FORMAT_UNKNOWN;
+        case TintTexelFormat::kBgra8Unorm:    return TEX_FORMAT_BGRA8_UNORM;
+        case TintTexelFormat::kRgba8Unorm:    return TEX_FORMAT_RGBA8_UNORM;
+        case TintTexelFormat::kRgba8Snorm:    return TEX_FORMAT_RGBA8_SNORM;
+        case TintTexelFormat::kRgba8Uint:     return TEX_FORMAT_RGBA8_UINT;
+        case TintTexelFormat::kRgba8Sint:     return TEX_FORMAT_RGBA8_SINT;
+        case TintTexelFormat::kRgba16Uint:    return TEX_FORMAT_RGBA16_UINT;
+        case TintTexelFormat::kRgba16Sint:    return TEX_FORMAT_RGBA16_SINT;
+        case TintTexelFormat::kRgba16Float:   return TEX_FORMAT_RGBA16_FLOAT;
+        case TintTexelFormat::kRgba16Unorm:   return TEX_FORMAT_RGBA16_UNORM;
+        case TintTexelFormat::kRgba16Snorm:   return TEX_FORMAT_RGBA16_SNORM;
+        case TintTexelFormat::kR32Uint:       return TEX_FORMAT_R32_UINT;
+        case TintTexelFormat::kR32Sint:       return TEX_FORMAT_R32_SINT;
+        case TintTexelFormat::kR32Float:      return TEX_FORMAT_R32_FLOAT;
+        case TintTexelFormat::kRg32Uint:      return TEX_FORMAT_RG32_UINT;
+        case TintTexelFormat::kRg32Sint:      return TEX_FORMAT_RG32_SINT;
+        case TintTexelFormat::kRg32Float:     return TEX_FORMAT_RG32_FLOAT;
+        case TintTexelFormat::kRgba32Uint:    return TEX_FORMAT_RGBA32_UINT;
+        case TintTexelFormat::kRgba32Sint:    return TEX_FORMAT_RGBA32_SINT;
+        case TintTexelFormat::kRgba32Float:   return TEX_FORMAT_RGBA32_FLOAT;
+        case TintTexelFormat::kR8Unorm:       return TEX_FORMAT_R8_UNORM;
+        case TintTexelFormat::kR8Snorm:       return TEX_FORMAT_R8_SNORM;
+        case TintTexelFormat::kR8Uint:        return TEX_FORMAT_R8_UINT;
+        case TintTexelFormat::kR8Sint:        return TEX_FORMAT_R8_SINT;
+        case TintTexelFormat::kRg8Unorm:      return TEX_FORMAT_RG8_UNORM;
+        case TintTexelFormat::kRg8Snorm:      return TEX_FORMAT_RG8_SNORM;
+        case TintTexelFormat::kRg8Uint:       return TEX_FORMAT_RG8_UINT;
+        case TintTexelFormat::kRg8Sint:       return TEX_FORMAT_RG8_SINT;
+        case TintTexelFormat::kR16Uint:       return TEX_FORMAT_R16_UINT;
+        case TintTexelFormat::kR16Sint:       return TEX_FORMAT_R16_SINT;
+        case TintTexelFormat::kR16Float:      return TEX_FORMAT_R16_FLOAT;
+        case TintTexelFormat::kR16Unorm:      return TEX_FORMAT_R16_UNORM;
+        case TintTexelFormat::kR16Snorm:      return TEX_FORMAT_R16_SNORM;
+        case TintTexelFormat::kRg16Uint:      return TEX_FORMAT_RG16_UINT;
+        case TintTexelFormat::kRg16Sint:      return TEX_FORMAT_RG16_SINT;
+        case TintTexelFormat::kRg16Float:     return TEX_FORMAT_RG16_FLOAT;
+        case TintTexelFormat::kRg16Unorm:     return TEX_FORMAT_RG16_UNORM;
+        case TintTexelFormat::kRg16Snorm:     return TEX_FORMAT_RG16_SNORM;
+        case TintTexelFormat::kRg11B10Ufloat: return TEX_FORMAT_R11G11B10_FLOAT;
+        case TintTexelFormat::kRgb10A2Uint:   return TEX_FORMAT_RGB10A2_UINT;
+        case TintTexelFormat::kRgb10A2Unorm:  return TEX_FORMAT_RGB10A2_UNORM;
+        case TintTexelFormat::kNone:          return TEX_FORMAT_UNKNOWN;
         // clang-format on
         default:
             UNEXPECTED("Unexpected texel format");

@@ -72,6 +72,8 @@ TEST(SPIRVUtils, PatchImageFormatsIgnoresInstructionOperands)
 
     std::vector<uint32_t> ExpectedSPIRV = SPIRV;
     ExpectedSPIRV[ImageFormatWord]      = 1; // ImageFormatRgba32f
+    ExpectedSPIRV.insert(ExpectedSPIRV.begin() + 5,
+                         {0x00020011, 49}); // OpCapability StorageImageExtendedFormats
 
     std::unordered_map<HashMapStringKey, TEXTURE_FORMAT> ImageFormats;
     ImageFormats.emplace("Tex", TEX_FORMAT_RGBA32_FLOAT);
