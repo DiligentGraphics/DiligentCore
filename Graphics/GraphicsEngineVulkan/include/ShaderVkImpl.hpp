@@ -82,13 +82,7 @@ public:
     virtual const ShaderCodeBufferDesc* DILIGENT_CALL_TYPE GetConstantBufferDesc(Uint32 Index) const override final;
 
     /// Implementation of IShaderVk::GetSPIRV().
-    virtual const std::vector<uint32_t>& DILIGENT_CALL_TYPE GetSPIRV() const override final
-    {
-        static const std::vector<uint32_t> NullSPIRV;
-        // NOTE: while shader is compiled asynchronously, m_SPIRV may be modified by
-        //       another thread and thus can't be accessed.
-        return !IsCompiling() ? m_SPIRV : NullSPIRV;
-    }
+    virtual const std::vector<uint32_t>& DILIGENT_CALL_TYPE GetSPIRV() const override final;
 
     using ShaderResourcesSharedPtr = std::shared_ptr<const SPIRVShaderResources>;
     const ShaderResourcesSharedPtr& GetShaderResources() const

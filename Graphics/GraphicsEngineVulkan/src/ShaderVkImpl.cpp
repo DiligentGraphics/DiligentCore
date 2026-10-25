@@ -356,4 +356,13 @@ const ShaderCodeBufferDesc* ShaderVkImpl::GetConstantBufferDesc(Uint32 Index) co
     return m_pShaderResources->GetUniformBufferDesc(Index);
 }
 
+const std::vector<uint32_t>& ShaderVkImpl::GetSPIRV() const
+{
+    // NB: keep implementation in cpp to avoid https://github.com/llvm/llvm-project/issues/72361
+    static const std::vector<uint32_t> NullSPIRV;
+    // NOTE: while shader is compiled asynchronously, m_SPIRV may be modified by
+    //       another thread and thus can't be accessed.
+    return !IsCompiling() ? m_SPIRV : NullSPIRV;
+}
+
 } // namespace Diligent
