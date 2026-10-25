@@ -89,7 +89,7 @@ CComPtr<ID3D12DeviceChild> PipelineStateCacheD3D12Impl::LoadComputePipeline(cons
         return {};
     }
 
-    CComPtr<ID3D12DeviceChild> d3d12PSO;
+    CComPtr<ID3D12PipelineState> d3d12PSO;
     if (m_pLibrary && (m_Desc.Mode & PSO_CACHE_MODE_LOAD) != 0)
     {
         std::lock_guard<std::mutex> Lock{m_LibraryMtx};
@@ -97,7 +97,7 @@ CComPtr<ID3D12DeviceChild> PipelineStateCacheD3D12Impl::LoadComputePipeline(cons
         if ((m_Desc.Flags & PSO_CACHE_FLAG_VERBOSE) != 0)
             LOG_INFO_MESSAGE(SUCCEEDED(hr) ? "PSO cache hit (compute): " : "PSO cache miss (compute): ", NarrowString(Name));
     }
-    return d3d12PSO;
+    return CComPtr<ID3D12DeviceChild>{d3d12PSO.p};
 }
 
 CComPtr<ID3D12DeviceChild> PipelineStateCacheD3D12Impl::LoadGraphicsPipeline(const wchar_t* Name, const D3D12_GRAPHICS_PIPELINE_STATE_DESC& Desc)
@@ -108,7 +108,7 @@ CComPtr<ID3D12DeviceChild> PipelineStateCacheD3D12Impl::LoadGraphicsPipeline(con
         return {};
     }
 
-    CComPtr<ID3D12DeviceChild> d3d12PSO;
+    CComPtr<ID3D12PipelineState> d3d12PSO;
     if (m_pLibrary && (m_Desc.Mode & PSO_CACHE_MODE_LOAD) != 0)
     {
         std::lock_guard<std::mutex> Lock{m_LibraryMtx};
@@ -116,7 +116,7 @@ CComPtr<ID3D12DeviceChild> PipelineStateCacheD3D12Impl::LoadGraphicsPipeline(con
         if ((m_Desc.Flags & PSO_CACHE_FLAG_VERBOSE) != 0)
             LOG_INFO_MESSAGE(SUCCEEDED(hr) ? "PSO cache hit (graphics): " : "PSO cache miss (graphics): ", NarrowString(Name));
     }
-    return d3d12PSO;
+    return CComPtr<ID3D12DeviceChild>{d3d12PSO.p};
 }
 
 #ifdef D3D12_H_HAS_MESH_SHADER
