@@ -259,14 +259,10 @@ WebGPUDeviceWrapper CreateDeviceForAdapter(const DeviceFeatures& Features, WGPUI
         if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_BGRA8UnormStorage))
             wgpuFeatures.push_back(WGPUFeatureName_BGRA8UnormStorage);
 
-        if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_Unorm16TextureFormats))
-            wgpuFeatures.push_back(WGPUFeatureName_Unorm16TextureFormats);
-
-        if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_TextureFormatsTier1))
-            wgpuFeatures.push_back(WGPUFeatureName_TextureFormatsTier1);
-
         if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_TextureFormatsTier2))
             wgpuFeatures.push_back(WGPUFeatureName_TextureFormatsTier2);
+        else if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_TextureFormatsTier1))
+            wgpuFeatures.push_back(WGPUFeatureName_TextureFormatsTier1);
     }
 
     struct CallbackUserData
