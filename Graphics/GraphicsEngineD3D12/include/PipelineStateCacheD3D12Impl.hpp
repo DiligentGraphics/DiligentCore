@@ -61,6 +61,12 @@ public:
     bool StorePipeline(const wchar_t* Name, ID3D12DeviceChild* pPSO);
 
 private:
+    template <typename LoadPipelineType>
+    CComPtr<ID3D12DeviceChild> LoadPipelineImpl(ID3D12PipelineLibrary*  pLibrary,
+                                                const wchar_t*          Name,
+                                                const char*             PipelineType,
+                                                const LoadPipelineType& LoadPipeline);
+
     // CreatePipelineLibrary retains the raw data pointer but neither copies the bytes
     // nor takes ownership of the memory.
     RefCntAutoPtr<IDataBlob> m_pInitialData;

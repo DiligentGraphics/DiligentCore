@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -85,7 +85,11 @@ PipelineStateCacheD3D12Impl::~PipelineStateCacheD3D12Impl()
     GetDevice()->SafeReleaseDeviceObject(std::make_pair(std::move(m_pInitialData), std::move(m_pLibrary)), ~Uint64{0});
 }
 
-CComPtr<ID3D12DeviceChild> PipelineStateCacheD3D12Impl::LoadComputePipeline(const wchar_t* Name, const D3D12_COMPUTE_PIPELINE_STATE_DESC& Desc)
+template <typename LoadPipelineType>
+CComPtr<ID3D12DeviceChild> PipelineStateCacheD3D12Impl::LoadPipelineImpl(ID3D12PipelineLibrary*  pLibrary,
+                                                                         const wchar_t*          Name,
+                                                                         const char*             PipelineType,
+                                                                         const LoadPipelineType& LoadPipeline)
 {
     if (Name == nullptr)
     {
@@ -94,48 +98,36 @@ CComPtr<ID3D12DeviceChild> PipelineStateCacheD3D12Impl::LoadComputePipeline(cons
     }
 
     CComPtr<ID3D12PipelineState> d3d12PSO;
-    if (m_pLibrary && (m_Desc.Mode & PSO_CACHE_MODE_LOAD) != 0)
+    if (pLibrary != nullptr && (m_Desc.Mode & PSO_CACHE_MODE_LOAD) != 0)
     {
         std::lock_guard<std::mutex> Lock{m_LibraryMtx};
-        HRESULT                     hr = m_pLibrary->LoadComputePipeline(Name, &Desc, IID_PPV_ARGS(&d3d12PSO));
+        const HRESULT               hr = LoadPipeline(IID_PPV_ARGS(&d3d12PSO));
         if ((m_Desc.Flags & PSO_CACHE_FLAG_VERBOSE) != 0)
-            LOG_INFO_MESSAGE(SUCCEEDED(hr) ? "PSO cache hit (compute): " : "PSO cache miss (compute): ", NarrowString(Name));
+            LOG_INFO_MESSAGE("PSO cache ", SUCCEEDED(hr) ? "hit" : "miss", " (", PipelineType, "): ", NarrowString(Name), " (HRESULT ", hr, ")");
     }
     return CComPtr<ID3D12DeviceChild>{d3d12PSO.p};
 }
 
+CComPtr<ID3D12DeviceChild> PipelineStateCacheD3D12Impl::LoadComputePipeline(const wchar_t* Name, const D3D12_COMPUTE_PIPELINE_STATE_DESC& Desc)
+{
+    return LoadPipelineImpl(m_pLibrary, Name, "compute", [&](REFIID IID, void** ppPSO) {
+        return m_pLibrary->LoadComputePipeline(Name, &Desc, IID, ppPSO);
+    });
+}
+
 CComPtr<ID3D12DeviceChild> PipelineStateCacheD3D12Impl::LoadGraphicsPipeline(const wchar_t* Name, const D3D12_GRAPHICS_PIPELINE_STATE_DESC& Desc)
 {
-    if (Name == nullptr)
-    {
-        DEV_ERROR("Pipeline name must not be null");
-        return {};
-    }
-
-    CComPtr<ID3D12PipelineState> d3d12PSO;
-    if (m_pLibrary && (m_Desc.Mode & PSO_CACHE_MODE_LOAD) != 0)
-    {
-        std::lock_guard<std::mutex> Lock{m_LibraryMtx};
-        HRESULT                     hr = m_pLibrary->LoadGraphicsPipeline(Name, &Desc, IID_PPV_ARGS(&d3d12PSO));
-        if ((m_Desc.Flags & PSO_CACHE_FLAG_VERBOSE) != 0)
-            LOG_INFO_MESSAGE(SUCCEEDED(hr) ? "PSO cache hit (graphics): " : "PSO cache miss (graphics): ", NarrowString(Name));
-    }
-    return CComPtr<ID3D12DeviceChild>{d3d12PSO.p};
+    return LoadPipelineImpl(m_pLibrary, Name, "graphics", [&](REFIID IID, void** ppPSO) {
+        return m_pLibrary->LoadGraphicsPipeline(Name, &Desc, IID, ppPSO);
+    });
 }
 
 #ifdef D3D12_H_HAS_MESH_SHADER
 CComPtr<ID3D12DeviceChild> PipelineStateCacheD3D12Impl::LoadPipeline(const wchar_t* Name, const D3D12_PIPELINE_STATE_STREAM_DESC& Desc)
 {
-    VERIFY_EXPR(Name != nullptr);
-    CComPtr<ID3D12PipelineState> d3d12PSO;
-    if (m_pLibrary1 && (m_Desc.Mode & PSO_CACHE_MODE_LOAD) != 0)
-    {
-        std::lock_guard<std::mutex> Lock{m_LibraryMtx};
-        const HRESULT               hr = m_pLibrary1->LoadPipeline(Name, &Desc, IID_PPV_ARGS(&d3d12PSO));
-        if ((m_Desc.Flags & PSO_CACHE_FLAG_VERBOSE) != 0)
-            LOG_INFO_MESSAGE(SUCCEEDED(hr) ? "PSO cache hit (mesh): " : "PSO cache miss (mesh): ", NarrowString(Name), " (HRESULT ", hr, ")");
-    }
-    return CComPtr<ID3D12DeviceChild>{d3d12PSO.p};
+    return LoadPipelineImpl(m_pLibrary1, Name, "mesh", [&](REFIID IID, void** ppPSO) {
+        return m_pLibrary1->LoadPipeline(Name, &Desc, IID, ppPSO);
+    });
 }
 #endif
 
