@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -51,7 +51,7 @@
 #include "DynamicLinearAllocator.hpp"
 #include "D3DShaderResourceValidation.hpp"
 #include "DataBlobImpl.hpp"
-#include "HashUtils.hpp"
+#include "XXH128Hasher.hpp"
 
 #include "DXBCUtils.hpp"
 #include "DXCompiler.hpp"
@@ -64,54 +64,12 @@ constexpr INTERFACE_ID PipelineStateD3D12Impl::IID_InternalImpl;
 
 namespace
 {
-struct PipelineCacheHasher
-{
-    template <typename T>
-    void Update(const T& Value)
-    {
-        if constexpr (std::is_fundamental<T>::value || std::is_enum<T>::value)
-            UpdateRaw(&Value, sizeof(Value));
-        else
-            HashCombiner<PipelineCacheHasher, T>{*this}(Value);
-    }
-
-    void Update(const char* Value)
-    {
-        const Uint64 Length = Value != nullptr ? std::strlen(Value) : 0;
-        Update(Length);
-        UpdateRaw(Value, Length);
-    }
-
-    template <typename... Args>
-    void operator()(const Args&... Values)
-    {
-        (Update(Values), ...);
-    }
-
-    void UpdateRaw(const void* pData, Uint64 Size)
-    {
-        const auto* Bytes = static_cast<const Uint8*>(pData);
-        for (Uint64 i = 0; i < Size; ++i)
-        {
-            m_Hash ^= Bytes[i];
-            m_Hash *= FNVPrime;
-        }
-    }
-
-    Uint64 Get() const { return m_Hash; }
-
-private:
-    static constexpr Uint64 FNVOffsetBasis = 14695981039346656037ull;
-    static constexpr Uint64 FNVPrime       = 1099511628211ull;
-    Uint64                  m_Hash         = FNVOffsetBasis;
-};
-
 template <typename ShaderStagesType>
 std::wstring GetPipelineCacheName(const RootSignatureD3D12& RootSig, const ShaderStagesType& ShaderStages, const GraphicsPipelineDesc* pGraphics = nullptr)
 {
     // Hash the effective pipeline after binding remapping. Archive unpacking changes
     // create-info flags/signatures and shader bindings, but not the native pipeline.
-    PipelineCacheHasher Hasher;
+    XXH128State Hasher;
     Hasher(RootSig.GetHash(), pGraphics != nullptr);
     if (pGraphics != nullptr)
         Hasher(*pGraphics);
@@ -121,7 +79,7 @@ std::wstring GetPipelineCacheName(const RootSignatureD3D12& RootSig, const Shade
         for (const auto& Bytecode : Stage.ByteCodes)
             Hasher.UpdateRaw(Bytecode->GetConstDataPtr(), Bytecode->GetSize());
     }
-    return L"PSO_2_" + std::to_wstring(Hasher.Get());
+    return L"PSO_2_" + WidenString(Hasher.Digest().ToString());
 }
 
 #ifdef _MSC_VER
