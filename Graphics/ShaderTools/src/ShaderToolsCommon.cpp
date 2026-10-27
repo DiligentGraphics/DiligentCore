@@ -560,10 +560,13 @@ void UpdateHashWithShaderCreateInfo(XXH128State& Hasher, const ShaderCreateInfo&
 
     if (ShaderCI.Macros)
     {
+        // Encode boundaries so that, for example, A=12 and A1=2 hash differently.
+        Hasher.Update(ShaderCI.Macros.Count);
         for (size_t i = 0; i < ShaderCI.Macros.Count; ++i)
         {
             const ShaderMacro& Macro = ShaderCI.Macros[i];
-            Hasher.Update(Macro.Name, Macro.Definition);
+            Hasher.Update(static_cast<Uint64>(StrLen(Macro.Name)), Macro.Name,
+                          static_cast<Uint64>(StrLen(Macro.Definition)), Macro.Definition);
         }
     }
 

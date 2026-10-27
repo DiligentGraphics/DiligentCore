@@ -66,13 +66,7 @@ struct XXH128State final
         RHS.m_State = nullptr;
     }
 
-    XXH128State& operator=(XXH128State&& RHS) noexcept
-    {
-        this->m_State = RHS.m_State;
-        RHS.m_State   = nullptr;
-
-        return *this;
-    }
+    XXH128State& operator=(XXH128State&& RHS) noexcept;
 
     template <typename T>
     typename std::enable_if<std::is_fundamental<T>::value || std::is_enum<T>::value, XXH128State&>::type Update(const T& Val) noexcept
@@ -102,6 +96,7 @@ struct XXH128State final
         return Update(RestArgs...);
     }
 
+    /// Appends Size bytes. A zero-size update is a no-op and permits a null pData.
     XXH128State& UpdateRaw(const void* pData, uint64_t Size) noexcept;
 
     template <typename T>
@@ -114,7 +109,7 @@ struct XXH128State final
             return *this;
         if (Len == 0)
             Len = StrLen(pStr);
-        return UpdateRaw(pStr, Len);
+        return UpdateRaw(pStr, Len * sizeof(T));
     }
 
     template <typename... ArgsType>

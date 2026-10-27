@@ -69,6 +69,7 @@ PRIVATE
     Diligent-GraphicsTools
     Diligent-GraphicsEngine
     Diligent-ShaderTools
+    xxHash::xxhash
 )
 
 if(WEBGPU_SUPPORTED)

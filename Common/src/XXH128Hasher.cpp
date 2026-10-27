@@ -62,10 +62,23 @@ XXH128State::~XXH128State()
     XXH3_freeState(m_State);
 }
 
+XXH128State& XXH128State::operator=(XXH128State&& RHS) noexcept
+{
+    if (this != &RHS)
+    {
+        XXH3_freeState(m_State);
+        m_State     = RHS.m_State;
+        RHS.m_State = nullptr;
+    }
+    return *this;
+}
+
 XXH128State& XXH128State::UpdateRaw(const void* pData, uint64_t Size) noexcept
 {
+    if (Size == 0)
+        return *this;
+
     VERIFY_EXPR(pData != nullptr);
-    VERIFY_EXPR(Size != 0);
     XXH3_128bits_update(m_State, pData, StaticCast<size_t>(Size));
     return *this;
 }

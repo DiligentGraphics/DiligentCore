@@ -186,4 +186,41 @@ TEST(BytecodeCacheTest, Include)
     }
 }
 
+TEST(BytecodeCacheTest, DistinctMacroBoundaries)
+{
+    RefCntAutoPtr<IBytecodeCache> Cache;
+    CreateBytecodeCache({RENDER_DEVICE_TYPE_VULKAN}, &Cache);
+    ASSERT_NE(Cache, nullptr);
+
+    ShaderCreateInfo CI;
+    CI.Source                        = "void main() {}";
+    const ShaderMacro First[]        = {{"A", "12"}};
+    const ShaderMacro Second[]       = {{"A1", "2"}};
+    const Uint32      FirstData      = 12;
+    const Uint32      SecondData     = 2;
+    auto              FirstBytecode  = DataBlobImpl::Create(sizeof(FirstData), &FirstData);
+    auto              SecondBytecode = DataBlobImpl::Create(sizeof(SecondData), &SecondData);
+    CI.Macros                        = {First, 1};
+    Cache->AddBytecode(CI, FirstBytecode);
+    CI.Macros = {Second, 1};
+    Cache->AddBytecode(CI, SecondBytecode);
+
+    RefCntAutoPtr<IDataBlob> Stored;
+    Cache->Store(&Stored);
+    Cache->Clear();
+    ASSERT_TRUE(Cache->Load(Stored));
+    RefCntAutoPtr<IDataBlob> Loaded;
+    CI.Macros = {First, 1};
+    Cache->GetBytecode(CI, &Loaded);
+    ASSERT_NE(Loaded, nullptr);
+    ASSERT_EQ(Loaded->GetSize(), sizeof(FirstData));
+    EXPECT_EQ(memcmp(Loaded->GetConstDataPtr(), &FirstData, sizeof(FirstData)), 0);
+    Loaded.Release();
+    CI.Macros = {Second, 1};
+    Cache->GetBytecode(CI, &Loaded);
+    ASSERT_NE(Loaded, nullptr);
+    ASSERT_EQ(Loaded->GetSize(), sizeof(SecondData));
+    EXPECT_EQ(memcmp(Loaded->GetConstDataPtr(), &SecondData, sizeof(SecondData)), 0);
+}
+
 } // namespace
