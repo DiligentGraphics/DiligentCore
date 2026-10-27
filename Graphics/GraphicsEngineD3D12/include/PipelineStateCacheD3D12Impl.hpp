@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -61,10 +61,13 @@ public:
     bool StorePipeline(const wchar_t* Name, ID3D12DeviceChild* pPSO);
 
 private:
-    RefCntAutoPtr<IDataBlob>        m_pInitialData;
+    // CreatePipelineLibrary retains the raw data pointer but neither copies the bytes
+    // nor takes ownership of the memory.
+    RefCntAutoPtr<IDataBlob> m_pInitialData;
+
+    std::mutex                      m_LibraryMtx;
     CComPtr<ID3D12PipelineLibrary>  m_pLibrary;
     CComPtr<ID3D12PipelineLibrary1> m_pLibrary1;
-    std::mutex                      m_LibraryMtx;
 };
 
 } // namespace Diligent
