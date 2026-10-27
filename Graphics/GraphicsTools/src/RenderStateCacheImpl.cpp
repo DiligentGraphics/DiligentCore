@@ -48,6 +48,7 @@
 #include "GraphicsAccessories.hpp"
 #include "GraphicsUtilities.h"
 #include "ShaderSourceFactoryUtils.hpp"
+#include "ShaderToolsCommon.hpp"
 #include "DXCompiler.hpp"
 
 namespace Diligent
@@ -130,7 +131,7 @@ std::string RenderStateCacheImpl::MakeHashStr(const char* Name, const XXH128Hash
 }
 
 
-static void ComputeDeviceAttribsHash(XXH128State& Hasher, IRenderDevice* pDevice)
+static void UpdateHashWithDeviceAttribs(XXH128State& Hasher, IRenderDevice* pDevice)
 {
     if (pDevice != nullptr)
     {
@@ -311,7 +312,7 @@ static void HashShaderCIByFileName(XXH128State& Hasher, const ShaderCreateInfo& 
     ShaderCreateInfo HashCI = ShaderCI;
     HashCI.FilePath         = nullptr;
     HashCI.Source           = nullptr;
-    Hasher.Update(HashCI);
+    UpdateHashWithShaderCreateInfo(Hasher, HashCI);
     if (ShaderCI.FilePath != nullptr)
     {
         // Hash only the file path
@@ -335,10 +336,10 @@ bool RenderStateCacheImpl::CreateShaderInternal(const ShaderCreateInfo& ShaderCI
 #else
     constexpr bool IsDebug = false;
 #endif
-    ComputeDeviceAttribsHash(Hasher, m_pDevice);
+    UpdateHashWithDeviceAttribs(Hasher, m_pDevice);
     if (m_CI.FileHashMode == RENDER_STATE_CACHE_FILE_HASH_MODE_BY_CONTENT)
     {
-        Hasher.Update(ShaderCI);
+        UpdateHashWithShaderCreateInfo(Hasher, ShaderCI);
     }
     else if (m_CI.FileHashMode == RENDER_STATE_CACHE_FILE_HASH_MODE_BY_NAME)
     {
@@ -795,7 +796,7 @@ bool RenderStateCacheImpl::CreatePipelineStateInternal(const CreateInfoType& PSO
     }
 
     XXH128State Hasher;
-    ComputeDeviceAttribsHash(Hasher, m_pDevice);
+    UpdateHashWithDeviceAttribs(Hasher, m_pDevice);
     Hasher.Update(PSOCreateInfo);
     const auto Hash = Hasher.Digest();
 

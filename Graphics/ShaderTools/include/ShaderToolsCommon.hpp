@@ -41,6 +41,8 @@
 namespace Diligent
 {
 
+struct XXH128State;
+
 /// Returns shader type definition macro(s), e.g., for a vertex shader:
 ///
 ///     ShaderMacroArray{{{"VERTEX_SHADER", "1"}}, 1}
@@ -145,6 +147,10 @@ std::string GetShaderCodeTypeName(SHADER_CODE_BASIC_TYPE     BasicType,
                                   Uint32                     NumRows,
                                   Uint32                     NumCols,
                                   SHADER_SOURCE_LANGUAGE     Lang);
+
+/// Appends shader creation settings and bytecode or source (including recursively
+/// processed includes) to Hasher without resetting or finalizing its state.
+void UpdateHashWithShaderCreateInfo(XXH128State& Hasher, const ShaderCreateInfo& ShaderCI) noexcept;
 
 struct ShaderCodeVariableDescX : ShaderCodeVariableDesc
 {

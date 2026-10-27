@@ -23,7 +23,6 @@ set(INTERFACE
     interface/ShaderSourceFactoryUtils.h
     interface/ShaderSourceFactoryUtils.hpp
     interface/GPUUploadManager.h
-    interface/XXH128Hasher.hpp
     interface/VertexPool.h
     interface/VertexPoolX.hpp
 )
@@ -41,7 +40,6 @@ set(SOURCE
     src/ScreenCapture.cpp
     src/ShaderSourceFactoryUtils.cpp
     src/GPUUploadManagerImpl.cpp
-    src/XXH128Hasher.cpp
     src/VertexPool.cpp
 )
 
@@ -142,7 +140,6 @@ PRIVATE
     Diligent-GraphicsAccessories
     Diligent-ShaderTools
     Diligent-GraphicsEngine
-    xxHash::xxhash
     ${DEPENDENCIES}
 PUBLIC
     Diligent-GraphicsEngineInterface

@@ -32,6 +32,7 @@
 
 #include "HashUtils.hpp"
 #include "XXH128Hasher.hpp"
+#include "ShaderToolsCommon.hpp"
 #include "GraphicsTypesOutputInserters.hpp"
 
 #include "gtest/gtest.h"
@@ -303,7 +304,10 @@ public:
     void Add(const char* Msg)
     {
         XXH128State Hasher;
-        Hasher.Update(m_Desc);
+        if constexpr (std::is_same<Type, ShaderCreateInfo>::value)
+            UpdateHashWithShaderCreateInfo(Hasher, m_Desc);
+        else
+            Hasher.Update(m_Desc);
         EXPECT_TRUE(m_Hashes.insert(Hasher.Digest()).second) << Msg;
     }
 

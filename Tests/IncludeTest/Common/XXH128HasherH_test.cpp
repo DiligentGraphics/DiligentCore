@@ -24,4 +24,4 @@
  *  of the possibility of such damages.
  */
 
-#include "DiligentCore/Graphics/GraphicsTools/interface/XXH128Hasher.hpp"
+#include "DiligentCore/Common/interface/XXH128Hasher.hpp"

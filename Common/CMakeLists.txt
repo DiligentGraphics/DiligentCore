@@ -58,6 +58,7 @@ set(INTERFACE
     interface/CallbackWrapper.hpp
     interface/WeakObjectCache.hpp
     interface/WeakValueHashMap.hpp
+    interface/XXH128Hasher.hpp
 )
 
 set(SOURCE
@@ -75,6 +76,7 @@ set(SOURCE
     src/SpinLock.cpp
     src/ThreadPool.cpp
     src/Timer.cpp
+    src/XXH128Hasher.cpp
 )
 
 add_library(Diligent-Common STATIC ${SOURCE} ${INCLUDE} ${INTERFACE})
@@ -89,6 +91,7 @@ PUBLIC
 target_link_libraries(Diligent-Common
 PRIVATE
     Diligent-BuildSettings
+    xxHash::xxhash
 PUBLIC
     Diligent-TargetPlatform
 )

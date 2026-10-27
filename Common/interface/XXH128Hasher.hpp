@@ -29,10 +29,9 @@
 #include <cstring>
 #include <string>
 
-#include "../../../Primitives/interface/BasicTypes.h"
-#include "../../../Graphics/GraphicsEngine/interface/Shader.h"
-#include "../../../Common/interface/StringTools.hpp"
-#include "../../../Common/interface/HashUtils.hpp"
+#include "../../Primitives/interface/BasicTypes.h"
+#include "StringTools.hpp"
+#include "HashUtils.hpp"
 
 struct XXH3_state_s;
 
@@ -124,8 +123,6 @@ struct XXH128State final
         return Update(Args...);
     }
 
-    XXH128State& Update(const ShaderCreateInfo& ShaderCI) noexcept;
-
     template <typename T>
     typename std::enable_if<(std::is_same<typename std::remove_cv<T>::type, SamplerDesc>::value ||
                              std::is_same<typename std::remove_cv<T>::type, StencilOpDesc>::value ||
@@ -166,7 +163,6 @@ struct XXH128State final
         Combiner(Val);
         return *this;
     }
-
 
     XXH128Hash Digest() noexcept;
 

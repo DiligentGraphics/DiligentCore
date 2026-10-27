@@ -36,6 +36,7 @@
 #include "GraphicsAccessories.hpp"
 #include "ParsingTools.hpp"
 #include "ShaderSourcePath.hpp"
+#include "XXH128Hasher.hpp"
 
 namespace Diligent
 {
@@ -527,6 +528,56 @@ bool ProcessShaderIncludes(const ShaderCreateInfo& ShaderCI, std::function<void(
         return false;
     }
 }
+
+void UpdateHashWithShaderCreateInfo(XXH128State& Hasher, const ShaderCreateInfo& ShaderCI) noexcept
+{
+    ASSERT_SIZEOF64(ShaderCI, 152, "Did you add new members to ShaderCreateInfo? Please handle them here.");
+
+    Hasher.Update(static_cast<Uint32>(ShaderCI.SourceLength), // Aka ByteCodeSize
+                  ShaderCI.EntryPoint,
+                  ShaderCI.Desc,
+                  ShaderCI.SourceLanguage,
+                  ShaderCI.ShaderCompiler,
+                  ShaderCI.HLSLVersion,
+                  ShaderCI.GLSLVersion,
+                  ShaderCI.GLESSLVersion,
+                  ShaderCI.MSLVersion,
+                  ShaderCI.CompileFlags,
+                  ShaderCI.ShaderOptimizationLevel,
+                  ShaderCI.LoadConstantBufferReflection);
+
+    if (ShaderCI.Source != nullptr || ShaderCI.FilePath != nullptr)
+    {
+        DEV_CHECK_ERR(ShaderCI.ByteCode == nullptr, "ShaderCI.ByteCode must be null when either Source or FilePath is specified");
+        ProcessShaderIncludes(ShaderCI, [&Hasher](const ShaderIncludePreprocessInfo& ProcessInfo) {
+            Hasher.UpdateStr(ProcessInfo.Source, ProcessInfo.SourceLength);
+        });
+    }
+    else if (ShaderCI.ByteCode != nullptr && ShaderCI.ByteCodeSize != 0)
+    {
+        Hasher.UpdateRaw(ShaderCI.ByteCode, ShaderCI.ByteCodeSize);
+    }
+
+    if (ShaderCI.Macros)
+    {
+        for (size_t i = 0; i < ShaderCI.Macros.Count; ++i)
+        {
+            const ShaderMacro& Macro = ShaderCI.Macros[i];
+            Hasher.Update(Macro.Name, Macro.Definition);
+        }
+    }
+
+    if (ShaderCI.GLSLExtensions != nullptr)
+    {
+        Hasher.UpdateStr(ShaderCI.GLSLExtensions);
+    }
+
+    if (ShaderCI.WebGPUEmulatedArrayIndexSuffix != nullptr)
+    {
+        Hasher.UpdateStr(ShaderCI.WebGPUEmulatedArrayIndexSuffix);
+    }
+}
+
 
 static std::string UnrollShaderIncludesImpl(const ShaderCreateInfo&          ShaderCI,
                                             const ShaderSourceFileData&      SourceData,
