@@ -46,17 +46,20 @@ PipelineStateCacheD3D12Impl::PipelineStateCacheD3D12Impl(IReferenceCounters*    
     }
 // clang-format on
 {
-    auto* pDevice1 = pRenderDeviceD3D12->GetD3D12Device1();
+    ID3D12Device1* pDevice1 = pRenderDeviceD3D12->GetD3D12Device1();
     if (pDevice1 == nullptr)
     {
         LOG_WARNING_MESSAGE("D3D12 pipeline libraries are unavailable; native caching is disabled.");
         return;
     }
 
-    // D3D12 does not copy the serialized data: retain our own copy until the library is released.
     if (CreateInfo.pCacheData != nullptr && CreateInfo.CacheDataSize != 0)
     {
-        m_pInitialData           = DataBlobImpl::Create(CreateInfo.CacheDataSize, CreateInfo.pCacheData);
+        // CreatePipelineLibrary retains the raw data pointer but neither copies the bytes
+        // nor takes ownership of the memory. Keeping the library alive does not keep the
+        // IDataBlob alive, so own a copy and retain it until the library is destroyed.
+        m_pInitialData = DataBlobImpl::Create(CreateInfo.CacheDataSize, CreateInfo.pCacheData);
+
         const HRESULT LoadResult = pDevice1->CreatePipelineLibrary(m_pInitialData->GetConstDataPtr(), m_pInitialData->GetSize(), IID_PPV_ARGS(&m_pLibrary));
         if (FAILED(LoadResult))
         {
@@ -78,6 +81,7 @@ PipelineStateCacheD3D12Impl::~PipelineStateCacheD3D12Impl()
 {
     // D3D12 object can only be destroyed when it is no longer used by the GPU
     m_pLibrary1.Release();
+    // Keep the backing data alive through deferred destruction of the library.
     GetDevice()->SafeReleaseDeviceObject(std::make_pair(std::move(m_pInitialData), std::move(m_pLibrary)), ~Uint64{0});
 }
 
