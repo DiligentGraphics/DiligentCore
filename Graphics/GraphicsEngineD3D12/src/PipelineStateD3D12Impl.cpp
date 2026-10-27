@@ -64,13 +64,18 @@ constexpr INTERFACE_ID PipelineStateD3D12Impl::IID_InternalImpl;
 
 namespace
 {
-template <typename ShaderStagesType>
-std::wstring GetPipelineCacheName(const RootSignatureD3D12& RootSig, const ShaderStagesType& ShaderStages, const GraphicsPipelineDesc* pGraphics = nullptr)
+std::wstring GetPipelineCacheName(const RootSignatureD3D12&                    RootSig,
+                                  const PipelineStateD3D12Impl::TShaderStages& ShaderStages,
+                                  const GraphicsPipelineDesc*                  pGraphics = nullptr)
 {
     // Hash the effective pipeline after binding remapping. Archive unpacking changes
     // create-info flags/signatures and shader bindings, but not the native pipeline.
     XXH128State Hasher;
     Hasher(RootSig.GetHash(), pGraphics != nullptr);
+
+    // Graphics and mesh pipelines have additional fixed-function state. Compute
+    // pipelines are fully described by the root signature and shader bytecode.
+    // Ray tracing uses a separate state-object creation path and is not cached here.
     if (pGraphics != nullptr)
         Hasher(*pGraphics);
     for (const auto& Stage : ShaderStages)
