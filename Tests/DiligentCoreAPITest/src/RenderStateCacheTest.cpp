@@ -24,6 +24,7 @@
  *  of the possibility of such damages.
  */
 
+#include <cstring>
 #include <functional>
 
 #include "GPUTestingEnvironment.hpp"
@@ -986,6 +987,171 @@ TEST(RenderStateCacheTest, WebGPUEntryPoints_MultipleDeviceShaders)
 TEST(RenderStateCacheTest, WebGPUEntryPoints_MultipleArchivedShaders)
 {
     TestWebGPUEntryPoints(/*LoadShadersFromArchive = */ true, /*MultipleEntryPoints = */ true);
+}
+
+void TestWebGPUEntryPointCacheIdentity(bool ReloadableShaders)
+{
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceInfo().IsWebGPUDevice())
+        GTEST_SKIP() << "WGSL entry points require WebGPU";
+    if (pEnv->GetArchiverFactory() == nullptr)
+        GTEST_SKIP() << "Archiver library is not loaded";
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    const SHADER_TYPE ShaderTypes[] = {SHADER_TYPE_VERTEX, SHADER_TYPE_PIXEL, SHADER_TYPE_COMPUTE};
+    const char*       ShaderNames[] = {"Entry point identity VS", "Entry point identity PS", "Entry point identity CS"};
+    // Entry names also cover ambiguous concatenation: a + bc == ab + c.
+    const char* EntryPoints[][2] = {
+        {"a", "ab"},
+        {"bc", "c"},
+        {"computeA", "computeB"},
+    };
+    const char* ResourceNames[][2] = {
+        {"vertexValueA", "vertexValueB"},
+        {"fragmentValueA", "fragmentValueB"},
+        {"computeValueA", "computeValueB"},
+    };
+    const char* Sources[] = {
+        "@group(0) @binding(0) var<uniform> vertexValueA: vec4f;\n"
+        "@group(0) @binding(1) var<uniform> vertexValueB: vec4f;\n"
+        "@vertex fn a() -> @builtin(position) vec4f { return vertexValueA; }\n"
+        "@vertex fn ab() -> @builtin(position) vec4f { return vertexValueB; }\n",
+        "@group(0) @binding(0) var<uniform> fragmentValueA: vec4f;\n"
+        "@group(0) @binding(1) var<uniform> fragmentValueB: vec4f;\n"
+        "@fragment fn bc() -> @location(0) vec4f { return fragmentValueA; }\n"
+        "@fragment fn c() -> @location(0) vec4f { return fragmentValueB; }\n",
+        "@group(0) @binding(0) var<storage, read_write> computeValueA: array<u32>;\n"
+        "@group(0) @binding(1) var<storage, read_write> computeValueB: array<u32>;\n"
+        "@compute @workgroup_size(1) fn computeA() { computeValueA[0] = 1u; }\n"
+        "@compute @workgroup_size(1) fn computeB() { computeValueB[0] = 2u; }\n",
+    };
+
+    auto VerifyResources = [](IPipelineState* pPSO, const char* FirstResource, const char* SecondResource = nullptr) {
+        ASSERT_EQ(1u, pPSO->GetResourceSignatureCount());
+        auto* pSignature = pPSO->GetResourceSignature(0);
+        ASSERT_NE(nullptr, pSignature);
+        const auto& Desc = pSignature->GetDesc();
+        ASSERT_EQ(SecondResource != nullptr ? 2u : 1u, Desc.NumResources);
+        bool FoundFirst  = false;
+        bool FoundSecond = false;
+        for (Uint32 i = 0; i < Desc.NumResources; ++i)
+        {
+            FoundFirst |= std::strcmp(Desc.Resources[i].Name, FirstResource) == 0;
+            FoundSecond |= SecondResource != nullptr && std::strcmp(Desc.Resources[i].Name, SecondResource) == 0;
+        }
+        EXPECT_TRUE(FoundFirst);
+        EXPECT_EQ(SecondResource != nullptr, FoundSecond);
+    };
+
+    RefCntAutoPtr<IDataBlob> pData;
+    for (Uint32 Pass = 0; Pass < 2; ++Pass)
+    {
+        SCOPED_TRACE(Pass);
+        auto pCache = CreateCache(pDevice, ReloadableShaders, pData);
+        ASSERT_NE(nullptr, pCache);
+
+        RefCntAutoPtr<IShader> Shaders[_countof(ShaderTypes)][2];
+        for (Uint32 Stage = 0; Stage < _countof(ShaderTypes); ++Stage)
+        {
+            for (Uint32 Entry = 0; Entry < 2; ++Entry)
+            {
+                ShaderCreateInfo ShaderCI;
+                ShaderCI.Desc           = {ShaderNames[Stage], ShaderTypes[Stage]};
+                ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_WGSL;
+                ShaderCI.Source         = Sources[Stage];
+                ShaderCI.EntryPoint     = EntryPoints[Stage][Entry];
+                if (ReloadableShaders)
+                    EXPECT_EQ(Pass != 0, pCache->CreateShader(ShaderCI, &Shaders[Stage][Entry]));
+                else
+                    pDevice->CreateShader(ShaderCI, &Shaders[Stage][Entry]);
+                ASSERT_NE(nullptr, Shaders[Stage][Entry]);
+                ASSERT_EQ(SHADER_STATUS_READY, Shaders[Stage][Entry]->GetStatus());
+            }
+
+            // The entry point is the only executable distinction: hashing the
+            // complete WGSL module alone must not identify these as one shader.
+            const void* Bytecode[2] = {};
+            Uint64      Sizes[2]    = {};
+            for (Uint32 Entry = 0; Entry < 2; ++Entry)
+                Shaders[Stage][Entry]->GetBytecode(&Bytecode[Entry], Sizes[Entry]);
+            ASSERT_NE(nullptr, Bytecode[0]);
+            ASSERT_NE(nullptr, Bytecode[1]);
+            ASSERT_EQ(Sizes[0], Sizes[1]);
+            EXPECT_EQ(0, std::memcmp(Bytecode[0], Bytecode[1], static_cast<size_t>(Sizes[0])));
+        }
+
+        GraphicsPipelineStateCreateInfo GraphicsCI;
+        GraphicsCI.PSODesc.Name                                  = "RenderStateCache - entry point identity graphics";
+        GraphicsCI.GraphicsPipeline.NumRenderTargets             = 1;
+        GraphicsCI.GraphicsPipeline.RTVFormats[0]                = pEnv->GetSwapChain()->GetDesc().ColorBufferFormat;
+        GraphicsCI.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+        GraphicsCI.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+        RefCntAutoPtr<IPipelineState> GraphicsPSOs[4];
+        for (Uint32 Iteration = 0; Iteration < _countof(GraphicsPSOs); ++Iteration)
+        {
+            // Reverse the lookup order after reloading the archive.
+            const Uint32 Variant     = Pass == 0 ? Iteration : 3u - Iteration;
+            const Uint32 VertexEntry = Variant & 1u;
+            const Uint32 PixelEntry  = Variant >> 1u;
+            SCOPED_TRACE(Variant);
+            GraphicsCI.pVS = Shaders[0][VertexEntry];
+            GraphicsCI.pPS = Shaders[1][PixelEntry];
+
+            EXPECT_EQ(Pass != 0, pCache->CreateGraphicsPipelineState(GraphicsCI, &GraphicsPSOs[Variant]));
+            ASSERT_NE(nullptr, GraphicsPSOs[Variant]);
+            ASSERT_EQ(PIPELINE_STATE_STATUS_READY, GraphicsPSOs[Variant]->GetStatus());
+            VerifyResources(GraphicsPSOs[Variant], ResourceNames[0][VertexEntry], ResourceNames[1][PixelEntry]);
+            for (Uint32 Other = 0; Other < _countof(GraphicsPSOs); ++Other)
+            {
+                if (Other != Variant && GraphicsPSOs[Other])
+                    EXPECT_NE(GraphicsPSOs[Other], GraphicsPSOs[Variant]);
+            }
+
+            RefCntAutoPtr<IPipelineState> pRepeatedPSO;
+            EXPECT_TRUE(pCache->CreateGraphicsPipelineState(GraphicsCI, &pRepeatedPSO));
+            EXPECT_EQ(GraphicsPSOs[Variant], pRepeatedPSO);
+        }
+
+        ComputePipelineStateCreateInfo ComputeCI;
+        ComputeCI.PSODesc.Name         = "RenderStateCache - entry point identity compute";
+        ComputeCI.PSODesc.PipelineType = PIPELINE_TYPE_COMPUTE;
+
+        RefCntAutoPtr<IPipelineState> ComputePSOs[2];
+        for (Uint32 Iteration = 0; Iteration < _countof(ComputePSOs); ++Iteration)
+        {
+            const Uint32 Entry = Pass == 0 ? Iteration : 1u - Iteration;
+            SCOPED_TRACE(Entry);
+            ComputeCI.pCS = Shaders[2][Entry];
+            EXPECT_EQ(Pass != 0, pCache->CreateComputePipelineState(ComputeCI, &ComputePSOs[Entry]));
+            ASSERT_NE(nullptr, ComputePSOs[Entry]);
+            ASSERT_EQ(PIPELINE_STATE_STATUS_READY, ComputePSOs[Entry]->GetStatus());
+            VerifyResources(ComputePSOs[Entry], ResourceNames[2][Entry]);
+            if (ComputePSOs[1u - Entry])
+                EXPECT_NE(ComputePSOs[0], ComputePSOs[1]);
+
+            RefCntAutoPtr<IPipelineState> pRepeatedPSO;
+            EXPECT_TRUE(pCache->CreateComputePipelineState(ComputeCI, &pRepeatedPSO));
+            EXPECT_EQ(ComputePSOs[Entry], pRepeatedPSO);
+        }
+
+        RefCntAutoPtr<IDataBlob> pNextData;
+        ASSERT_TRUE(pCache->WriteToBlob(ContentVersion, &pNextData));
+        ASSERT_NE(nullptr, pNextData);
+        pData = std::move(pNextData);
+    }
+}
+
+TEST(RenderStateCacheTest, WebGPUEntryPointCacheIdentity_DeviceShaders)
+{
+    TestWebGPUEntryPointCacheIdentity(/*ReloadableShaders = */ false);
+}
+
+TEST(RenderStateCacheTest, WebGPUEntryPointCacheIdentity_ReloadableShaders)
+{
+    TestWebGPUEntryPointCacheIdentity(/*ReloadableShaders = */ true);
 }
 
 TEST(RenderStateCacheTest, CreateGraphicsPSO)

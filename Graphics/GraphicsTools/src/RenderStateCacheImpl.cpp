@@ -799,6 +799,20 @@ bool RenderStateCacheImpl::CreatePipelineStateInternal(const CreateInfoType& PSO
     XXH128State Hasher;
     UpdateHashWithDeviceAttribs(Hasher, m_pDevice);
     Hasher.Update(PSOCreateInfo);
+    if (m_DeviceType == RENDER_DEVICE_TYPE_WEBGPU)
+    {
+        // WGSL bytecode contains the whole module, so the selected entry point
+        // is also needed to identify the shader used by the pipeline.
+        ProcessPipelineStateCreateInfoShaders(PSOCreateInfo, [&Hasher](IShader* pShader) {
+            Hasher.Update(pShader != nullptr);
+            if (pShader != nullptr)
+            {
+                const char* EntryPoint = GetWebGPUShaderEntryPoint(pShader);
+                VERIFY_EXPR(EntryPoint != nullptr);
+                Hasher.Update(EntryPoint);
+            }
+        });
+    }
     const auto Hash = Hasher.Digest();
 
     // First, try to check if the PSO has already been requested
