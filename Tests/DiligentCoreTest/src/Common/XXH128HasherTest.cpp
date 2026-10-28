@@ -49,6 +49,28 @@ XXH128Hash ReferenceHash(const void* Data, size_t Size)
     return {Hash.low64, Hash.high64};
 }
 
+// Build the documented string encoding independently of XXH128State:
+// a native-endian Uint64 byte count, followed by exactly that many bytes.
+// The all-ones count represents a null pointer and has no payload.
+void AppendStringFrame(std::vector<Uint8>& Bytes, const void* Data, size_t ByteSize)
+{
+    const Uint64 Length = Data != nullptr ? static_cast<Uint64>(ByteSize) : ~Uint64{0};
+    const auto*  Prefix = reinterpret_cast<const Uint8*>(&Length);
+    Bytes.insert(Bytes.end(), Prefix, Prefix + sizeof(Length));
+    if (Data != nullptr && ByteSize != 0)
+    {
+        const auto* Payload = static_cast<const Uint8*>(Data);
+        Bytes.insert(Bytes.end(), Payload, Payload + ByteSize);
+    }
+}
+
+XXH128Hash ReferenceStringHash(const void* Data, size_t ByteSize)
+{
+    std::vector<Uint8> Bytes;
+    AppendStringFrame(Bytes, Data, ByteSize);
+    return ReferenceHash(Bytes.data(), Bytes.size());
+}
+
 TEST(XXH128HasherTest, KnownAnswers)
 {
     // Seed-zero vectors and buffer generator from xxHash/tests/sanity_test.c and sanity_test_vectors.h.
@@ -119,7 +141,7 @@ void TestString(const CharType (&Text)[Size])
     auto Copy2 = std::make_unique<CharType[]>(Size);
     memcpy(Copy1.get(), Text, sizeof(Text));
     memcpy(Copy2.get(), Text, sizeof(Text));
-    const auto Expected = ReferenceHash(Text, (Size - 1) * sizeof(CharType));
+    const auto Expected = ReferenceStringHash(Text, (Size - 1) * sizeof(CharType));
 
     XXH128State Pointer1;
     XXH128State Pointer2;
@@ -147,14 +169,19 @@ void TestString(const CharType (&Text)[Size])
     {
         XXH128State ExplicitLength;
         EXPECT_EQ(&ExplicitLength.UpdateStr(Binary, Length), &ExplicitLength);
-        EXPECT_EQ(ExplicitLength.Digest(), ReferenceHash(Binary, Length * sizeof(CharType)));
+        EXPECT_EQ(ExplicitLength.Digest(), ReferenceStringHash(Binary, Length * sizeof(CharType)));
         XXH128State EmbeddedNull;
         EmbeddedNull.Update(std::basic_string<CharType>{Binary, Length});
         EXPECT_EQ(EmbeddedNull.Digest(), ExplicitLength.Digest());
     }
     XXH128State NullTerminated;
     NullTerminated.Update(Binary);
-    EXPECT_EQ(NullTerminated.Digest(), ReferenceHash(Binary, sizeof(CharType)));
+    EXPECT_EQ(NullTerminated.Digest(), ReferenceStringHash(Binary, sizeof(CharType)));
+
+    // An explicit zero length retains the API's automatic C-string length.
+    XXH128State AutomaticLength;
+    AutomaticLength.UpdateStr(Binary, 0);
+    EXPECT_EQ(AutomaticLength.Digest(), NullTerminated.Digest());
 }
 
 TEST(XXH128HasherTest, String)
@@ -176,12 +203,113 @@ TEST(XXH128HasherTest, EmptyInput)
     {
         const auto Before = Hasher.Digest();
         EXPECT_EQ(&Hasher.UpdateRaw(nullptr, 0), &Hasher);
-        Hasher.UpdateStr(static_cast<const char*>(nullptr));
-        Hasher.UpdateStr(static_cast<const wchar_t*>(nullptr));
-        Hasher.Update("", L"", std::string{}, std::wstring{});
+        EXPECT_EQ(&Hasher.UpdateRaw("", 0), &Hasher);
         EXPECT_EQ(Hasher.Digest(), Before);
-        Hasher.Update("prefix");
+        Hasher.UpdateRaw("prefix", 6);
     }
+}
+
+TEST(XXH128HasherTest, EmptyAndNullStrings)
+{
+    XXH128State EmptyChar;
+    XXH128State EmptyWide;
+    XXH128State EmptyString;
+    XXH128State EmptyWideString;
+    EmptyChar.Update("");
+    EmptyWide.Update(L"");
+    EmptyString.Update(std::string{});
+    EmptyWideString.Update(std::wstring{});
+    const Uint64 EmptyLength   = 0;
+    const auto   EmptyExpected = ReferenceHash(&EmptyLength, sizeof(EmptyLength));
+    EXPECT_EQ(EmptyChar.Digest(), EmptyExpected);
+    EXPECT_EQ(EmptyWide.Digest(), EmptyExpected);
+    EXPECT_EQ(EmptyString.Digest(), EmptyExpected);
+    EXPECT_EQ(EmptyWideString.Digest(), EmptyExpected);
+    EXPECT_FALSE(EmptyExpected == ReferenceHash(nullptr, 0));
+
+    XXH128State NullChar;
+    XXH128State NullWide;
+    EXPECT_EQ(&NullChar.Update(static_cast<const char*>(nullptr)), &NullChar);
+    EXPECT_EQ(&NullWide.UpdateStr(static_cast<const wchar_t*>(nullptr)), &NullWide);
+    const Uint64 NullMarker   = ~Uint64{0};
+    const auto   NullExpected = ReferenceHash(&NullMarker, sizeof(NullMarker));
+    EXPECT_EQ(NullChar.Digest(), NullExpected);
+    EXPECT_EQ(NullWide.Digest(), NullExpected);
+    EXPECT_FALSE(NullExpected == EmptyExpected);
+    EXPECT_FALSE(NullExpected == ReferenceHash(nullptr, 0));
+}
+
+template <typename CharType>
+void TestStringFieldBoundaries(const CharType* A,
+                               const CharType* AB,
+                               const CharType* BC,
+                               const CharType* C,
+                               const CharType* ABC,
+                               const CharType* Empty)
+{
+    // These distinct field sequences must remain distinct even when their raw
+    // payloads concatenate to the same bytes or contain only empty/null fields.
+    const std::vector<std::vector<const CharType*>> Fields = {
+        {A, BC},
+        {AB, C},
+        {ABC},
+        {},
+        {Empty},
+        {Empty, Empty},
+        {nullptr},
+        {nullptr, nullptr},
+        {nullptr, Empty},
+        {Empty, nullptr},
+        {A},
+        {Empty, A},
+        {A, Empty},
+        {nullptr, A},
+        {A, nullptr},
+        {Empty, A, nullptr},
+        {nullptr, A, Empty},
+    };
+
+    std::vector<XXH128Hash> Hashes;
+    for (size_t i = 0; i < Fields.size(); ++i)
+    {
+        SCOPED_TRACE(i);
+        XXH128State        Hasher;
+        std::vector<Uint8> Bytes;
+        for (const CharType* Field : Fields[i])
+        {
+            Hasher.Update(Field);
+            const size_t ByteSize = Field != nullptr ? std::char_traits<CharType>::length(Field) * sizeof(CharType) : 0;
+            AppendStringFrame(Bytes, Field, ByteSize);
+        }
+
+        const auto Hash = Hasher.Digest();
+        EXPECT_EQ(Hash, ReferenceHash(Bytes.empty() ? nullptr : Bytes.data(), Bytes.size()));
+        for (size_t j = 0; j < Hashes.size(); ++j)
+        {
+            SCOPED_TRACE(j);
+            EXPECT_FALSE(Hash == Hashes[j]);
+        }
+        Hashes.push_back(Hash);
+    }
+
+    XXH128State Pair;
+    Pair.Update(A, BC);
+    EXPECT_EQ(Pair.Digest(), Hashes[0]);
+
+    // Framed strings are fields, while UpdateRaw remains a byte stream.
+    XXH128State Raw;
+    Raw.UpdateRaw(ABC, std::char_traits<CharType>::length(ABC) * sizeof(CharType));
+    EXPECT_FALSE(Raw.Digest() == Hashes[2]);
+}
+
+TEST(XXH128HasherTest, StringFieldBoundaries)
+{
+    TestStringFieldBoundaries("a", "ab", "bc", "c", "abc", "");
+}
+
+TEST(XXH128HasherTest, WideStringFieldBoundaries)
+{
+    TestStringFieldBoundaries(L"a", L"ab", L"bc", L"c", L"abc", L"");
 }
 
 TEST(XXH128HasherTest, ScalarsAndVariadicUpdate)
@@ -204,7 +332,7 @@ TEST(XXH128HasherTest, ScalarsAndVariadicUpdate)
     Append(Float);
     Append(Bool);
     Append(Enum);
-    Bytes.insert(Bytes.end(), Text.begin(), Text.end());
+    AppendStringFrame(Bytes, Text.data(), Text.size());
     const auto Expected = ReferenceHash(Bytes.data(), Bytes.size());
 
     XXH128State Variadic;
@@ -221,38 +349,38 @@ TEST(XXH128HasherTest, ScalarsAndVariadicUpdate)
 TEST(XXH128HasherTest, DigestDoesNotFinalize)
 {
     XXH128State Hasher;
-    Hasher.Update("abc");
+    Hasher.UpdateRaw("abc", 3);
     EXPECT_EQ(Hasher.Digest(), ReferenceHash("abc", 3));
     EXPECT_EQ(Hasher.Digest(), ReferenceHash("abc", 3));
-    Hasher.Update("def");
+    Hasher.UpdateRaw("def", 3);
     EXPECT_EQ(Hasher.Digest(), ReferenceHash("abcdef", 6));
 }
 
 TEST(XXH128HasherTest, MoveConstructionAndAssignment)
 {
     XXH128State Source;
-    Source.Update("abc");
+    Source.UpdateRaw("abc", 3);
     XXH128State Moved{std::move(Source)};
     EXPECT_EQ(Moved.Digest(), ReferenceHash("abc", 3));
-    Moved.Update("def");
+    Moved.UpdateRaw("def", 3);
 
     XXH128State Destination;
     Destination.Update("discard this state");
     EXPECT_EQ(&(Destination = std::move(Moved)), &Destination);
     EXPECT_EQ(Destination.Digest(), ReferenceHash("abcdef", 6));
-    Destination.Update("ghi");
+    Destination.UpdateRaw("ghi", 3);
     EXPECT_EQ(Destination.Digest(), ReferenceHash("abcdefghi", 9));
 
     // A moved-from object can be assigned a new state and used again.
     Source = XXH128State{};
-    Source.Update("reused");
+    Source.UpdateRaw("reused", 6);
     EXPECT_EQ(Source.Digest(), ReferenceHash("reused", 6));
 }
 
 TEST(XXH128HasherTest, SelfMoveAssignment)
 {
     XXH128State Hasher;
-    Hasher.Update("abc");
+    Hasher.UpdateRaw("abc", 3);
     auto Assign = [](XXH128State& To, XXH128State& From) {
         To = std::move(From);
     };

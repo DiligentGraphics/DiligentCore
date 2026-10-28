@@ -99,6 +99,10 @@ struct XXH128State final
     /// Appends Size bytes. A zero-size update is a no-op and permits a null pData.
     XXH128State& UpdateRaw(const void* pData, uint64_t Size) noexcept;
 
+    /// Appends a Uint64 byte length followed by the string contents.
+    /// A null pointer is encoded as ~Uint64{0} with no contents and differs from an empty string.
+    /// Len is a character count; zero uses the null-terminated string length.
+    /// Use UpdateRaw() to append raw string fragments without field boundaries.
     template <typename T>
     typename std::enable_if<(std::is_same<typename std::remove_cv<T>::type, char>::value ||
                              std::is_same<typename std::remove_cv<T>::type, wchar_t>::value),
@@ -106,10 +110,12 @@ struct XXH128State final
     UpdateStr(T* pStr, size_t Len = 0) noexcept
     {
         if (pStr == nullptr)
-            return *this;
+            return Update(~Uint64{0});
         if (Len == 0)
             Len = StrLen(pStr);
-        return UpdateRaw(pStr, Len * sizeof(T));
+        const Uint64 ByteLength = static_cast<Uint64>(Len) * sizeof(T);
+        Update(ByteLength);
+        return UpdateRaw(pStr, ByteLength);
     }
 
     template <typename... ArgsType>
