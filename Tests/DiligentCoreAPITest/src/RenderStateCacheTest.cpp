@@ -1345,6 +1345,55 @@ TEST(RenderStateCacheTest, CreateComputePSO_Sign_Async)
     TestComputePSO(/*UseSignature = */ true, /*CompileAsync = */ true);
 }
 
+// The archive does not store SRBAllocationGranularity and ImmediateContextMask; the dearchiver takes them from the
+// unpack info. A pipeline created with non-default values must be found in a loaded cache and keep those values.
+TEST(RenderStateCacheTest, ArchivedPSOKeepsDescription)
+{
+    GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceInfo().Features.ComputeShaders)
+        GTEST_SKIP() << "Compute shaders are not supported by this device";
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
+    pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/RenderStateCache", &pShaderSourceFactory);
+    ASSERT_NE(nullptr, pShaderSourceFactory);
+
+    constexpr Uint32 SRBAllocationGranularity = 4;
+    // Every immediate context; it differs from the default mask when the device has more than one.
+    const Uint64 ImmediateContextMask = (Uint64{1} << pEnv->GetNumImmediateContexts()) - 1;
+
+    RefCntAutoPtr<IDataBlob> pArchiveData;
+    for (Uint32 Pass = 0; Pass < 2; ++Pass)
+    {
+        SCOPED_TRACE(Pass);
+        auto pCache = CreateCache(pDevice, false, pArchiveData);
+        ASSERT_NE(nullptr, pCache);
+
+        RefCntAutoPtr<IShader> pCS;
+        CreateComputeShader(pCache, pShaderSourceFactory, SHADER_COMPILE_FLAG_NONE, pCS, Pass != 0);
+        ASSERT_NE(nullptr, pCS);
+
+        ComputePipelineStateCreateInfo PSOCI;
+        PSOCI.PSODesc.Name                               = "Archived pipeline description";
+        PSOCI.PSODesc.SRBAllocationGranularity           = SRBAllocationGranularity;
+        PSOCI.PSODesc.ImmediateContextMask               = ImmediateContextMask;
+        PSOCI.PSODesc.ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
+        PSOCI.pCS                                        = pCS;
+        RefCntAutoPtr<IPipelineState> pPSO;
+        EXPECT_EQ(Pass != 0, pCache->CreateComputePipelineState(PSOCI, &pPSO));
+        ASSERT_NE(nullptr, pPSO);
+        ASSERT_EQ(PIPELINE_STATE_STATUS_READY, pPSO->GetStatus());
+        EXPECT_EQ(PSOCI.PSODesc, pPSO->GetDesc());
+        VerifyComputePSO(pPSO, /*UseSignature = */ true);
+
+        pArchiveData.Release();
+        ASSERT_TRUE(pCache->WriteToBlob(ContentVersion, &pArchiveData));
+        ASSERT_NE(nullptr, pArchiveData);
+    }
+}
+
 
 TEST(RenderStateCacheTest, CacheByFileName)
 {
