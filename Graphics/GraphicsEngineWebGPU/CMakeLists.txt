@@ -153,10 +153,11 @@ PUBLIC
 target_link_libraries(Diligent-GraphicsEngineWebGPU-shared
 PRIVATE
     Diligent-BuildSettings 
-    Diligent-GraphicsEngineWebGPU-static
 PUBLIC
     Diligent-GraphicsEngineWebGPUInterface
 )
+
+target_link_whole_archive(Diligent-GraphicsEngineWebGPU-shared Diligent-GraphicsEngineWebGPU-static)
 
 if(PLATFORM_WIN32)
     # Do not add 'lib' prefix when building with MinGW
