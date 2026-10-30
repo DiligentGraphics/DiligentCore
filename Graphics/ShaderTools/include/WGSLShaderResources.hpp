@@ -35,6 +35,7 @@
 //    |                                                                                                                                                                                                  |
 //    | Uniform Buffers | Storage Buffers | Textures | Storage Textures | Samplers | Ext Textures | Spec Constants |   Resource Names   |
 
+#include <cstdint>
 #include <memory>
 #include <string>
 

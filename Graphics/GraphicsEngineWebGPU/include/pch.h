@@ -31,6 +31,8 @@
 
 #pragma once
 
+#include <algorithm>
+#include <cstring>
 #include <string>
 
 #include <webgpu/webgpu.h>

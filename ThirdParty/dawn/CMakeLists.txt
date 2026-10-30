@@ -58,16 +58,21 @@ set(DAWN_ENABLE_D3D12      OFF CACHE BOOL "" FORCE)
 set(DAWN_ENABLE_DESKTOP_GL OFF CACHE BOOL "" FORCE)
 set(DAWN_ENABLE_OPENGLES   OFF CACHE BOOL "" FORCE)
 set(DAWN_ENABLE_METAL      OFF CACHE BOOL "" FORCE)
+set(DAWN_ENABLE_NULL       OFF CACHE BOOL "" FORCE)
 if (PLATFORM_WIN32)
     set(DAWN_ENABLE_D3D12      ON CACHE BOOL "" FORCE)
     set(TINT_BUILD_HLSL_WRITER ON CACHE BOOL "" FORCE)
 elseif(PLATFORM_MACOS)
     set(DAWN_ENABLE_METAL     ON CACHE BOOL "" FORCE)
     set(TINT_BUILD_MSL_WRITER ON CACHE BOOL "" FORCE)
+elseif(PLATFORM_LINUX)
+    # Use the null device for serialization. Dawn Native references Tint bindings that are only
+    # defined when a backend writer is built, so enable the HLSL writer as on Windows.
+    set(DAWN_ENABLE_NULL       ON CACHE BOOL "" FORCE)
+    set(TINT_BUILD_HLSL_WRITER ON CACHE BOOL "" FORCE)
 endif()
 
 set(DAWN_USE_GLFW                OFF CACHE BOOL "" FORCE)
-set(DAWN_ENABLE_NULL             OFF CACHE BOOL "" FORCE)
 set(DAWN_USE_WINDOWS_UI          OFF CACHE BOOL "" FORCE)
 set(DAWN_ENABLE_SPIRV_VALIDATION OFF CACHE BOOL "" FORCE)
 
