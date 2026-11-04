@@ -818,7 +818,11 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
 #ifdef DILIGENT_DEVELOPMENT
     if ((Flags & DRAW_FLAG_VERIFY_STATES) != 0)
     {
-        for (Uint32 slot = 0; slot < m_NumVertexStreams; ++slot)
+        // Trailing bindings beyond the pipeline's input-slot range are unused.
+        // GetNumBufferSlotsUsed() is the highest referenced slot plus one, so
+        // gaps within this range may still produce false positives.
+        const Uint32 NumSlotsToCheck = std::min(m_NumVertexStreams, m_pPipelineState->GetNumBufferSlotsUsed());
+        for (Uint32 slot = 0; slot < NumSlotsToCheck; ++slot)
         {
             if (BufferVkImpl* pBufferVk = m_VertexStreams[slot].pBuffer)
             {

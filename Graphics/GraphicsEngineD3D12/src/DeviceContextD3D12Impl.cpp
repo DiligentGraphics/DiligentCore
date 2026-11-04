@@ -642,7 +642,11 @@ void DeviceContextD3D12Impl::PrepareForDraw(GraphicsContext& GraphCtx, DRAW_FLAG
 #ifdef DILIGENT_DEVELOPMENT
     if ((Flags & DRAW_FLAG_VERIFY_STATES) != 0)
     {
-        for (Uint32 Buff = 0; Buff < m_NumVertexStreams; ++Buff)
+        // Trailing bindings beyond the pipeline's input-slot range are unused.
+        // GetNumBufferSlotsUsed() is the highest referenced slot plus one, so
+        // gaps within this range may still produce false positives.
+        const Uint32 NumSlotsToCheck = std::min(m_NumVertexStreams, m_pPipelineState->GetNumBufferSlotsUsed());
+        for (Uint32 Buff = 0; Buff < NumSlotsToCheck; ++Buff)
         {
             const auto& CurrStream = m_VertexStreams[Buff];
             if (const BufferD3D12Impl* pBufferD3D12 = CurrStream.pBuffer)

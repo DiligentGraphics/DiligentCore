@@ -931,6 +931,28 @@ TEST_F(DrawCommandTest, DrawProcedural)
     Present();
 }
 
+TEST_F(DrawCommandTest, DrawProceduralWithUnusedVertexBuffer)
+{
+    GPUTestingEnvironment* const pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext* const        pContext = pEnv->GetDeviceContext();
+
+    SetRenderTargets(sm_pDrawProceduralPSO);
+
+    RefCntAutoPtr<IBuffer> pVB = CreateVertexBuffer(Vert, sizeof(Vert));
+    ASSERT_NE(pVB, nullptr);
+    IBuffer* pVBs[] = {pVB};
+    pContext->SetVertexBuffers(0, 1, pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+
+    // Uploads can leave a bound vertex buffer in COPY_DEST. A procedural draw
+    // has no vertex inputs and must not validate this unused buffer's state.
+    pContext->UpdateBuffer(pVB, 0, sizeof(Vert), Vert, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    const DrawAttribs DrawAttrs{6, DRAW_FLAG_VERIFY_ALL};
+    pContext->Draw(DrawAttrs);
+
+    Present();
+}
+
 
 // Non-indexed draw calls
 
@@ -956,6 +978,30 @@ TEST_F(DrawCommandTest, Draw)
 
     DrawAttribs drawAttrs{6, DRAW_FLAG_VERIFY_ALL};
     pContext->Draw(drawAttrs);
+
+    Present();
+}
+
+TEST_F(DrawCommandTest, DrawWithUnusedTrailingVertexBuffer)
+{
+    GPUTestingEnvironment* const pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext* const        pContext = pEnv->GetDeviceContext();
+
+    SetRenderTargets(sm_pDrawPSO);
+
+    RefCntAutoPtr<IBuffer> pVB       = CreateVertexBuffer(Vert, sizeof(Vert));
+    RefCntAutoPtr<IBuffer> pUnusedVB = CreateVertexBuffer(Vert, sizeof(Vert));
+    ASSERT_NE(pVB, nullptr);
+    ASSERT_NE(pUnusedVB, nullptr);
+    IBuffer* pVBs[] = {pVB, pUnusedVB};
+    pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+
+    // The pipeline consumes only slot 0. An upload to the still-bound trailing
+    // buffer leaves it in COPY_DEST, which must not affect this draw's validation.
+    pContext->UpdateBuffer(pUnusedVB, 0, sizeof(Vert), Vert, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    const DrawAttribs DrawAttrs{6, DRAW_FLAG_VERIFY_ALL};
+    pContext->Draw(DrawAttrs);
 
     Present();
 }
