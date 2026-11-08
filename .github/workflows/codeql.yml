@@ -18,10 +18,10 @@ jobs:
 
           - host_name:       "Linux"
             platform:        "Linux"
-            os:              "ubuntu-24.04"
+            os:              "ubuntu-26.04"
             cmake_generator: "Ninja"
-            cc:              "clang-18"
-            cxx:             "clang++-18"
+            cc:              "clang-22"
+            cxx:             "clang++-22"
 
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.host_name }} -> Code QL, ${{ matrix.toolset }}, ${{ matrix.build_type }}
