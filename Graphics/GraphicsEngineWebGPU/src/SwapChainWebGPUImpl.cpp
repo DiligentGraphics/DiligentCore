@@ -305,8 +305,16 @@ bool SwapChainWebGPUImpl::ConfigureSurface()
     if (std::find(Caps.alphaModes, Caps.alphaModes + Caps.alphaModeCount, WGPUCompositeAlphaMode_Opaque) != Caps.alphaModes + Caps.alphaModeCount)
         AlphaMode = WGPUCompositeAlphaMode_Opaque;
 
-    const WGPUTextureFormat  ViewFormat = TextureFormatToWGPUFormat(m_SwapChainDesc.ColorBufferFormat);
+    const WGPUTextureFormat ViewFormat = TextureFormatToWGPUFormat(m_SwapChainDesc.ColorBufferFormat);
+
+    WGPUSurfaceColorManagement wgpuColorManagement{};
+    wgpuColorManagement.chain.sType     = WGPUSType_SurfaceColorManagement;
+    wgpuColorManagement.chain.next      = nullptr;
+    wgpuColorManagement.colorSpace      = WGPUPredefinedColorSpace_DisplayP3;
+    wgpuColorManagement.toneMappingMode = WGPUToneMappingMode_Extended;
+
     WGPUSurfaceConfiguration Config{};
+    Config.nextInChain     = SurfaceFormat != WGPUTextureFormat_RGBA16Float ? nullptr : &wgpuColorManagement.chain;
     Config.device          = pDevice->GetWebGPUDevice();
     Config.usage           = Usage;
     Config.width           = m_SwapChainDesc.Width;
@@ -316,6 +324,7 @@ bool SwapChainWebGPUImpl::ConfigureSurface()
     Config.alphaMode       = AlphaMode;
     Config.viewFormatCount = IsSRGB ? 1 : 0;
     Config.viewFormats     = IsSRGB ? &ViewFormat : nullptr;
+
     wgpuSurfaceConfigure(m_wgpuSurface, &Config);
     m_SurfaceConfigured = true;
     return true;
