@@ -135,6 +135,9 @@ if(TARGET Diligent-HLSL2GLSLConverterLib)
 endif()
 
 if(VULKAN_SUPPORTED)
+    target_include_directories(DiligentCoreAPITest PRIVATE ../../Graphics/GraphicsEngineVulkan/include)
+    target_link_libraries(DiligentCoreAPITest PRIVATE Diligent-GraphicsEngineNextGenBase Diligent-GraphicsEngineVk-static)
+    target_compile_definitions(DiligentCoreAPITest PRIVATE DILIGENT_USE_VOLK=1)
     if(PLATFORM_MACOS)
         if(VULKAN_LIB_PATH)
             # Configure rpath so that the executable can find vulkan library
