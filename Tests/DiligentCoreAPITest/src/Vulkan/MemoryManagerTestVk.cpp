@@ -109,6 +109,42 @@ TEST(VulkanMemoryManagerTest, OversizedPages)
     }
 }
 
+TEST(VulkanMemoryManagerTest, AllocationAlignment)
+{
+    auto* pEnv = GPUTestingEnvironment::GetInstance();
+    if (pEnv->GetDevice()->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_VULKAN)
+        GTEST_SKIP();
+
+    auto*                  pDevice  = static_cast<RenderDeviceVkImpl*>(pEnv->GetDevice());
+    constexpr VkDeviceSize PageSize = 64 << 10;
+    for (bool HostVisible : {false, true})
+    {
+        SCOPED_TRACE(HostVisible ? "host-visible" : "device-local");
+        TrackingMemoryManager       Mgr{"Alignment test", pDevice->GetLogicalDevice(),
+                                  pDevice->GetPhysicalDevice(), DefaultRawMemoryAllocator::GetAllocator(),
+                                  PageSize, PageSize, 0, 0};
+        const VkMemoryPropertyFlags Props = HostVisible ? VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT : VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        const uint32_t              Type  = pDevice->GetPhysicalDevice().GetMemoryTypeIndex(~0u, Props);
+        ASSERT_NE(Type, VulkanUtilities::PhysicalDevice::InvalidMemoryTypeIndex);
+
+        const VkDeviceSize Sizes[]      = {PageSize + 1, 1};
+        const VkDeviceSize Alignments[] = {256, 2 * PageSize};
+        for (size_t i = 0; i < 2; ++i)
+        {
+            SCOPED_TRACE(i);
+            {
+                auto Allocation = Mgr.Allocate(Sizes[i], Alignments[i], Type, HostVisible, 0);
+                ASSERT_TRUE(Allocation);
+                EXPECT_EQ(Allocation.UnalignedOffset, 0u);
+                EXPECT_GE(Allocation.Size, AlignUp(Sizes[i], Alignments[i]));
+                EXPECT_GE(Allocation.Page->GetPageSize(), Allocation.Size);
+            }
+            Mgr.ShrinkMemory();
+            EXPECT_EQ(Mgr.LivePages, 0u);
+        }
+    }
+}
+
 } // namespace
 } // namespace Testing
 } // namespace Diligent

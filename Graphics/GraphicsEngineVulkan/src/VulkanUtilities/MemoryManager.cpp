@@ -190,7 +190,8 @@ MemoryAllocation MemoryManager::Allocate(VkDeviceSize Size, VkDeviceSize Alignme
     size_t stat_ind = HostVisible ? 1 : 0;
     if (Allocation.Page == nullptr)
     {
-        const VkDeviceSize PageSize = std::max(BasePageSize, Size);
+        // The suballocator rounds the requested size up to Alignment, even at offset zero.
+        const VkDeviceSize PageSize = std::max(BasePageSize, Diligent::AlignUp(Size, Alignment));
 
         m_CurrAllocatedSize[stat_ind] += PageSize;
         m_PeakAllocatedSize[stat_ind] = std::max(m_PeakAllocatedSize[stat_ind], m_CurrAllocatedSize[stat_ind]);
