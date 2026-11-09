@@ -173,9 +173,15 @@ MemoryAllocation MemoryManager::Allocate(VkDeviceSize Size, VkDeviceSize Alignme
     MemoryPageIndex             PageIdx{MemoryTypeIndex, HostVisible, AllocateFlags};
     std::lock_guard<std::mutex> Lock{m_PagesMtx};
 
+    const VkDeviceSize BasePageSize = HostVisible ? m_HostVisiblePageSize : m_DeviceLocalPageSize;
+
     auto range = m_Pages.equal_range(PageIdx);
     for (auto page_it = range.first; page_it != range.second; ++page_it)
     {
+        // Oversized pages belong to a single allocation and must never be shared.
+        if (page_it->second.GetPageSize() > BasePageSize)
+            continue;
+
         Allocation = page_it->second.Allocate(Size, Alignment);
         if (Allocation.Page != nullptr)
             break;
@@ -184,9 +190,7 @@ MemoryAllocation MemoryManager::Allocate(VkDeviceSize Size, VkDeviceSize Alignme
     size_t stat_ind = HostVisible ? 1 : 0;
     if (Allocation.Page == nullptr)
     {
-        VkDeviceSize PageSize = HostVisible ? m_HostVisiblePageSize : m_DeviceLocalPageSize;
-        while (PageSize < Size)
-            PageSize *= 2;
+        const VkDeviceSize PageSize = std::max(BasePageSize, Size);
 
         m_CurrAllocatedSize[stat_ind] += PageSize;
         m_PeakAllocatedSize[stat_ind] = std::max(m_PeakAllocatedSize[stat_ind], m_CurrAllocatedSize[stat_ind]);
@@ -214,8 +218,6 @@ MemoryAllocation MemoryManager::Allocate(VkDeviceSize Size, VkDeviceSize Alignme
 void MemoryManager::ShrinkMemory()
 {
     std::lock_guard<std::mutex> Lock{m_PagesMtx};
-    if (m_CurrAllocatedSize[0] <= m_DeviceLocalReserveSize && m_CurrAllocatedSize[1] <= m_HostVisibleReserveSize)
-        return;
 
     auto it = m_Pages.begin();
     while (it != m_Pages.end())
@@ -225,7 +227,8 @@ void MemoryManager::ShrinkMemory()
         MemoryPage&  Page          = curr_it->second;
         bool         IsHostVisible = Page.GetCPUMemory() != nullptr;
         VkDeviceSize ReserveSize   = IsHostVisible ? m_HostVisibleReserveSize : m_DeviceLocalReserveSize;
-        if (Page.IsEmpty() && m_CurrAllocatedSize[IsHostVisible ? 1 : 0] > ReserveSize)
+        VkDeviceSize BasePageSize  = IsHostVisible ? m_HostVisiblePageSize : m_DeviceLocalPageSize;
+        if (Page.IsEmpty() && (Page.GetPageSize() > BasePageSize || m_CurrAllocatedSize[IsHostVisible ? 1 : 0] > ReserveSize))
         {
             VkDeviceSize PageSize = Page.GetPageSize();
             m_CurrAllocatedSize[IsHostVisible ? 1 : 0] -= PageSize;
