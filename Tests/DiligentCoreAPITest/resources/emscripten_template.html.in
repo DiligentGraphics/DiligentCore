@@ -77,7 +77,8 @@
             term.writeln(text);
         };
 
-        var argv = [ "--mode=gl" ];
+        const mode = new URLSearchParams(window.location.search).get("mode") || "@DEFAULT_TEST_MODE@";
+        var argv = ["--mode=" + mode];
         var Module = {
             preRun: [],
             postRun: [],
@@ -96,7 +97,54 @@
         window.onerror = function () {
             console.log("onerror: " + event);
         };
+
+        async function initializeWebGPUDevice() {
+            if (!navigator.gpu) {
+                throw new Error("WebGPU is not available in this browser.");
+            }
+            const adapter = await navigator.gpu.requestAdapter({powerPreference: "high-performance"});
+            if (!adapter) {
+                throw new Error("No WebGPU adapter is available.");
+            }
+
+            // Exercise the adapter's capabilities rather than the default device limits,
+            // just as native WebGPU device creation does for the GPU tests.
+            const requiredLimits = {};
+            for (const name in adapter.limits) {
+                const value = adapter.limits[name];
+                if (typeof value === "number") {
+                    requiredLimits[name] = value;
+                }
+            }
+            return adapter.requestDevice({
+                requiredFeatures: Array.from(adapter.features),
+                requiredLimits,
+            });
+        }
+
+        function reportInitializationFailure(error) {
+            Module.preinitializedWebGPUDevice?.destroy();
+            const message = "Failed to initialize GPU tests: " + error.message;
+            terminal_write(message);
+            console.error(message);
+        }
+
+        async function startTests() {
+            try {
+                if (mode === "wgpu") {
+                    // Emscripten imports this device while initializing the module.
+                    Module.preinitializedWebGPUDevice = await initializeWebGPUDevice();
+                }
+                const script = document.createElement("script");
+                script.src = "DiligentCoreAPITest.js";
+                script.onerror = () => reportInitializationFailure(new Error("Unable to load the test script."));
+                document.body.appendChild(script);
+            } catch (error) {
+                reportInitializationFailure(error);
+            }
+        }
+
+        startTests();
     </script>
-    {{{ SCRIPT }}}
 </body>
 </html>

@@ -59,6 +59,10 @@
 
 #if WEBGPU_SUPPORTED
 #    include "EngineFactoryWebGPU.h"
+#    if PLATFORM_WEB
+#        include <webgpu/webgpu.h>
+#        include <emscripten/html5.h>
+#    endif
 #endif
 
 #if ARCHIVER_SUPPORTED
@@ -470,7 +474,19 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
             EngineWebGPUCreateInfo EngineCI{};
             EngineCI.Features = EnvCI.Features;
             ppContexts.resize((std::max)(size_t{1}, ContextCI.size()) + NumDeferredCtx);
+#    if PLATFORM_WEB
+            // The browser host creates the device asynchronously before starting the tests.
+            WGPUDevice Device = emscripten_webgpu_get_device();
+            if (Device == nullptr)
+                LOG_ERROR_AND_THROW("The GPU tests require a preinitialized WebGPU device");
+
+            WGPUInstance Instance = wgpuCreateInstance(nullptr);
+            pFactoryWGPU->AttachToWebGPUDevice(Instance, nullptr, Device, EngineCI, &m_pDevice, ppContexts.data());
+#    else
             pFactoryWGPU->CreateDeviceAndContextsWebGPU(EngineCI, &m_pDevice, ppContexts.data());
+#    endif
+            if (!m_pDevice || ppContexts[0] == nullptr)
+                LOG_ERROR_AND_THROW("Failed to initialize the WebGPU test device and context");
         }
 #endif
         break;

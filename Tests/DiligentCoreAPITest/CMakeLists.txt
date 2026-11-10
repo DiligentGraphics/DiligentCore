@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.17...3.22)
 
 if (PLATFORM_WEB)
-    set(CMAKE_EXECUTABLE_SUFFIX ".html")
+    set(CMAKE_EXECUTABLE_SUFFIX ".js")
 endif()
 
 project(DiligentCoreAPITest)
@@ -103,9 +103,14 @@ get_supported_backends(ENGINE_LIBRARIES)
 
 if (PLATFORM_WEB)  
     set(RESOURCE_PATH "${PROJECT_SOURCE_DIR}/assets/")
-    set(HTML_TEMPLATE_FILE ${PROJECT_SOURCE_DIR}/resources/emscripten_template.html)      
-    target_link_options(DiligentCoreAPITest PRIVATE "SHELL: -s SINGLE_FILE -s ALLOW_MEMORY_GROWTH=1 --preload-file '${RESOURCE_PATH}@'")      
-    target_link_options(DiligentCoreAPITest PRIVATE "SHELL: --shell-file '${HTML_TEMPLATE_FILE}'") 
+    if(WEBGPU_SUPPORTED)
+        set(DEFAULT_TEST_MODE "wgpu")
+    else()
+        set(DEFAULT_TEST_MODE "gl")
+    endif()
+    # Load the generated script only after the browser has created the WebGPU device.
+    configure_file(resources/emscripten_template.html.in ${CMAKE_CURRENT_BINARY_DIR}/DiligentCoreAPITest.html @ONLY)
+    target_link_options(DiligentCoreAPITest PRIVATE "SHELL: -s SINGLE_FILE -s ALLOW_MEMORY_GROWTH=1 --preload-file '${RESOURCE_PATH}@'")
 endif()
 
 target_link_libraries(DiligentCoreAPITest
