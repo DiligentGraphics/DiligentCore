@@ -96,6 +96,9 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactoryWebGPU, IEngineFactory)
     ///
     /// \param [out] ppSwapChain    - Address of the memory location where pointer to the new
     ///                               swap chain will be written.
+    ///
+    /// \remarks On the web, an RGBA16Float canvas interprets the application's output in the
+    ///          Display P3 color space and uses extended tone mapping.
     VIRTUAL void METHOD(CreateSwapChainWebGPU)(THIS_
                                               IRenderDevice*               pDevice,
                                               IDeviceContext*              pImmediateContext,

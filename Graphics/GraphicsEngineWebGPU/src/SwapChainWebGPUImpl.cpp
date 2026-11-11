@@ -307,14 +307,7 @@ bool SwapChainWebGPUImpl::ConfigureSurface()
 
     const WGPUTextureFormat wgpuViewFormat = TextureFormatToWGPUFormat(m_SwapChainDesc.ColorBufferFormat);
 
-    WGPUSurfaceColorManagement wgpuColorManagement{};
-    wgpuColorManagement.chain.sType     = WGPUSType_SurfaceColorManagement;
-    wgpuColorManagement.chain.next      = nullptr;
-    wgpuColorManagement.colorSpace      = WGPUPredefinedColorSpace_DisplayP3;
-    wgpuColorManagement.toneMappingMode = WGPUToneMappingMode_Extended;
-
     WGPUSurfaceConfiguration wgpuSurfaceConfig{};
-    wgpuSurfaceConfig.nextInChain     = wgpuSurfaceFormat != WGPUTextureFormat_RGBA16Float ? nullptr : &wgpuColorManagement.chain;
     wgpuSurfaceConfig.device          = pDevice->GetWebGPUDevice();
     wgpuSurfaceConfig.usage           = wgpuUsage;
     wgpuSurfaceConfig.width           = m_SwapChainDesc.Width;
@@ -324,6 +317,18 @@ bool SwapChainWebGPUImpl::ConfigureSurface()
     wgpuSurfaceConfig.alphaMode       = wgpuAlphaMode;
     wgpuSurfaceConfig.viewFormatCount = IsSRGB ? 1 : 0;
     wgpuSurfaceConfig.viewFormats     = IsSRGB ? &wgpuViewFormat : nullptr;
+
+#if PLATFORM_WEB
+    // Only Emdawn accepts this chain on a surface configuration.
+    WGPUSurfaceColorManagement wgpuColorManagement{};
+    if (wgpuSurfaceFormat == WGPUTextureFormat_RGBA16Float)
+    {
+        wgpuColorManagement.chain.sType     = WGPUSType_SurfaceColorManagement;
+        wgpuColorManagement.colorSpace      = WGPUPredefinedColorSpace_DisplayP3;
+        wgpuColorManagement.toneMappingMode = WGPUToneMappingMode_Extended;
+        wgpuSurfaceConfig.nextInChain       = &wgpuColorManagement.chain;
+    }
+#endif
 
     wgpuSurfaceConfigure(m_wgpuSurface, &wgpuSurfaceConfig);
     m_SurfaceConfigured = true;
