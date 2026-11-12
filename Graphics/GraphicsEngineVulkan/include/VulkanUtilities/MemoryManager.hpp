@@ -135,15 +135,17 @@ public:
 
     VkDeviceSize GetPageSize() const { return m_AllocationMgr.GetMaxSize(); }
 
-    MemoryAllocation Allocate(VkDeviceSize size, VkDeviceSize alignment);
-
     VkDeviceMemory GetVkMemory() const { return m_VkMemory; }
     void*          GetCPUMemory() const { return m_CPUMemory; }
 
 private:
     using AllocationsMgrOffsetType = Diligent::VariableSizeAllocationsManager::OffsetType;
 
+    friend class MemoryManager;
     friend struct MemoryAllocation;
+
+    // MemoryManager holds m_PagesMtx while allocating so ShrinkMemory() cannot erase this page.
+    MemoryAllocation Allocate(VkDeviceSize size, VkDeviceSize alignment);
 
     // Memory is reclaimed immediately. The application is responsible to ensure it is not in use by the GPU
     void Free(MemoryAllocation&& Allocation);
