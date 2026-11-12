@@ -442,6 +442,12 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
         SetState(InitialState);
     }
 
+    if (m_VulkanBuffer)
+    {
+        m_VkBufferFlags = VkBuffCI.flags;
+        m_VkBufferUsage = VkBuffCI.usage;
+    }
+
     VERIFY_EXPR(IsInKnownState());
 
     if (m_Desc.Usage == USAGE_SPARSE)
@@ -547,6 +553,14 @@ VkBuffer BufferVkImpl::GetVkBuffer() const
         VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer expected");
         return m_pDevice->GetDynamicMemoryManager().GetVkBuffer();
     }
+}
+
+void BufferVkImpl::GetVkBufferInfo(BufferNativeInfoVk& Info) const
+{
+    Info.Flags        = m_VkBufferFlags;
+    Info.Usage        = m_VkBufferUsage;
+    Info.Memory       = m_MemoryAllocation ? m_MemoryAllocation.Page->GetVkMemory() : VK_NULL_HANDLE;
+    Info.MemoryOffset = m_BufferMemoryAlignedOffset;
 }
 
 void BufferVkImpl::SetAccessFlags(VkAccessFlags AccessFlags)

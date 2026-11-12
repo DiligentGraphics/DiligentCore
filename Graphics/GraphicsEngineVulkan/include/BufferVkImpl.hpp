@@ -67,6 +67,9 @@ public:
     /// Implementation of IBufferVk::GetVkBuffer().
     virtual VkBuffer DILIGENT_CALL_TYPE GetVkBuffer() const override final;
 
+    /// Implementation of IBufferVk::GetVkBufferInfo().
+    virtual void DILIGENT_CALL_TYPE GetVkBufferInfo(BufferNativeInfoVk& Info) const override final;
+
     /// Implementation of IBuffer::GetNativeHandle() in Vulkan backend.
     virtual Uint64 DILIGENT_CALL_TYPE GetNativeHandle() override final { return BitCast<Uint64>(GetVkBuffer()); }
 
@@ -108,8 +111,10 @@ private:
 private:
     VulkanUtilities::BufferViewWrapper CreateView(struct BufferViewDesc& ViewDesc);
 
-    Uint32       m_DynamicOffsetAlignment    = 0;
-    VkDeviceSize m_BufferMemoryAlignedOffset = 0;
+    VkBufferCreateFlags m_VkBufferFlags             = 0;
+    VkBufferUsageFlags  m_VkBufferUsage             = 0;
+    Uint32              m_DynamicOffsetAlignment    = 0;
+    VkDeviceSize        m_BufferMemoryAlignedOffset = 0;
 
     VulkanUtilities::BufferWrapper    m_VulkanBuffer;
     VulkanUtilities::MemoryAllocation m_MemoryAllocation;

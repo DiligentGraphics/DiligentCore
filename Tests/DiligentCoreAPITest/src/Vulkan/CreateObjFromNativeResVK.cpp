@@ -101,6 +101,15 @@ void TestCreateObjFromNativeResVK::CreateBuffer(Diligent::IBuffer* pBuffer)
 
     const auto& SrcBuffDesc = pBuffer->GetDesc();
 
+    BufferNativeInfoVk NativeInfo;
+    pBufferVk->GetVkBufferInfo(NativeInfo);
+    EXPECT_EQ(NativeInfo.Flags, 0u);
+    EXPECT_NE(NativeInfo.Memory, VkDeviceMemory{});
+    if ((SrcBuffDesc.BindFlags & BIND_VERTEX_BUFFER) != 0)
+        EXPECT_NE(NativeInfo.Usage & VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 0u);
+    if ((SrcBuffDesc.BindFlags & BIND_UNIFORM_BUFFER) != 0)
+        EXPECT_NE(NativeInfo.Usage & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0u);
+
     RefCntAutoPtr<IBuffer> pBufferFromNativeVkHandle;
     pDeviceVk->CreateBufferFromVulkanResource(VkBufferHandle, SrcBuffDesc, RESOURCE_STATE_UNKNOWN, &pBufferFromNativeVkHandle);
     ASSERT_NE(pBufferFromNativeVkHandle, nullptr);
@@ -112,6 +121,11 @@ void TestCreateObjFromNativeResVK::CreateBuffer(Diligent::IBuffer* pBuffer)
     ASSERT_NE(pTestBufferVk, nullptr);
     EXPECT_EQ(pTestBufferVk->GetVkBuffer(), VkBufferHandle);
     EXPECT_EQ(BitCast<VkBuffer>(pTestBufferVk->GetNativeHandle()), VkBufferHandle);
+    pTestBufferVk->GetVkBufferInfo(NativeInfo);
+    EXPECT_EQ(NativeInfo.Flags, 0u);
+    EXPECT_EQ(NativeInfo.Usage, 0u);
+    EXPECT_EQ(NativeInfo.Memory, VkDeviceMemory{});
+    EXPECT_EQ(NativeInfo.MemoryOffset, 0u);
 #endif
 }
 
