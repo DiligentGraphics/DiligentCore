@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -60,6 +60,14 @@ void TestCreateObjFromNativeResVK::CreateTexture(Diligent::ITexture* pTexture)
     auto VkHandle = pTextureVk->GetVkImage();
     ASSERT_NE(VkHandle, (VkImage)VK_NULL_HANDLE);
 
+    TextureNativeInfoVk NativeInfo;
+    pTextureVk->GetVkImageInfo(NativeInfo);
+    EXPECT_NE(NativeInfo.Format, VK_FORMAT_UNDEFINED);
+    EXPECT_NE(NativeInfo.Memory, VkDeviceMemory{});
+    EXPECT_EQ((NativeInfo.Flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) != 0, SrcTexDesc.IsCube());
+    if ((SrcTexDesc.BindFlags & BIND_SHADER_RESOURCE) != 0)
+        EXPECT_NE(NativeInfo.Usage & VK_IMAGE_USAGE_SAMPLED_BIT, 0u);
+
     RefCntAutoPtr<ITexture> pAttachedTexture;
     pDeviceVk->CreateTextureFromVulkanImage(VkHandle, SrcTexDesc, RESOURCE_STATE_UNKNOWN, &pAttachedTexture);
     ASSERT_NE(pAttachedTexture, nullptr);
@@ -71,6 +79,12 @@ void TestCreateObjFromNativeResVK::CreateTexture(Diligent::ITexture* pTexture)
     ASSERT_NE(pAttachedTextureVk, nullptr);
     EXPECT_EQ(pAttachedTextureVk->GetVkImage(), VkHandle);
     EXPECT_EQ(BitCast<VkImage>(pAttachedTextureVk->GetNativeHandle()), VkHandle);
+    pAttachedTextureVk->GetVkImageInfo(NativeInfo);
+    EXPECT_EQ(NativeInfo.Format, VK_FORMAT_UNDEFINED);
+    EXPECT_EQ(NativeInfo.Flags, 0u);
+    EXPECT_EQ(NativeInfo.Usage, 0u);
+    EXPECT_EQ(NativeInfo.Memory, VkDeviceMemory{});
+    EXPECT_EQ(NativeInfo.MemoryOffset, 0u);
 #endif
 }
 

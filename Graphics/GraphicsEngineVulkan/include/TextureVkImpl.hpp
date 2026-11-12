@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -76,6 +76,9 @@ public:
     /// Implementation of ITextureVk::GetLayout().
     virtual VkImageLayout DILIGENT_CALL_TYPE GetLayout() const override final;
 
+    /// Implementation of ITextureVk::GetVkImageInfo().
+    virtual void DILIGENT_CALL_TYPE GetVkImageInfo(TextureNativeInfoVk& Info) const override final;
+
     VkBuffer GetVkStagingBuffer() const
     {
         return m_StagingBuffer;
@@ -85,7 +88,7 @@ public:
     {
         uint8_t* StagingDataCPUAddress = reinterpret_cast<uint8_t*>(m_MemoryAllocation.Page->GetCPUMemory());
         VERIFY_EXPR(StagingDataCPUAddress != nullptr);
-        StagingDataCPUAddress += m_StagingDataAlignedOffset;
+        StagingDataCPUAddress += m_AlignedMemoryOffset;
         return StagingDataCPUAddress;
     }
 
@@ -115,10 +118,14 @@ protected:
 
     void InitSparseProperties() noexcept(false);
 
+    VkFormat           m_VkFormat     = VK_FORMAT_UNDEFINED;
+    VkImageCreateFlags m_VkImageFlags = 0;
+    VkImageUsageFlags  m_VkImageUsage = 0;
+
     VulkanUtilities::ImageWrapper     m_VulkanImage;
     VulkanUtilities::BufferWrapper    m_StagingBuffer;
     VulkanUtilities::MemoryAllocation m_MemoryAllocation;
-    VkDeviceSize                      m_StagingDataAlignedOffset = 0;
+    VkDeviceSize                      m_AlignedMemoryOffset = 0; // Binding offset of the image or staging buffer.
 };
 
 } // namespace Diligent

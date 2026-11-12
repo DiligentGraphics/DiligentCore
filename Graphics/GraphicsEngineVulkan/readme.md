@@ -22,6 +22,7 @@ Below are some of the methods that provide access to internal Vulkan objects:
 | `ITextureVk::GetVkImage`                    | returns a Vulkan handle of the internal image object                     |
 | `ITextureVk::SetLayout`                     | sets the Vulkan image resource layout                                    |
 | `ITextureVk::GetLayout`                     | returns the Vulkan image resource layout                                 |
+| `ITextureVk::GetVkImageInfo`                | returns the native image format, creation flags, usage, and memory binding |
 | `ITextureViewVk::GetVulkanImageView`        | returns Vulkan handle of the internal image view object                  |
 | `IDeviceContextVk::TransitionImageLayout`   | transitions the internal Vulkan image to the specified layout            |
 | `IDeviceContextVk::BufferMemoryBarrier`     | transitions the internal Vulkan buffer object to the specified state     |
