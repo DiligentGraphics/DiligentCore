@@ -267,18 +267,19 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
         // and the transition away from this layout is not guaranteed to preserve that data.
         ImageCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
+        m_VulkanImage  = LogicalDevice.CreateImage(ImageCI, m_Desc.Name);
+        m_VkFormat     = ImageCI.format;
+        m_VkImageFlags = ImageCI.flags;
+        m_VkImageUsage = ImageCI.usage;
+
         if (m_Desc.Usage == USAGE_SPARSE)
         {
-            m_VulkanImage = LogicalDevice.CreateImage(ImageCI, m_Desc.Name);
-
             SetState(RESOURCE_STATE_UNDEFINED);
 
             InitSparseProperties();
         }
         else
         {
-            m_VulkanImage = LogicalDevice.CreateImage(ImageCI, m_Desc.Name);
-
             VkMemoryRequirements MemReqs = LogicalDevice.GetImageMemoryRequirements(m_VulkanImage);
 
             const VkMemoryPropertyFlags ImageMemoryFlags = IsMemoryless ? VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT : VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
@@ -292,6 +293,7 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
             VkDeviceMemory Memory = m_MemoryAllocation.Page->GetVkMemory();
             VkResult       err    = LogicalDevice.BindImageMemory(m_VulkanImage, Memory, AlignedOffset);
             CHECK_VK_ERROR_AND_THROW(err, "Failed to bind image memory");
+            m_AlignedMemoryOffset = AlignedOffset;
 
             if (InitContent)
             {
@@ -648,7 +650,7 @@ void TextureVkImpl::CreateStagingTexture(const TextureData* pInitData, const Tex
     VkResult err = LogicalDevice.BindBufferMemory(m_StagingBuffer, StagingBufferMemory, AlignedStagingMemOffset);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging buffer memory");
 
-    m_StagingDataAlignedOffset = AlignedStagingMemOffset;
+    m_AlignedMemoryOffset = AlignedStagingMemOffset;
 
     if (bInitializeTexture)
     {
@@ -691,6 +693,20 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
 
     if (m_Desc.Usage == USAGE_SPARSE)
         InitSparseProperties();
+}
+
+void TextureVkImpl::GetVkImageInfo(TextureNativeInfoVk& Info) const
+{
+    Info.Format       = m_VkFormat;
+    Info.Flags        = m_VkImageFlags;
+    Info.Usage        = m_VkImageUsage;
+    Info.Memory       = VK_NULL_HANDLE;
+    Info.MemoryOffset = 0;
+    if (m_VulkanImage && m_MemoryAllocation)
+    {
+        Info.Memory       = m_MemoryAllocation.Page->GetVkMemory();
+        Info.MemoryOffset = m_AlignedMemoryOffset;
+    }
 }
 
 void TextureVkImpl::CreateViewInternal(const TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView)
@@ -955,7 +971,7 @@ void TextureVkImpl::InvalidateStagingRange(VkDeviceSize Offset, VkDeviceSize Siz
     InvalidateRange.pNext  = nullptr;
     InvalidateRange.memory = m_MemoryAllocation.Page->GetVkMemory();
 
-    Offset += m_StagingDataAlignedOffset;
+    Offset += m_AlignedMemoryOffset;
     VkDeviceSize AlignedOffset = AlignDown(Offset, PhysDeviceLimits.nonCoherentAtomSize);
     Size += Offset - AlignedOffset;
     VkDeviceSize AlignedSize = AlignUp(Size, PhysDeviceLimits.nonCoherentAtomSize);

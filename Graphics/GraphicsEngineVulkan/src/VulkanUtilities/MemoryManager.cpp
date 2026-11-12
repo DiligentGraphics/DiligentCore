@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -225,7 +225,7 @@ void MemoryManager::ShrinkMemory()
         MemoryPage&  Page          = curr_it->second;
         bool         IsHostVisible = Page.GetCPUMemory() != nullptr;
         VkDeviceSize ReserveSize   = IsHostVisible ? m_HostVisibleReserveSize : m_DeviceLocalReserveSize;
-        if (Page.IsEmpty() && m_CurrAllocatedSize[IsHostVisible ? 1 : 0] > ReserveSize)
+        if (m_CurrAllocatedSize[IsHostVisible ? 1 : 0] > ReserveSize && Page.IsEmpty())
         {
             VkDeviceSize PageSize = Page.GetPageSize();
             m_CurrAllocatedSize[IsHostVisible ? 1 : 0] -= PageSize;

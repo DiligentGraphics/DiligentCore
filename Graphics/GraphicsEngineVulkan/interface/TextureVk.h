@@ -47,6 +47,26 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_TextureVk =
 
 // clang-format off
 
+/// Native creation parameters and memory binding of a Vulkan texture image.
+struct TextureNativeInfoVk
+{
+    /// Format of the image. VK_FORMAT_UNDEFINED indicates that image metadata is unavailable.
+    VkFormat           Format       DEFAULT_INITIALIZER(VK_FORMAT_UNDEFINED);
+
+    /// Image creation flags.
+    VkImageCreateFlags Flags        DEFAULT_INITIALIZER(0);
+
+    /// Image usage flags.
+    VkImageUsageFlags  Usage        DEFAULT_INITIALIZER(0);
+
+    /// Borrowed handle to the bound device memory, or VK_NULL_HANDLE if no single binding is known.
+    VkDeviceMemory     Memory       DEFAULT_INITIALIZER(VK_NULL_HANDLE);
+
+    /// Byte offset of the image in Memory. Valid only when Memory is non-null.
+    VkDeviceSize       MemoryOffset DEFAULT_INITIALIZER(0);
+};
+typedef struct TextureNativeInfoVk TextureNativeInfoVk;
+
 /// Exposes Vulkan-specific functionality of a texture object.
 DILIGENT_BEGIN_INTERFACE(ITextureVk, ITexture)
 {
@@ -66,6 +86,12 @@ DILIGENT_BEGIN_INTERFACE(ITextureVk, ITexture)
 
     /// Returns current Vulkan image layout. If the state is unknown to the engine, returns VK_IMAGE_LAYOUT_UNDEFINED
     VIRTUAL VkImageLayout METHOD(GetLayout)(THIS) CONST PURE;
+
+    /// Writes the native image information to Info. The texture retains ownership of its memory.
+    /// Buffer-backed staging textures and wrapped images (including swap chain backbuffers)
+    /// report VK_FORMAT_UNDEFINED and zero for the remaining fields. Engine-created sparse
+    /// images report their creation parameters with a null memory handle.
+    VIRTUAL void METHOD(GetVkImageInfo)(THIS_ TextureNativeInfoVk REF Info) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -78,6 +104,7 @@ DILIGENT_END_INTERFACE
 #    define ITextureVk_GetVkImage(This)     CALL_IFACE_METHOD(TextureVk, GetVkImage,This)
 #    define ITextureVk_SetLayout(This, ...) CALL_IFACE_METHOD(TextureVk, SetLayout, This, __VA_ARGS__)
 #    define ITextureVk_GetLayout(This)      CALL_IFACE_METHOD(TextureVk, GetLayout, This)
+#    define ITextureVk_GetVkImageInfo(This, ...) CALL_IFACE_METHOD(TextureVk, GetVkImageInfo, This, __VA_ARGS__)
 
 // clang-format on
 

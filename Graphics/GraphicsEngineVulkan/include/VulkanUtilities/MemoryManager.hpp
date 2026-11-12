@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -125,14 +125,15 @@ public:
     MemoryPage& operator= (MemoryPage&)       = delete;
     MemoryPage& operator= (MemoryPage&& rhs)  = delete;
 
-    bool IsEmpty() const { return m_AllocationMgr.IsEmpty(); }
-    bool IsFull()  const { return m_AllocationMgr.IsFull();  }
-    VkDeviceSize GetPageSize() const { return m_AllocationMgr.GetMaxSize();  }
-    VkDeviceSize GetUsedSize() const { return m_AllocationMgr.GetUsedSize(); }
-
     // clang-format on
 
-    MemoryAllocation Allocate(VkDeviceSize size, VkDeviceSize alignment);
+    bool IsEmpty() const
+    {
+        std::lock_guard<std::mutex> Lock{m_Mutex};
+        return m_AllocationMgr.IsEmpty();
+    }
+
+    VkDeviceSize GetPageSize() const { return m_AllocationMgr.GetMaxSize(); }
 
     VkDeviceMemory GetVkMemory() const { return m_VkMemory; }
     void*          GetCPUMemory() const { return m_CPUMemory; }
@@ -140,13 +141,17 @@ public:
 private:
     using AllocationsMgrOffsetType = Diligent::VariableSizeAllocationsManager::OffsetType;
 
+    friend class MemoryManager;
     friend struct MemoryAllocation;
+
+    // MemoryManager holds m_PagesMtx while allocating so ShrinkMemory() cannot erase this page.
+    MemoryAllocation Allocate(VkDeviceSize size, VkDeviceSize alignment);
 
     // Memory is reclaimed immediately. The application is responsible to ensure it is not in use by the GPU
     void Free(MemoryAllocation&& Allocation);
 
     MemoryManager&                           m_ParentMemoryMgr;
-    std::mutex                               m_Mutex;
+    mutable std::mutex                       m_Mutex;
     Diligent::VariableSizeAllocationsManager m_AllocationMgr;
     VulkanUtilities::DeviceMemoryWrapper     m_VkMemory;
     void*                                    m_CPUMemory = nullptr;

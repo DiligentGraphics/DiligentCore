@@ -2,6 +2,7 @@
 
 ## Current progress
 
+* Added `ITextureVk::GetVkImageInfo()` and `IBufferVk::GetVkBufferInfo()` to query native Vulkan resource creation parameters and memory bindings (API256021)
 * Added success results, probe mode, and path separator normalization to `IShaderSourceInputStreamFactory::CreateInputStream()` and `CreateInputStream2()` (API256020)
 * Added `SHADER_OPTIMIZATION_LEVEL` enum and `ShaderCreateInfo::ShaderOptimizationLevel` member (API256019)
 * Added `ShaderFloat64` and `ShaderBarycentrics` members to `DeviceFeatures` struct (API256018)
