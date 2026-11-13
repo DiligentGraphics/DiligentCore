@@ -25,6 +25,8 @@
  */
 
 
+#include <atomic>
+
 #include "WebGPU/TestingSwapChainWebGPU.hpp"
 #include "WebGPU/TestingEnvironmentWebGPU.hpp"
 
@@ -176,7 +178,10 @@ void TestingSwapChainWebGPU::ReleaseBackendResources()
 
 void TestingSwapChainWebGPU::TakeSnapshot(ITexture* pCopyFrom)
 {
-    m_CompareAlpha = true;
+    m_ReferenceData.clear();
+#if PLATFORM_WEB
+    ASSERT_TRUE(emscripten_has_asyncify()) << "WebGPU snapshot readback requires Asyncify or JSPI.";
+#endif
 
     RefCntAutoPtr<IDeviceContextWebGPU> pContextWebGPU{m_pContext, IID_DeviceContextWebGPU};
 
@@ -218,41 +223,37 @@ void TestingSwapChainWebGPU::TakeSnapshot(ITexture* pCopyFrom)
     wgpuCommandEncoderRelease(wgpuCmdEncoder);
     wgpuCommandBufferRelease(wgpuCmdBuffer);
 
-    const size_t              DataSize = size_t{m_StagingRowPitch} * m_SwapChainDesc.Height;
-    WGPUBufferMapCallbackInfo CallbackInfo{};
+    const size_t DataSize = size_t{m_StagingRowPitch} * m_SwapChainDesc.Height;
+    // All WebGPU map results are nonzero. The callback publishes the result on success or failure.
+    constexpr WGPUMapAsyncStatus    Pending{};
+    std::atomic<WGPUMapAsyncStatus> MapStatus{Pending};
+    WGPUBufferMapCallbackInfo       CallbackInfo{};
     CallbackInfo.mode      = DefaultWGPUCallbackMode;
-    CallbackInfo.userdata1 = this;
-    CallbackInfo.callback  = [](WGPUMapAsyncStatus MapStatus, WGPUStringView Message, void* pUserData, void* pUserData2) {
-        if (MapStatus == WGPUMapAsyncStatus_Success)
-        {
-            const auto pThis = static_cast<TestingSwapChainWebGPU*>(pUserData);
-
-            pThis->m_ReferenceDataPitch = pThis->m_SwapChainDesc.Width * 4;
-            pThis->m_ReferenceData.resize(pThis->m_ReferenceDataPitch * pThis->m_SwapChainDesc.Height);
-
-            const auto* pMappedData = static_cast<const Uint8*>(wgpuBufferGetConstMappedRange(
-                pThis->m_wgpuStagingBuffer, 0, size_t{pThis->m_StagingRowPitch} * pThis->m_SwapChainDesc.Height));
-            VERIFY_EXPR(pMappedData != nullptr);
-
-            for (Uint32 Row = 0; Row < pThis->m_SwapChainDesc.Height; ++Row)
-            {
-                memcpy(pThis->m_ReferenceData.data() + size_t{Row} * pThis->m_ReferenceDataPitch,
-                       pMappedData + size_t{Row} * pThis->m_StagingRowPitch,
-                       pThis->m_ReferenceDataPitch);
-            }
-            wgpuBufferUnmap(pThis->m_wgpuStagingBuffer);
-        }
-        else
-        {
-            ADD_FAILURE() << "Failing to map staging buffer";
-        }
+    CallbackInfo.userdata1 = &MapStatus;
+    CallbackInfo.callback  = [](WGPUMapAsyncStatus Status, WGPUStringView, void* pUserData, void*) {
+        static_cast<std::atomic<WGPUMapAsyncStatus>*>(pUserData)->store(Status, std::memory_order_release);
     };
     wgpuBufferMapAsync(m_wgpuStagingBuffer, WGPUMapMode_Read, 0, DataSize, CallbackInfo);
 
 #if !PLATFORM_WEB
     RefCntAutoPtr<IRenderDeviceWebGPU> pDeviceWebGPU{m_pDevice, IID_RenderDeviceWebGPU};
-    wgpuInstanceProcessEvents(pDeviceWebGPU->GetWebGPUInstance());
 #endif
+    while (MapStatus.load(std::memory_order_acquire) == Pending)
+    {
+#if PLATFORM_WEB
+        emscripten_sleep(1);
+#else
+        wgpuInstanceProcessEvents(pDeviceWebGPU->GetWebGPUInstance());
+#endif
+    }
+    ASSERT_EQ(MapStatus.load(), WGPUMapAsyncStatus_Success) << "Failed to map the reference staging buffer.";
+
+    const void* pMappedData = wgpuBufferGetConstMappedRange(m_wgpuStagingBuffer, 0, DataSize);
+    if (pMappedData != nullptr)
+        SetReferenceData(pMappedData, m_StagingRowPitch);
+    else
+        ADD_FAILURE() << "The reference staging buffer has no mapped data.";
+    wgpuBufferUnmap(m_wgpuStagingBuffer);
 }
 
 void CreateTestingSwapChainWebGPU(TestingEnvironmentWebGPU* pEnv,

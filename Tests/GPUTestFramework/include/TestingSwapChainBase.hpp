@@ -339,6 +339,8 @@ public:
 
     virtual void CompareWithSnapshot(ITexture* pTexture) override
     {
+        ASSERT_FALSE(m_ReferenceData.empty()) << "No reference snapshot is available.";
+
         if (pTexture == nullptr)
             pTexture = m_pRenderTarget;
 
