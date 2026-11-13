@@ -42,10 +42,15 @@ class TrackingMemoryManager : public VulkanUtilities::MemoryManager
 {
 public:
     using MemoryManager::MemoryManager;
-    size_t LivePages = 0;
+    size_t LivePages     = 0;
+    size_t CreatedPages = 0;
 
 private:
-    void OnNewPageCreated(VulkanUtilities::MemoryPage&) override { ++LivePages; }
+    void OnNewPageCreated(VulkanUtilities::MemoryPage&) override
+    {
+        ++LivePages;
+        ++CreatedPages;
+    }
     void OnPageDestroy(VulkanUtilities::MemoryPage&) override { --LivePages; }
 };
 
@@ -105,6 +110,105 @@ TEST(VulkanMemoryManagerTest, OversizedPages)
             ASSERT_TRUE(Boundary);
             EXPECT_EQ(Mgr.LivePages, 1u);
             EXPECT_EQ(Boundary.Page->GetPageSize(), PageSize);
+        }
+    }
+}
+
+TEST(VulkanMemoryManagerTest, ReuseEmptyOversizedPage)
+{
+    auto* pEnv = GPUTestingEnvironment::GetInstance();
+    if (pEnv->GetDevice()->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_VULKAN)
+        GTEST_SKIP();
+
+    auto*                  pDevice  = static_cast<RenderDeviceVkImpl*>(pEnv->GetDevice());
+    constexpr VkDeviceSize PageSize = 64 << 10;
+    for (bool HostVisible : {false, true})
+    {
+        SCOPED_TRACE(HostVisible ? "host-visible" : "device-local");
+        const VkMemoryPropertyFlags Props = HostVisible ? VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT : VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        const uint32_t              Type  = pDevice->GetPhysicalDevice().GetMemoryTypeIndex(~0u, Props);
+        ASSERT_NE(Type, VulkanUtilities::PhysicalDevice::InvalidMemoryTypeIndex);
+        TrackingMemoryManager Mgr{"Oversized reuse test", pDevice->GetLogicalDevice(),
+                                  pDevice->GetPhysicalDevice(), DefaultRawMemoryAllocator::GetAllocator(),
+                                  PageSize, PageSize, 2 * PageSize, 2 * PageSize};
+        VulkanUtilities::MemoryPage* OriginalPage = nullptr;
+        {
+            auto Large = Mgr.Allocate(3 * PageSize / 2, 256, Type, HostVisible, 0);
+            ASSERT_TRUE(Large);
+            OriginalPage = Large.Page;
+            // Match collection before completed deferred releases are purged.
+            Mgr.ShrinkMemory();
+        }
+        {
+            auto Replacement = Mgr.Allocate(3 * PageSize / 2, 256, Type, HostVisible, 0);
+            ASSERT_TRUE(Replacement);
+            EXPECT_EQ(Replacement.Page, OriginalPage);
+            EXPECT_EQ(Mgr.CreatedPages, 1u);
+            EXPECT_EQ(Mgr.LivePages, 1u);
+            auto Small = Mgr.Allocate(256, 256, Type, HostVisible, 0);
+            ASSERT_TRUE(Small);
+            EXPECT_NE(Small.Page, Replacement.Page);
+        }
+        Mgr.ShrinkMemory();
+        EXPECT_EQ(Mgr.LivePages, 1u);
+    }
+}
+
+TEST(VulkanMemoryManagerTest, OversizedPagesPreserveSharedReserve)
+{
+    auto* pEnv = GPUTestingEnvironment::GetInstance();
+    if (pEnv->GetDevice()->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_VULKAN)
+        GTEST_SKIP();
+
+    auto*                  pDevice  = static_cast<RenderDeviceVkImpl*>(pEnv->GetDevice());
+    constexpr VkDeviceSize PageSize = 64 << 10;
+    for (bool HostVisible : {false, true})
+    {
+        SCOPED_TRACE(HostVisible ? "host-visible" : "device-local");
+        const VkMemoryPropertyFlags Props = HostVisible ? VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT : VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        const uint32_t              Type  = pDevice->GetPhysicalDevice().GetMemoryTypeIndex(~0u, Props);
+        ASSERT_NE(Type, VulkanUtilities::PhysicalDevice::InvalidMemoryTypeIndex);
+        for (bool LargeFirst : {false, true})
+        {
+            SCOPED_TRACE(LargeFirst);
+            TrackingMemoryManager Mgr{"Shared reserve test", pDevice->GetLogicalDevice(),
+                                      pDevice->GetPhysicalDevice(), DefaultRawMemoryAllocator::GetAllocator(),
+                                      PageSize, PageSize, 2 * PageSize, 2 * PageSize};
+            VulkanUtilities::MemoryAllocation Large;
+            if (LargeFirst)
+                Large = Mgr.Allocate(3 * PageSize / 2, 256, Type, HostVisible, 0);
+            {
+                auto Small = Mgr.Allocate(256, 256, Type, HostVisible, 0);
+                ASSERT_TRUE(Small);
+                if (!LargeFirst)
+                    Large = Mgr.Allocate(3 * PageSize / 2, 256, Type, HostVisible, 0);
+                ASSERT_TRUE(Large);
+            }
+            Mgr.ShrinkMemory();
+            EXPECT_EQ(Mgr.LivePages, 2u);
+            {
+                auto Released = std::move(Large);
+            }
+            Mgr.ShrinkMemory();
+            EXPECT_EQ(Mgr.LivePages, 1u);
+            const auto CreatedPages = Mgr.CreatedPages;
+            {
+                auto Small = Mgr.Allocate(PageSize, 256, Type, HostVisible, 0);
+                ASSERT_TRUE(Small);
+                EXPECT_EQ(Mgr.CreatedPages, CreatedPages);
+            }
+            // The reserve remains a limit: excess empty shared pages are collected.
+            {
+                auto First  = Mgr.Allocate(PageSize, 256, Type, HostVisible, 0);
+                auto Second = Mgr.Allocate(PageSize, 256, Type, HostVisible, 0);
+                auto Third  = Mgr.Allocate(PageSize, 256, Type, HostVisible, 0);
+                ASSERT_TRUE(First);
+                ASSERT_TRUE(Second);
+                ASSERT_TRUE(Third);
+                EXPECT_EQ(Mgr.LivePages, 3u);
+            }
+            Mgr.ShrinkMemory();
+            EXPECT_EQ(Mgr.LivePages, 2u);
         }
     }
 }

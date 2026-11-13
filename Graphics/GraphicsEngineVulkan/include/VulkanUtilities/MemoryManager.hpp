@@ -132,7 +132,7 @@ public:
 
     // clang-format on
 
-    MemoryAllocation Allocate(VkDeviceSize size, VkDeviceSize alignment);
+    MemoryAllocation Allocate(VkDeviceSize size, VkDeviceSize alignment, bool RequireEmpty = false);
 
     VkDeviceMemory GetVkMemory() const { return m_VkMemory; }
     void*          GetCPUMemory() const { return m_CPUMemory; }

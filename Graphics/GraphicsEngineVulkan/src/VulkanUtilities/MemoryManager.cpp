@@ -96,9 +96,11 @@ MemoryPage::~MemoryPage()
     VERIFY(IsEmpty(), "Destroying a page with not all allocations released");
 }
 
-MemoryAllocation MemoryPage::Allocate(VkDeviceSize size, VkDeviceSize alignment)
+MemoryAllocation MemoryPage::Allocate(VkDeviceSize size, VkDeviceSize alignment, bool RequireEmpty)
 {
     std::lock_guard<std::mutex> Lock{m_Mutex};
+    if (RequireEmpty && !m_AllocationMgr.IsEmpty())
+        return MemoryAllocation{};
     VERIFY(size <= std::numeric_limits<AllocationsMgrOffsetType>::max(),
            "Allocation size (", size, ") exceeds maximum allowed value ",
            std::numeric_limits<AllocationsMgrOffsetType>::max());
@@ -178,11 +180,9 @@ MemoryAllocation MemoryManager::Allocate(VkDeviceSize Size, VkDeviceSize Alignme
     auto range = m_Pages.equal_range(PageIdx);
     for (auto page_it = range.first; page_it != range.second; ++page_it)
     {
-        // Oversized pages belong to a single allocation and must never be shared.
-        if (page_it->second.GetPageSize() > BasePageSize)
-            continue;
-
-        Allocation = page_it->second.Allocate(Size, Alignment);
+        // Reuse empty oversized pages, but never share a live oversized allocation.
+        // Check emptiness under the page lock, since releases may run concurrently.
+        Allocation = page_it->second.Allocate(Size, Alignment, page_it->second.GetPageSize() > BasePageSize);
         if (Allocation.Page != nullptr)
             break;
     }
@@ -220,6 +220,16 @@ void MemoryManager::ShrinkMemory()
 {
     std::lock_guard<std::mutex> Lock{m_PagesMtx};
 
+    // Isolated pages must not consume the reserve for shared pages.
+    std::array<VkDeviceSize, 2> SharedAllocatedSize = {};
+    for (const auto& Entry : m_Pages)
+    {
+        const bool         HostVisible  = Entry.first.IsHostVisible;
+        const VkDeviceSize BasePageSize = HostVisible ? m_HostVisiblePageSize : m_DeviceLocalPageSize;
+        if (Entry.second.GetPageSize() <= BasePageSize)
+            SharedAllocatedSize[HostVisible ? 1 : 0] += Entry.second.GetPageSize();
+    }
+
     auto it = m_Pages.begin();
     while (it != m_Pages.end())
     {
@@ -229,9 +239,11 @@ void MemoryManager::ShrinkMemory()
         bool         IsHostVisible = Page.GetCPUMemory() != nullptr;
         VkDeviceSize ReserveSize   = IsHostVisible ? m_HostVisibleReserveSize : m_DeviceLocalReserveSize;
         VkDeviceSize BasePageSize  = IsHostVisible ? m_HostVisiblePageSize : m_DeviceLocalPageSize;
-        if (Page.IsEmpty() && (Page.GetPageSize() > BasePageSize || m_CurrAllocatedSize[IsHostVisible ? 1 : 0] > ReserveSize))
+        if (Page.IsEmpty() && (Page.GetPageSize() > BasePageSize || SharedAllocatedSize[IsHostVisible ? 1 : 0] > ReserveSize))
         {
             VkDeviceSize PageSize = Page.GetPageSize();
+            if (PageSize <= BasePageSize)
+                SharedAllocatedSize[IsHostVisible ? 1 : 0] -= PageSize;
             m_CurrAllocatedSize[IsHostVisible ? 1 : 0] -= PageSize;
             LOG_INFO_MESSAGE("MemoryManager '", m_MgrName, "': destroying ", (IsHostVisible ? "host-visible" : "device-local"),
                              " page (", Diligent::FormatMemorySize(PageSize, 2),
