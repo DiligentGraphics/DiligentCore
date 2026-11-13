@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,4 +37,6 @@ void TestBufferVk_CInterface(IBufferVk* pView)
     (void)vkAccessFlag;
     VkDeviceAddress vkAddr = IBufferVk_GetVkDeviceAddress(pView);
     (void)vkAddr;
+    BufferNativeInfoVk Info;
+    IBufferVk_GetVkBufferInfo(pView, &Info);
 }

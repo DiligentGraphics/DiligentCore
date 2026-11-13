@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -94,24 +94,6 @@ MemoryPage::~MemoryPage()
     }
 
     VERIFY(IsEmpty(), "Destroying a page with not all allocations released");
-}
-
-bool MemoryPage::IsEmpty() const
-{
-    std::lock_guard<std::mutex> Lock{m_Mutex};
-    return m_AllocationMgr.IsEmpty();
-}
-
-bool MemoryPage::IsFull() const
-{
-    std::lock_guard<std::mutex> Lock{m_Mutex};
-    return m_AllocationMgr.IsFull();
-}
-
-VkDeviceSize MemoryPage::GetUsedSize() const
-{
-    std::lock_guard<std::mutex> Lock{m_Mutex};
-    return m_AllocationMgr.GetUsedSize();
 }
 
 MemoryAllocation MemoryPage::Allocate(VkDeviceSize size, VkDeviceSize alignment, bool RequireEmpty)
@@ -291,7 +273,7 @@ void MemoryManager::ShrinkMemory()
         bool         IsHostVisible = Page.GetCPUMemory() != nullptr;
         VkDeviceSize ReserveSize   = IsHostVisible ? m_HostVisibleReserveSize : m_DeviceLocalReserveSize;
         VkDeviceSize BasePageSize  = IsHostVisible ? m_HostVisiblePageSize : m_DeviceLocalPageSize;
-        if (Page.IsEmpty() && (Page.GetPageSize() > BasePageSize || SharedAllocatedSize[IsHostVisible ? 1 : 0] > ReserveSize))
+        if ((Page.GetPageSize() > BasePageSize || SharedAllocatedSize[IsHostVisible ? 1 : 0] > ReserveSize) && Page.IsEmpty())
         {
             VkDeviceSize PageSize = Page.GetPageSize();
             if (PageSize <= BasePageSize)

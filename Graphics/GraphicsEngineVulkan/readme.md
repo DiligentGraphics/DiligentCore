@@ -18,10 +18,12 @@ Below are some of the methods that provide access to internal Vulkan objects:
 | `IBufferVk::SetAccessFlags`                 | sets the access flags for the buffer                                     |
 | `IBufferVk::GetAccessFlags`                 | returns the buffer access flags                                          |
 | `IBufferVk::GetVkDeviceAddress`             | returns a Vulkan device address of the internal buffer object            |
+| `IBufferVk::GetVkBufferInfo`                | returns the native buffer creation flags, usage, and memory binding      |
 | `IBufferViewVk::GetVkBufferView`            | returns a Vulkan handle of the internal buffer view object               |
 | `ITextureVk::GetVkImage`                    | returns a Vulkan handle of the internal image object                     |
 | `ITextureVk::SetLayout`                     | sets the Vulkan image resource layout                                    |
 | `ITextureVk::GetLayout`                     | returns the Vulkan image resource layout                                 |
+| `ITextureVk::GetVkImageInfo`                | returns the native image format, creation flags, usage, and memory binding |
 | `ITextureViewVk::GetVulkanImageView`        | returns Vulkan handle of the internal image view object                  |
 | `IDeviceContextVk::TransitionImageLayout`   | transitions the internal Vulkan image to the specified layout            |
 | `IDeviceContextVk::BufferMemoryBarrier`     | transitions the internal Vulkan buffer object to the specified state     |

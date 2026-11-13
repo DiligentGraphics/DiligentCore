@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,6 +32,9 @@ void TestTextureVk_CInterface(ITextureVk* pTexture)
 {
     VkImage vkImg = ITextureVk_GetVkImage(pTexture);
     (void)vkImg;
+
+    TextureNativeInfoVk Info;
+    ITextureVk_GetVkImageInfo(pTexture, &Info);
 
     ITextureVk_SetLayout(pTexture, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,6 +47,23 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_BufferVk =
 
 // clang-format off
 
+/// Native creation parameters and memory binding of a Vulkan buffer.
+struct BufferNativeInfoVk
+{
+    /// Buffer creation flags.
+    VkBufferCreateFlags Flags        DEFAULT_INITIALIZER(0);
+
+    /// Buffer usage flags. Zero indicates that creation metadata is unavailable.
+    VkBufferUsageFlags  Usage        DEFAULT_INITIALIZER(0);
+
+    /// Borrowed handle to the bound device memory, or VK_NULL_HANDLE if no single binding is known.
+    VkDeviceMemory      Memory       DEFAULT_INITIALIZER(VK_NULL_HANDLE);
+
+    /// Byte offset passed to vkBindBufferMemory. Valid only when Memory is non-null.
+    VkDeviceSize        MemoryOffset DEFAULT_INITIALIZER(0);
+};
+typedef struct BufferNativeInfoVk BufferNativeInfoVk;
+
 /// Exposes Vulkan-specific functionality of a buffer object.
 DILIGENT_BEGIN_INTERFACE(IBufferVk, IBuffer)
 {
@@ -67,6 +84,12 @@ DILIGENT_BEGIN_INTERFACE(IBufferVk, IBuffer)
 
     /// Returns a Vulkan device address of the internal buffer object.
     VIRTUAL VkDeviceAddress METHOD(GetVkDeviceAddress)(THIS) CONST PURE;
+
+    /// Writes the native buffer information to Info. The buffer retains ownership of its memory.
+    /// Wrapped buffers and dynamic buffers suballocated from the shared upload buffer report
+    /// zero for all fields. Dynamic buffers with their own VkBuffer report its creation parameters
+    /// and binding. Engine-created sparse buffers report their creation parameters with a null memory handle.
+    VIRTUAL void METHOD(GetVkBufferInfo)(THIS_ BufferNativeInfoVk REF Info) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -78,6 +101,7 @@ DILIGENT_END_INTERFACE
 #    define IBufferVk_SetAccessFlags(This, ...) CALL_IFACE_METHOD(BufferVk, SetAccessFlags, This, __VA_ARGS__)
 #    define IBufferVk_GetAccessFlags(This)      CALL_IFACE_METHOD(BufferVk, GetAccessFlags, This)
 #    define IBufferVk_GetVkDeviceAddress(This)  CALL_IFACE_METHOD(BufferVk, GetVkDeviceAddress, This)
+#    define IBufferVk_GetVkBufferInfo(This, ...) CALL_IFACE_METHOD(BufferVk, GetVkBufferInfo, This, __VA_ARGS__)
 
 #endif
 
