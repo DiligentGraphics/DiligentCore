@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2025 Diligent Graphics LLC
+ *  Copyright 2023-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,6 +25,10 @@
  */
 
 #include "pch.h"
+
+#if PLATFORM_WEB
+#    include <emscripten.h>
+#endif
 
 #include "FenceWebGPUImpl.hpp"
 #include "GraphicsAccessories.hpp"
@@ -87,11 +91,21 @@ void FenceWebGPUImpl::Signal(Uint64 Value)
 void FenceWebGPUImpl::Wait(Uint64 Value)
 {
 #if PLATFORM_WEB
-    LOG_ERROR_MESSAGE("IFence::Wait() is not supported on the Web. Use non-blocking synchronization methods.");
-#else
+    // Emscripten reports both Asyncify and JSPI through this query.
+    if (!emscripten_has_asyncify())
+    {
+        LOG_ERROR_MESSAGE("IFence::Wait() requires Asyncify or JSPI on the Web. Use non-blocking synchronization methods.");
+        return;
+    }
+#endif
     while (GetCompletedValue() < Value)
+    {
+#if PLATFORM_WEB
+        emscripten_sleep(1);
+#else
         m_pDevice->DeviceTick();
 #endif
+    }
 }
 
 void FenceWebGPUImpl::AppendSyncPoints(const std::vector<RefCntAutoPtr<SyncPointWebGPUImpl>>& SyncPoints, Uint64 Value)

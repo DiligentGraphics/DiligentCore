@@ -26,6 +26,10 @@
 
 #include "pch.h"
 
+#if PLATFORM_WEB
+#    include <emscripten.h>
+#endif
+
 #include "DeviceContextWebGPUImpl.hpp"
 #include "RenderDeviceWebGPUImpl.hpp"
 #include "TextureWebGPUImpl.hpp"
@@ -1368,10 +1372,13 @@ void DeviceContextWebGPUImpl::WaitForIdle()
 {
     Flush();
 #if PLATFORM_WEB
-    LOG_ERROR_MESSAGE("IDeviceContext::WaitForIdle() is not supported on the Web. Use non-blocking synchronization methods.");
-#else
-    m_pFence->Wait(m_FenceValue);
+    if (!emscripten_has_asyncify())
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::WaitForIdle() requires Asyncify or JSPI on the Web. Use non-blocking synchronization methods.");
+        return;
+    }
 #endif
+    m_pFence->Wait(m_FenceValue);
 }
 
 void DeviceContextWebGPUImpl::BeginQuery(IQuery* pQuery)

@@ -101,7 +101,7 @@ void TestingEnvironmentWebGPU::SubmitCommandEncoder(WGPUCommandEncoder wgpuCmdEn
     if (WaitForIdle)
     {
 #if PLATFORM_WEB
-        LOG_ERROR_MESSAGE("Waiting for submitted WebGPU work is not supported on the Web. Use non-blocking synchronization methods.");
+        GetDeviceContext()->WaitForIdle();
 #else
         bool IsWorkDone       = false;
         auto WorkDoneCallback = [](WGPUQueueWorkDoneStatus Status, WGPUStringView Message, void* pUserData, void* pUserData2) {

@@ -348,12 +348,15 @@ WGPUDevice RenderDeviceWebGPUImpl::GetWebGPUDevice() const
 void RenderDeviceWebGPUImpl::IdleGPU()
 {
 #if PLATFORM_WEB
-    LOG_ERROR_MESSAGE("IRenderDevice::IdleGPU() is not supported on the Web. Use non-blocking synchronization methods.");
-#else
+    if (!emscripten_has_asyncify())
+    {
+        LOG_ERROR_MESSAGE("IRenderDevice::IdleGPU() requires Asyncify or JSPI on the Web. Use non-blocking synchronization methods.");
+        return;
+    }
+#endif
     VERIFY_EXPR(m_wpImmediateContexts.size() == 1);
     if (RefCntAutoPtr<DeviceContextWebGPUImpl> pImmediateCtx = m_wpImmediateContexts[0].Lock())
         pImmediateCtx->WaitForIdle();
-#endif
 }
 
 void RenderDeviceWebGPUImpl::CreateTextureFromWebGPUTexture(WGPUTexture        wgpuTexture,
