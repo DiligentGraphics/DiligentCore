@@ -192,6 +192,11 @@ if ((${DILIGENT_BUILD_GOOGLE_TEST}) AND (NOT TARGET gtest))
     if (PLATFORM_WEB)
         find_targets_in_directory(GTEST_TARGETS ${GTEST_SOURCE_DIR})
         set_targets_emscripten_properties(${GTEST_TARGETS})
+
+        # Google Test normally calls each test body inside a C++ try block. Emscripten
+        # implements that call through a JavaScript wrapper, which prevents JSPI
+        # from suspending a GPU wait. Compile the gtest dispatcher without the wrapper.
+        target_compile_options(gtest PRIVATE "-fno-exceptions")
     endif()
 endif()
 
