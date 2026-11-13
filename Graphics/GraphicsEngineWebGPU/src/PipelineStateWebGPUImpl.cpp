@@ -789,21 +789,8 @@ PIPELINE_STATE_STATUS PipelineStateWebGPUImpl::GetStatus(bool WaitForCompletion)
     // Check the status of asynchronous tasks.
 #if PLATFORM_WEB
     PIPELINE_STATE_STATUS Status = TPipelineStateBase::GetStatus(false);
-    while (Status == PIPELINE_STATE_STATUS_COMPILING)
-    {
-        if (!AsyncInitializer::GetAsyncTask(m_AsyncInitializer))
-        {
-            // A finished worker has already published READY or FAILED. Mark cancellation
-            // only if the pipeline is still COMPILING after the task is gone.
-            if (m_Status.compare_exchange_strong(Status, PIPELINE_STATE_STATUS_FAILED))
-                return PIPELINE_STATE_STATUS_FAILED;
-            break;
-        }
-        if (!WaitForCompletion || !YieldForPipelineCompilation())
-            return Status;
-
+    while (WaitForCompletion && Status == PIPELINE_STATE_STATUS_COMPILING && YieldForPipelineCompilation())
         Status = TPipelineStateBase::GetStatus(false);
-    }
 #else
     PIPELINE_STATE_STATUS Status = TPipelineStateBase::GetStatus(WaitForCompletion);
 #endif

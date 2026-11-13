@@ -1396,6 +1396,8 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     ///                                 If false, the method will return the pipeline state status without waiting.
     /// 							    This parameter is ignored if the pipeline state was compiled synchronously.
     ///
+    /// If the queued compilation task is cancelled, both polling and waiting return Diligent::PIPELINE_STATE_STATUS_FAILED.
+    ///
     /// On WebGPU in the browser, waiting for a compiling pipeline requires Asyncify or JSPI.
     /// Otherwise the method logs an error and returns Diligent::PIPELINE_STATE_STATUS_COMPILING.
     ///

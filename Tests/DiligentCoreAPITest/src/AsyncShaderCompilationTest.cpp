@@ -40,6 +40,12 @@
 #include "Timer.hpp"
 #include "GraphicsTypesX.hpp"
 
+#if ARCHIVER_SUPPORTED
+#    include "GraphicsAccessories.hpp"
+#    include "SerializationDevice.h"
+#    include "ThreadPool.hpp"
+#endif
+
 using namespace Diligent;
 using namespace Diligent::Testing;
 
@@ -243,5 +249,111 @@ TEST(Shader, AsyncPipeline_AsyncShaders)
 {
     TestAsyncPipeline(SHADER_COMPILE_FLAG_ASYNCHRONOUS, PSO_CREATE_FLAG_ASYNCHRONOUS);
 }
+
+#if ARCHIVER_SUPPORTED
+// Record the task submitted by the archiver so the test can remove it before it runs.
+class ManualCompilationPool final : public ObjectBase<IThreadPool>
+{
+public:
+    using TBase = ObjectBase<IThreadPool>;
+    explicit ManualCompilationPool(IReferenceCounters* pRefCounters) :
+        TBase{pRefCounters}
+    {}
+
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ThreadPool, TBase)
+
+    bool DILIGENT_CALL_TYPE EnqueueTask(IAsyncTask* pTask, IAsyncTask** ppPrerequisites, Uint32 NumPrerequisites) override
+    {
+        pQueuedTask = pTask;
+        return m_pPool->EnqueueTask(pTask, ppPrerequisites, NumPrerequisites);
+    }
+
+    bool DILIGENT_CALL_TYPE   RemoveTask(IAsyncTask* pTask) override { return m_pPool->RemoveTask(pTask); }
+    bool DILIGENT_CALL_TYPE   ReprioritizeTask(IAsyncTask* pTask) override { return m_pPool->ReprioritizeTask(pTask); }
+    void DILIGENT_CALL_TYPE   ReprioritizeAllTasks() override { m_pPool->ReprioritizeAllTasks(); }
+    void DILIGENT_CALL_TYPE   WaitForAllTasks() override { m_pPool->WaitForAllTasks(); }
+    Uint32 DILIGENT_CALL_TYPE GetQueueSize() override { return m_pPool->GetQueueSize(); }
+    Uint32 DILIGENT_CALL_TYPE GetRunningTaskCount() const override { return m_pPool->GetRunningTaskCount(); }
+    void DILIGENT_CALL_TYPE   StopThreads() override { m_pPool->StopThreads(); }
+    bool DILIGENT_CALL_TYPE   ProcessTask(Uint32 ThreadId, bool WaitForTask) override { return m_pPool->ProcessTask(ThreadId, WaitForTask); }
+
+    RefCntAutoPtr<IAsyncTask> pQueuedTask;
+
+private:
+    const RefCntAutoPtr<IThreadPool> m_pPool = CreateThreadPool(ThreadPoolCreateInfo{0});
+};
+
+TEST(Shader, AsyncPipeline_CancelledSerializedPipeline)
+{
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IArchiverFactory*      pFactory = pEnv->GetArchiverFactory();
+    if (pFactory == nullptr)
+        GTEST_SKIP() << "Archiver library is not loaded";
+
+    RefCntAutoPtr<ManualCompilationPool> pPool{MakeNewRCObj<ManualCompilationPool>()()};
+    SerializationDeviceCreateInfo        DeviceCI;
+    DeviceCI.pAsyncShaderCompilationThreadPool = pPool;
+    RefCntAutoPtr<ISerializationDevice> pDevice;
+    pFactory->CreateSerializationDevice(DeviceCI, &pDevice);
+    ASSERT_NE(pDevice, nullptr);
+
+    const RenderDeviceInfo&         DeviceInfo = pEnv->GetDevice()->GetDeviceInfo();
+    const ARCHIVE_DEVICE_DATA_FLAGS Target     = RenderDeviceTypeToArchiveDataFlag(DeviceInfo.Type);
+    if ((pDevice->GetSerializationDeviceInfo().SupportedArchiveTargets & Target) == 0)
+        GTEST_SKIP() << "The serialization device does not support the active backend";
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.Desc           = {"Cancellation test CS", SHADER_TYPE_COMPUTE};
+    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.Source         = "[numthreads(1, 1, 1)] void main() {}";
+    if (DeviceInfo.IsWebGPUDevice())
+    {
+        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_WGSL;
+        ShaderCI.Source         = "@compute @workgroup_size(1) fn main() {}";
+    }
+    else if (DeviceInfo.IsGLDevice())
+    {
+        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL;
+        ShaderCI.Source         = "layout(local_size_x = 1) in; void main() {}";
+    }
+    ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+
+    RefCntAutoPtr<IShader> pCS;
+    pDevice->CreateShader(ShaderCI, ShaderArchiveInfo{Target}, &pCS);
+    ASSERT_NE(pCS, nullptr);
+
+    ComputePipelineStateCreateInfo PSOCreateInfo;
+    PSOCreateInfo.PSODesc.Name = "Cancelled serialized pipeline";
+    PSOCreateInfo.Flags        = PSO_CREATE_FLAG_ASYNCHRONOUS;
+    PSOCreateInfo.pCS          = pCS;
+    PipelineStateArchiveInfo ArchiveInfo;
+    ArchiveInfo.DeviceFlags = Target;
+    for (bool RetainTask : {true, false})
+    {
+        for (bool Wait : {false, true})
+        {
+            SCOPED_TRACE(testing::Message() << "RetainTask=" << RetainTask << ", Wait=" << Wait);
+            RefCntAutoPtr<IPipelineState> pPSO;
+            pDevice->CreateComputePipelineState(PSOCreateInfo, ArchiveInfo, &pPSO);
+            RefCntAutoPtr<IAsyncTask> pTask = std::move(pPool->pQueuedTask);
+            ASSERT_NE(pPSO, nullptr);
+            ASSERT_NE(pTask, nullptr);
+            const PIPELINE_STATE_STATUS BeforeRemoval = pPSO->GetStatus(false);
+            ASSERT_TRUE(pPool->RemoveTask(pTask));
+            ASSERT_EQ(BeforeRemoval, PIPELINE_STATE_STATUS_COMPILING);
+            ASSERT_EQ(pTask->GetStatus(), ASYNC_TASK_STATUS_CANCELLED);
+            if (!RetainTask)
+            {
+                RefCntWeakPtr<IAsyncTask> wpTask{pTask};
+                pTask.Release();
+                ASSERT_FALSE(wpTask.Lock());
+            }
+
+            ASSERT_EQ(pPSO->GetStatus(Wait), PIPELINE_STATE_STATUS_FAILED);
+            EXPECT_EQ(pPSO->GetStatus(!Wait), PIPELINE_STATE_STATUS_FAILED);
+        }
+    }
+}
+#endif
 
 } // namespace

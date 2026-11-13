@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -358,6 +358,30 @@ void ExtractShaders(const TilePipelineStateCreateInfo& CreateInfo,
     ActiveShaderStages = SHADER_TYPE_TILE;
 
     VERIFY_EXPR(!ShaderStages.empty());
+}
+
+inline PIPELINE_STATE_STATUS GetCompilationStatus(const std::unique_ptr<AsyncInitializer>& Initializer,
+                                                  std::atomic<PIPELINE_STATE_STATUS>&      PipelineStatus,
+                                                  bool                                     WaitForCompletion)
+{
+    VERIFY_EXPR(PipelineStatus.load() != PIPELINE_STATE_STATUS_UNINITIALIZED);
+    if (!Initializer)
+        return PipelineStatus.load();
+
+    const ASYNC_TASK_STATUS TaskStatus    = Initializer->Update(WaitForCompletion);
+    PIPELINE_STATE_STATUS   CurrentStatus = PipelineStatus.load();
+    if (TaskStatus == ASYNC_TASK_STATUS_COMPLETE)
+    {
+        VERIFY(CurrentStatus > PIPELINE_STATE_STATUS_COMPILING, "Pipeline state status must be atomically set by the initialization task before it finishes");
+    }
+    else if (CurrentStatus == PIPELINE_STATE_STATUS_COMPILING && !Initializer->GetCompileTask())
+    {
+        // Cancellation can destroy the task without running its handler. A worker that
+        // finished between the status and task checks has already published its result.
+        if (PipelineStatus.compare_exchange_strong(CurrentStatus, PIPELINE_STATE_STATUS_FAILED))
+            return PIPELINE_STATE_STATUS_FAILED;
+    }
+    return CurrentStatus;
 }
 
 Uint32 GetRenderTargetMask(const GraphicsPipelineDesc& GraphicsPipeline) noexcept;
@@ -760,13 +784,7 @@ public:
 
     virtual PIPELINE_STATE_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion = false) override
     {
-        VERIFY_EXPR(m_Status.load() != PIPELINE_STATE_STATUS_UNINITIALIZED);
-        ASYNC_TASK_STATUS InitTaskStatus = AsyncInitializer::Update(m_AsyncInitializer, WaitForCompletion);
-        if (InitTaskStatus == ASYNC_TASK_STATUS_COMPLETE)
-        {
-            VERIFY(m_Status.load() > PIPELINE_STATE_STATUS_COMPILING, "Pipeline state status must be atomically set by the initialization task before it finishes");
-        }
-        return m_Status.load();
+        return PipelineStateUtils::GetCompilationStatus(m_AsyncInitializer, m_Status, WaitForCompletion);
     }
 
     SHADER_TYPE GetActiveShaderStages() const

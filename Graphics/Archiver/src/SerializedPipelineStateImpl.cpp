@@ -508,13 +508,7 @@ ShaderCreateInfo DILIGENT_CALL_TYPE SerializedPipelineStateImpl::GetPatchedShade
 
 PIPELINE_STATE_STATUS SerializedPipelineStateImpl::GetStatus(bool WaitForCompletion)
 {
-    VERIFY_EXPR(m_Status.load() != PIPELINE_STATE_STATUS_UNINITIALIZED);
-    ASYNC_TASK_STATUS InitTaskStatus = AsyncInitializer::Update(m_AsyncInitializer, WaitForCompletion);
-    if (InitTaskStatus == ASYNC_TASK_STATUS_COMPLETE)
-    {
-        VERIFY(m_Status.load() > PIPELINE_STATE_STATUS_COMPILING, "Pipeline state status must be atomically set by the initialization task before it finishes");
-    }
-    return m_Status.load();
+    return PipelineStateUtils::GetCompilationStatus(m_AsyncInitializer, m_Status, WaitForCompletion);
 }
 
 } // namespace Diligent
