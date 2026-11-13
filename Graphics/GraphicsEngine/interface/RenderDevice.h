@@ -407,10 +407,19 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
 
     /// \note The method blocks the execution of the calling thread until the GPU is idle.
     ///
-    /// The method does not flush immediate contexts, so it will only wait for commands that
-    /// the contexts using IDeviceContext::Flush() if it needs to make sure all recorded commands
-    /// have been previously submitted for execution. An application should explicitly flush
-    /// are complete when the method returns.
+    /// To include all recorded commands in the wait, flush the immediate contexts with
+    /// IDeviceContext::Flush() before calling this method.
+    ///
+    /// On browser WebGPU, this method requires Asyncify or JSPI. If neither is enabled,
+    /// it logs an error and returns without waiting.
+    /// With JSPI, call through a suspension-capable WebAssembly entry point (such as an export
+    /// wrapped with `WebAssembly.promising`). A synchronous frame callback can throw
+    /// `WebAssembly.SuspendError` if the wait needs to yield.
+    /// To track GPU work from a synchronous frame callback, use IDeviceContext::EnqueueSignal()
+    /// after that work, flush the context, and poll IFence::GetCompletedValue() on later frames.
+    ///
+    /// A suspended wait yields to the browser event loop. Until the call returns, defer application
+    /// callbacks that reenter the same operation or modify resources it uses.
     VIRTUAL void METHOD(IdleGPU)(THIS) PURE;
 
 

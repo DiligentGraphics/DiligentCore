@@ -1398,8 +1398,17 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     ///
     /// If the queued compilation task is cancelled, both polling and waiting return Diligent::PIPELINE_STATE_STATUS_FAILED.
     ///
-    /// On WebGPU in the browser, waiting for a compiling pipeline requires Asyncify or JSPI.
-    /// Otherwise the method logs an error and returns Diligent::PIPELINE_STATE_STATUS_COMPILING.
+    /// On browser WebGPU, GetStatus(true) requires Asyncify or JSPI to wait for compilation.
+    /// If neither is enabled, a pending wait logs an error and returns Diligent::PIPELINE_STATE_STATUS_COMPILING.
+    /// With JSPI, call through a suspension-capable WebAssembly entry point (such as an export
+    /// wrapped with `WebAssembly.promising`). A synchronous frame callback can throw
+    /// `WebAssembly.SuspendError` if the wait needs to yield.
+    /// In a synchronous frame callback, use GetStatus(false) and poll again on a later frame
+    /// if it returns Diligent::PIPELINE_STATE_STATUS_COMPILING.
+    ///
+    /// A suspended wait yields to the browser event loop. Until the call returns, defer application
+    /// callbacks that reenter the same operation or modify resources it uses.
+    /// This includes polling the same pipeline with GetStatus(false) while GetStatus(true) is suspended.
     ///
     /// \return     The pipeline state status.
     VIRTUAL PIPELINE_STATE_STATUS METHOD(GetStatus)(THIS_

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -122,7 +122,18 @@ DILIGENT_BEGIN_INTERFACE(IFence, IDeviceObject)
 
     /// \param [in] Value - The value that the fence is waiting for to reach.
     ///
-    /// The method blocks the execution of the calling thread until the wait is complete.
+    /// The call normally blocks until the fence reaches Value.
+    ///
+    /// On browser WebGPU, this method requires Asyncify or JSPI. If neither is enabled,
+    /// it logs an error and returns without waiting.
+    /// With JSPI, call through a suspension-capable WebAssembly entry point (such as an export
+    /// wrapped with `WebAssembly.promising`). A synchronous frame callback can throw
+    /// `WebAssembly.SuspendError` if the wait needs to yield.
+    /// In a synchronous frame callback, poll IFence::GetCompletedValue() on later frames
+    /// until it reaches or exceeds Value.
+    ///
+    /// A suspended wait yields to the browser event loop. Until the call returns, defer application
+    /// callbacks that reenter the same operation or modify resources it uses.
     VIRTUAL void METHOD(Wait)(THIS_
                               Uint64 Value) PURE;
 };
