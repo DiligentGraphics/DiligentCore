@@ -125,10 +125,10 @@ public:
     MemoryPage& operator= (MemoryPage&)       = delete;
     MemoryPage& operator= (MemoryPage&& rhs)  = delete;
 
-    bool IsEmpty() const { return m_AllocationMgr.IsEmpty(); }
-    bool IsFull()  const { return m_AllocationMgr.IsFull();  }
+    bool IsEmpty() const;
+    bool IsFull() const;
     VkDeviceSize GetPageSize() const { return m_AllocationMgr.GetMaxSize();  }
-    VkDeviceSize GetUsedSize() const { return m_AllocationMgr.GetUsedSize(); }
+    VkDeviceSize GetUsedSize() const;
 
     // clang-format on
 
@@ -146,7 +146,7 @@ private:
     void Free(MemoryAllocation&& Allocation);
 
     MemoryManager&                           m_ParentMemoryMgr;
-    std::mutex                               m_Mutex;
+    mutable std::mutex                       m_Mutex;
     Diligent::VariableSizeAllocationsManager m_AllocationMgr;
     VulkanUtilities::DeviceMemoryWrapper     m_VkMemory;
     void*                                    m_CPUMemory = nullptr;

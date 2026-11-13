@@ -96,6 +96,24 @@ MemoryPage::~MemoryPage()
     VERIFY(IsEmpty(), "Destroying a page with not all allocations released");
 }
 
+bool MemoryPage::IsEmpty() const
+{
+    std::lock_guard<std::mutex> Lock{m_Mutex};
+    return m_AllocationMgr.IsEmpty();
+}
+
+bool MemoryPage::IsFull() const
+{
+    std::lock_guard<std::mutex> Lock{m_Mutex};
+    return m_AllocationMgr.IsFull();
+}
+
+VkDeviceSize MemoryPage::GetUsedSize() const
+{
+    std::lock_guard<std::mutex> Lock{m_Mutex};
+    return m_AllocationMgr.GetUsedSize();
+}
+
 MemoryAllocation MemoryPage::Allocate(VkDeviceSize size, VkDeviceSize alignment, bool RequireEmpty)
 {
     std::lock_guard<std::mutex> Lock{m_Mutex};
@@ -163,7 +181,15 @@ MemoryAllocation MemoryManager::Allocate(const VkMemoryRequirements& MemReqs, Vk
 
 MemoryAllocation MemoryManager::Allocate(VkDeviceSize Size, VkDeviceSize Alignment, uint32_t MemoryTypeIndex, bool HostVisible, VkMemoryAllocateFlags AllocateFlags)
 {
-    MemoryAllocation Allocation;
+    // The suballocator doubles its alignment while initializing a page. Keep sizes below
+    // half its offset range to avoid overflow there as well as in alignment arithmetic.
+    constexpr VkDeviceSize MaxSize = std::numeric_limits<Diligent::VariableSizeAllocationsManager::OffsetType>::max() / 2;
+    if (Size == 0 || Alignment == 0 || (Alignment & (Alignment - 1)) != 0 ||
+        Alignment > MaxSize || Size > MaxSize - (Alignment - 1))
+        LOG_ERROR_AND_THROW("Invalid Vulkan memory allocation size or alignment");
+
+    const VkDeviceSize AlignedSize = Diligent::AlignUp(Size, Alignment);
+    MemoryAllocation   Allocation;
 
     // On integrated GPUs, there is no difference between host-visible and GPU-only
     // memory, so MemoryTypeIndex is the same. As GPU-only pages do not have CPU address,
@@ -177,26 +203,52 @@ MemoryAllocation MemoryManager::Allocate(VkDeviceSize Size, VkDeviceSize Alignme
 
     const VkDeviceSize BasePageSize = HostVisible ? m_HostVisiblePageSize : m_DeviceLocalPageSize;
 
-    auto range = m_Pages.equal_range(PageIdx);
+    auto range             = m_Pages.equal_range(PageIdx);
+    auto BestOversizedPage = range.second;
     for (auto page_it = range.first; page_it != range.second; ++page_it)
     {
-        // Reuse empty oversized pages, but never share a live oversized allocation.
-        // Check emptiness under the page lock, since releases may run concurrently.
-        Allocation = page_it->second.Allocate(Size, Alignment, page_it->second.GetPageSize() > BasePageSize);
+        MemoryPage& Page = page_it->second;
+        if (Page.GetPageSize() > BasePageSize)
+        {
+            // Small requests must not pin large pages or bypass available shared space.
+            if (AlignedSize > BasePageSize && Page.GetPageSize() >= AlignedSize && Page.IsEmpty() &&
+                (BestOversizedPage == range.second || Page.GetPageSize() < BestOversizedPage->second.GetPageSize()))
+                BestOversizedPage = page_it;
+            continue;
+        }
+        Allocation = Page.Allocate(Size, Alignment);
         if (Allocation.Page != nullptr)
             break;
     }
+    if (Allocation.Page == nullptr && BestOversizedPage != range.second)
+        Allocation = BestOversizedPage->second.Allocate(Size, Alignment, true);
 
     size_t stat_ind = HostVisible ? 1 : 0;
     if (Allocation.Page == nullptr)
     {
-        // The suballocator rounds the requested size up to Alignment, even at offset zero.
-        const VkDeviceSize PageSize = std::max(BasePageSize, Diligent::AlignUp(Size, Alignment));
+        // Collection may precede deferred releases. Reclaim unusable isolated pages
+        // before asking Vulkan for more memory, even if the next collection has not run.
+        for (auto page_it = range.first; page_it != range.second;)
+        {
+            MemoryPage& Page = page_it->second;
+            if (Page.GetPageSize() > BasePageSize && Page.IsEmpty())
+            {
+                m_CurrAllocatedSize[stat_ind] -= Page.GetPageSize();
+                OnPageDestroy(Page);
+                page_it = m_Pages.erase(page_it);
+            }
+            else
+                ++page_it;
+        }
 
+        // The suballocator rounds the requested size up to Alignment, even at offset zero.
+        const VkDeviceSize PageSize = std::max(BasePageSize, AlignedSize);
+        auto               it       = m_Pages.emplace(PageIdx, MemoryPage{*this, PageSize, MemoryTypeIndex, HostVisible, AllocateFlags});
+
+        // Page construction, mapping and map insertion may throw. Count only resident pages.
         m_CurrAllocatedSize[stat_ind] += PageSize;
         m_PeakAllocatedSize[stat_ind] = std::max(m_PeakAllocatedSize[stat_ind], m_CurrAllocatedSize[stat_ind]);
 
-        auto it = m_Pages.emplace(PageIdx, MemoryPage{*this, PageSize, MemoryTypeIndex, HostVisible, AllocateFlags});
         LOG_INFO_MESSAGE("MemoryManager '", m_MgrName, "': created new ", (HostVisible ? "host-visible" : "device-local"),
                          " page. (", Diligent::FormatMemorySize(PageSize, 2), ", type idx: ", MemoryTypeIndex,
                          "). Current allocated size: ", Diligent::FormatMemorySize(m_CurrAllocatedSize[stat_ind], 2));
