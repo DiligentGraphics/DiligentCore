@@ -26,6 +26,10 @@
 
 #include "pch.h"
 
+#if PLATFORM_WEB
+#    include <emscripten.h>
+#endif
+
 #include "PipelineStateWebGPUImpl.hpp"
 #include "RenderDeviceWebGPUImpl.hpp"
 #include "ShaderWebGPUImpl.hpp"
@@ -766,10 +770,43 @@ void PipelineStateWebGPUImpl::InitializeWebGPUComputePipeline(const TShaderStage
     }
 }
 
+#if PLATFORM_WEB
+static bool YieldForPipelineCompilation()
+{
+    if (!emscripten_has_asyncify())
+    {
+        LOG_ERROR_MESSAGE("IPipelineState::GetStatus(true) requires Asyncify or JSPI on the Web. Poll GetStatus(false) instead.");
+        return false;
+    }
+
+    emscripten_sleep(1);
+    return true;
+}
+#endif
+
 PIPELINE_STATE_STATUS PipelineStateWebGPUImpl::GetStatus(bool WaitForCompletion)
 {
-    // Check the status of asynchronous tasks
+    // Check the status of asynchronous tasks.
+#if PLATFORM_WEB
+    PIPELINE_STATE_STATUS Status = TPipelineStateBase::GetStatus(false);
+    while (Status == PIPELINE_STATE_STATUS_COMPILING)
+    {
+        if (!AsyncInitializer::GetAsyncTask(m_AsyncInitializer))
+        {
+            // A finished worker has already published READY or FAILED. Mark cancellation
+            // only if the pipeline is still COMPILING after the task is gone.
+            if (m_Status.compare_exchange_strong(Status, PIPELINE_STATE_STATUS_FAILED))
+                return PIPELINE_STATE_STATUS_FAILED;
+            break;
+        }
+        if (!WaitForCompletion || !YieldForPipelineCompilation())
+            return Status;
+
+        Status = TPipelineStateBase::GetStatus(false);
+    }
+#else
     PIPELINE_STATE_STATUS Status = TPipelineStateBase::GetStatus(WaitForCompletion);
+#endif
     if (Status != PIPELINE_STATE_STATUS_READY)
     {
         if (Status == PIPELINE_STATE_STATUS_FAILED && m_AsyncBuilder)
@@ -780,14 +817,6 @@ PIPELINE_STATE_STATUS PipelineStateWebGPUImpl::GetStatus(bool WaitForCompletion)
 
     if (m_AsyncBuilder)
     {
-#if PLATFORM_WEB
-        if (WaitForCompletion)
-        {
-            LOG_ERROR_MESSAGE("Waiting for asynchronous pipeline initialization is not supported on the Web");
-            WaitForCompletion = false;
-        }
-#endif
-
         do
         {
             AsyncPipelineBuilder::CallbackStatus CallbackStatus = m_AsyncBuilder->Status.load();
@@ -829,8 +858,11 @@ PIPELINE_STATE_STATUS PipelineStateWebGPUImpl::GetStatus(bool WaitForCompletion)
                     UNEXPECTED("Unexpected status");
             }
 
-            // Note: DeviceTick() when WaitForCompletion == true is not required here since we use
-            //       WGPUCallbackMode_AllowSpontaneous callback mode.
+#if PLATFORM_WEB
+            if (WaitForCompletion && m_AsyncBuilder && !YieldForPipelineCompilation())
+                break;
+#endif
+            // Native WebGPU delivers the callback spontaneously without DeviceTick().
 
         } while (WaitForCompletion && m_AsyncBuilder);
 

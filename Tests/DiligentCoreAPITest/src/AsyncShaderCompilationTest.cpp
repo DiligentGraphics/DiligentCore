@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024-2025 Diligent Graphics LLC
+ *  Copyright 2024-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -31,6 +31,10 @@
 #include <thread>
 #include <random>
 #include <vector>
+
+#if PLATFORM_WEB && WEBGPU_SUPPORTED
+#    include <emscripten.h>
+#endif
 
 #include "ShaderMacroHelper.hpp"
 #include "Timer.hpp"
@@ -206,13 +210,20 @@ void TestAsyncPipeline(SHADER_COMPILE_FLAGS ShaderFlags, PSO_CREATE_FLAGS PSOFla
         Uint32 NumPSOsReady = 0;
         for (RefCntAutoPtr<IPipelineState>& pPSO : pPSOs)
         {
-            if (pPSO->GetStatus() == PIPELINE_STATE_STATUS_READY)
+            const PIPELINE_STATE_STATUS Status = pPSO->GetStatus();
+            ASSERT_NE(Status, PIPELINE_STATE_STATUS_FAILED);
+            if (Status == PIPELINE_STATE_STATUS_READY)
                 ++NumPSOsReady;
         }
         if (NumPSOsReady == pPSOs.size())
             break;
+#if PLATFORM_WEB && WEBGPU_SUPPORTED
+        // WebGPU delivers pipeline creation callbacks on the browser event loop.
+        emscripten_sleep(10);
+#else
         std::this_thread::yield();
         std::this_thread::sleep_for(std::chrono::milliseconds{10});
+#endif
         ++Iter;
     }
     LOG_INFO_MESSAGE(pPSOs.size(), " PSOs were compiled after ", Iter, " iterations (", (T.GetElapsedTime() - StartTime) * 1000, " ms)");

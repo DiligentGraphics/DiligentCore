@@ -1395,6 +1395,10 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     /// \param [in] WaitForCompletion - If true, the method will wait until the pipeline state is compiled.
     ///                                 If false, the method will return the pipeline state status without waiting.
     /// 							    This parameter is ignored if the pipeline state was compiled synchronously.
+    ///
+    /// On WebGPU in the browser, waiting for a compiling pipeline requires Asyncify or JSPI.
+    /// Otherwise the method logs an error and returns Diligent::PIPELINE_STATE_STATUS_COMPILING.
+    ///
     /// \return     The pipeline state status.
     VIRTUAL PIPELINE_STATE_STATUS METHOD(GetStatus)(THIS_
                                                     bool WaitForCompletion DEFAULT_VALUE(false)) PURE;
