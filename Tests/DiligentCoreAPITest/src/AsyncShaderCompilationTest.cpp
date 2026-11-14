@@ -32,10 +32,6 @@
 #include <random>
 #include <vector>
 
-#if PLATFORM_WEB && WEBGPU_SUPPORTED
-#    include <emscripten.h>
-#endif
-
 #include "ShaderMacroHelper.hpp"
 #include "Timer.hpp"
 #include "GraphicsTypesX.hpp"
@@ -223,13 +219,8 @@ void TestAsyncPipeline(SHADER_COMPILE_FLAGS ShaderFlags, PSO_CREATE_FLAGS PSOFla
         }
         if (NumPSOsReady == pPSOs.size())
             break;
-#if PLATFORM_WEB && WEBGPU_SUPPORTED
         // WebGPU delivers pipeline creation callbacks on the browser event loop.
-        emscripten_sleep(10);
-#else
-        std::this_thread::yield();
-        std::this_thread::sleep_for(std::chrono::milliseconds{10});
-#endif
+        TestingEnvironment::YieldExecution(10);
         ++Iter;
     }
     LOG_INFO_MESSAGE(pPSOs.size(), " PSOs were compiled after ", Iter, " iterations (", (T.GetElapsedTime() - StartTime) * 1000, " ms)");

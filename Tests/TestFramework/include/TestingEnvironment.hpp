@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -51,6 +51,13 @@ public:
     static void SetErrorAllowance(int NumErrorsToAllow, const char* InfoMessage = nullptr);
     static void PushExpectedErrorSubstring(const char* Str, bool ClearStack = true);
     static void PushExpectedErrorSubstrings(const std::vector<const char*>& Messages, bool ClearStack = true);
+
+    /// Yields execution, optionally delaying the next polling iteration.
+    /// On native platforms, a zero delay yields the thread; otherwise it sleeps.
+    /// On the Web, this suspends the call so browser callbacks can run, even with
+    /// a zero delay. Tests must enter through an Asyncify/JSPI-capable entry point
+    /// and must not reenter the suspended Wasm module.
+    static void YieldExecution(Uint32 SleepTimeMs = 0);
 
     static const char* GetCurrentTestStatusString();
     static const char* GetTestSkippedString();

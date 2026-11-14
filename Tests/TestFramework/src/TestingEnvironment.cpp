@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -28,6 +28,13 @@
 #include "PlatformDebug.hpp"
 #include "DebugUtilities.hpp"
 
+#if PLATFORM_WEB
+#    include <emscripten.h>
+#else
+#    include <chrono>
+#    include <thread>
+#endif
+
 namespace Diligent
 {
 
@@ -50,6 +57,18 @@ TestingEnvironment::TestingEnvironment()
     }
     SetDebugMessageCallback(MessageCallback);
     PlatformDebug::SetBreakOnError(false);
+}
+
+void TestingEnvironment::YieldExecution(Uint32 SleepTimeMs)
+{
+#if PLATFORM_WEB
+    emscripten_sleep(SleepTimeMs);
+#else
+    if (SleepTimeMs == 0)
+        std::this_thread::yield();
+    else
+        std::this_thread::sleep_for(std::chrono::milliseconds{SleepTimeMs});
+#endif
 }
 
 void TestingEnvironment::MessageCallback(DEBUG_MESSAGE_SEVERITY Severity,

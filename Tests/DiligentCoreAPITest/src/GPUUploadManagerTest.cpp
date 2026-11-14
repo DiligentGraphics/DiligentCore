@@ -945,6 +945,8 @@ TEST(GPUUploadManagerTest, ParallelBufferUpdates)
             pContext->Flush();
             pContext->FinishFrame();
             ++NumRenderThreadUpdates;
+            // Let completion callbacks run so staging pages can be reused.
+            pEnv->YieldExecution();
         }
     }
 
@@ -1299,7 +1301,7 @@ TEST(GPUUploadManagerTest, CreateWithNullContext)
 
     AllThreadsRunningSignal.Wait();
 
-    std::this_thread::sleep_for(10ms);
+    pEnv->YieldExecution(10);
     EXPECT_EQ(NumUpdatesRunning.load(), kNumThreads) << "All threads should be running updates because RenderThreadUpdate() was not called";
 
     while (NumUpdatesRunning.load() > 0)
@@ -1307,7 +1309,7 @@ TEST(GPUUploadManagerTest, CreateWithNullContext)
         pUploadManager->RenderThreadUpdate(pContext);
         pContext->Flush();
         pContext->FinishFrame();
-        std::this_thread::sleep_for(10ms);
+        pEnv->YieldExecution(10);
     }
 
     pUploadManager->RenderThreadUpdate(pContext);
@@ -1383,7 +1385,7 @@ TEST(GPUUploadManagerTest, MaxPageCount)
         pUploadManager->RenderThreadUpdate(pContext);
         pContext->Flush();
         pContext->FinishFrame();
-        std::this_thread::yield();
+        pEnv->YieldExecution();
     }
 
     pUploadManager->RenderThreadUpdate(pContext);
@@ -2551,6 +2553,8 @@ TEST(GPUUploadManagerTest, ParallelBufferAndTextureUpdates)
             pContext->Flush();
             pContext->FinishFrame();
             ++NumRenderThreadUpdates;
+            // Let completion callbacks run so staging pages can be reused.
+            pEnv->YieldExecution();
         }
     }
 

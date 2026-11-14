@@ -29,9 +29,3 @@ NullResourceBindings/NullTexture.*
 NullResourceBindings/NullSampler.*
 NullResourceBindings/NullRWTexture.*
 NullResourceBindings/NullRWStructBuffer.*
-
-# Blocking coordination with worker threads prevents browser event-loop progress.
-GPUUploadManagerTest.ParallelBufferUpdates
-GPUUploadManagerTest.CreateWithNullContext
-GPUUploadManagerTest.MaxPageCount
-GPUUploadManagerTest.ParallelBufferAndTextureUpdates
