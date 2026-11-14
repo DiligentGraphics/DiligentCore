@@ -1,0 +1,37 @@
+# Google Test patterns excluded only from the browser CI run.
+# Remove entries as the browser/backend limitations are fixed. New tests run by default.
+
+# These negative tests require C++ exception catching, disabled in the Web build.
+Shader.BrokenHLSL*
+Shader.AsyncPipelineWithBrokenShader
+DynamicTextureArray.RejectsUnsupportedUsage
+DynamicTextureArray.SparseUsageRequiresOneImmediateContext
+DynamicTextureAtlas.RejectsSparse2DTexture
+PRSCreationFailureTest.*
+PSOCreationFailureTest.*
+RenderStateCacheTest.BrokenShader*
+RenderStateCacheTest.BrokenPSO
+ArchiveTest/TestBrokenShader.*
+
+# Generates an archive for native backends, unavailable in an Emscripten build.
+GenerateArchiveDotNetTest.GenerateCubeArchive
+
+# Shader binding requirements exceed Chrome/SwiftShader limits.
+PipelineResourceSignatureTest.StructuredBuffers
+ShaderResourceLayoutTest.StructuredBuffers
+ShaderResourceLayoutTest.StructuredRWBuffers
+ShaderResourceLayoutTest.RWTextures
+
+# Deliberately missing bindings abort before the expected native diagnostics.
+NullResourceBindings/NullConstantBuffer.*
+NullResourceBindings/NullStructBuffer.*
+NullResourceBindings/NullTexture.*
+NullResourceBindings/NullSampler.*
+NullResourceBindings/NullRWTexture.*
+NullResourceBindings/NullRWStructBuffer.*
+
+# Blocking coordination with worker threads prevents browser event-loop progress.
+GPUUploadManagerTest.ParallelBufferUpdates
+GPUUploadManagerTest.CreateWithNullContext
+GPUUploadManagerTest.MaxPageCount
+GPUUploadManagerTest.ParallelBufferAndTextureUpdates

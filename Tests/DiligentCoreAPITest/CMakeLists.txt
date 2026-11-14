@@ -114,7 +114,16 @@ if (PLATFORM_WEB)
     endif()
     # Load the generated script only after the browser has created the WebGPU device.
     configure_file(resources/emscripten_template.html.in ${CMAKE_CURRENT_BINARY_DIR}/DiligentCoreAPITest.html @ONLY)
-    target_link_options(DiligentCoreAPITest PRIVATE "SHELL: -s SINGLE_FILE -s ALLOW_MEMORY_GROWTH=1 --preload-file '${RESOURCE_PATH}@'")
+    # Keep Wasm separate so Chrome does not need to parse a large embedded binary.
+    # Preload enough workers for tests that create four threads per CPU, plus the
+    # shader compilation pool. Synchronous thread joins cannot start new workers.
+    target_link_options(DiligentCoreAPITest PRIVATE
+        "SHELL: -s ALLOW_MEMORY_GROWTH=1 --preload-file '${RESOURCE_PATH}@'"
+        "-sPTHREAD_POOL_SIZE=Math.max(4,navigator.hardwareConcurrency)*5"
+        "-sSTACK_SIZE=8388608"
+        "-sEXIT_RUNTIME=1"
+        "-sEXPORTED_RUNTIME_METHODS=FS"
+    )
 endif()
 
 target_link_libraries(DiligentCoreAPITest
