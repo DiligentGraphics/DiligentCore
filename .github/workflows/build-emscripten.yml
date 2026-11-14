@@ -56,17 +56,6 @@ jobs:
     - name: Test WebGPU in Chrome
       if: runner.os == 'Linux'
       timeout-minutes: 20
-      shell: bash
-      run: |
-        python3 Tests/DiligentCoreAPITest/browser/run_tests.py \
-          --module "$DILIGENT_BUILD_DIR/Tests/DiligentCoreAPITest/DiligentCoreAPITest.js" \
-          --browser "$(command -v google-chrome)" \
-          --output BrowserTestResults
-
-    - name: Upload browser GPU test results
-      if: ${{ always() && runner.os == 'Linux' }}
-      uses: actions/upload-artifact@v7
+      uses: DiligentGraphics/github-action/run-core-browser-tests@v29
       with:
-        name: WebGPU-Chrome-${{matrix.build_type}}
-        path: BrowserTestResults
-        if-no-files-found: warn
+        artifact-name: WebGPU-Chrome-${{matrix.build_type}}

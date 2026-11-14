@@ -5,12 +5,19 @@ WebGPU and SwiftShader, in both Debug and Release. All selected tests run in one
 browser session. No browser automation packages are required.
 
 Build the Emscripten configuration with `DILIGENT_BUILD_CORE_TESTS=ON` and
-`DILIGENT_NO_WEBGPU=OFF`, then run:
+`DILIGENT_NO_WEBGPU=OFF`, then run locally with the SwiftShader options:
 
 ```sh
 python3 Tests/DiligentCoreAPITest/browser/run_tests.py \
     --module build/Tests/DiligentCoreAPITest/DiligentCoreAPITest.js \
     --browser "$(command -v google-chrome)" \
+    --browser-arg=--use-angle=swiftshader \
+    --browser-arg=--enable-features=Vulkan \
+    --browser-arg=--use-vulkan=swiftshader \
+    --browser-arg=--disable-vulkan-surface \
+    --browser-arg=--enable-unsafe-webgpu \
+    --browser-arg=--enable-unsafe-swiftshader \
+    --browser-arg=--use-webgpu-adapter=swiftshader \
     --output BrowserTestResults
 ```
 
@@ -30,3 +37,9 @@ features retain their normal Google Test skip behavior.
 Use `--filter 'Suite.Test*'` to select tests and
 `--no-exclusions` to investigate an excluded test. `--timeout` changes the
 maximum seconds without test progress. Exclusions do not affect native runs.
+
+CI uses the `run-core-browser-tests` action from `DiligentGraphics/github-action`.
+It supplies the shared Chrome/SwiftShader wrapper used by Radient browser tests
+and uploads results on success or failure. Test exclusions and the browser
+harness remain in this module. A local Chrome wrapper can also be passed through
+`--browser` instead of specifying the individual `--browser-arg` options.

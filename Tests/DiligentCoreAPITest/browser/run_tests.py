@@ -132,10 +132,7 @@ def run(args):
                 with tempfile.TemporaryDirectory(prefix="diligent-gpu-browser-") as profile:
                     command = [browser, "--headless=new", "--no-first-run", "--no-default-browser-check",
                                "--disable-background-networking", "--disable-extensions", "--disable-sync",
-                               "--use-angle=swiftshader", "--enable-features=Vulkan",
-                               "--use-vulkan=swiftshader", "--disable-vulkan-surface",
-                               "--enable-unsafe-webgpu", "--enable-unsafe-swiftshader",
-                               "--use-webgpu-adapter=swiftshader", "--user-data-dir=" + profile,
+                               *args.browser_arg, "--user-data-dir=" + profile,
                                f"http://127.0.0.1:{server.server_port}/"]
                     log("Browser test filter: " + selected)
                     with (output / "chrome.log").open("w", encoding="utf-8") as chrome_log:
@@ -178,6 +175,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--module", type=Path, required=True, help="Built DiligentCoreAPITest.js")
     parser.add_argument("--browser", help="Chrome/Chromium executable; discovered from PATH by default")
+    parser.add_argument("--browser-arg", action="append", default=[],
+                        help="Additional browser option; repeat --browser-arg=OPTION as needed")
     parser.add_argument("--output", type=Path, default=Path("BrowserTestResults"))
     parser.add_argument("--filter", default="*", help="Google Test filter, before browser exclusions")
     parser.add_argument("--exclude-file", type=Path, default=HERE / "exclude.txt")
