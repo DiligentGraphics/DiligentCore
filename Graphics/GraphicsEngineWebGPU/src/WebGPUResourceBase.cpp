@@ -189,15 +189,23 @@ void WebGPUResourceBase::ProcessAsyncReadback(StagingBufferInfo& Buffer)
 
         if (MapStatus == WGPUMapAsyncStatus_Success)
         {
-            // Do NOT use WGPU_WHOLE_MAP_SIZE due to https://github.com/emscripten-core/emscripten/issues/20538
-            const size_t MappedDataSize = BufferInfo.Resource.m_MappedData.size();
-            if (const void* pData = wgpuBufferGetConstMappedRange(BufferInfo.wgpuBuffer, 0, AlignUp(MappedDataSize, MappedRangeAlignment)))
+            WebGPUResourceBase& Resource = BufferInfo.Resource;
+            // Waiting on a specific future can deliver a newer mapping before an older one.
+            // Only publish data newer than the last successful copy, while still completing
+            // cleanup and signaling for every readback.
+            if (BufferInfo.ReadbackId > Resource.m_LastPublishedReadbackId)
             {
-                memcpy(BufferInfo.Resource.m_MappedData.data(), pData, MappedDataSize);
-            }
-            else
-            {
-                UNEXPECTED("Mapped range is null");
+                // Do NOT use WGPU_WHOLE_MAP_SIZE due to https://github.com/emscripten-core/emscripten/issues/20538
+                const size_t MappedDataSize = Resource.m_MappedData.size();
+                if (const void* pData = wgpuBufferGetConstMappedRange(BufferInfo.wgpuBuffer, 0, AlignUp(MappedDataSize, MappedRangeAlignment)))
+                {
+                    memcpy(Resource.m_MappedData.data(), pData, MappedDataSize);
+                    Resource.m_LastPublishedReadbackId = BufferInfo.ReadbackId;
+                }
+                else
+                {
+                    UNEXPECTED("Mapped range is null");
+                }
             }
             wgpuBufferUnmap(BufferInfo.wgpuBuffer.Get());
         }
@@ -211,6 +219,9 @@ void WebGPUResourceBase::ProcessAsyncReadback(StagingBufferInfo& Buffer)
         // Release the reference to the resource
         BufferInfo.Resource.m_Owner.Release();
     };
+
+    // Assign the submission order before the mapping callback can run.
+    Buffer.ReadbackId = ++m_LastSubmittedReadbackId;
 
     // Keep the resource alive until the callback is called
     m_Owner.AddRef();

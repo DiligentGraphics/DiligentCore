@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -49,6 +49,7 @@ public:
         WebGPUResourceBase&                Resource;
         WebGPUBufferWrapper                wgpuBuffer;
         RefCntAutoPtr<SyncPointWebGPUImpl> pSyncPoint = {};
+        Uint64                             ReadbackId = 0;
     };
 
     WebGPUResourceBase(IDeviceObject& Owner, size_t MaxPendingBuffers);
@@ -79,6 +80,9 @@ private:
     MapState m_MapState = MapState::None;
 
     std::vector<StagingBufferInfo> m_StagingBuffers;
+
+    Uint64 m_LastSubmittedReadbackId = 0;
+    Uint64 m_LastPublishedReadbackId = 0;
 
     static constexpr size_t MappedRangeAlignment = 4;
 

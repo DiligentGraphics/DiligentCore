@@ -115,4 +115,94 @@ TEST(DeviceContextTest, WaitForIdleReadback)
     }
 }
 
+
+// A fence signaled only after the second submission may complete its readback
+// before the first submission's mapping callback runs. Draining older callbacks
+// must not replace the latest data, including when staging buffers are reused.
+TEST(DeviceContextTest, ReadbackPreservesLatestSubmission)
+{
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
+
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    // Keep both copies pending during submission so that a targeted fence wait
+    // can deliver the newer mapping before ordinary event processing runs the older one.
+    BufferDesc BackgroundDesc;
+    BackgroundDesc.Name = "Readback ordering background copy";
+    BackgroundDesc.Size = 4u << 20;
+    RefCntAutoPtr<IBuffer> pBackgroundSource;
+    RefCntAutoPtr<IBuffer> pBackgroundDestination;
+    pDevice->CreateBuffer(BackgroundDesc, nullptr, &pBackgroundSource);
+    pDevice->CreateBuffer(BackgroundDesc, nullptr, &pBackgroundDestination);
+    ASSERT_NE(pBackgroundSource, nullptr);
+    ASSERT_NE(pBackgroundDestination, nullptr);
+
+    std::array<Uint32, 1024> Expected{};
+    BufferDesc               Desc;
+    Desc.Name      = "Ordered readback source";
+    Desc.Size      = sizeof(Expected);
+    Desc.BindFlags = BIND_UNIFORM_BUFFER;
+    RefCntAutoPtr<IBuffer> pSource;
+    pDevice->CreateBuffer(Desc, nullptr, &pSource);
+    ASSERT_NE(pSource, nullptr);
+
+    Desc.Name           = "Ordered readback staging buffer";
+    Desc.Usage          = USAGE_STAGING;
+    Desc.BindFlags      = BIND_NONE;
+    Desc.CPUAccessFlags = CPU_ACCESS_READ;
+    RefCntAutoPtr<IBuffer> pReadback;
+    pDevice->CreateBuffer(Desc, nullptr, &pReadback);
+    ASSERT_NE(pReadback, nullptr);
+
+    FenceDesc FenceCI;
+    FenceCI.Name = "Latest readback fence";
+    RefCntAutoPtr<IFence> pFence;
+    pDevice->CreateFence(FenceCI, &pFence);
+    ASSERT_NE(pFence, nullptr);
+
+    const auto SubmitCopy = [&](Uint32 Value) {
+        Expected.fill(Value);
+        pContext->UpdateBuffer(pSource, 0, Desc.Size, Expected.data(), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pContext->CopyBuffer(pSource, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
+                             pReadback, 0, Desc.Size, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    };
+    const auto CheckReadback = [&](const char* Stage) {
+        SCOPED_TRACE(Stage);
+        void* pData = nullptr;
+        pContext->MapBuffer(pReadback, MAP_READ, MAP_FLAG_DO_NOT_WAIT, pData);
+        ASSERT_NE(pData, nullptr);
+        std::array<Uint32, 1024> Actual{};
+        std::memcpy(Actual.data(), pData, sizeof(Actual));
+        pContext->UnmapBuffer(pReadback, MAP_READ);
+        EXPECT_EQ(Actual, Expected);
+    };
+
+    for (Uint32 Iteration = 0; Iteration < 8; ++Iteration)
+    {
+        SCOPED_TRACE(Iteration);
+        for (Uint32 Copy = 0; Copy < 64; ++Copy)
+        {
+            pContext->CopyBuffer(pBackgroundSource, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
+                                 pBackgroundDestination, 0, BackgroundDesc.Size, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        }
+        SubmitCopy(0x11110000u + Iteration);
+        pContext->Flush();
+        SubmitCopy(0x22220000u + Iteration);
+        const Uint64 FenceValue = Uint64{Iteration} + 1;
+        pContext->EnqueueSignal(pFence, FenceValue);
+        pContext->Flush();
+        pFence->Wait(FenceValue);
+        EXPECT_EQ(pFence->GetCompletedValue(), FenceValue);
+        CheckReadback("After waiting for the latest submission");
+
+        // Process pending callbacks, then ensure all older readbacks have finished.
+        pContext->Flush();
+        CheckReadback("After processing pending callbacks");
+        pContext->WaitForIdle();
+        CheckReadback("After draining all readbacks");
+    }
+}
+
 } // namespace
