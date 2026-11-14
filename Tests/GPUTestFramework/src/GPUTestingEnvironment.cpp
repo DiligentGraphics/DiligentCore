@@ -62,6 +62,7 @@
 #    if PLATFORM_WEB
 #        include <webgpu/webgpu.h>
 #        include <emscripten/html5.h>
+#        include <emscripten.h>
 #    endif
 #endif
 
@@ -480,7 +481,14 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
             if (Device == nullptr)
                 LOG_ERROR_AND_THROW("The GPU tests require a preinitialized WebGPU device");
 
-            WGPUInstance Instance = wgpuCreateInstance(nullptr);
+            const WGPUInstanceFeatureName RequiredFeature = WGPUInstanceFeatureName_TimedWaitAny;
+            WGPUInstanceDescriptor        InstanceDesc{};
+            if (emscripten_has_asyncify())
+            {
+                InstanceDesc.requiredFeatureCount = 1;
+                InstanceDesc.requiredFeatures     = &RequiredFeature;
+            }
+            WGPUInstance Instance = wgpuCreateInstance(&InstanceDesc);
             pFactoryWGPU->AttachToWebGPUDevice(Instance, nullptr, Device, EngineCI, &m_pDevice, ppContexts.data());
 #    else
             pFactoryWGPU->CreateDeviceAndContextsWebGPU(EngineCI, &m_pDevice, ppContexts.data());

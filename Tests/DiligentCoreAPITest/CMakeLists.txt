@@ -105,7 +105,7 @@ if (PLATFORM_WEB)
     set(RESOURCE_PATH "${PROJECT_SOURCE_DIR}/assets/")
     if(WEBGPU_SUPPORTED)
         set(DEFAULT_TEST_MODE "wgpu")
-        # GPU waits yield with emscripten_sleep(), which Emscripten marks as suspending.
+        # WebGPU future waits and CPU-compilation yields use suspending Emscripten imports.
         # Keep invoke_* wrappers synchronous: libc++ calls them from static constructors
         # before the runtime enters main() through WebAssembly.promising.
         target_link_options(DiligentCoreAPITest PRIVATE "-sJSPI=1" "-sASYNCIFY_IGNORE_INDIRECT=1")

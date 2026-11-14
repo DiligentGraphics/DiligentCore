@@ -1534,10 +1534,14 @@ void DeviceContextWebGPUImpl::Flush()
 
         wgpuQueueSubmit(m_wgpuQueue, 1, &wgpuCmdBuffer.Get());
         WGPUQueueWorkDoneCallbackInfo CallbackInfo{};
-        CallbackInfo.mode      = DefaultWGPUCallbackMode;
-        CallbackInfo.callback  = WorkDoneCallback;
-        CallbackInfo.userdata1 = pWorkDoneSyncPoint.Detach();
-        wgpuQueueOnSubmittedWorkDone(m_wgpuQueue, CallbackInfo);
+        CallbackInfo.mode       = DefaultWGPUCallbackMode;
+        CallbackInfo.callback   = WorkDoneCallback;
+        CallbackInfo.userdata1  = pWorkDoneSyncPoint.Detach();
+        const WGPUFuture Future = wgpuQueueOnSubmittedWorkDone(m_wgpuQueue, CallbackInfo);
+        // The first sync point tracks queue completion; the remaining points receive
+        // their buffer-mapping futures in ProcessAsyncReadback() below.
+        // SyncPoints retains this point even if the queue callback has already run.
+        SyncPoints.front()->SetFuture(Future);
         m_wgpuCommandEncoder.Reset(nullptr);
 
         for (auto& PendingReadIt : m_PendingStagingReads)

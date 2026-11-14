@@ -26,11 +26,8 @@
 
 #include "pch.h"
 
-#if PLATFORM_WEB
-#    include <emscripten.h>
-#endif
-
 #include "FenceWebGPUImpl.hpp"
+#include "WebGPUAsync.hpp"
 #include "GraphicsAccessories.hpp"
 #include "RenderDeviceWebGPUImpl.hpp"
 
@@ -46,7 +43,7 @@ FenceWebGPUImpl::FenceWebGPUImpl(IReferenceCounters*     pRefCounters,
         LOG_ERROR_AND_THROW("Description of Fence '", m_Desc.Name, "' is invalid: ", GetFenceTypeString(m_Desc.Type), " is not supported in WebGPU.");
 }
 
-void FenceWebGPUImpl::ProcessSyncPoints()
+void FenceWebGPUImpl::ProcessSyncPoints(Uint64 ValueToWaitFor)
 {
     while (!m_SyncGroups.empty())
     {
@@ -61,20 +58,22 @@ void FenceWebGPUImpl::ProcessSyncPoints()
             }
             else
             {
-                break;
+                if (ValueToWaitFor == 0 || m_LastCompletedFenceValue.load() >= ValueToWaitFor)
+                    return;
+
+                // Queue completion alone is insufficient: each group also contains the
+                // staging-map futures required to make its readbacks available to the CPU.
+                if (!WaitForWebGPUFuture(m_pDevice->GetWebGPUInstance(), SyncPoints.front()->GetFuture()))
+                    return;
             }
         }
 
-        if (SyncPoints.empty())
-        {
-            UpdateLastCompletedFenceValue(SyncGroup.first);
-            m_SyncGroups.pop_front();
-        }
-        else
-        {
-            break;
-        }
+        UpdateLastCompletedFenceValue(SyncGroup.first);
+        m_SyncGroups.pop_front();
     }
+
+    if (ValueToWaitFor != 0 && m_LastCompletedFenceValue.load() < ValueToWaitFor)
+        LOG_ERROR_MESSAGE("Cannot wait for a WebGPU fence value that has not been submitted.");
 }
 
 Uint64 FenceWebGPUImpl::GetCompletedValue()
@@ -90,22 +89,7 @@ void FenceWebGPUImpl::Signal(Uint64 Value)
 
 void FenceWebGPUImpl::Wait(Uint64 Value)
 {
-#if PLATFORM_WEB
-    // Emscripten reports both Asyncify and JSPI through this query.
-    if (!emscripten_has_asyncify())
-    {
-        LOG_ERROR_MESSAGE("IFence::Wait() requires Asyncify or JSPI on the Web. Use non-blocking synchronization methods.");
-        return;
-    }
-#endif
-    while (GetCompletedValue() < Value)
-    {
-#if PLATFORM_WEB
-        emscripten_sleep(1);
-#else
-        m_pDevice->DeviceTick();
-#endif
-    }
+    ProcessSyncPoints(Value);
 }
 
 void FenceWebGPUImpl::AppendSyncPoints(const std::vector<RefCntAutoPtr<SyncPointWebGPUImpl>>& SyncPoints, Uint64 Value)

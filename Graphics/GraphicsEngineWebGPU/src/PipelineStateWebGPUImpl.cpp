@@ -31,6 +31,7 @@
 #endif
 
 #include "PipelineStateWebGPUImpl.hpp"
+#include "WebGPUAsync.hpp"
 #include "RenderDeviceWebGPUImpl.hpp"
 #include "ShaderWebGPUImpl.hpp"
 #include "RenderPassWebGPUImpl.hpp"
@@ -411,6 +412,7 @@ struct PipelineStateWebGPUImpl::AsyncPipelineBuilder : public ObjectBase<IObject
         Completed
     };
     std::atomic<CallbackStatus> Status{CallbackStatus::NotStarted};
+    WGPUFuture                  Future{};
 
     AsyncPipelineBuilder(IReferenceCounters* pRefCounters,
                          TShaderStages&&     _ShaderStages) :
@@ -705,14 +707,14 @@ void PipelineStateWebGPUImpl::InitializeWebGPURenderPipeline(const TShaderStages
     {
         // The reference will be released from the callback.
         AsyncBuilder->AddRef();
-        wgpuDeviceCreateRenderPipelineAsync(m_pDevice->GetWebGPUDevice(), &wgpuRenderPipelineDesc,
-                                            {
-                                                nullptr,
-                                                WGPUCallbackMode_AllowSpontaneous,
-                                                AsyncPipelineBuilder::CreateRenderPipelineCallback,
-                                                AsyncBuilder,
-                                                nullptr,
-                                            });
+        AsyncBuilder->Future = wgpuDeviceCreateRenderPipelineAsync(m_pDevice->GetWebGPUDevice(), &wgpuRenderPipelineDesc,
+                                                                   {
+                                                                       nullptr,
+                                                                       WGPUCallbackMode_AllowSpontaneous,
+                                                                       AsyncPipelineBuilder::CreateRenderPipelineCallback,
+                                                                       AsyncBuilder,
+                                                                       nullptr,
+                                                                   });
     }
     else
     {
@@ -753,14 +755,14 @@ void PipelineStateWebGPUImpl::InitializeWebGPUComputePipeline(const TShaderStage
     {
         // The reference will be released from the callback.
         AsyncBuilder->AddRef();
-        wgpuDeviceCreateComputePipelineAsync(m_pDevice->GetWebGPUDevice(), &wgpuComputePipelineDesc,
-                                             {
-                                                 nullptr,
-                                                 WGPUCallbackMode_AllowSpontaneous,
-                                                 AsyncPipelineBuilder::CreateComputePipelineCallback,
-                                                 AsyncBuilder,
-                                                 nullptr,
-                                             });
+        AsyncBuilder->Future = wgpuDeviceCreateComputePipelineAsync(m_pDevice->GetWebGPUDevice(), &wgpuComputePipelineDesc,
+                                                                    {
+                                                                        nullptr,
+                                                                        WGPUCallbackMode_AllowSpontaneous,
+                                                                        AsyncPipelineBuilder::CreateComputePipelineCallback,
+                                                                        AsyncBuilder,
+                                                                        nullptr,
+                                                                    });
     }
     else
     {
@@ -771,7 +773,7 @@ void PipelineStateWebGPUImpl::InitializeWebGPUComputePipeline(const TShaderStage
 }
 
 #if PLATFORM_WEB
-static bool YieldForPipelineCompilation()
+static bool YieldForCPUCompilation()
 {
     if (!emscripten_has_asyncify())
     {
@@ -789,7 +791,7 @@ PIPELINE_STATE_STATUS PipelineStateWebGPUImpl::GetStatus(bool WaitForCompletion)
     // Check the status of asynchronous tasks.
 #if PLATFORM_WEB
     PIPELINE_STATE_STATUS Status = TPipelineStateBase::GetStatus(false);
-    while (WaitForCompletion && Status == PIPELINE_STATE_STATUS_COMPILING && YieldForPipelineCompilation())
+    while (WaitForCompletion && Status == PIPELINE_STATE_STATUS_COMPILING && YieldForCPUCompilation())
         Status = TPipelineStateBase::GetStatus(false);
 #else
     PIPELINE_STATE_STATUS Status = TPipelineStateBase::GetStatus(WaitForCompletion);
@@ -845,11 +847,10 @@ PIPELINE_STATE_STATUS PipelineStateWebGPUImpl::GetStatus(bool WaitForCompletion)
                     UNEXPECTED("Unexpected status");
             }
 
-#if PLATFORM_WEB
-            if (WaitForCompletion && m_AsyncBuilder && !YieldForPipelineCompilation())
+            if (WaitForCompletion && m_AsyncBuilder &&
+                m_AsyncBuilder->Status.load() == AsyncPipelineBuilder::CallbackStatus::InProgress &&
+                !WaitForWebGPUFuture(m_pDevice->GetWebGPUInstance(), m_AsyncBuilder->Future))
                 break;
-#endif
-            // Native WebGPU delivers the callback spontaneously without DeviceTick().
 
         } while (WaitForCompletion && m_AsyncBuilder);
 

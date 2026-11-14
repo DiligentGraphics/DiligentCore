@@ -34,7 +34,7 @@
 #include "DeviceContextWebGPU.h"
 #include "TextureWebGPU.h"
 #include "Align.hpp"
-#include "../../../../Graphics/GraphicsEngineWebGPU/include/WebGPUDefinitions.hpp"
+#include "../../../../Graphics/GraphicsEngineWebGPU/include/WebGPUAsync.hpp"
 
 #if PLATFORM_WEB
 #    include <emscripten.h>
@@ -184,6 +184,7 @@ void TestingSwapChainWebGPU::TakeSnapshot(ITexture* pCopyFrom)
 #endif
 
     RefCntAutoPtr<IDeviceContextWebGPU> pContextWebGPU{m_pContext, IID_DeviceContextWebGPU};
+    RefCntAutoPtr<IRenderDeviceWebGPU>  pDeviceWebGPU{m_pDevice, IID_RenderDeviceWebGPU};
 
     WGPUTexture wgpuSrcTexture = m_wgpuColorTexture;
     if (pCopyFrom != nullptr)
@@ -233,19 +234,8 @@ void TestingSwapChainWebGPU::TakeSnapshot(ITexture* pCopyFrom)
     CallbackInfo.callback  = [](WGPUMapAsyncStatus Status, WGPUStringView, void* pUserData, void*) {
         static_cast<std::atomic<WGPUMapAsyncStatus>*>(pUserData)->store(Status, std::memory_order_release);
     };
-    wgpuBufferMapAsync(m_wgpuStagingBuffer, WGPUMapMode_Read, 0, DataSize, CallbackInfo);
-
-#if !PLATFORM_WEB
-    RefCntAutoPtr<IRenderDeviceWebGPU> pDeviceWebGPU{m_pDevice, IID_RenderDeviceWebGPU};
-#endif
-    while (MapStatus.load(std::memory_order_acquire) == Pending)
-    {
-#if PLATFORM_WEB
-        emscripten_sleep(1);
-#else
-        wgpuInstanceProcessEvents(pDeviceWebGPU->GetWebGPUInstance());
-#endif
-    }
+    const WGPUFuture Future = wgpuBufferMapAsync(m_wgpuStagingBuffer, WGPUMapMode_Read, 0, DataSize, CallbackInfo);
+    ASSERT_TRUE(WaitForWebGPUFuture(pDeviceWebGPU->GetWebGPUInstance(), Future));
     ASSERT_EQ(MapStatus.load(), WGPUMapAsyncStatus_Success) << "Failed to map the reference staging buffer.";
 
     const void* pMappedData = wgpuBufferGetConstMappedRange(m_wgpuStagingBuffer, 0, DataSize);

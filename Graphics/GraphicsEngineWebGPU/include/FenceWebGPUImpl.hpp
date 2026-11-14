@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2024 Diligent Graphics LLC
+ *  Copyright 2023-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -63,7 +63,8 @@ public:
     void AppendSyncPoints(const std::vector<RefCntAutoPtr<SyncPointWebGPUImpl>>& SyncPoints, Uint64 Value);
 
 private:
-    void ProcessSyncPoints();
+    // A zero target only polls; otherwise wait until the completed value reaches the target.
+    void ProcessSyncPoints(Uint64 ValueToWaitFor = 0);
 
 private:
     using SyncPointGroup = std::pair<Uint64, std::vector<RefCntAutoPtr<SyncPointWebGPUImpl>>>;

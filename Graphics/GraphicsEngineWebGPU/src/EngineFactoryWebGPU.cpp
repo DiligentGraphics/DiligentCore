@@ -121,7 +121,10 @@ WebGPUInstanceWrapper InitializeWebGPUInstance(bool EnableUnsafe)
     wgpuDawnTogglesDesc.enabledToggleCount        = _countof(ToggleNames);
     wgpuDawnTogglesDesc.enabledToggles            = ToggleNames;
 
-    WGPUInstanceDescriptor wgpuInstanceDesc = {};
+    const WGPUInstanceFeatureName RequiredFeature = WGPUInstanceFeatureName_TimedWaitAny;
+    WGPUInstanceDescriptor        wgpuInstanceDesc{};
+    wgpuInstanceDesc.requiredFeatureCount = 1;
+    wgpuInstanceDesc.requiredFeatures     = &RequiredFeature;
     if (EnableUnsafe)
     {
         wgpuInstanceDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuDawnTogglesDesc);

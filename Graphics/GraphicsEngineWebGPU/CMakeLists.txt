@@ -33,6 +33,7 @@ set(INCLUDE
     include/SyncPointWebGPU.hpp
     include/TextureViewWebGPUImpl.hpp
     include/TextureWebGPUImpl.hpp
+    include/WebGPUAsync.hpp
     include/WebGPUDefinitions.hpp
     include/WebGPUObjectWrappers.hpp
     include/WebGPUTypeConversions.hpp

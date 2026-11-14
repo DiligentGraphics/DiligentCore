@@ -220,7 +220,9 @@ void WebGPUResourceBase::ProcessAsyncReadback(StagingBufferInfo& Buffer)
     CallbackInfo.mode      = DefaultWGPUCallbackMode;
     CallbackInfo.callback  = MapAsyncCallback;
     CallbackInfo.userdata1 = &Buffer;
-    wgpuBufferMapAsync(Buffer.wgpuBuffer, WGPUMapMode_Read, 0, AlignUp(MappedDataSize, MappedRangeAlignment), CallbackInfo);
+    // The callback releases the resource, so retain the sync point before submitting the map.
+    const RefCntAutoPtr<SyncPointWebGPUImpl> pSyncPoint = Buffer.pSyncPoint;
+    pSyncPoint->SetFuture(wgpuBufferMapAsync(Buffer.wgpuBuffer, WGPUMapMode_Read, 0, AlignUp(MappedDataSize, MappedRangeAlignment), CallbackInfo));
 }
 
 } // namespace Diligent

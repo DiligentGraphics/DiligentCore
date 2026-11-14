@@ -108,6 +108,10 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactoryWebGPU, IEngineFactory)
 
     /// Attaches to existing WebGPU render device, adapter and instance.
 
+    /// The instance must enable WGPUInstanceFeatureName_TimedWaitAny to use blocking
+    /// fence, device-idle, or GPU pipeline-compilation waits. Non-blocking operation
+    /// does not require this feature. Browser waits also require Asyncify or JSPI.
+
     /// \param [in] wgpuInstance     - pointer to the native WebGPU instance.
     /// \param [in] wgpuAdapter      - pointer to the native WebGPU adapter.
     /// \param [in] wgpuDevice       - pointer to the native WebGPU device.

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@
 #include <atomic>
 
 #include "ObjectBase.hpp"
+#include "WebGPUDefinitions.hpp"
 
 namespace Diligent
 {
@@ -45,7 +46,17 @@ public:
     bool IsTriggered() const { return m_Triggered.load(); }
     void Trigger() { m_Triggered.store(true); }
 
+    // Set when the asynchronous operation is submitted, before the context can be waited on.
+    void SetFuture(WGPUFuture Future)
+    {
+        VERIFY(m_Future.id == 0, "The sync point future has already been assigned");
+        m_Future = Future;
+    }
+
+    WGPUFuture GetFuture() const { return m_Future; }
+
 private:
+    WGPUFuture        m_Future{};
     std::atomic<Bool> m_Triggered{false};
 };
 
