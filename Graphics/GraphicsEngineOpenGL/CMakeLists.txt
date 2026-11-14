@@ -278,7 +278,7 @@ elseif(PLATFORM_IOS)
     # Silence GLES deprecation warnings
     target_compile_definitions(Diligent-GraphicsEngineOpenGL-static PUBLIC GLES_SILENCE_DEPRECATION)
 elseif(PLATFORM_WEB)
-    target_link_options(Diligent-GraphicsEngineOpenGL-static PUBLIC "SHELL: -s FULL_ES3=1 -s USE_PTHREADS=1")
+    target_link_options(Diligent-GraphicsEngineOpenGL-static PUBLIC "-sFULL_ES3=1" "-pthread")
 endif()
 
 if(PLATFORM_WIN32)
