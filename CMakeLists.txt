@@ -458,11 +458,7 @@ if(MSVC)
         message("Additional MSVC compile options for debug configuration: " ${DILIGENT_MSVC_DEBUG_COMPILE_OPTIONS})
     endif()
 
-    # Enable whole program optimization
     set(DEFAULT_DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS "")
-    if(NOT DILIGENT_SANITIZER)
-        list(APPEND DEFAULT_DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS /GL)
-    endif()
     if("${TARGET_CPU}" STREQUAL "x86_64")
         # Enable AVX2
         list(APPEND DEFAULT_DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS /arch:AVX2)

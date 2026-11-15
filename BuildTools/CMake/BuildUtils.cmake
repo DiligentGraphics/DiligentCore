@@ -226,13 +226,18 @@ function(set_common_target_properties TARGET)
     )
 
     if(MSVC)
-        # For msvc, enable link-time code generation for release builds (I was not able to
-        # find any way to set these settings through interface library BuildSettings)
+        # Enable link-time code generation only when /GL is requested
+        # through the release compiler options.
+        set(MSVC_LTCG_FLAG "")
+        if("/GL" IN_LIST DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS)
+            set(MSVC_LTCG_FLAG "/LTCG")
+        endif()
+
         if(TARGET_TYPE STREQUAL STATIC_LIBRARY)
 
             foreach(REL_CONFIG ${RELEASE_CONFIGURATIONS})
                 set_target_properties(${TARGET} PROPERTIES
-                    STATIC_LIBRARY_FLAGS_${REL_CONFIG} /LTCG
+                    STATIC_LIBRARY_FLAGS_${REL_CONFIG} "${MSVC_LTCG_FLAG}"
                 )
             endforeach()
 
@@ -240,7 +245,7 @@ function(set_common_target_properties TARGET)
 
             foreach(REL_CONFIG ${RELEASE_CONFIGURATIONS})
                 set_target_properties(${TARGET} PROPERTIES
-                    LINK_FLAGS_${REL_CONFIG} "/LTCG /OPT:REF /INCREMENTAL:NO"
+                    LINK_FLAGS_${REL_CONFIG} "${MSVC_LTCG_FLAG} /OPT:REF /INCREMENTAL:NO"
                 )
             endforeach()
 
