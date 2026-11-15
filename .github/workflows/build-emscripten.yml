@@ -38,24 +38,24 @@ jobs:
 
     - name: Set up build environment
       if:   success()
-      uses: DiligentGraphics/github-action/setup-build-env@v28
+      uses: DiligentGraphics/github-action/setup-build-env@v30
       with:
         platform: Web
 
     - name: Configure CMake
       if:   success()
-      uses: DiligentGraphics/github-action/configure-cmake@v28
+      uses: DiligentGraphics/github-action/configure-cmake@v30
       with:
         build-type: ${{ matrix.build_type }}
         cmake-args: ${{ matrix.cmake_args }}
 
     - name: Build
       if:   success()
-      uses: DiligentGraphics/github-action/build@v28
+      uses: DiligentGraphics/github-action/build@v30
 
     - name: Test WebGPU in Chrome
       if: runner.os == 'Linux'
       timeout-minutes: 20
-      uses: DiligentGraphics/github-action/run-core-browser-tests@v29
+      uses: DiligentGraphics/github-action/run-core-browser-tests@v30
       with:
         artifact-name: WebGPU-Chrome-${{matrix.build_type}}

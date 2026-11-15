@@ -10,7 +10,7 @@ FetchContent_DeclareShallowGit(
     dawn
     GIT_REPOSITORY  https://github.com/DiligentGraphics/dawn.git
     # Work around the MSVC x86 queue serial return miscompilation.
-    GIT_TAG         msvc-x86-queue-serial-fix
+    GIT_TAG         msvc-x86-queue-serial-fix2
     GIT_SUBMODULES  "${DAWN_SUBMODULES}"
 )
 
