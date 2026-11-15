@@ -51,10 +51,18 @@ jobs:
 
     - name: Build
       if:   success()
+      id:   build
       uses: DiligentGraphics/github-action/build@v30
 
+    - name: Test Core CPU in Chrome
+      if: ${{ !cancelled() && runner.os == 'Linux' && steps.build.outcome == 'success' }}
+      timeout-minutes: 20
+      uses: DiligentGraphics/github-action/run-core-cpu-browser-tests@v31
+      with:
+        artifact-name: CoreCPU-Chrome-${{matrix.build_type}}
+
     - name: Test WebGPU in Chrome
-      if: runner.os == 'Linux'
+      if: ${{ !cancelled() && runner.os == 'Linux' && steps.build.outcome == 'success' }}
       timeout-minutes: 20
       uses: DiligentGraphics/github-action/run-core-browser-tests@v30
       with:
