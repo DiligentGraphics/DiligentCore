@@ -38,13 +38,13 @@ jobs:
 
     - name: Set up build environment
       if:   success()
-      uses: DiligentGraphics/github-action/setup-build-env@v33
+      uses: DiligentGraphics/github-action/setup-build-env@v35
       with:
         platform: Web
 
     - name: Configure CMake
       if:   success()
-      uses: DiligentGraphics/github-action/configure-cmake@v33
+      uses: DiligentGraphics/github-action/configure-cmake@v35
       with:
         build-type: ${{ matrix.build_type }}
         cmake-args: ${{ matrix.cmake_args }}
@@ -52,18 +52,18 @@ jobs:
     - name: Build
       if:   success()
       id:   build
-      uses: DiligentGraphics/github-action/build@v33
+      uses: DiligentGraphics/github-action/build@v35
 
     - name: Test Core CPU in Chrome
       if: ${{ !cancelled() && steps.build.outcome == 'success' }}
       timeout-minutes: 20
-      uses: DiligentGraphics/github-action/run-core-cpu-browser-tests@v33
+      uses: DiligentGraphics/github-action/run-core-cpu-browser-tests@v35
       with:
         artifact-name: CoreCPU-Chrome-${{runner.os}}-${{matrix.build_type}}
 
     - name: Test WebGPU in Chrome
       if: ${{ !cancelled() && runner.os != 'macOS' && steps.build.outcome == 'success' }}
       timeout-minutes: 20
-      uses: DiligentGraphics/github-action/run-core-browser-tests@v33
+      uses: DiligentGraphics/github-action/run-core-browser-tests@v35
       with:
         artifact-name: WebGPU-Chrome-${{runner.os}}-${{matrix.build_type}}
