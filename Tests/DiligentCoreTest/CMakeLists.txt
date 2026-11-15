@@ -51,11 +51,23 @@ else()
     set_common_target_properties(DiligentCoreTest)
 endif()
 
-if (PLATFORM_WEB)  
+if (PLATFORM_WEB)
     set(RESOURCE_PATH "${PROJECT_SOURCE_DIR}/assets/")
-    set(HTML_TEMPLATE_FILE ${PROJECT_SOURCE_DIR}/resources/emscripten_template.html)      
-    target_link_options(DiligentCoreTest PRIVATE "SHELL: -s SINGLE_FILE -s ALLOW_MEMORY_GROWTH=1 --preload-file '${RESOURCE_PATH}@'")      
-    target_link_options(DiligentCoreTest PRIVATE "SHELL: --shell-file '${HTML_TEMPLATE_FILE}'") 
+    set(HTML_TEMPLATE_FILE ${PROJECT_SOURCE_DIR}/resources/emscripten_template.html)
+    # Match the API tests: allow browser-aware waits, but keep invoke_* wrappers
+    # synchronous during libc++ static initialization before main() can suspend.
+    target_link_options(DiligentCoreTest PRIVATE "-sJSPI=1" "-sASYNCIFY_IGNORE_INDIRECT=1")
+    # Keep the script and Wasm separate so the automated runner can supply Module.
+    # Match TestingEnvironment::GetTestThreadCount: four workers per logical CPU.
+    # Synchronous joins cannot start workers beyond the preloaded pool.
+    target_link_options(DiligentCoreTest PRIVATE
+        "SHELL: -s ALLOW_MEMORY_GROWTH=1 --preload-file '${RESOURCE_PATH}@'"
+        "SHELL: --shell-file '${HTML_TEMPLATE_FILE}'"
+        "-sPTHREAD_POOL_SIZE=Math.max(1,navigator.hardwareConcurrency)*4"
+        "-sSTACK_SIZE=8388608"
+        "-sEXIT_RUNTIME=1"
+        "-sEXPORTED_RUNTIME_METHODS=FS"
+    )
 endif()
 
 target_link_libraries(DiligentCoreTest

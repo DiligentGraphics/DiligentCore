@@ -670,7 +670,7 @@ TEST(Common_ThreadPool, WaitForAllTasksNotifiedAfterRemoveTask)
 
 TEST(Common_ThreadPool, WaitForAllTasksNotifiesAllWaiters)
 {
-    constexpr Uint32 NumWaiters = 4;
+    const Uint32 NumWaiters = Testing::TestingEnvironment::GetTestThreadCount(4, 1); // Reserve the pool worker.
 
     auto pThreadPool = CreateThreadPool(ThreadPoolCreateInfo{1});
     ASSERT_NE(pThreadPool, nullptr);
@@ -897,9 +897,10 @@ TEST(Common_ThreadPool, Priorities)
 
 TEST(Common_ThreadPool, Prerequisites)
 {
-    for (Uint32 NumThreads : {1, 8})
+    for (Uint32 RequestedThreads : {1, 8})
     {
-        auto pThreadPool = CreateThreadPool(ThreadPoolCreateInfo{NumThreads});
+        const Uint32 NumThreads  = Testing::TestingEnvironment::GetTestThreadCount(RequestedThreads);
+        auto         pThreadPool = CreateThreadPool(ThreadPoolCreateInfo{NumThreads});
         ASSERT_NE(pThreadPool, nullptr);
 
         constexpr Uint32               NumTasks = 16;

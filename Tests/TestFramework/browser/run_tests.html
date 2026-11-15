@@ -1,6 +1,6 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>Diligent Core GPU tests</title>
+<title>Diligent Core tests</title>
 <canvas id="canvas" width="512" height="512"></canvas>
 <script type="module">
 const config = CONFIG_JSON;
@@ -29,40 +29,43 @@ try {
         throw new Error("The test server must enable cross-origin isolation for pthreads.");
     if (typeof WebAssembly.Suspending !== "function")
         throw new Error("The browser must support JSPI.");
-    if (!navigator.gpu)
-        throw new Error("WebGPU is not available.");
-
     log("Browser:", navigator.userAgent);
     log("CPU count:", navigator.hardwareConcurrency);
 
-    // A fresh headless Chrome process can transiently fail to create its WebGPU
-    // command buffer. Retry adapter discovery before loading Wasm, while still
-    // failing if software WebGPU remains unavailable. Successful startup has no delay.
-    const maxAdapterAttempts = 20;
-    let adapter;
-    for (let attempt = 1; attempt <= maxAdapterAttempts; ++attempt) {
-        adapter = await navigator.gpu.requestAdapter({forceFallbackAdapter: true});
-        if (adapter || attempt === maxAdapterAttempts)
-            break;
-        log(`Software WebGPU adapter unavailable (attempt ${attempt}/${maxAdapterAttempts}); retrying...`);
-        await new Promise(resolve => setTimeout(resolve, 250));
-    }
-    if (!adapter)
-        throw new Error(`No software WebGPU adapter is available after ${maxAdapterAttempts} attempts.`);
-    log("WebGPU adapter:", adapter.info.vendor, adapter.info.architecture, adapter.info.description);
+    let device;
+    if (config.mode === "wgpu") {
+        if (!navigator.gpu)
+            throw new Error("WebGPU is not available.");
 
-    // Match the interactive test page and native tests: request the adapter's
-    // available capabilities instead of using WebGPU's conservative defaults.
-    const requiredLimits = {};
-    for (const name in adapter.limits) {
-        if (typeof adapter.limits[name] === "number")
-            requiredLimits[name] = adapter.limits[name];
+        // A fresh headless Chrome process can transiently fail to create its WebGPU
+        // command buffer. Retry adapter discovery before loading Wasm, while still
+        // failing if software WebGPU remains unavailable. Successful startup has no delay.
+        const maxAdapterAttempts = 20;
+        let adapter;
+        for (let attempt = 1; attempt <= maxAdapterAttempts; ++attempt) {
+            adapter = await navigator.gpu.requestAdapter({forceFallbackAdapter: true});
+            if (adapter || attempt === maxAdapterAttempts)
+                break;
+            log(`Software WebGPU adapter unavailable (attempt ${attempt}/${maxAdapterAttempts}); retrying...`);
+            await new Promise(resolve => setTimeout(resolve, 250));
+        }
+        if (!adapter)
+            throw new Error(`No software WebGPU adapter is available after ${maxAdapterAttempts} attempts.`);
+        log("WebGPU adapter:", adapter.info.vendor, adapter.info.architecture, adapter.info.description);
+
+        // Match the interactive test page and native tests: request the adapter's
+        // available capabilities instead of using WebGPU's conservative defaults.
+        const requiredLimits = {};
+        for (const name in adapter.limits) {
+            if (typeof adapter.limits[name] === "number")
+                requiredLimits[name] = adapter.limits[name];
+        }
+        device = await adapter.requestDevice({
+            requiredFeatures: Array.from(adapter.features), requiredLimits,
+        });
+        device.addEventListener("uncapturederror", event => fail(event.error));
+        device.lost.then(info => { if (info.reason !== "destroyed") fail(info.message); });
     }
-    const device = await adapter.requestDevice({
-        requiredFeatures: Array.from(adapter.features), requiredLimits,
-    });
-    device.addEventListener("uncapturederror", event => fail(event.error));
-    device.lost.then(info => { if (info.reason !== "destroyed") fail(info.message); });
 
     globalThis.Module = {
         canvas: document.getElementById("canvas"),
@@ -83,7 +86,7 @@ try {
     };
     const script = document.createElement("script");
     script.src = "/module/" + encodeURIComponent(config.module);
-    script.onerror = () => fail("Unable to load the GPU test module.");
+    script.onerror = () => fail("Unable to load the test module.");
     document.body.appendChild(script);
 } catch (error) {
     fail(error);

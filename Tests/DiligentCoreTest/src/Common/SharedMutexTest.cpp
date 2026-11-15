@@ -27,6 +27,7 @@
 #include "SharedMutex.hpp"
 #include "ThreadSignal.hpp"
 #include "gtest/gtest.h"
+#include "TestingEnvironment.hpp"
 
 #include <atomic>
 #include <chrono>
@@ -91,7 +92,7 @@ void UpdateMax(std::atomic<uint32_t>& MaxValue, uint32_t Value)
 
 TEST(Common_SharedMutex, UniqueLockSerializesWriters)
 {
-    static constexpr uint32_t ThreadCount    = 16;
+    const uint32_t            ThreadCount    = Diligent::Testing::TestingEnvironment::GetTestThreadCount(16);
     static constexpr uint32_t IterationCount = 128;
 
     Threading::SharedMutex   Mutex;
@@ -196,7 +197,7 @@ TEST(Common_SharedMutex, SharedLockAllowsParallelReaders)
     if (!Threading::SharedMutexSupportsConcurrentReaders)
         GTEST_SKIP() << "SharedMutex uses exclusive fallback on this platform.";
 
-    static constexpr uint32_t ThreadCount = 8;
+    const uint32_t ThreadCount = Diligent::Testing::TestingEnvironment::GetTestThreadCount(8);
 
     Threading::SharedMutex   Mutex;
     ThreadStartGate          StartGate{ThreadCount};

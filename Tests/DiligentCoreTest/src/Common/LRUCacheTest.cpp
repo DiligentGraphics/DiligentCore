@@ -27,6 +27,7 @@
 #include "LRUCache.hpp"
 
 #include "gtest/gtest.h"
+#include "TestingEnvironment.hpp"
 
 #include <thread>
 #include <functional>
@@ -47,7 +48,7 @@ TEST(Common_LRUCache, Get)
 {
     LRUCache<int, CacheData> Cache{16};
 
-    constexpr Uint32         NumThreads = 16;
+    const Uint32             NumThreads = Testing::TestingEnvironment::GetTestThreadCount(16);
     std::vector<std::thread> Threads(NumThreads);
     std::vector<CacheData>   Data(NumThreads);
 
@@ -85,7 +86,7 @@ TEST(Common_LRUCache, ReleaseQueue)
 {
     LRUCache<int, CacheData> Cache{16};
 
-    constexpr Uint32                    NumThreads = 16;
+    const Uint32                        NumThreads = Testing::TestingEnvironment::GetTestThreadCount(16);
     std::vector<std::thread>            Threads(NumThreads);
     std::vector<std::vector<CacheData>> ThreadsData(NumThreads);
 

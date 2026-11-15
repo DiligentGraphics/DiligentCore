@@ -27,6 +27,7 @@
 #include "UniqueIdentifier.hpp"
 #include "ThreadSignal.hpp"
 #include "gtest/gtest.h"
+#include "TestingEnvironment.hpp"
 
 #include <atomic>
 #include <thread>
@@ -47,7 +48,7 @@ struct OtherCounterTestObjectClass;
 
 TEST(Common_UniqueIdentifier, ReturnsStableIdFromMultipleThreads)
 {
-    static constexpr Uint32 ThreadCount = 32;
+    const Uint32 ThreadCount = Testing::TestingEnvironment::GetTestThreadCount(32);
 
     UniqueIdHelper<ConcurrentTestObjectClass> Helper;
     Threading::Signal                         StartSignal;

@@ -59,6 +59,12 @@ public:
     /// and must not reenter the suspended Wasm module.
     static void YieldExecution(Uint32 SleepTimeMs = 0);
 
+    /// Returns RequestedCount on native platforms. On the Web, limits the group
+    /// to four threads per logical CPU, matching the CPU test's preloaded workers.
+    /// ReservedThreadCount accounts for other workers alive during this test
+    /// (e.g. a coordinator or factory thread) and must be below that Web limit.
+    static Uint32 GetTestThreadCount(Uint32 RequestedCount, Uint32 ReservedThreadCount = 0);
+
     static const char* GetCurrentTestStatusString();
     static const char* GetTestSkippedString();
 

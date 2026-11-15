@@ -27,6 +27,7 @@
 #include "WeakValueHashMap.hpp"
 
 #include "gtest/gtest.h"
+#include "TestingEnvironment.hpp"
 
 #include <algorithm>
 #include <atomic>
@@ -334,7 +335,7 @@ TEST(Common_WeakValueHashMap, GetLiveValuesRemovesExpiredValues)
     ContinueDestruction.Trigger();
 }
 
-static constexpr size_t kNumThreads = 8;
+static const size_t kNumThreads = Testing::TestingEnvironment::GetTestThreadCount(8);
 #ifdef DILIGENT_DEBUG
 static constexpr int kNumParallelKeys = 1024;
 #else
@@ -356,7 +357,7 @@ TEST(Common_WeakValueHashMap, ParallelGetOrInsert1)
             Threads[t] = std::thread{
                 [&Map, &StartSignal]() //
                 {
-                    StartSignal.Wait(true, kNumThreads);
+                    StartSignal.Wait(true, static_cast<int>(kNumThreads));
 
                     for (int k = 0; k < kNumParallelKeys; ++k)
                     {
@@ -394,7 +395,7 @@ TEST(Common_WeakValueHashMap, ParallelGetOrInsert2)
             Threads[t] = std::thread{
                 [&Map, &StartSignal, &Handles](size_t ThreadId) //
                 {
-                    StartSignal.Wait(true, kNumThreads);
+                    StartSignal.Wait(true, static_cast<int>(kNumThreads));
 
                     for (int k = 0; k < kNumParallelKeys; ++k)
                     {

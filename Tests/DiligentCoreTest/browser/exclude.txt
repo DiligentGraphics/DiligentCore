@@ -1,0 +1,24 @@
+# Google Test patterns excluded only from the browser run.
+# These tests require C++ exception catching, disabled in the Web build.
+# Keep ordinary tests enabled; new tests run by default.
+Common_LRUCache.Exceptions
+Common_ObjectsRegistry.Exceptions_SharedPtr
+Common_ObjectsRegistry.Exceptions_RefCntAutoPtr
+Common_ParsingTools.SkipCommentErrors
+Common_ParsingTools.Tokenizer_Errors
+Common_RefCntAutoPtr.Misc
+Common_RefCntAutoPtr.OveralignedObject
+Common_RefCntWeakPtr.QueryObjectReleasesTemporaryStrongRefOnException
+Common_RefCntWeakPtr.ConstructorExceptionWithSelfWeakPtrDoesNotDestroyCounters
+Common_ThreadPool.ProcessTaskCancelsTaskOnException
+Common_WeakObjectCache.PropagatesFactoryExceptionAndAllowsRetry
+Common_WeakObjectCache.FactoryMayMutateCacheKeyStorageOnException
+Common_WeakObjectCache.ConcurrentFactoryExceptionWakesAllWaiters
+ShaderPreprocessTest.InvalidInclude
+WGSLShaderResources.InvalidSourceAndReflectionDiagnostics
+
+# These filesystem operations are not implemented by the Emscripten backend.
+Platforms_FileSystem.Search
+Platforms_FileSystem.SearchRecursive
+Platforms_FileSystem.GetLocalAppDataDirectory
+Platforms_FileSystem.GetLocalAppDataDirectory_NullAppName

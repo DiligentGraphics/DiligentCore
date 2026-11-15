@@ -29,6 +29,7 @@
 #undef DILIGENT_OBJECTS_REGISTRY_TEST_HOOKS
 
 #include "gtest/gtest.h"
+#include "TestingEnvironment.hpp"
 
 #include <atomic>
 #include <thread>
@@ -99,7 +100,7 @@ void TestObjectRegistryGet()
         ASSERT_EQ(Registry.Get(Key), nullptr);
     }
 
-    constexpr Uint32                     NumThreads = 16;
+    const Uint32                         NumThreads = Testing::TestingEnvironment::GetTestThreadCount(16);
     std::vector<std::thread>             Threads(NumThreads);
     std::vector<StrongPtrType<DataType>> Data(NumThreads);
 
@@ -142,7 +143,7 @@ void TestObjectRegistryCreateDestroyRace()
 {
     ObjectsRegistry<int, StrongPtrType<DataType>> Registry{64};
 
-    constexpr Uint32         NumThreads = 16;
+    const Uint32             NumThreads = Testing::TestingEnvironment::GetTestThreadCount(16);
     std::vector<std::thread> Threads(NumThreads);
 
     Threading::Signal StartSignal;

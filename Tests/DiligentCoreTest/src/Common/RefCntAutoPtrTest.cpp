@@ -39,6 +39,7 @@
 #include "ThreadSignal.hpp"
 
 #include "gtest/gtest.h"
+#include "TestingEnvironment.hpp"
 
 using namespace Diligent;
 
@@ -1195,9 +1196,8 @@ public:
     Threading::Signal m_WorkerThreadSignal[2];
     Threading::Signal m_MainThreadSignal;
 
-    std::mutex      m_NumThreadsCompletedMtx;
-    std::atomic_int m_NumThreadsCompleted[2];
-    std::atomic_int m_NumThreadsReady;
+    Threading::TickSignal m_WorkersCompletedSignal[2];
+    std::atomic_int       m_NumThreadsCompleted[2];
 };
 
 
@@ -1213,16 +1213,20 @@ RefCntAutoPtrThreadingTest::~RefCntAutoPtrThreadingTest()
 
 void RefCntAutoPtrThreadingTest::WaitSiblingWorkerThreads(int SignalIdx)
 {
-    auto NumThreads = static_cast<int>(m_Threads.size());
+    const int NumThreads = static_cast<int>(m_Threads.size());
+    // Arm the wait before announcing completion so the last worker cannot wake
+    // this group before its peers are ready to observe the tick. Blocking here
+    // preserves the barrier without spinning when there are more threads than CPUs.
+    uint64_t CompletedEpoch = m_WorkersCompletedSignal[SignalIdx].CurrentEpoch();
     if (++m_NumThreadsCompleted[SignalIdx] == NumThreads)
     {
         ASSERT_FALSE(m_WorkerThreadSignal[1 - SignalIdx].IsTriggered());
+        m_WorkersCompletedSignal[SignalIdx].Tick();
         m_MainThreadSignal.Trigger();
     }
     else
     {
-        while (m_NumThreadsCompleted[SignalIdx] < NumThreads)
-            std::this_thread::yield();
+        m_WorkersCompletedSignal[SignalIdx].WaitNext(CompletedEpoch);
     }
 }
 
@@ -1402,7 +1406,7 @@ void RefCntAutoPtrThreadingTest::WorkerThreadFunc(RefCntAutoPtrThreadingTest* Th
 void RefCntAutoPtrThreadingTest::StartConcurrencyTest()
 {
     auto numCores = std::thread::hardware_concurrency();
-    m_Threads.resize(std::max(numCores, 4u));
+    m_Threads.resize(Testing::TestingEnvironment::GetTestThreadCount(std::max(numCores, 4u), 1));
     for (auto& t : m_Threads)
         t = std::thread(WorkerThreadFunc, this, &t - m_Threads.data());
 }
@@ -1439,9 +1443,26 @@ void RefCntAutoPtrThreadingTest::RunConcurrencyTest()
 
 TEST(Common_RefCntAutoPtr, Threading)
 {
-    RefCntAutoPtrThreadingTest ThreadingTest;
-    ThreadingTest.StartConcurrencyTest();
-    ThreadingTest.RunConcurrencyTest();
+    const auto RunTest = []() {
+        RefCntAutoPtrThreadingTest ThreadingTest;
+        ThreadingTest.StartConcurrencyTest();
+        ThreadingTest.RunConcurrencyTest();
+    };
+#if PLATFORM_WEB
+    // The coordinator waits on thousands of condition-variable barriers. On
+    // the browser thread those waits busy-spin; a worker can use Atomics.wait.
+    // Keep the full workload and let the browser process events until it ends.
+    std::atomic<bool> Finished{false};
+    std::thread       Coordinator{[&]() {
+        RunTest();
+        Finished.store(true, std::memory_order_release);
+    }};
+    while (!Finished.load(std::memory_order_acquire))
+        Testing::TestingEnvironment::YieldExecution(10);
+    Coordinator.join();
+#else
+    RunTest();
+#endif
 }
 
 

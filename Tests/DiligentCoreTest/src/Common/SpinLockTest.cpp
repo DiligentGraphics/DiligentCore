@@ -26,10 +26,12 @@
 
 #include "SpinLock.hpp"
 
+#include <algorithm>
 #include <vector>
 #include <thread>
 
 #include "gtest/gtest.h"
+#include "TestingEnvironment.hpp"
 
 using namespace Diligent;
 
@@ -38,8 +40,8 @@ namespace
 
 TEST(Common_SpinLock, ThreadContention)
 {
-    const auto NumCores   = std::thread::hardware_concurrency();
-    const auto NumThreads = NumCores * 8;
+    const Uint32 NumCores   = std::max(1u, std::thread::hardware_concurrency());
+    const Uint32 NumThreads = Testing::TestingEnvironment::GetTestThreadCount(NumCores * 8);
     LOG_INFO_MESSAGE("Running SpinLock test on ", NumThreads, " threads / ", NumCores, " cores");
     size_t Counter = 0;
 

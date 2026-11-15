@@ -112,7 +112,7 @@ bool WaitUntilEquals(const std::atomic<Uint32>& Value, Uint32 Expected)
 
 void TestConcurrentRequestsCreateSingleObjectForSameKey(size_t ShardCount)
 {
-    static constexpr Uint32 ThreadCount = 16;
+    const Uint32 ThreadCount = Testing::TestingEnvironment::GetTestThreadCount(16);
 
     WeakObjectCache<TestObject> Cache{ShardCount};
     ThreadStartGate             StartGate{ThreadCount};
@@ -158,7 +158,7 @@ void TestConcurrentRequestsCreateSingleObjectForSameKey(size_t ShardCount)
 
 void TestConcurrentRequestsReplaceExpiredEntryOnce(size_t ShardCount)
 {
-    static constexpr Uint32 ThreadCount = 16;
+    const Uint32 ThreadCount = Testing::TestingEnvironment::GetTestThreadCount(16);
 
     WeakObjectCache<TestObject> Cache{ShardCount};
     std::atomic<Uint32>         InitialCreateCount{0};
@@ -222,7 +222,7 @@ void TestConcurrentRequestsReplaceExpiredEntryOnce(size_t ShardCount)
 
 void TestConcurrentLiveCacheHitsDoNotCallFactory(size_t ShardCount)
 {
-    static constexpr Uint32 ThreadCount = 16;
+    const Uint32 ThreadCount = Testing::TestingEnvironment::GetTestThreadCount(16);
 
     WeakObjectCache<TestObject> Cache{ShardCount};
     std::atomic<Uint32>         CreateCount{0};
@@ -278,7 +278,7 @@ void TestConcurrentLiveCacheHitsDoNotCallFactory(size_t ShardCount)
 
 void TestConcurrentRequestsForDifferentKeysCreateIndependentObjects(size_t ShardCount)
 {
-    static constexpr Uint32 ThreadCount = 16;
+    const Uint32 ThreadCount = Testing::TestingEnvironment::GetTestThreadCount(16);
 
     WeakObjectCache<TestObject> Cache{ShardCount};
     ThreadStartGate             StartGate{ThreadCount};
@@ -738,7 +738,7 @@ TEST(Common_WeakObjectCache, FactoryMayMutateCacheKeyStorageOnFailure)
 
 TEST(Common_WeakObjectCache, ConcurrentFactoryFailureWakesAllWaiters)
 {
-    static constexpr Uint32 WaiterCount = 8;
+    const Uint32 WaiterCount = Testing::TestingEnvironment::GetTestThreadCount(8, 1); // Reserve the factory thread.
 
     WeakObjectCache<TestObject> Cache{1};
     Threading::Signal           FactoryStarted;
@@ -898,7 +898,7 @@ TEST(Common_WeakObjectCache, FactoryMayMutateCacheKeyStorageOnException)
 
 TEST(Common_WeakObjectCache, ConcurrentFactoryExceptionWakesAllWaiters)
 {
-    static constexpr Uint32 WaiterCount = 8;
+    const Uint32 WaiterCount = Testing::TestingEnvironment::GetTestThreadCount(8, 1); // Reserve the factory thread.
 
     WeakObjectCache<TestObject> Cache{1};
     Threading::Signal           FactoryStarted;

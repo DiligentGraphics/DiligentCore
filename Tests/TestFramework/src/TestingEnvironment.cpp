@@ -28,11 +28,13 @@
 #include "PlatformDebug.hpp"
 #include "DebugUtilities.hpp"
 
+#include <algorithm>
+#include <thread>
+
 #if PLATFORM_WEB
 #    include <emscripten.h>
 #else
 #    include <chrono>
-#    include <thread>
 #endif
 
 namespace Diligent
@@ -68,6 +70,18 @@ void TestingEnvironment::YieldExecution(Uint32 SleepTimeMs)
         std::this_thread::yield();
     else
         std::this_thread::sleep_for(std::chrono::milliseconds{SleepTimeMs});
+#endif
+}
+
+Uint32 TestingEnvironment::GetTestThreadCount(Uint32 RequestedCount, Uint32 ReservedThreadCount)
+{
+#if PLATFORM_WEB
+    const Uint32 MaxThreads = std::max(1u, std::thread::hardware_concurrency()) * 4;
+    VERIFY_EXPR(ReservedThreadCount < MaxThreads);
+    return std::min(RequestedCount, MaxThreads - ReservedThreadCount);
+#else
+    (void)ReservedThreadCount;
+    return RequestedCount;
 #endif
 }
 

@@ -27,6 +27,7 @@
 #include "MPSCQueue.hpp"
 
 #include "gtest/gtest.h"
+#include "TestingEnvironment.hpp"
 
 #include <thread>
 #include <vector>
@@ -131,7 +132,8 @@ TEST(Common_MPSCQueue, EnqueueDequeueParallel)
     MPSCQueue<Data>   Queue;
     std::vector<Data> ProducedData;
 
-    const Uint32 NumProducers        = std::max(std::thread::hardware_concurrency(), 4u);
+    // Leave one worker for the consumer.
+    const Uint32 NumProducers        = Testing::TestingEnvironment::GetTestThreadCount(std::max(std::thread::hardware_concurrency(), 4u), 1);
     const Uint32 NumItemsPerProducer = 10000;
     ProducedData.reserve(NumProducers * NumItemsPerProducer);
 
