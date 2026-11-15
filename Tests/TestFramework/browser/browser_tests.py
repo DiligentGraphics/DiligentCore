@@ -154,7 +154,9 @@ def run(args):
             thread = threading.Thread(target=server.serve_forever, daemon=True)
             thread.start()
             try:
-                with tempfile.TemporaryDirectory(prefix="diligent-browser-") as profile:
+                # Chrome helpers may still modify the profile after its main process exits.
+                # Best-effort profile cleanup must not replace the actual test result.
+                with tempfile.TemporaryDirectory(prefix="diligent-browser-", ignore_cleanup_errors=True) as profile:
                     command = [browser, "--headless=new", "--no-first-run", "--no-default-browser-check",
                                "--disable-background-networking", "--disable-extensions", "--disable-sync",
                                *args.browser_arg, "--user-data-dir=" + profile,
