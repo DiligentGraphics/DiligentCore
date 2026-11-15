@@ -20,5 +20,3 @@ WGSLShaderResources.InvalidSourceAndReflectionDiagnostics
 # These filesystem operations are not implemented by the Emscripten backend.
 Platforms_FileSystem.Search
 Platforms_FileSystem.SearchRecursive
-Platforms_FileSystem.GetLocalAppDataDirectory
-Platforms_FileSystem.GetLocalAppDataDirectory_NullAppName

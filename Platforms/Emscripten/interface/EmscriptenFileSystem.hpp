@@ -40,6 +40,9 @@ using EmscriptenFile = StandardFile;
 
 struct EmscriptenFileSystem : public LinuxFileSystem
 {
+    /// Returns /app-data, with AppName appended when nonempty, in the virtual filesystem.
+    /// Creates the directory if Create is true. By default, files are kept in memory
+    /// and do not persist across page reloads.
     static std::string GetLocalAppDataDirectory(const char* AppName = nullptr, bool Create = true);
 };
 

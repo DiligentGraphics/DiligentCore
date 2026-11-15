@@ -25,15 +25,23 @@
  */
 
 #include "EmscriptenFileSystem.hpp"
-#include "DebugUtilities.hpp"
 
 namespace Diligent
 {
 
 std::string EmscriptenFileSystem::GetLocalAppDataDirectory(const char* AppName, bool Create)
 {
-    UNSUPPORTED("Not implemented");
-    return std::string();
+    std::string AppDataDir{"/app-data"};
+    if (AppName != nullptr && AppName[0] != '\0')
+    {
+        AppDataDir += SlashSymbol;
+        AppDataDir += AppName;
+    }
+
+    if (Create && !PathExists(AppDataDir.c_str()))
+        CreateDirectory(AppDataDir.c_str());
+
+    return AppDataDir;
 }
 
 } // namespace Diligent
