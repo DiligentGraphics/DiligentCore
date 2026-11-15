@@ -96,7 +96,7 @@ void TestingEnvironment::MessageCallback(DEBUG_MESSAGE_SEVERITY Severity,
     {
         if (m_NumAllowedErrors == 0)
         {
-            ADD_FAILURE() << "Unexpected error";
+            ADD_FAILURE() << "Unexpected error: " << Message;
         }
         else
         {

@@ -1042,6 +1042,7 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = fa
         pDearchiver->UnpackPipelineState(UnpackInfo, &pUnpackedPSOWithLayout);
         ASSERT_NE(pUnpackedPSOWithLayout, nullptr);
         ASSERT_EQ(pUnpackedPSOWithLayout->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
+        ASSERT_EQ(pRefPSOWithLayout->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
 
         EXPECT_EQ(pUnpackedPSOWithLayout->GetGraphicsPipelineDesc(), pRefPSOWithLayout->GetGraphicsPipelineDesc());
         EXPECT_EQ(pUnpackedPSOWithLayout->GetResourceSignatureCount(), pRefPSOWithLayout->GetResourceSignatureCount());
