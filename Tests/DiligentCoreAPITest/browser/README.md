@@ -1,6 +1,6 @@
 # Browser GPU tests
 
-The Linux Emscripten CI jobs run `DiligentCoreAPITest` in headless Chrome with
+The Linux and Windows Emscripten CI jobs run `DiligentCoreAPITest` in headless Chrome with
 WebGPU and SwiftShader, in both Debug and Release. All selected tests run in one
 browser session. No browser automation packages are required.
 
@@ -39,7 +39,10 @@ Use `--filter 'Suite.Test*'` to select tests and
 maximum seconds without test progress. Exclusions do not affect native runs.
 
 CI uses the `run-core-browser-tests` action from `DiligentGraphics/github-action`.
-It supplies the shared Chrome/SwiftShader wrapper used by Radient browser tests
-and uploads results on success or failure. Test exclusions and the browser
-harness remain in this module. A local Chrome wrapper can also be passed through
+It supplies platform-specific Chrome/SwiftShader flags and uploads results on
+success or failure. On Windows, omit `--browser` to discover Chrome and replace
+the ANGLE/Vulkan options above with
+`--browser-arg=--use-angle=d3d11-warp`: ANGLE needs a D3D11 device for Chrome
+adapter selection, while WebGPU still uses SwiftShader. Test exclusions and the
+browser harness remain in this module. A local Chrome wrapper can also be passed through
 `--browser` instead of specifying the individual `--browser-arg` options.

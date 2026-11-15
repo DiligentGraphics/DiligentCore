@@ -8,6 +8,7 @@ errors, missing/empty Google Test XML, and timeouts fail the command.
 import argparse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -38,12 +39,34 @@ def make_filter(selection, exclusion_file):
     return (positive or "*") + ("-" + ":".join(exclusions) if exclusions else "")
 
 
+def find_browser():
+    for name in ("google-chrome", "google-chrome-stable", "chromium", "chromium-browser", "chrome"):
+        executable = shutil.which(name)
+        if executable:
+            return executable
+
+    candidates = []
+    if sys.platform == "win32":
+        for variable in ("PROGRAMFILES", "PROGRAMFILES(X86)", "LOCALAPPDATA"):
+            directory = os.environ.get(variable)
+            if directory:
+                candidates.append(Path(directory) / "Google/Chrome/Application/chrome.exe")
+    elif sys.platform == "darwin":
+        for directory in (Path("/Applications"), Path.home() / "Applications"):
+            candidates.extend((directory / "Google Chrome.app/Contents/MacOS/Google Chrome",
+                               directory / "Chromium.app/Contents/MacOS/Chromium"))
+    for candidate in candidates:
+        if candidate.is_file():
+            return str(candidate)
+    return None
+
+
 def run(args):
     module = args.module.resolve(strict=True)
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     (output / "results.xml").unlink(missing_ok=True)
-    browser = args.browser or shutil.which("google-chrome") or shutil.which("chromium")
+    browser = args.browser or find_browser()
     if not browser:
         raise RuntimeError("Chrome was not found; specify --browser")
     selected = make_filter(args.filter, None if args.no_exclusions else args.exclude_file)
@@ -177,7 +200,7 @@ def main(default_mode, default_exclude_file=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--module", type=Path, required=True, help="Built test executable JavaScript file")
     parser.add_argument("--mode", choices=("cpu", "wgpu"), default=default_mode)
-    parser.add_argument("--browser", help="Chrome/Chromium executable; discovered from PATH by default")
+    parser.add_argument("--browser", help="Chrome/Chromium executable; discovered from PATH or standard install locations")
     parser.add_argument("--browser-arg", action="append", default=[],
                         help="Additional browser option; repeat --browser-arg=OPTION as needed")
     parser.add_argument("--output", type=Path, default=Path("BrowserTestResults"))

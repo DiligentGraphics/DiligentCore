@@ -25,7 +25,7 @@ jobs:
 
           - os:        "macos-26"
             host_name: "MacOS"
-            cmake_args: "-DDILIGENT_BUILD_CORE_TESTS=ON -DDILIGENT_BUILD_CORE_INCLUDE_TEST=ON"
+            cmake_args: "-DDILIGENT_BUILD_CORE_TESTS=ON -DDILIGENT_BUILD_CORE_INCLUDE_TEST=ON -DDILIGENT_EMSCRIPTEN_STRIP_DEBUG_INFO=ON"
 
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.host_name }} -> Emscripten, ${{ matrix.build_type }}
@@ -38,13 +38,13 @@ jobs:
 
     - name: Set up build environment
       if:   success()
-      uses: DiligentGraphics/github-action/setup-build-env@v30
+      uses: DiligentGraphics/github-action/setup-build-env@v33
       with:
         platform: Web
 
     - name: Configure CMake
       if:   success()
-      uses: DiligentGraphics/github-action/configure-cmake@v30
+      uses: DiligentGraphics/github-action/configure-cmake@v33
       with:
         build-type: ${{ matrix.build_type }}
         cmake-args: ${{ matrix.cmake_args }}
@@ -52,18 +52,18 @@ jobs:
     - name: Build
       if:   success()
       id:   build
-      uses: DiligentGraphics/github-action/build@v30
+      uses: DiligentGraphics/github-action/build@v33
 
     - name: Test Core CPU in Chrome
-      if: ${{ !cancelled() && runner.os == 'Linux' && steps.build.outcome == 'success' }}
+      if: ${{ !cancelled() && steps.build.outcome == 'success' }}
       timeout-minutes: 20
-      uses: DiligentGraphics/github-action/run-core-cpu-browser-tests@v31
+      uses: DiligentGraphics/github-action/run-core-cpu-browser-tests@v33
       with:
-        artifact-name: CoreCPU-Chrome-${{matrix.build_type}}
+        artifact-name: CoreCPU-Chrome-${{runner.os}}-${{matrix.build_type}}
 
     - name: Test WebGPU in Chrome
-      if: ${{ !cancelled() && runner.os == 'Linux' && steps.build.outcome == 'success' }}
+      if: ${{ !cancelled() && runner.os != 'macOS' && steps.build.outcome == 'success' }}
       timeout-minutes: 20
-      uses: DiligentGraphics/github-action/run-core-browser-tests@v30
+      uses: DiligentGraphics/github-action/run-core-browser-tests@v33
       with:
-        artifact-name: WebGPU-Chrome-${{matrix.build_type}}
+        artifact-name: WebGPU-Chrome-${{runner.os}}-${{matrix.build_type}}

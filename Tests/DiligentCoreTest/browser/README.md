@@ -9,8 +9,9 @@ python3 Tests/DiligentCoreTest/browser/run_tests.py \
     --output CoreCPUBrowserTestResults
 ```
 
-The runner discovers Chrome/Chromium on `PATH`; use `--browser` to select an
-executable. The browser must support JSPI and shared Wasm memory. A GPU is not
+The runner supports Linux, Windows, and macOS. It discovers Chrome/Chromium on
+`PATH` or in standard Windows/macOS installation directories; use `--browser`
+to select an executable. The browser must support JSPI and shared Wasm memory. A GPU is not
 required. The generated `.wasm` and `.data` files must remain beside the `.js`
 file. Test assets are preloaded into the module's virtual filesystem.
 
