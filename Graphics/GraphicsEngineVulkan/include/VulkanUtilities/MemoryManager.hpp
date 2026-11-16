@@ -145,7 +145,7 @@ private:
     friend struct MemoryAllocation;
 
     // MemoryManager holds m_PagesMtx while allocating so ShrinkMemory() cannot erase this page.
-    MemoryAllocation Allocate(VkDeviceSize size, VkDeviceSize alignment);
+    MemoryAllocation Allocate(VkDeviceSize size, VkDeviceSize alignment, bool RequireEmpty = false);
 
     // Memory is reclaimed immediately. The application is responsible to ensure it is not in use by the GPU
     void Free(MemoryAllocation&& Allocation);

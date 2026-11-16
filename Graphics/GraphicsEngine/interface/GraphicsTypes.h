@@ -4109,12 +4109,17 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// Device-local memory is used for USAGE_DEFAULT and USAGE_IMMUTABLE
     /// GPU resources, such as buffers and textures.
     ///
+    /// Allocations larger than this size use separate pages that are not shared
+    /// with other resources and are released independently of the memory reserve.
+    ///
     /// If there is no available GPU memory, the resource will fail to be created.
     Uint32 DeviceLocalMemoryPageSize        DEFAULT_INITIALIZER(16 << 20);
 
     /// Allocation granularity for host-visible memory.
 
     /// Host-visible memory is primarily used to upload data to GPU resources.
+    /// Allocations larger than this size use separate pages that are not shared
+    /// with other resources and are released independently of the memory reserve.
     Uint32 HostVisibleMemoryPageSize        DEFAULT_INITIALIZER(16 << 20);
 
     /// Amount of device-local memory reserved by the engine.
