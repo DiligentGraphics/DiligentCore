@@ -15,6 +15,9 @@ jobs:
   deploy:
     runs-on: windows-2025
     name: Deploying NuGet package
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
     - name: Clone repository
@@ -31,6 +34,14 @@ jobs:
       working-directory: ${{github.workspace}}
       run:  python ./BuildTools/.NET/dotnet-build-package.py -c Release -s ./BuildTools/.NET/dotnet-build-settings.json -d ./ --dotnet-publish
 
+    - name: Authenticate to NuGet
+      id: nuget_login
+      uses: NuGet/login@v1
+      with:
+        user: ${{vars.NUGET_USER}}
+
     - name: Publish NuGet package
-      run: dotnet nuget push *.nupkg -k ${{secrets.NUGET_AUTH_TOKEN}} -s ${{env.NUGET_SOURCE_URL}}
+      run: dotnet nuget push *.nupkg --api-key "$env:NUGET_API_KEY" --source "$env:NUGET_SOURCE_URL"
       working-directory: ${{github.workspace}}/build/.NET/Graphics/GraphicsEngine.NET/bin/Release
+      env:
+        NUGET_API_KEY: ${{steps.nuget_login.outputs.NUGET_API_KEY}}
