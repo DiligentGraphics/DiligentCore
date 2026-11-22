@@ -61,7 +61,8 @@ def find_browser():
     return None
 
 
-def run(args):
+def run(args, request_handler=None):
+    """An optional request_handler serves module fixtures and returns True when handled."""
     module = args.module.resolve(strict=True)
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -100,7 +101,14 @@ def run(args):
                 self.send_header("Cache-Control", "no-store")
                 super().end_headers()
 
+            def do_HEAD(self):
+                if request_handler and request_handler(self):
+                    return
+                self.send_error(405)
+
             def do_GET(self):
+                if request_handler and request_handler(self):
+                    return
                 path = unquote(urlsplit(self.path).path)
                 if path == "/":
                     self.send_response(200)
@@ -198,7 +206,7 @@ def run(args):
         return 0 if report.get("code") == 0 and failures == 0 else 1
 
 
-def main(default_mode, default_exclude_file=None):
+def main(default_mode, default_exclude_file=None, request_handler=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--module", type=Path, required=True, help="Built test executable JavaScript file")
     parser.add_argument("--mode", choices=("cpu", "wgpu"), default=default_mode)
@@ -212,7 +220,7 @@ def main(default_mode, default_exclude_file=None):
     parser.add_argument("--timeout", type=float, default=120, help="Maximum seconds without test progress")
     args = parser.parse_args()
     try:
-        return run(args)
+        return run(args, request_handler=request_handler)
     except (OSError, RuntimeError, ValueError, ET.ParseError) as error:
         print(f"Browser tests failed: {error}", file=sys.stderr)
         print(f"Logs: {args.output.resolve()}", file=sys.stderr)
