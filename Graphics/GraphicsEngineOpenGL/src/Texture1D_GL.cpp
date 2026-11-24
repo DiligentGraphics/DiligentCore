@@ -153,6 +153,8 @@ void Texture1D_GL::UpdateData(GLContextState&          ContextState,
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, UnpackBuffer);
 
     const NativePixelAttribs& TransferAttribs = GetNativePixelTransferAttribs(m_Desc.Format);
+    // Android/iOS replace glTexSubImage1D with a stub that discards its arguments.
+    (void)TransferAttribs;
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, PBOOffsetAlignment);
     glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);

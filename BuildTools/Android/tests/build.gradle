@@ -18,7 +18,8 @@ android {
         externalNativeBuild {
             cmake {
                 arguments '-DANDROID_STL=c++_static',
-						  '-DDILIGENT_NO_FORMAT_VALIDATION=ON'
+                          '-DDILIGENT_NO_FORMAT_VALIDATION=ON',
+                          '-DDILIGENT_CLANG_COMPILE_OPTIONS=-Werror'
             }
         }
     }
