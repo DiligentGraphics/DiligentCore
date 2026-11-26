@@ -1,18 +1,18 @@
-RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2D_Static;
-RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2D_Mut;
-RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2D_Dyn;
+VK_IMAGE_FORMAT("rgba8") RWTexture2D<unorm float4> g_RWTex2D_Static;
+VK_IMAGE_FORMAT("rgba8") RWTexture2D<unorm float4> g_RWTex2D_Mut;
+VK_IMAGE_FORMAT("rgba8") RWTexture2D<unorm float4> g_RWTex2D_Dyn;
 
-RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2DArr_Static_0;
-RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2DArr_Static_1;
+VK_IMAGE_FORMAT("rgba8") RWTexture2D<unorm float4> g_RWTex2DArr_Static_0;
+VK_IMAGE_FORMAT("rgba8") RWTexture2D<unorm float4> g_RWTex2DArr_Static_1;
 
-RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2DArr_Mut_0;
-RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2DArr_Mut_1;
-RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2DArr_Mut_2;
-RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2DArr_Mut_3;
+VK_IMAGE_FORMAT("rgba8") RWTexture2D<unorm float4> g_RWTex2DArr_Mut_0;
+VK_IMAGE_FORMAT("rgba8") RWTexture2D<unorm float4> g_RWTex2DArr_Mut_1;
+VK_IMAGE_FORMAT("rgba8") RWTexture2D<unorm float4> g_RWTex2DArr_Mut_2;
+VK_IMAGE_FORMAT("rgba8") RWTexture2D<unorm float4> g_RWTex2DArr_Mut_3;
 
-RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2DArr_Dyn_0;
-RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2DArr_Dyn_1;
-RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2DArr_Dyn_2;
+VK_IMAGE_FORMAT("rgba8") RWTexture2D<unorm float4> g_RWTex2DArr_Dyn_0;
+VK_IMAGE_FORMAT("rgba8") RWTexture2D<unorm float4> g_RWTex2DArr_Dyn_1;
+VK_IMAGE_FORMAT("rgba8") RWTexture2D<unorm float4> g_RWTex2DArr_Dyn_2;
 
 float4 CheckValue(float4 Val, float4 Expected)
 {
@@ -77,7 +77,7 @@ float4 VerifyResources()
     return AllCorrect;
 }
 
-RWTexture2D</*format=rgba8*/ float4> g_tex2DUAV;
+VK_IMAGE_FORMAT("rgba8") RWTexture2D<float4> g_tex2DUAV;
 
 [numthreads(16, 16, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)

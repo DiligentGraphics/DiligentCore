@@ -1,6 +1,6 @@
-RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2D_0;
-RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2D_1;
-RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2D_2;
+VK_IMAGE_FORMAT("rgba8") RWTexture2D<unorm float4> g_RWTex2D_0;
+VK_IMAGE_FORMAT("rgba8") RWTexture2D<unorm float4> g_RWTex2D_1;
+VK_IMAGE_FORMAT("rgba8") RWTexture2D<unorm float4> g_RWTex2D_2;
 
 struct BufferData
 {
@@ -53,7 +53,7 @@ float4 VerifyResources()
     return AllCorrect;
 }
 
-RWTexture2D</*format=rgba8*/ float4> g_tex2DUAV;
+VK_IMAGE_FORMAT("rgba8") RWTexture2D<float4> g_tex2DUAV;
 
 [numthreads(16, 16, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
