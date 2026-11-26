@@ -27,7 +27,6 @@
 #pragma once
 
 #include "ParsingTools.hpp"
-#include "GraphicsTypes.h"
 
 namespace Diligent
 {
@@ -104,12 +103,6 @@ std::string ExtractGLSLImageFormatFromComment(const InteratorType& Start, const 
     auto ImgFmtEndPos = SkipIdentifier(Pos, End);
     return {Pos, ImgFmtEndPos};
 }
-
-/// Parses GLSL image format string, e.g. "rgba8" or "rg32f" and returns the corresponding texture format.
-///
-/// \param[in]  Format - GLSL image format string
-/// \return     Texture format, or TEXTURE_FORMAT_UNKNOWN if the format is not recognized.
-TEXTURE_FORMAT ParseGLSLImageFormat(const std::string& Format);
 
 } // namespace Parsing
 

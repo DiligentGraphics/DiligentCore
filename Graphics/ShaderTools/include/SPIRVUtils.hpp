@@ -26,23 +26,8 @@
 
 #pragma once
 
-#include <vector>
-#include <unordered_map>
-
-#include "GraphicsTypes.h"
-#include "HashUtils.hpp"
-
 namespace Diligent
 {
-
-/// Patches image format declarations in the SPIRV code using the provided mapping.
-///
-/// \param [in] SPIRV        - SPIRV code.
-/// \param [in] ImageFormats - Mapping from image format names to texture formats.
-///
-/// \return Patched SPIRV code.
-std::vector<uint32_t> PatchImageFormats(const std::vector<uint32_t>&                                SPIRV,
-                                        const std::unordered_map<HashMapStringKey, TEXTURE_FORMAT>& ImageFormats);
 
 /// Warms up SPIRV-Cross GLSL compiler to initialize internal static data before concurrent use.
 void WarmUpSPIRVCrossGLSLCompiler();
