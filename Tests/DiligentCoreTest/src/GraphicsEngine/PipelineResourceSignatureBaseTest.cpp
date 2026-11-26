@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -26,15 +26,81 @@
 
 #include "../../../../Graphics/GraphicsEngine/include/PipelineResourceSignatureBase.hpp"
 #include "CommonlyUsedStates.h"
+#include "TestingEnvironment.hpp"
 
 #include "gtest/gtest.h"
 
 #include <array>
+#include <limits>
 
 using namespace Diligent;
 
 namespace
 {
+
+TEST(PipelineResourceSignatureBaseTest, ImmutableSamplersDoNotConsumeResourceCacheOffsets)
+{
+    // One sampler must not push the resource count past the largest accepted total.
+    // Validation only inspects the descriptors; it does not allocate the resource array.
+    const PipelineResourceDesc Resource{SHADER_TYPE_PIXEL, "Texture", std::numeric_limits<Uint32>::max() - 1,
+                                        SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE};
+
+    const ImmutableSamplerDesc Sampler{SHADER_TYPE_PIXEL, "Sampler", Sam_LinearWrap};
+
+    PipelineResourceSignatureDesc Desc;
+    Desc.NumResources         = 1;
+    Desc.Resources            = &Resource;
+    Desc.NumImmutableSamplers = 1;
+    Desc.ImmutableSamplers    = &Sampler;
+    EXPECT_NO_THROW(ValidatePipelineResourceSignatureDesc(Desc, nullptr, RENDER_DEVICE_TYPE_D3D12));
+}
+
+TEST(PipelineResourceSignatureBaseTest, CountValidation)
+{
+    PipelineResourceDesc Resources[] = {
+        {SHADER_TYPE_PIXEL, "Resource0", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+        {SHADER_TYPE_PIXEL, "Resource1", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+    };
+    PipelineResourceSignatureDesc Desc;
+    Desc.Resources    = Resources;
+    Desc.NumResources = _countof(Resources);
+
+    EXPECT_NO_THROW(ValidatePipelineResourceSignatureDesc(Desc, nullptr, RENDER_DEVICE_TYPE_D3D12));
+
+    const auto ExpectFailure = [&Desc](const char* Message) {
+        Testing::TestingEnvironment::ErrorScope Errors{Message};
+        EXPECT_THROW(ValidatePipelineResourceSignatureDesc(Desc, nullptr, RENDER_DEVICE_TYPE_D3D12), std::runtime_error);
+    };
+
+    Resources[0].ArraySize = std::numeric_limits<Uint32>::max() - 1;
+    ExpectFailure("Total resource count, including array elements, exceeds the maximum representable value");
+    Resources[0].ArraySize = 1u << 31;
+    Resources[1].ArraySize = 1u << 31;
+    ExpectFailure("Total resource count, including array elements, exceeds the maximum representable value");
+
+    Desc.NumResources = MAX_RESOURCES_IN_SIGNATURE + 1;
+    ExpectFailure("Desc.NumResources");
+    Desc.NumResources = 1;
+    Desc.Resources    = nullptr;
+    ExpectFailure("Desc.Resources is null");
+    Desc.Resources         = Resources;
+    Resources[0].ArraySize = 0;
+    ExpectFailure("ArraySize must not be 0");
+
+    Resources[0].Flags     = PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS;
+    Resources[0].ArraySize = MAX_INLINE_CONSTANTS;
+    EXPECT_NO_THROW(ValidatePipelineResourceSignatureDesc(Desc, nullptr, RENDER_DEVICE_TYPE_D3D12));
+    Resources[0].ArraySize = std::numeric_limits<Uint32>::max();
+    ExpectFailure("for inline constants");
+
+    Desc.NumResources      = 2;
+    Resources[0].ArraySize = MAX_INLINE_CONSTANTS;
+    Resources[1].Flags     = PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS;
+    Resources[1].ArraySize = 1;
+    ExpectFailure("Total number of inline constant values");
+    Resources[0].ArraySize -= 1;
+    EXPECT_NO_THROW(ValidatePipelineResourceSignatureDesc(Desc, nullptr, RENDER_DEVICE_TYPE_D3D12));
+}
 
 TEST(PipelineResourceSignatureBaseTest, Compatibility)
 {

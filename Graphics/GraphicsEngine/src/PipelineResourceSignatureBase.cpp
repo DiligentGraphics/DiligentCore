@@ -71,6 +71,9 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
         LOG_PRS_ERROR_AND_THROW("Desc.UseCombinedTextureSamplers is true, but Desc.CombinedSamplerSuffix is null or empty");
 
 
+    // Array elements contribute to backend cache offsets; ~0u is an invalid offset.
+    // Immutable samplers have backend-specific storage and are counted by each backend.
+    Uint64 TotalResourceCount        = 0;
     Uint32 TotalInlineConstantValues = 0;
     // Hash map of all resources by name
     std::unordered_multimap<HashMapStringKey, const PipelineResourceDesc&> Resources;
@@ -89,6 +92,10 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
 
         if (Res.ArraySize == 0)
             LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].ArraySize must not be 0.");
+
+        TotalResourceCount += Res.GetArraySize();
+        if (TotalResourceCount >= std::numeric_limits<Uint32>::max())
+            LOG_PRS_ERROR_AND_THROW("Total resource count, including array elements, exceeds the maximum representable value.");
 
         const auto res_range = Resources.equal_range(Res.Name);
         for (auto res_it = res_range.first; res_it != res_range.second; ++res_it)
