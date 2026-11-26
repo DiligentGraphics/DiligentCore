@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -61,7 +61,8 @@ public:
     static constexpr Uint32 InvalidSamplerInd   = (1u << _SamplerIndBits) - 1;
     static constexpr Uint32 InvalidSRBRootIndex = (1u << _SRBRootIndexBits) - 1;
     static constexpr Uint32 InvalidSigRootIndex = (1u << _SigRootIndexBits) - 1;
-    static constexpr Uint32 InvalidRegister     = (1u << _RegisterBits) - 1;
+    static constexpr Uint32 MaxShaderRegister   = (1u << _RegisterBits) - 1;
+    static constexpr Uint32 InvalidRegister     = MaxShaderRegister;
     static constexpr Uint32 InvalidOffset       = ~0u;
 
     // clang-format off

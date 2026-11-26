@@ -155,7 +155,9 @@ public:
         }
     };
 
-    using TResourceCount = std::array<Uint16, 4>; // same as PipelineResourceSignatureGLImpl::TBindings.
+    using TResourceCount                  = std::array<Uint16, 4>; // same as PipelineResourceSignatureGLImpl::TBindings.
+    static constexpr Uint32 MaxMemorySize = 0xFFFE;
+
     static size_t GetRequiredMemorySize(const TResourceCount& ResCount, Uint32 TotalInlineConstants = 0);
 
     struct InitAttribs
@@ -425,7 +427,7 @@ private:
     }
 
 private:
-    static constexpr const Uint16 InvalidResourceOffset = 0xFFFF;
+    static constexpr const Uint16 InvalidResourceOffset = MaxMemorySize + 1;
     static constexpr const Uint16 m_UBsOffset           = 0;
 
     Uint16 m_TexturesOffset       = InvalidResourceOffset;

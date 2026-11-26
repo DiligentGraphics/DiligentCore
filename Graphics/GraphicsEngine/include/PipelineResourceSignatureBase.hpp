@@ -57,6 +57,12 @@
 namespace Diligent
 {
 
+// Check the calculated cache size before allocation or narrowing to packed offsets.
+void ValidateResourceCacheMemorySize(const PipelineResourceSignatureDesc& Desc,
+                                     Uint64                               RequiredSize,
+                                     Uint64                               MaxSize = std::numeric_limits<size_t>::max());
+
+
 /// Validates pipeline resource signature description and throws an exception in case of an error.
 /// \note  pDevice can be null if PRS is used for serialization.
 void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& Desc,

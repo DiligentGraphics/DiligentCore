@@ -27,6 +27,8 @@
 
 #include "pch.h"
 
+#include <limits>
+
 #include "ShaderResourceCacheVk.hpp"
 
 #include "DeviceContextVkImpl.hpp"
@@ -41,16 +43,27 @@
 namespace Diligent
 {
 
+ShaderResourceCacheVk::MemoryRequirements ShaderResourceCacheVk::GetMemoryRequirements(Uint32 NumSets, const Uint32* SetSizes, Uint32 TotalInlineConstants)
+{
+    VERIFY_EXPR(NumSets <= std::numeric_limits<Uint16>::max());
+    VERIFY_EXPR(NumSets == 0 || SetSizes != nullptr);
+
+    Uint64 TotalResources = 0;
+    for (Uint32 t = 0; t < NumSets; ++t)
+        TotalResources += SetSizes[t];
+
+    const Uint64 MemorySize = Uint64{NumSets} * sizeof(DescriptorSet) + TotalResources * sizeof(Resource) + Uint64{TotalInlineConstants} * sizeof(Uint32);
+    return {TotalResources, MemorySize};
+}
+
 size_t ShaderResourceCacheVk::GetRequiredMemorySize(Uint32        NumSets,
                                                     const Uint32* SetSizes,
                                                     Uint32        TotalInlineConstants)
 {
-    Uint32 TotalResources = 0;
-    for (Uint32 t = 0; t < NumSets; ++t)
-        TotalResources += SetSizes[t];
-
-    size_t MemorySize = NumSets * sizeof(DescriptorSet) + TotalResources * sizeof(Resource) + TotalInlineConstants * sizeof(Uint32);
-    return MemorySize;
+    const MemoryRequirements MemReq = GetMemoryRequirements(NumSets, SetSizes, TotalInlineConstants);
+    VERIFY_EXPR(MemReq.TotalResources <= MaxResourceCount);
+    VERIFY_EXPR(MemReq.Size <= std::numeric_limits<size_t>::max());
+    return static_cast<size_t>(MemReq.Size);
 }
 
 void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator,
@@ -70,18 +83,17 @@ void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator,
     //
     //  Ns = m_NumSets
 
-    m_NumSets = static_cast<Uint16>(NumSets);
-    VERIFY(m_NumSets == NumSets, "NumSets (", NumSets, ") exceed maximum representable value");
-
-    m_TotalResources = 0;
+    const MemoryRequirements MemReq = GetMemoryRequirements(NumSets, SetSizes, TotalInlineConstants);
+    VERIFY_EXPR(MemReq.TotalResources <= MaxResourceCount);
+    VERIFY_EXPR(MemReq.Size <= std::numeric_limits<size_t>::max());
+    m_NumSets        = static_cast<Uint16>(NumSets);
+    m_TotalResources = static_cast<Uint32>(MemReq.TotalResources);
+#ifdef DILIGENT_DEBUG
     for (Uint32 t = 0; t < NumSets; ++t)
-    {
         VERIFY_EXPR(SetSizes[t] > 0);
-        m_TotalResources += SetSizes[t];
-    }
+#endif
 
-    const size_t MemorySize = NumSets * sizeof(DescriptorSet) + m_TotalResources * sizeof(Resource) + TotalInlineConstants * sizeof(Uint32);
-    VERIFY_EXPR(MemorySize == GetRequiredMemorySize(NumSets, SetSizes, TotalInlineConstants));
+    const size_t MemorySize = static_cast<size_t>(MemReq.Size);
 #ifdef DILIGENT_DEBUG
     m_DbgInitializedResources.resize(m_NumSets);
     m_DbgAssignedInlineConstants.resize(TotalInlineConstants);

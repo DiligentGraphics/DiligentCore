@@ -61,6 +61,8 @@ private:
     static constexpr Uint32 _InvalidRegisterSpace  = (1u << _RegisterSpaceBits) - 1;
 
 public:
+    static constexpr Uint32 MaxShaderRegister = _InvalidShaderRegister - 1;
+
     Uint32 ArraySize = 1;
     Uint32 ShaderRegister : _ShaderRegisterBits;
     Uint32 RegisterSpace : _RegisterSpaceBits;

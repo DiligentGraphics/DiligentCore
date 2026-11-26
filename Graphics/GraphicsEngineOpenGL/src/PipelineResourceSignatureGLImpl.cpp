@@ -44,7 +44,7 @@ const char* GetBindingRangeName(BINDING_RANGE Range)
     static_assert(BINDING_RANGE_COUNT == 4, "Please update the switch below to handle the new shader resource range");
     switch (Range)
     {
-        // clang-format off
+            // clang-format off
         case BINDING_RANGE_UNIFORM_BUFFER: return "Uniform buffer";
         case BINDING_RANGE_TEXTURE:        return "Texture";
         case BINDING_RANGE_IMAGE:          return "Image";
@@ -60,7 +60,7 @@ BINDING_RANGE PipelineResourceToBindingRange(const PipelineResourceDesc& Desc)
     static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new shader resource type");
     switch (Desc.ResourceType)
     {
-        // clang-format off
+            // clang-format off
         case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:  return BINDING_RANGE_UNIFORM_BUFFER;
         case SHADER_RESOURCE_TYPE_TEXTURE_SRV:      return BINDING_RANGE_TEXTURE;
         case SHADER_RESOURCE_TYPE_BUFFER_SRV:       return (Desc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) ? BINDING_RANGE_TEXTURE : BINDING_RANGE_STORAGE_BUFFER;
@@ -117,6 +117,8 @@ void PipelineResourceSignatureGLImpl::CreateLayout(const bool IsSerialized)
         if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER)
         {
             const Uint32 ImtblSamplerIdx = FindImmutableSampler(ResDesc.ShaderStages, ResDesc.Name);
+            if (ImtblSamplerIdx != InvalidImmutableSamplerIndex && ImtblSamplerIdx >= ResourceAttribs::InvalidSamplerInd)
+                LOG_ERROR_AND_THROW("Immutable sampler index exceeds the maximum representable value.");
             // Create sampler resource without cache space
             if (!IsSerialized)
             {
@@ -154,7 +156,12 @@ void PipelineResourceSignatureGLImpl::CreateLayout(const bool IsSerialized)
                     SamplerIdx = FindAssignedSampler(ResDesc, ResourceAttribs::InvalidSamplerInd);
             }
 
+            if (ImtblSamplerIdx != InvalidImmutableSamplerIndex && ImtblSamplerIdx >= ResourceAttribs::InvalidSamplerInd)
+                LOG_ERROR_AND_THROW("Immutable sampler index exceeds the maximum representable value.");
+
             Uint16& CacheOffset = m_BindingCount[Range];
+            if (Uint64{CacheOffset} + ResDesc.GetArraySize() > std::numeric_limits<TBindings::value_type>::max())
+                LOG_ERROR_AND_THROW("Resource binding count exceeds the maximum representable value.");
             if (!IsSerialized)
             {
                 new (pAttribs) ResourceAttribs //
@@ -222,6 +229,10 @@ void PipelineResourceSignatureGLImpl::CreateLayout(const bool IsSerialized)
         }
     }
     VERIFY_EXPR(InlineConstantBufferIdx == m_NumInlineConstantBuffers);
+
+    ValidateResourceCacheMemorySize(m_Desc,
+                                    ShaderResourceCacheGL::GetRequiredMemorySize(m_BindingCount, m_TotalInlineConstants),
+                                    ShaderResourceCacheGL::MaxMemorySize);
 
     if (m_pStaticResCache)
     {

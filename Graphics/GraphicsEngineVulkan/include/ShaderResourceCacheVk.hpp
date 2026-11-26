@@ -89,6 +89,18 @@ public:
 
     ~ShaderResourceCacheVk();
 
+    static constexpr Uint32 TotalResourceCountBits = 30;
+    static constexpr Uint32 MaxResourceCount       = (1u << TotalResourceCountBits) - 1;
+
+    struct MemoryRequirements
+    {
+        Uint64 TotalResources = 0;
+        Uint64 Size           = 0;
+    };
+
+    // Signature construction validates the wide result before allocating any cache.
+    static MemoryRequirements GetMemoryRequirements(Uint32 NumSets, const Uint32* SetSizes, Uint32 TotalInlineConstants);
+
     static size_t GetRequiredMemorySize(Uint32        NumSets,
                                         const Uint32* SetSizes,
                                         Uint32        TotalInlineConstants);
@@ -365,7 +377,7 @@ private:
     // regardless of the variable type (including inline constant buffers).
     // Note this variable is not equal to dynamic offsets count, which is constant.
     Uint16 m_NumDynamicBuffers = 0;
-    Uint32 m_TotalResources : 30;
+    Uint32 m_TotalResources : TotalResourceCountBits;
 
     // Indicates what types of resources are stored in the cache
     const Uint32 m_ContentType : 1;

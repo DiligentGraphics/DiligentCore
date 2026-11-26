@@ -49,7 +49,6 @@ size_t ShaderResourceCacheGL::GetRequiredMemorySize(const TResourceCount& ResCou
     // clang-format on
     MemSize += TotalInlineConstants * sizeof(Uint32);
 
-    VERIFY(MemSize < InvalidResourceOffset, "Memory size exceed the maximum allowed size.");
     return MemSize;
 }
 
@@ -71,6 +70,7 @@ void ShaderResourceCacheGL::Initialize(const InitAttribs& Attribs)
             TotalInlineConstants += InlineCBAttribs.NumConstants;
     }
     VERIFY_EXPR(TotalInlineConstants == Attribs.DbgTotalInlineConstants);
+    VERIFY_EXPR(GetRequiredMemorySize(ResCount, TotalInlineConstants) <= MaxMemorySize);
 
     m_HasInlineConstants = (TotalInlineConstants > 0);
 

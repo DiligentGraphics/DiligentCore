@@ -118,7 +118,6 @@ size_t ShaderResourceCacheD3D11::GetRequiredMemorySize(const D3D11ShaderResource
     const Uint32 TotalInlineConstants = GetTotalInlineConstants(ResCount, pInlineCBs, NumInlineCBs);
     MemSize += TotalInlineConstants * sizeof(Uint32);
 
-    VERIFY(MemSize < std::numeric_limits<OffsetType>::max(), "Memory size exceed the maximum allowed size.");
     return MemSize;
 }
 
@@ -158,6 +157,7 @@ void ShaderResourceCacheD3D11::Initialize(const D3D11ShaderResourceCounters&    
 {
     // http://diligentgraphics.com/diligent-engine/architecture/d3d11/shader-resource-cache/
     VERIFY(!IsInitialized(), "Resource cache has already been initialized!");
+    VERIFY_EXPR(GetRequiredMemorySize(ResCount, pInlineCBs, NumInlineCBs) <= MaxMemorySize);
 
     if (pDynamicCBSlotsMask != nullptr)
         m_DynamicCBSlotsMask = *pDynamicCBSlotsMask;

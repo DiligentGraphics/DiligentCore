@@ -255,6 +255,8 @@ public:
 
     static constexpr int NumShaderTypes = D3D11ResourceBindPoints::NumShaderTypes;
 
+    static constexpr Uint32 MaxMemorySize = std::numeric_limits<Uint16>::max() - 1;
+
     static size_t GetRequiredMemorySize(const D3D11ShaderResourceCounters&      ResCount,
                                         const InlineConstantBufferAttribsD3D11* pInlineCBs,
                                         Uint32                                  NumInlineCBs);

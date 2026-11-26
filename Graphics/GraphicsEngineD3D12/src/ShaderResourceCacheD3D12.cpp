@@ -41,22 +41,25 @@
 namespace Diligent
 {
 
-static size_t GetRequiredMemorySize(Uint32 NumTables,
+// Keep byte calculations wide until their address-space bounds have been checked.
+static Uint64 GetRequiredMemorySize(Uint32 NumTables,
                                     Uint32 TotalResources,
                                     Uint32 NumDescriptorAllocations,
                                     Uint32 TotalInlineConstantValues)
 {
-    size_t MemorySize = NumTables * sizeof(ShaderResourceCacheD3D12::RootTable);
+    Uint64 MemorySize = Uint64{NumTables} * sizeof(ShaderResourceCacheD3D12::RootTable);
 
     MemorySize = AlignUp(MemorySize, alignof(ShaderResourceCacheD3D12::Resource));
-    MemorySize += TotalResources * sizeof(ShaderResourceCacheD3D12::Resource);
+    MemorySize += Uint64{TotalResources} * sizeof(ShaderResourceCacheD3D12::Resource);
 
     MemorySize = AlignUp(MemorySize, alignof(DescriptorHeapAllocation));
-    MemorySize += NumDescriptorAllocations * sizeof(DescriptorHeapAllocation);
+    MemorySize += Uint64{NumDescriptorAllocations} * sizeof(DescriptorHeapAllocation);
 
     MemorySize = AlignUp(MemorySize, alignof(Uint32));
-    MemorySize += TotalInlineConstantValues * sizeof(Uint32);
+    MemorySize += Uint64{TotalInlineConstantValues} * sizeof(Uint32);
 
+    if (MemorySize > std::numeric_limits<size_t>::max())
+        LOG_ERROR_AND_THROW("Resource cache memory size exceeds the maximum representable value.");
     return MemorySize;
 }
 
@@ -75,6 +78,8 @@ ShaderResourceCacheD3D12::MemoryRequirements ShaderResourceCacheD3D12::GetMemory
             const Uint32 ParamGroupSize = RootParams.GetParameterGroupSize(d3d12HeapType, static_cast<ROOT_PARAMETER_GROUP>(group));
             if (ParamGroupSize != 0)
             {
+                if (Uint64{MemReqs.TotalResources} + ParamGroupSize >= std::numeric_limits<Uint32>::max())
+                    LOG_ERROR_AND_THROW("Shader descriptor count exceeds the maximum representable value.");
                 MemReqs.TotalResources += ParamGroupSize;
                 // Every non-empty table from each group will need a descriptor table
                 ++MemReqs.NumDescriptorAllocations;
@@ -82,6 +87,8 @@ ShaderResourceCacheD3D12::MemoryRequirements ShaderResourceCacheD3D12::GetMemory
         }
     }
     // Root views and root constants resources are stored in one-descriptor tables
+    if (Uint64{MemReqs.TotalResources} + NumRootViews + NumRootConsts >= std::numeric_limits<Uint32>::max())
+        LOG_ERROR_AND_THROW("Shader descriptor count exceeds the maximum representable value.");
     MemReqs.TotalResources += NumRootViews;
     MemReqs.TotalResources += NumRootConsts;
 
@@ -120,10 +127,12 @@ size_t ShaderResourceCacheD3D12::AllocateMemory(IMemoryAllocator& MemAllocator,
 {
     VERIFY(!m_pMemory, "Memory has already been allocated");
 
-    const size_t MemorySize = GetRequiredMemorySize(m_NumTables,
-                                                    m_TotalResourceCount,
-                                                    m_NumDescriptorAllocations,
-                                                    TotalInlineConstantValues);
+    const Uint64 RequiredSize = GetRequiredMemorySize(m_NumTables,
+                                                      m_TotalResourceCount,
+                                                      m_NumDescriptorAllocations,
+                                                      TotalInlineConstantValues);
+    VERIFY_EXPR(RequiredSize <= std::numeric_limits<size_t>::max());
+    const size_t MemorySize = static_cast<size_t>(RequiredSize);
 
     if (MemorySize > 0)
     {
@@ -172,7 +181,11 @@ void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator&                   Me
 
     m_TotalResourceCount = 0;
     for (Uint32 t = 0; t < m_NumTables; ++t)
+    {
+        if (Uint64{m_TotalResourceCount} + TableSizes[t] >= std::numeric_limits<Uint32>::max())
+            LOG_ERROR_AND_THROW("Shader descriptor count exceeds the maximum representable value.");
         m_TotalResourceCount += TableSizes[t];
+    }
 
     m_DescriptorAllocations = 0;
 

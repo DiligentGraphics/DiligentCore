@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -82,6 +82,7 @@ private:
     // clang-format on
 
 public:
+    static constexpr Uint32 MaxArraySize      = (1u << _ArraySizeBits) - 1;
     static constexpr Uint32 MaxDescriptorSets = (1u << _DescrSetBits);
     static constexpr Uint32 InvalidSamplerInd = (1u << _SamplerIndBits) - 1;
 

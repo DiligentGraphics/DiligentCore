@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -262,8 +262,11 @@ private:
 
     static constexpr Uint64 NumBitsPerStage = 8;
     static constexpr Uint64 StageMask       = (Uint64{1} << NumBitsPerStage) - 1;
-    static constexpr Uint32 MaxCounter      = (Uint32{1} << NumBitsPerStage) - 1;
 
+public:
+    static constexpr Uint32 MaxCounter = (Uint32{1} << NumBitsPerStage) - 1;
+
+private:
     // 0      1      2      3      4      5      6      7      8
     // |  VS  |  PS  |  GS  |  HS  |  DS  |  CS  |unused|unused|
     union

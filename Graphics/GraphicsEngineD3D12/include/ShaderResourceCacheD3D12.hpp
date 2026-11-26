@@ -137,13 +137,17 @@ public:
 
     ~ShaderResourceCacheD3D12();
 
+    static constexpr Uint32 MaxRootTables     = 64;
+    static constexpr Uint32 ResourceCountBits = 31;
+    static constexpr Uint32 MaxTableResources = (1u << ResourceCountBits) - 1;
+
     struct MemoryRequirements
     {
         Uint32 NumTables                 = 0;
         Uint32 TotalResources            = 0;
         Uint32 NumDescriptorAllocations  = 0;
         Uint32 TotalInlineConstantValues = 0;
-        size_t TotalSize                 = 0;
+        Uint64 TotalSize                 = 0;
     };
     static MemoryRequirements GetMemoryRequirements(const RootParamsManager& RootParams);
 
@@ -264,7 +268,7 @@ public:
         const Uint32 m_TableStartOffset;
 
         // The total number of resources in the table, accounting for array sizes
-        const Uint32 m_NumResources : 31;
+        const Uint32 m_NumResources : ResourceCountBits;
 
         // Flag indicating if this table stores the resource of a root view
         const Uint32 m_IsRootView : 1;
@@ -423,8 +427,6 @@ private:
     }
 
 private:
-    static constexpr Uint32 MaxRootTables = 64;
-
     std::unique_ptr<void, STDDeleter<void, IMemoryAllocator>> m_pMemory;
 
     // Descriptor heap allocations, indexed by m_AllocationIndex

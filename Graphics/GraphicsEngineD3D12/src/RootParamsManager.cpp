@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -520,6 +520,8 @@ void RootParamsBuilder::InitializeMgr(IMemoryAllocator& MemAllocator, RootParams
             TableOffsetInGroupAllocation //
         };
 
+        if (Uint64{TableOffsetInGroupAllocation} + pTbl->GetDescriptorTableSize() >= std::numeric_limits<Uint32>::max())
+            LOG_ERROR_AND_THROW("Shader descriptor count exceeds the maximum representable value.");
         TableOffsetInGroupAllocation += pTbl->GetDescriptorTableSize();
         pCurrDescrRangePtr += d3d12SrcTbl.NumDescriptorRanges;
     }
@@ -550,10 +552,6 @@ void RootParamsBuilder::InitializeMgr(IMemoryAllocator& MemAllocator, RootParams
     ParamsMgr.m_pRootTables    = NumRootTables != 0 ? pRootTables : nullptr;
     ParamsMgr.m_pRootViews     = NumRootViews != 0 ? pRootViews : nullptr;
     ParamsMgr.m_pRootConstants = NumRootConstants != 0 ? pRootConstants : nullptr;
-
-#ifdef DILIGENT_DEBUG
-    ParamsMgr.Validate();
-#endif
 }
 
 } // namespace Diligent

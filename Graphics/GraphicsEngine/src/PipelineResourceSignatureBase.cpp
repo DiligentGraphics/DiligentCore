@@ -35,6 +35,15 @@
 namespace Diligent
 {
 
+void ValidateResourceCacheMemorySize(const PipelineResourceSignatureDesc& Desc, Uint64 RequiredSize, Uint64 MaxSize)
+{
+    if (RequiredSize > MaxSize)
+    {
+        LOG_ERROR_AND_THROW("Resource cache memory size (", RequiredSize, ") for pipeline resource signature '",
+                            (Desc.Name ? Desc.Name : ""), "' exceeds the maximum representable value (", MaxSize, ").");
+    }
+}
+
 namespace
 {
 

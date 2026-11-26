@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,6 +29,7 @@
 #include <limits>
 
 #include "GPUTestingEnvironment.hpp"
+#include "GraphicsTypesX.hpp"
 
 #include "gtest/gtest.h"
 
@@ -143,6 +144,210 @@ TEST(PRSCreationFailureTest, ZeroArraySize)
     PRSDesc.Resources    = Resources;
     PRSDesc.NumResources = _countof(Resources);
     TestCreatePRSFailure(PRSDesc, "Desc.Resources[1].ArraySize must not be 0");
+}
+
+TEST(PRSCreationFailureTest, ResourceCountOverflow)
+{
+    PipelineResourceDesc Resources[] =
+        {
+            {SHADER_TYPE_VS_PS, "g_Texture0", 1u << 31, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+            {SHADER_TYPE_VS_PS, "g_Texture1", 1u << 31, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC}};
+    PipelineResourceSignatureDesc Desc;
+    Desc.Name         = "Resource count overflow";
+    Desc.Resources    = Resources;
+    Desc.NumResources = _countof(Resources);
+    TestCreatePRSFailure(Desc, "Total resource count, including array elements, exceeds the maximum representable value");
+
+    Desc.NumResources      = 1;
+    Resources[0].ArraySize = ~0u;
+    TestCreatePRSFailure(Desc, "Total resource count, including array elements, exceeds the maximum representable value");
+}
+
+TEST(PRSCreationFailureTest, D3D12ImmutableSamplerRegisters)
+{
+    IRenderDevice* const pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
+    if (pDevice->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_D3D12)
+        GTEST_SKIP();
+
+    PipelineResourceDesc Resources[] =
+        {
+            {SHADER_TYPE_PIXEL, "g_Samplers", 65535, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+            {SHADER_TYPE_PIXEL, "g_LastSampler", 1, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE}};
+    const ImmutableSamplerDesc Samplers[] =
+        {
+            {SHADER_TYPE_PIXEL, "g_Samplers", SamplerDesc{}},
+            {SHADER_TYPE_PIXEL, "g_LastSampler", SamplerDesc{}}};
+    PipelineResourceSignatureDesc Desc;
+    Desc.Name                 = "Immutable sampler registers";
+    Desc.Resources            = Resources;
+    Desc.NumResources         = _countof(Resources);
+    Desc.ImmutableSamplers    = Samplers;
+    Desc.NumImmutableSamplers = _countof(Samplers);
+
+    // Only signature metadata is created: immutable sampler arrays consume no resource cache slots.
+    // The second sampler's register is the largest value representable in a resource attribute.
+    RefCntAutoPtr<IPipelineResourceSignature> pSignature;
+    pDevice->CreatePipelineResourceSignature(Desc, &pSignature);
+    ASSERT_NE(pSignature, nullptr);
+
+    Resources[0].ArraySize = 65536;
+    TestCreatePRSFailure(Desc, "Shader register for resource 'g_LastSampler' exceeds the maximum representable value");
+
+    // The immutable-sampler attribute has a wider field, with its highest value reserved.
+    Resources[0].ArraySize = (1u << 24) - 1;
+    TestCreatePRSFailure(Desc, "Immutable sampler shader register exceeds the maximum representable value");
+}
+
+TEST(PRSCreationFailureTest, BackendResourceCountOverflow)
+{
+    const auto  DeviceType = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Type;
+    Uint32      ArraySize  = 0;
+    const char* Error      = "Resource binding count exceeds the maximum representable value";
+    switch (DeviceType)
+    {
+        case RENDER_DEVICE_TYPE_D3D11: ArraySize = 256; break;
+        case RENDER_DEVICE_TYPE_GL:
+        case RENDER_DEVICE_TYPE_GLES: ArraySize = 65536; break;
+        case RENDER_DEVICE_TYPE_WEBGPU: ArraySize = 65537; break;
+        case RENDER_DEVICE_TYPE_D3D12:
+            ArraySize = 1u << 31;
+            Error     = "Resource array size exceeds the maximum representable value";
+            break;
+        case RENDER_DEVICE_TYPE_VULKAN:
+            ArraySize = 1u << 25;
+            Error     = "Resource array size for 'g_Texture' exceeds the maximum representable value";
+            break;
+        default: GTEST_SKIP() << "No backend-specific cache limit case";
+    }
+
+    PipelineResourceDesc          Resource{SHADER_TYPE_VS_PS, "g_Texture", ArraySize, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
+    PipelineResourceSignatureDesc Desc;
+    Desc.Name         = "Backend resource count overflow";
+    Desc.Resources    = &Resource;
+    Desc.NumResources = 1;
+    for (Uint32 Granularity : {1u, 4u})
+    {
+        Desc.SRBAllocationGranularity = Granularity;
+        TestCreatePRSFailure(Desc, Error);
+    }
+
+    // Also exercise cleanup after immutable sampler creation.
+    ImmutableSamplerDesc Sampler{SHADER_TYPE_PIXEL, "g_UnusedSampler", SamplerDesc{}};
+    Desc.ImmutableSamplers    = &Sampler;
+    Desc.NumImmutableSamplers = 1;
+    TestCreatePRSFailure(Desc, Error);
+}
+
+TEST(PRSCreationFailureTest, WebGPUCombinedSamplerCountOverflow)
+{
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_WEBGPU)
+        GTEST_SKIP();
+    // The original texture array fits; its generated sampler array takes the group over the limit.
+    const PipelineResourceDesc    Resource{SHADER_TYPE_PIXEL, "g_Texture", 32769, SHADER_RESOURCE_TYPE_TEXTURE_SRV,
+                                        SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER};
+    PipelineResourceSignatureDesc Desc;
+    Desc.Resources                  = &Resource;
+    Desc.NumResources               = 1;
+    Desc.UseCombinedTextureSamplers = true;
+    TestCreatePRSFailure(Desc, "Resource binding count exceeds the maximum representable value");
+}
+
+TEST(PRSCreationFailureTest, ImmutableSamplerArrayCountOverflow)
+{
+    const auto Type = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Type;
+    if (Type != RENDER_DEVICE_TYPE_D3D11 && Type != RENDER_DEVICE_TYPE_WEBGPU)
+        GTEST_SKIP();
+    const Uint32                  Count = Type == RENDER_DEVICE_TYPE_D3D11 ? 256 : 65537;
+    const PipelineResourceDesc    Resource{SHADER_TYPE_PIXEL, "g_Sampler", Count, SHADER_RESOURCE_TYPE_SAMPLER,
+                                        SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE};
+    const ImmutableSamplerDesc    Sampler{SHADER_TYPE_PIXEL, "g_Sampler", SamplerDesc{}};
+    PipelineResourceSignatureDesc Desc;
+    Desc.Resources            = &Resource;
+    Desc.NumResources         = 1;
+    Desc.ImmutableSamplers    = &Sampler;
+    Desc.NumImmutableSamplers = 1;
+    TestCreatePRSFailure(Desc, "Resource binding count exceeds the maximum representable value");
+}
+
+TEST(PRSCreationFailureTest, D3D12RootParameterCountOverflow)
+{
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_D3D12)
+        GTEST_SKIP();
+    PipelineResourceSignatureDescX Desc{"Root parameter count overflow"};
+    for (Uint32 i = 0; i < 65; ++i)
+    {
+        const std::string Name = "g_Buffer" + std::to_string(i);
+        Desc.AddResource(SHADER_TYPE_PIXEL, Name.c_str(), 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
+    }
+    TestCreatePRSFailure(Desc, "Root table count exceeds the maximum representable value");
+}
+
+TEST(PRSCreationFailureTest, DynamicBufferCountOverflow)
+{
+    const auto& DeviceInfo = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
+    if (!DeviceInfo.IsVulkanDevice() && DeviceInfo.Type != RENDER_DEVICE_TYPE_WEBGPU)
+        GTEST_SKIP();
+
+    // The counts fit separately, but their sum overflows the cache's dynamic buffer counter.
+    const PipelineResourceDesc Resources[] =
+        {
+            {SHADER_TYPE_VS_PS, "g_UniformBuffers", 32768, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+            {SHADER_TYPE_VS_PS, "g_StorageBuffers", 32768, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE}};
+    PipelineResourceSignatureDesc Desc;
+    Desc.Name         = "Dynamic buffer count overflow";
+    Desc.Resources    = Resources;
+    Desc.NumResources = _countof(Resources);
+    TestCreatePRSFailure(Desc, "Dynamic buffer count exceeds the maximum representable value");
+}
+
+TEST(PRSCreationFailureTest, VulkanAggregateResourceCountOverflow)
+{
+    if (!GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().IsVulkanDevice())
+        GTEST_SKIP();
+
+    // Every array fits in its 25-bit field, but the aggregate exceeds the cache's 30-bit count.
+    PipelineResourceSignatureDescX Desc{"Aggregate resource count overflow"};
+    for (Uint32 i = 0; i < 33; ++i)
+    {
+        const std::string Name = "g_Texture" + std::to_string(i);
+        Desc.AddResource(SHADER_TYPE_VS_PS, Name.c_str(), (1u << 25) - 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+    }
+    TestCreatePRSFailure(Desc, "Shader resource cache resource count exceeds the maximum representable value");
+}
+
+TEST(PRSCreationFailureTest, ResourceCacheAddressSpaceOverflow)
+{
+    if (sizeof(size_t) > sizeof(Uint32))
+        GTEST_SKIP() << "This case targets 32-bit allocation sizes";
+
+    const auto& DeviceInfo = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
+    if (!DeviceInfo.IsVulkanDevice() && DeviceInfo.Type != RENDER_DEVICE_TYPE_D3D12)
+        GTEST_SKIP();
+
+    // Counts fit the backend's fields, but storing the resources requires more than 4 GiB.
+    PipelineResourceSignatureDescX Desc{"Resource cache address space overflow"};
+    const Uint32                   NumResources = DeviceInfo.IsVulkanDevice() ? 16 : 1;
+    const Uint32                   ArraySize    = DeviceInfo.IsVulkanDevice() ? 1u << 24 : 1u << 29;
+    for (Uint32 i = 0; i < NumResources; ++i)
+    {
+        const std::string Name = "g_Texture" + std::to_string(i);
+        Desc.AddResource(SHADER_TYPE_VS_PS, Name.c_str(), ArraySize, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+    }
+    TestCreatePRSFailure(Desc, "Resource cache memory size");
+}
+
+TEST(PRSCreationFailureTest, OpenGLResourceCacheSizeOverflow)
+{
+    if (!GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().IsGLDevice())
+        GTEST_SKIP();
+
+    // The binding count fits in 16 bits, but the byte offsets do not.
+    PipelineResourceDesc          Resource{SHADER_TYPE_VS_PS, "g_Texture", 16384, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
+    PipelineResourceSignatureDesc Desc;
+    Desc.Name         = "Resource cache size overflow";
+    Desc.Resources    = &Resource;
+    Desc.NumResources = 1;
+    TestCreatePRSFailure(Desc, "exceeds the maximum representable value");
 }
 
 TEST(PRSCreationFailureTest, OverlappingStages)

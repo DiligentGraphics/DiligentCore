@@ -119,6 +119,9 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout(const bool IsSerialized)
         while (ShaderStages != SHADER_TYPE_UNKNOWN)
         {
             const Int32 ShaderInd = ExtractFirstShaderStageIndex(ShaderStages);
+            // Check before incrementing the packed counter.
+            if (Uint64{ResCounters[Range][ShaderInd]} + ArraySize > D3D11ResourceRangeCounters::MaxCounter)
+                LOG_ERROR_AND_THROW("Resource binding count exceeds the maximum representable value.");
             BindPoints[ShaderInd] = ResCounters[Range][ShaderInd];
             ResCounters[Range][ShaderInd] += ArraySize;
         }
@@ -280,6 +283,10 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout(const bool IsSerialized)
         }
     }
     VERIFY_EXPR(InlineConstantBufferIdx == m_NumInlineConstantBuffers);
+
+    ValidateResourceCacheMemorySize(m_Desc,
+                                    ShaderResourceCacheD3D11::GetRequiredMemorySize(m_ResourceCounters, m_pInlineConstantBuffers, m_NumInlineConstantBuffers),
+                                    ShaderResourceCacheD3D11::MaxMemorySize);
 
     if (m_pStaticResCache)
     {

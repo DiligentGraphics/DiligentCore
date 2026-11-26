@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -132,7 +132,7 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
             },
             [this]() //
             {
-                return ShaderResourceCacheD3D12::GetMemoryRequirements(m_RootParams).TotalSize;
+                return static_cast<size_t>(ShaderResourceCacheD3D12::GetMemoryRequirements(m_RootParams).TotalSize);
             });
     }
     catch (...)
@@ -200,6 +200,10 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(const bool IsSer
     {
         ImmutableSamplerAttribsD3D12&         ImmutableSampler    = m_pImmutableSamplerAttribs[i];
         constexpr D3D12_DESCRIPTOR_RANGE_TYPE DescriptorRangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
+        if (NumResources[DescriptorRangeType] > ImmutableSamplerAttribsD3D12::MaxShaderRegister)
+            LOG_ERROR_AND_THROW("Immutable sampler shader register exceeds the maximum representable value.");
+        if (Uint64{NumResources[DescriptorRangeType]} + ImmutableSampler.ArraySize > std::numeric_limits<Uint32>::max())
+            LOG_ERROR_AND_THROW("Immutable sampler descriptor count exceeds the maximum representable value.");
         if (!IsSerialized)
         {
             ImmutableSampler.RegisterSpace  = 0;
@@ -249,6 +253,8 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(const bool IsSer
             // For inline constants, ArraySize holds the number of 4-byte constants,
             // while the resource occupies only one register slot.
             const Uint32 ArraySize = ResDesc.GetArraySize();
+            if (ArraySize > ShaderResourceCacheD3D12::MaxTableResources)
+                LOG_ERROR_AND_THROW("Resource array size exceeds the maximum representable value.");
 
             if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
             {
@@ -270,6 +276,8 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(const bool IsSer
                     StaticResInlineConstInfo.push_back(InlineConstInfo);
                 }
 
+                if (Uint64{StaticResCacheTblSizes[SigRootIndex]} + ArraySize > ShaderResourceCacheD3D12::MaxTableResources)
+                    LOG_ERROR_AND_THROW("Static root table resource count exceeds the maximum representable value.");
                 StaticResCacheTblSizes[SigRootIndex] += ArraySize;
             }
 
@@ -284,6 +292,8 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(const bool IsSer
                 // Normal resources go into space 0.
                 Space    = 0;
                 Register = NumResources[d3d12DescriptorRangeType];
+                if (Uint64{NumResources[d3d12DescriptorRangeType]} + ArraySize > std::numeric_limits<Uint32>::max())
+                    LOG_ERROR_AND_THROW("Shader descriptor count exceeds the maximum representable value.");
                 NumResources[d3d12DescriptorRangeType] += ArraySize;
             }
 
@@ -329,6 +339,11 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(const bool IsSer
                                                ResDesc.ArraySize, // Array size or the number of inline constants
                                                Register, Space,
                                                SRBRootIndex, SRBOffsetFromTableStart);
+            // Validate the actual builder assignments before storing packed resource attributes.
+            if (SRBRootIndex >= ShaderResourceCacheD3D12::MaxRootTables)
+                LOG_ERROR_AND_THROW("Root table count exceeds the maximum representable value.");
+            if (Uint64{SRBOffsetFromTableStart} + ArraySize > ShaderResourceCacheD3D12::MaxTableResources)
+                LOG_ERROR_AND_THROW("Root table resource count exceeds the maximum representable value.");
         }
         else
         {
@@ -340,6 +355,9 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(const bool IsSer
             Space    = ImtblSamAttribs.RegisterSpace;
             Register = ImtblSamAttribs.ShaderRegister;
         }
+
+        if (Register > ResourceAttribs::MaxShaderRegister)
+            LOG_ERROR_AND_THROW("Shader register for resource '", ResDesc.Name, "' exceeds the maximum representable value.");
 
         ResourceAttribs* const pAttrib = m_pResourceAttribs + i;
         if (!IsSerialized)
@@ -380,6 +398,12 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(const bool IsSer
         }
     }
     ParamsBuilder.InitializeMgr(GetRawAllocator(), m_RootParams);
+    // Check cache storage even when SRBs are allocated individually. Do this before
+    // the debug validator expands descriptor ranges into per-descriptor bookkeeping.
+    (void)ShaderResourceCacheD3D12::GetMemoryRequirements(m_RootParams);
+#ifdef DILIGENT_DEBUG
+    m_RootParams.Validate();
+#endif
 
     if (GetNumStaticResStages() > 0)
     {
@@ -963,7 +987,7 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
             },
             [this]() //
             {
-                return ShaderResourceCacheD3D12::GetMemoryRequirements(m_RootParams).TotalSize;
+                return static_cast<size_t>(ShaderResourceCacheD3D12::GetMemoryRequirements(m_RootParams).TotalSize);
             });
     }
     catch (...)

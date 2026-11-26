@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2024 Diligent Graphics LLC
+ *  Copyright 2023-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -71,8 +71,9 @@ private:
     // clang-format on
 
 public:
-    static constexpr Uint32 MaxBindGroups     = (1u << _BindGroupBits);
-    static constexpr Uint32 InvalidSamplerInd = (1u << _SamplerIndBits) - 1;
+    static constexpr Uint32 MaxBindingsPerGroup = (1u << _BindingIndexBits);
+    static constexpr Uint32 MaxBindGroups       = (1u << _BindGroupBits);
+    static constexpr Uint32 InvalidSamplerInd   = (1u << _SamplerIndBits) - 1;
 
     // clang-format off
     const Uint32  BindingIndex         : _BindingIndexBits;    // Binding in the descriptor set

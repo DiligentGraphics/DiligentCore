@@ -183,6 +183,10 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
         // For inline constants, GetArraySize() returns 1 (actual resource array size),
         // while ResDesc.ArraySize contains the number of 32-bit constants.
         const Uint32 DescriptorCount = ResDesc.GetArraySize();
+        if (DescriptorCount > PipelineResourceAttribsVk::MaxArraySize)
+            LOG_ERROR_AND_THROW("Resource array size for '", ResDesc.Name, "' exceeds the maximum representable value.");
+        if (Uint64{CacheGroupSizes[CacheGroup]} + DescriptorCount > ShaderResourceCacheVk::MaxResourceCount)
+            LOG_ERROR_AND_THROW("Shader resource cache resource count exceeds the maximum representable value.");
 
         // All resources (including all inline constant buffers) get descriptors in the set.
         // One inline constant will be promoted to push constant by PSO, and its
@@ -196,13 +200,6 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
         {
             StaticResourceCount += DescriptorCount;
         }
-    }
-
-    // Initialize static resource cache (now that we know resource and inline constant counts)
-    if (StaticResourceCount > 0)
-    {
-        VERIFY_EXPR(GetNumStaticResStages() > 0);
-        m_pStaticResCache->InitializeSets(GetRawAllocator(), 1, &StaticResourceCount, m_TotalStaticInlineConstants);
     }
 
     // Descriptor set mapping (static/mutable (0) or dynamic (1) -> set index)
@@ -222,6 +219,49 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
         DSMapping[DESCRIPTOR_SET_ID_STATIC_MUTABLE] = (TotalStaticBindings != 0 ? Idx++ : 0xFF);
         DSMapping[DESCRIPTOR_SET_ID_DYNAMIC]        = (TotalDynamicBindings != 0 ? Idx++ : 0xFF);
         VERIFY_EXPR(Idx <= MAX_DESCRIPTOR_SETS);
+    }
+
+    Uint32 NumSets = 0;
+    if (DSMapping[DESCRIPTOR_SET_ID_STATIC_MUTABLE] < MAX_DESCRIPTOR_SETS)
+    {
+        m_DescriptorSetSizes[DSMapping[DESCRIPTOR_SET_ID_STATIC_MUTABLE]] =
+            CacheGroupSizes[CACHE_GROUP_DYN_UB_STAT_VAR] +
+            CacheGroupSizes[CACHE_GROUP_DYN_SB_STAT_VAR] +
+            CacheGroupSizes[CACHE_GROUP_OTHER_STAT_VAR];
+        ++NumSets;
+    }
+
+    if (DSMapping[DESCRIPTOR_SET_ID_DYNAMIC] < MAX_DESCRIPTOR_SETS)
+    {
+        m_DescriptorSetSizes[DSMapping[DESCRIPTOR_SET_ID_DYNAMIC]] =
+            CacheGroupSizes[CACHE_GROUP_DYN_UB_DYN_VAR] +
+            CacheGroupSizes[CACHE_GROUP_DYN_SB_DYN_VAR] +
+            CacheGroupSizes[CACHE_GROUP_OTHER_DYN_VAR];
+        ++NumSets;
+    }
+#ifdef DILIGENT_DEBUG
+    for (Uint32 i = 0; i < NumSets; ++i)
+        VERIFY_EXPR(m_DescriptorSetSizes[i] != ~0U && m_DescriptorSetSizes[i] > 0);
+#else
+    (void)NumSets;
+#endif
+
+    // Check the final sizes before allocating the static cache or expanding sampler arrays.
+    const auto Memory = ShaderResourceCacheVk::GetMemoryRequirements(NumSets, m_DescriptorSetSizes.data(), m_TotalInlineConstants);
+    if (Memory.TotalResources > ShaderResourceCacheVk::MaxResourceCount)
+        LOG_ERROR_AND_THROW("Shader resource cache resource count exceeds the maximum representable value.");
+    ValidateResourceCacheMemorySize(m_Desc, Memory.Size);
+    const Uint64 DynamicBufferCount =
+        Uint64{CacheGroupSizes[CACHE_GROUP_DYN_UB_STAT_VAR]} + CacheGroupSizes[CACHE_GROUP_DYN_SB_STAT_VAR] +
+        CacheGroupSizes[CACHE_GROUP_DYN_UB_DYN_VAR] + CacheGroupSizes[CACHE_GROUP_DYN_SB_DYN_VAR];
+    if (DynamicBufferCount > std::numeric_limits<Uint16>::max())
+        LOG_ERROR_AND_THROW("Dynamic buffer count exceeds the maximum representable value.");
+
+    // Initialize static resource cache (now that we know resource and inline constant counts)
+    if (StaticResourceCount > 0)
+    {
+        VERIFY_EXPR(GetNumStaticResStages() > 0);
+        m_pStaticResCache->InitializeSets(GetRawAllocator(), 1, &StaticResourceCount, m_TotalStaticInlineConstants);
     }
 
     // Resource bindings as well as cache offsets are ordered by CACHE_GROUP in each descriptor set:
@@ -465,6 +505,8 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
 
 
         Uint32& BindingIndex = BindingIndices[SetId * 3 + CACHE_GROUP_OTHER];
+        if (BindingIndex == std::numeric_limits<Uint32>::max())
+            LOG_ERROR_AND_THROW("Immutable sampler binding index exceeds the maximum representable value.");
         if (!IsSerialized)
         {
             ImtblSampAttribs.DescrSet     = DSMapping[SetId];
@@ -487,31 +529,6 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
         vkSetLayoutBinding.pImmutableSamplers = TempAllocator.Construct<VkSampler>(pSamplerVk ? pSamplerVk->GetVkSampler() : VK_NULL_HANDLE);
         vkSetLayoutBindings[SetId].push_back(vkSetLayoutBinding);
     }
-
-    Uint32 NumSets = 0;
-    if (DSMapping[DESCRIPTOR_SET_ID_STATIC_MUTABLE] < MAX_DESCRIPTOR_SETS)
-    {
-        m_DescriptorSetSizes[DSMapping[DESCRIPTOR_SET_ID_STATIC_MUTABLE]] =
-            CacheGroupSizes[CACHE_GROUP_DYN_UB_STAT_VAR] +
-            CacheGroupSizes[CACHE_GROUP_DYN_SB_STAT_VAR] +
-            CacheGroupSizes[CACHE_GROUP_OTHER_STAT_VAR];
-        ++NumSets;
-    }
-
-    if (DSMapping[DESCRIPTOR_SET_ID_DYNAMIC] < MAX_DESCRIPTOR_SETS)
-    {
-        m_DescriptorSetSizes[DSMapping[DESCRIPTOR_SET_ID_DYNAMIC]] =
-            CacheGroupSizes[CACHE_GROUP_DYN_UB_DYN_VAR] +
-            CacheGroupSizes[CACHE_GROUP_DYN_SB_DYN_VAR] +
-            CacheGroupSizes[CACHE_GROUP_OTHER_DYN_VAR];
-        ++NumSets;
-    }
-#ifdef DILIGENT_DEBUG
-    for (Uint32 i = 0; i < NumSets; ++i)
-        VERIFY_EXPR(m_DescriptorSetSizes[i] != ~0U && m_DescriptorSetSizes[i] > 0);
-#else
-    (void)NumSets;
-#endif
 
     VkDescriptorSetLayoutCreateInfo SetLayoutCI = {};
 

@@ -363,6 +363,8 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
 
     auto ReserveBindings = [&BindingCount, &CacheGroupSizes](CACHE_GROUP GroupId, Uint32 Count) {
         // NB: since WebGPU does not support resource arrays, binding count is the same as the cache group size
+        if (Uint64{BindingCount[GroupId]} + Count > PipelineResourceAttribsWebGPU::MaxBindingsPerGroup)
+            LOG_ERROR_AND_THROW("Resource binding count exceeds the maximum representable value.");
         BindingCount[GroupId] += Count;
         CacheGroupSizes[GroupId] += Count;
     };
@@ -417,14 +419,6 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
         ReserveBindings(ImmutableSamplerCacheGroup, ImtblSampAttribs.ArraySize);
     }
 
-    VERIFY_EXPR((StaticResourceCount != 0) == (GetNumStaticResStages() != 0));
-    // Initialize static resource cache
-    if (StaticResourceCount != 0)
-    {
-        VERIFY_EXPR(m_pStaticResCache != nullptr);
-        m_pStaticResCache->InitializeGroups(GetRawAllocator(), 1, &StaticResourceCount, m_TotalStaticInlineConstants);
-    }
-
     // Bind group mapping (static/mutable (0) or dynamic (1) -> bind group index).
     // If all resources are dynamic, then the signature will contain a single group with index 0.
     std::array<Uint32, BIND_GROUP_ID_NUM_GROUPS> BindGroupIdToIndex = {};
@@ -443,6 +437,62 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
         BindGroupIdToIndex[BIND_GROUP_ID_STATIC_MUTABLE] = (TotalStaticBindings != 0 ? Idx++ : 0xFF);
         BindGroupIdToIndex[BIND_GROUP_ID_DYNAMIC]        = (TotalDynamicBindings != 0 ? Idx++ : 0xFF);
         VERIFY_EXPR(Idx <= MAX_BIND_GROUPS);
+    }
+
+    Uint32 NumGroups = 0;
+    if (BindGroupIdToIndex[BIND_GROUP_ID_STATIC_MUTABLE] < MAX_BIND_GROUPS)
+    {
+        const Uint32 BindGroupIndex = BindGroupIdToIndex[BIND_GROUP_ID_STATIC_MUTABLE];
+        m_BindGroupSizes[BindGroupIndex] =
+            CacheGroupSizes[CACHE_GROUP_DYN_UB_STAT_VAR] +
+            CacheGroupSizes[CACHE_GROUP_DYN_SB_STAT_VAR] +
+            CacheGroupSizes[CACHE_GROUP_OTHER_STAT_VAR];
+        m_DynamicOffsetCounts[BindGroupIndex] =
+            CacheGroupSizes[CACHE_GROUP_DYN_UB_STAT_VAR] +
+            CacheGroupSizes[CACHE_GROUP_DYN_SB_STAT_VAR];
+        ++NumGroups;
+    }
+
+    if (BindGroupIdToIndex[BIND_GROUP_ID_DYNAMIC] < MAX_BIND_GROUPS)
+    {
+        const Uint32 BindGroupIndex = BindGroupIdToIndex[BIND_GROUP_ID_DYNAMIC];
+        m_BindGroupSizes[BindGroupIndex] =
+            CacheGroupSizes[CACHE_GROUP_DYN_UB_DYN_VAR] +
+            CacheGroupSizes[CACHE_GROUP_DYN_SB_DYN_VAR] +
+            CacheGroupSizes[CACHE_GROUP_OTHER_DYN_VAR];
+        m_DynamicOffsetCounts[BindGroupIndex] =
+            CacheGroupSizes[CACHE_GROUP_DYN_UB_DYN_VAR] +
+            CacheGroupSizes[CACHE_GROUP_DYN_SB_DYN_VAR];
+        ++NumGroups;
+    }
+
+#ifdef DILIGENT_DEBUG
+    for (Uint32 i = 0; i < NumGroups; ++i)
+        VERIFY_EXPR(m_BindGroupSizes[i] != ~0U && m_BindGroupSizes[i] > 0);
+#else
+    (void)NumGroups;
+#endif
+    VERIFY_EXPR(NumGroups == GetNumBindGroups());
+
+    // Validate complete groups before allocating caches or expanding bindings into native entries.
+    for (Uint32 i = 0; i < NumGroups; ++i)
+    {
+        if (m_BindGroupSizes[i] > PipelineResourceAttribsWebGPU::MaxBindingsPerGroup)
+            LOG_ERROR_AND_THROW("Resource binding count exceeds the maximum representable value.");
+    }
+    ValidateResourceCacheMemorySize(m_Desc, ShaderResourceCacheWebGPU::GetRequiredMemorySize(NumGroups, m_BindGroupSizes.data(), m_TotalInlineConstants));
+    const Uint64 DynamicBufferCount =
+        Uint64{CacheGroupSizes[CACHE_GROUP_DYN_UB_STAT_VAR]} + CacheGroupSizes[CACHE_GROUP_DYN_SB_STAT_VAR] +
+        CacheGroupSizes[CACHE_GROUP_DYN_UB_DYN_VAR] + CacheGroupSizes[CACHE_GROUP_DYN_SB_DYN_VAR];
+    if (DynamicBufferCount > std::numeric_limits<Uint16>::max())
+        LOG_ERROR_AND_THROW("Dynamic buffer count exceeds the maximum representable value.");
+
+    VERIFY_EXPR((StaticResourceCount != 0) == (GetNumStaticResStages() != 0));
+    // Initialize static resource cache
+    if (StaticResourceCount != 0)
+    {
+        VERIFY_EXPR(m_pStaticResCache != nullptr);
+        m_pStaticResCache->InitializeGroups(GetRawAllocator(), 1, &StaticResourceCount, m_TotalStaticInlineConstants);
     }
 
     // Get starting offsets and binding indices for each cache group
@@ -666,41 +716,6 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
     VERIFY_EXPR(BindingIndices[CACHE_GROUP_DYN_UB_DYN_VAR] == BindingCount[CACHE_GROUP_DYN_UB_DYN_VAR]);
     VERIFY_EXPR(BindingIndices[CACHE_GROUP_DYN_SB_DYN_VAR] == BindingCount[CACHE_GROUP_DYN_UB_DYN_VAR] + BindingCount[CACHE_GROUP_DYN_SB_DYN_VAR]);
     VERIFY_EXPR(BindingIndices[CACHE_GROUP_OTHER_DYN_VAR] == BindingCount[CACHE_GROUP_DYN_UB_DYN_VAR] + BindingCount[CACHE_GROUP_DYN_SB_DYN_VAR] + BindingCount[CACHE_GROUP_OTHER_DYN_VAR]);
-
-    Uint32 NumGroups = 0;
-    if (BindGroupIdToIndex[BIND_GROUP_ID_STATIC_MUTABLE] < MAX_BIND_GROUPS)
-    {
-        const Uint32 BindGroupIndex = BindGroupIdToIndex[BIND_GROUP_ID_STATIC_MUTABLE];
-        m_BindGroupSizes[BindGroupIndex] =
-            CacheGroupSizes[CACHE_GROUP_DYN_UB_STAT_VAR] +
-            CacheGroupSizes[CACHE_GROUP_DYN_SB_STAT_VAR] +
-            CacheGroupSizes[CACHE_GROUP_OTHER_STAT_VAR];
-        m_DynamicOffsetCounts[BindGroupIndex] =
-            CacheGroupSizes[CACHE_GROUP_DYN_UB_STAT_VAR] +
-            CacheGroupSizes[CACHE_GROUP_DYN_SB_STAT_VAR];
-        ++NumGroups;
-    }
-
-    if (BindGroupIdToIndex[BIND_GROUP_ID_DYNAMIC] < MAX_BIND_GROUPS)
-    {
-        const Uint32 BindGroupIndex = BindGroupIdToIndex[BIND_GROUP_ID_DYNAMIC];
-        m_BindGroupSizes[BindGroupIndex] =
-            CacheGroupSizes[CACHE_GROUP_DYN_UB_DYN_VAR] +
-            CacheGroupSizes[CACHE_GROUP_DYN_SB_DYN_VAR] +
-            CacheGroupSizes[CACHE_GROUP_OTHER_DYN_VAR];
-        m_DynamicOffsetCounts[BindGroupIndex] =
-            CacheGroupSizes[CACHE_GROUP_DYN_UB_DYN_VAR] +
-            CacheGroupSizes[CACHE_GROUP_DYN_SB_DYN_VAR];
-        ++NumGroups;
-    }
-
-#ifdef DILIGENT_DEBUG
-    for (Uint32 i = 0; i < NumGroups; ++i)
-        VERIFY_EXPR(m_BindGroupSizes[i] != ~0U && m_BindGroupSizes[i] > 0);
-#else
-    (void)NumGroups;
-#endif
-    VERIFY_EXPR(NumGroups == GetNumBindGroups());
 
     // Since WebGPU does not support multithreading, we can't create the bind group layouts
     // here as the signature may be created in a worker thread.
