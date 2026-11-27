@@ -27,6 +27,7 @@
 #include "../../../../Graphics/GraphicsEngine/include/PipelineResourceSignatureBase.hpp"
 #include "CommonlyUsedStates.h"
 #include "TestingEnvironment.hpp"
+#include "StringTools.hpp"
 
 #include "gtest/gtest.h"
 
@@ -100,6 +101,181 @@ TEST(PipelineResourceSignatureBaseTest, CountValidation)
     ExpectFailure("Total number of inline constant values");
     Resources[0].ArraySize -= 1;
     EXPECT_NO_THROW(ValidatePipelineResourceSignatureDesc(Desc, nullptr, RENDER_DEVICE_TYPE_D3D12));
+}
+
+void ExpectInvalidShaderStages(const PipelineResourceSignatureDesc& Desc,
+                               SHADER_TYPE                          ShaderStages = SHADER_TYPE_UNKNOWN,
+                               const char*                          Error        = "must belong to a single pipeline type")
+{
+    Testing::TestingEnvironment::ErrorScope Errors{Error};
+    EXPECT_THROW(ValidatePipelineResourceSignatureDesc(Desc, nullptr, RENDER_DEVICE_TYPE_D3D12, ShaderStages), std::runtime_error);
+}
+
+TEST(PipelineResourceSignatureBaseTest, CompatibleShaderStages)
+{
+    PipelineResourceDesc          Resource{SHADER_TYPE_PIXEL, "Resource", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE};
+    ImmutableSamplerDesc          Sampler{SHADER_TYPE_PIXEL, "Sampler", Sam_LinearWrap};
+    PipelineResourceSignatureDesc Desc;
+    Desc.Resources         = &Resource;
+    Desc.ImmutableSamplers = &Sampler;
+    EXPECT_NO_THROW(ValidatePipelineResourceSignatureDesc(Desc, nullptr, RENDER_DEVICE_TYPE_D3D12));
+
+    // Check every nonempty subset, including pixel-only stages shared by graphics and mesh pipelines.
+    const SHADER_TYPE PipelineStages[] = {SHADER_TYPE_ALL_GRAPHICS, SHADER_TYPE_ALL_MESH,
+                                          SHADER_TYPE_COMPUTE, SHADER_TYPE_ALL_RAY_TRACING, SHADER_TYPE_TILE};
+    for (SHADER_TYPE Stages : PipelineStages)
+    {
+        for (Uint32 Subset = Stages; Subset != 0; Subset = (Subset - 1) & Stages)
+        {
+            SCOPED_TRACE(::testing::Message() << "Stages: " << Subset);
+            Resource.ShaderStages = static_cast<SHADER_TYPE>(Subset);
+            Sampler.ShaderStages  = Resource.ShaderStages;
+
+            Desc.NumResources         = 1;
+            Desc.NumImmutableSamplers = 0;
+            EXPECT_NO_THROW(ValidatePipelineResourceSignatureDesc(Desc, nullptr, RENDER_DEVICE_TYPE_D3D12));
+
+            Desc.NumResources         = 0;
+            Desc.NumImmutableSamplers = 1;
+            EXPECT_NO_THROW(ValidatePipelineResourceSignatureDesc(Desc, nullptr, RENDER_DEVICE_TYPE_D3D12));
+
+            Desc.NumImmutableSamplers = 0;
+            EXPECT_NO_THROW(ValidatePipelineResourceSignatureDesc(Desc, nullptr, RENDER_DEVICE_TYPE_D3D12, Resource.ShaderStages));
+        }
+    }
+}
+
+TEST(PipelineResourceSignatureBaseTest, IncompatibleShaderStages)
+{
+    PipelineResourceDesc Resources[] = {
+        {SHADER_TYPE_PIXEL, "Resource0", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+        {SHADER_TYPE_PIXEL, "Resource1", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+    };
+    ImmutableSamplerDesc Samplers[] = {
+        {SHADER_TYPE_PIXEL, "Sampler0", Sam_LinearWrap},
+        {SHADER_TYPE_PIXEL, "Sampler1", Sam_LinearWrap},
+    };
+    PipelineResourceSignatureDesc Desc;
+    Desc.Resources         = Resources;
+    Desc.ImmutableSamplers = Samplers;
+
+    // Each pair mixes two incompatible pipeline families. Use distinct names so that
+    // validation must inspect the combined stages rather than duplicate declarations.
+    const SHADER_TYPE PipelineStages[] = {SHADER_TYPE_VERTEX, SHADER_TYPE_MESH,
+                                          SHADER_TYPE_COMPUTE, SHADER_TYPE_RAY_GEN, SHADER_TYPE_TILE};
+    for (size_t i = 0; i < _countof(PipelineStages); ++i)
+    {
+        for (size_t j = i + 1; j < _countof(PipelineStages); ++j)
+        {
+            const SHADER_TYPE Stages = PipelineStages[i] | PipelineStages[j];
+            SCOPED_TRACE(::testing::Message() << "Stages: " << Uint32{Stages});
+
+            Desc.NumResources         = 1;
+            Desc.NumImmutableSamplers = 0;
+            Resources[0].ShaderStages = Stages;
+            ExpectInvalidShaderStages(Desc);
+
+            Desc.NumResources         = 2;
+            Resources[0].ShaderStages = PipelineStages[i];
+            Resources[1].ShaderStages = PipelineStages[j];
+            ExpectInvalidShaderStages(Desc);
+
+            Desc.NumResources = 1;
+            ExpectInvalidShaderStages(Desc, PipelineStages[j]);
+
+            Desc.NumResources         = 0;
+            Desc.NumImmutableSamplers = 1;
+            Samplers[0].ShaderStages  = Stages;
+            ExpectInvalidShaderStages(Desc);
+
+            Desc.NumImmutableSamplers = 2;
+            Samplers[0].ShaderStages  = PipelineStages[i];
+            Samplers[1].ShaderStages  = PipelineStages[j];
+            ExpectInvalidShaderStages(Desc);
+        }
+    }
+
+    Desc.NumResources         = 1;
+    Desc.NumImmutableSamplers = 0;
+    Resources[0].ShaderStages = SHADER_TYPE_ALL;
+    ExpectInvalidShaderStages(Desc);
+
+    // A standalone all-stage sampler must fail before pooled variable-data allocation.
+    Desc.NumResources             = 0;
+    Desc.NumImmutableSamplers     = 1;
+    Desc.SRBAllocationGranularity = 4;
+    Samplers[0].ShaderStages      = SHADER_TYPE_ALL;
+    ExpectInvalidShaderStages(Desc);
+}
+
+TEST(PipelineResourceSignatureBaseTest, InvalidShaderStageBits)
+{
+    PipelineResourceDesc          Resource{SHADER_TYPE_PIXEL, "Resource", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE};
+    ImmutableSamplerDesc          Sampler{SHADER_TYPE_PIXEL, "Sampler", Sam_LinearWrap};
+    PipelineResourceSignatureDesc Desc;
+    Desc.Resources         = &Resource;
+    Desc.ImmutableSamplers = &Sampler;
+
+    const Uint32 InvalidMasks[] = {Uint32{SHADER_TYPE_LAST} << 1, Uint32{1} << 31,
+                                   (Uint32{SHADER_TYPE_LAST} << 1) | SHADER_TYPE_PIXEL,
+                                   (Uint32{1} << 31) | SHADER_TYPE_PIXEL};
+    for (Uint32 Mask : InvalidMasks)
+    {
+        SCOPED_TRACE(::testing::Message() << "Stages: " << Mask);
+        const auto ResourceError = FormatString("Desc.Resources[0].ShaderStages (", Mask, ") contains invalid shader stage bits.");
+        const auto SamplerError  = FormatString("Desc.ImmutableSamplers[0].ShaderStages (", Mask, ") contains invalid shader stage bits.");
+
+        Resource.ShaderStages = static_cast<SHADER_TYPE>(Mask);
+        Sampler.ShaderStages  = Resource.ShaderStages;
+
+        Desc.NumResources         = 1;
+        Desc.NumImmutableSamplers = 0;
+        ExpectInvalidShaderStages(Desc, SHADER_TYPE_UNKNOWN, ResourceError.c_str());
+
+        // Reject invalid bits before input-attachment diagnostics format the stage names.
+        Resource.ResourceType = SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT;
+        ExpectInvalidShaderStages(Desc, SHADER_TYPE_UNKNOWN, ResourceError.c_str());
+        Resource.ResourceType = SHADER_RESOURCE_TYPE_TEXTURE_SRV;
+
+        Desc.NumResources         = 0;
+        Desc.NumImmutableSamplers = 1;
+        ExpectInvalidShaderStages(Desc, SHADER_TYPE_UNKNOWN, SamplerError.c_str());
+
+        // A known resource or PSO pipeline must not hide undefined sampler visibility bits.
+        Resource.ShaderStages = SHADER_TYPE_PIXEL;
+        Desc.NumResources     = 1;
+        ExpectInvalidShaderStages(Desc, SHADER_TYPE_UNKNOWN, SamplerError.c_str());
+
+        Desc.NumResources = 0;
+        ExpectInvalidShaderStages(Desc, SHADER_TYPE_PIXEL, SamplerError.c_str());
+    }
+}
+
+TEST(PipelineResourceSignatureBaseTest, ImmutableSamplerStageVisibility)
+{
+    PipelineResourceDesc          Resource{SHADER_TYPE_PIXEL, "Resource", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE};
+    const ImmutableSamplerDesc    Sampler{SHADER_TYPE_ALL, "Sampler", Sam_LinearWrap};
+    PipelineResourceSignatureDesc Desc;
+    Desc.Resources                = &Resource;
+    Desc.ImmutableSamplers        = &Sampler;
+    Desc.NumImmutableSamplers     = 1;
+    Desc.SRBAllocationGranularity = 4;
+
+    const SHADER_TYPE PipelineStages[] = {SHADER_TYPE_ALL_GRAPHICS, SHADER_TYPE_ALL_MESH,
+                                          SHADER_TYPE_COMPUTE, SHADER_TYPE_ALL_RAY_TRACING, SHADER_TYPE_TILE};
+    for (SHADER_TYPE Stages : PipelineStages)
+    {
+        SCOPED_TRACE(::testing::Message() << "Stages: " << Uint32{Stages});
+        // Broad immutable visibility does not widen a pipeline type established by resources.
+        Resource.ShaderStages = Stages;
+        Desc.NumResources     = 1;
+        EXPECT_NO_THROW(ValidatePipelineResourceSignatureDesc(Desc, nullptr, RENDER_DEVICE_TYPE_D3D12));
+
+        // Implicit signatures also retain the pipeline type supplied by their PSO,
+        // including when no ordinary resources are reflected by the shaders.
+        Desc.NumResources = 0;
+        EXPECT_NO_THROW(ValidatePipelineResourceSignatureDesc(Desc, nullptr, RENDER_DEVICE_TYPE_D3D12, Stages));
+    }
 }
 
 TEST(PipelineResourceSignatureBaseTest, Compatibility)

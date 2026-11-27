@@ -379,12 +379,17 @@ typedef struct PipelineResourceDesc PipelineResourceDesc;
 struct PipelineResourceSignatureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// A pointer to an array of resource descriptions. See Diligent::PipelineResourceDesc.
+
+    /// The combined shader stages of all resources must be compatible with a single pipeline type.
     const PipelineResourceDesc*  Resources  DEFAULT_INITIALIZER(nullptr);
 
     /// The number of resources in Resources array.
     Uint32  NumResources  DEFAULT_INITIALIZER(0);
 
     /// A pointer to an array of immutable samplers. See Diligent::ImmutableSamplerDesc.
+
+    /// In a standalone signature with no resources, the combined immutable-sampler stages must be
+    /// compatible with a single pipeline type. Otherwise immutable samplers may use broader visibility.
     const ImmutableSamplerDesc*  ImmutableSamplers  DEFAULT_INITIALIZER(nullptr);
 
     /// The number of immutable samplers in ImmutableSamplers array.

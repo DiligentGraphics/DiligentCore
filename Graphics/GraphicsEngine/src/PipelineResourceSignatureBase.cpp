@@ -56,13 +56,17 @@ ASSERT_SIZEOF64(TestPipelineResourceSignatureInternalData, 32, "Did you add new 
 
 void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& Desc,
                                            const IRenderDevice*                 pDevice,
-                                           RENDER_DEVICE_TYPE                   DeviceType) noexcept(false)
+                                           RENDER_DEVICE_TYPE                   DeviceType,
+                                           SHADER_TYPE                          ShaderStages) noexcept(false)
 {
     const RenderDeviceInfo& DeviceInfo = pDevice != nullptr ?
         pDevice->GetDeviceInfo() :
         RenderDeviceInfo{DeviceType, Version{}, DeviceFeatures{DEVICE_FEATURE_STATE_ENABLED}};
 
     const DeviceFeatures& Features = DeviceInfo.Features;
+
+    // The initial stage mask is internal state; descriptor masks are validated below.
+    VERIFY_EXPR((ShaderStages & ~SHADER_TYPE_ALL) == 0);
 
     if (Desc.BindingIndex >= MAX_RESOURCE_SIGNATURES)
         LOG_PRS_ERROR_AND_THROW("Desc.BindingIndex (", Uint32{Desc.BindingIndex}, ") exceeds the maximum allowed value (", MAX_RESOURCE_SIGNATURES - 1, ").");
@@ -98,6 +102,11 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
 
         if (Res.ShaderStages == SHADER_TYPE_UNKNOWN)
             LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].ShaderStages must not be SHADER_TYPE_UNKNOWN.");
+
+        if ((Res.ShaderStages & ~SHADER_TYPE_ALL) != 0)
+            LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].ShaderStages (", Uint32{Res.ShaderStages}, ") contains invalid shader stage bits.");
+
+        ShaderStages |= Res.ShaderStages;
 
         if (Res.ArraySize == 0)
             LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].ArraySize must not be 0.");
@@ -209,6 +218,7 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
         //}
     }
 
+    SHADER_TYPE ImmutableSamplerStages = SHADER_TYPE_UNKNOWN;
     // Hash map of all immutable samplers by name
     std::unordered_multimap<HashMapStringKey, const ImmutableSamplerDesc&> ImtblSamplers;
     for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)
@@ -222,6 +232,11 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
 
         if (SamDesc.ShaderStages == SHADER_TYPE_UNKNOWN)
             LOG_PRS_ERROR_AND_THROW("Desc.ImmutableSamplers[", i, "].ShaderStages must not be SHADER_TYPE_UNKNOWN.");
+
+        if ((SamDesc.ShaderStages & ~SHADER_TYPE_ALL) != 0)
+            LOG_PRS_ERROR_AND_THROW("Desc.ImmutableSamplers[", i, "].ShaderStages (", Uint32{SamDesc.ShaderStages}, ") contains invalid shader stage bits.");
+
+        ImmutableSamplerStages |= SamDesc.ShaderStages;
 
         const auto sam_range = ImtblSamplers.equal_range(SamDesc.SamplerOrTextureName);
         for (auto sam_it = sam_range.first; sam_it != sam_range.second; ++sam_it)
@@ -245,6 +260,23 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
         }
 
         ImtblSamplers.emplace(SamDesc.SamplerOrTextureName, SamDesc);
+    }
+
+    // Broad sampler visibility is allowed when resources or the owning PSO define the pipeline stages.
+    // Otherwise a standalone sampler-only signature must identify one compatible pipeline type.
+    if (ShaderStages == SHADER_TYPE_UNKNOWN)
+        ShaderStages = ImmutableSamplerStages;
+
+    // Stage-indexed variable managers and SRB allocators only support stages from one pipeline type.
+    // Pixel-only stages are valid for both traditional graphics and mesh pipelines.
+    static_assert(SHADER_TYPE_LAST == 0x4000 && PIPELINE_TYPE_LAST == 4, "Update pipeline shader stage validation");
+    if ((ShaderStages & SHADER_TYPE_ALL_GRAPHICS) != ShaderStages &&
+        (ShaderStages & SHADER_TYPE_ALL_MESH) != ShaderStages &&
+        (ShaderStages & SHADER_TYPE_COMPUTE) != ShaderStages &&
+        (ShaderStages & SHADER_TYPE_ALL_RAY_TRACING) != ShaderStages &&
+        (ShaderStages & SHADER_TYPE_TILE) != ShaderStages)
+    {
+        LOG_PRS_ERROR_AND_THROW("Shader stages (", GetShaderStagesString(ShaderStages), ") must belong to a single pipeline type.");
     }
 
     if (Desc.UseCombinedTextureSamplers)

@@ -30,6 +30,7 @@
 
 #include "GPUTestingEnvironment.hpp"
 #include "GraphicsTypesX.hpp"
+#include "StringTools.hpp"
 
 #include "gtest/gtest.h"
 
@@ -132,6 +133,47 @@ TEST(PRSCreationFailureTest, UnknownResourceShaderStages)
     PRSDesc.Resources    = Resources;
     PRSDesc.NumResources = _countof(Resources);
     TestCreatePRSFailure(PRSDesc, "Desc.Resources[1].ShaderStages must not be SHADER_TYPE_UNKNOWN");
+}
+
+TEST(PRSCreationFailureTest, IncompatibleResourceShaderStages)
+{
+    const PipelineResourceDesc Resources[] =
+        {
+            {SHADER_TYPE_VERTEX, "g_VertexBuffer", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+            {SHADER_TYPE_COMPUTE, "g_ComputeBuffer", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE}};
+    PipelineResourceSignatureDesc Desc;
+    Desc.Name                     = "Incompatible resource shader stages";
+    Desc.Resources                = Resources;
+    Desc.NumResources             = _countof(Resources);
+    Desc.SRBAllocationGranularity = 4;
+    TestCreatePRSFailure(Desc, "must belong to a single pipeline type");
+}
+
+TEST(PRSCreationFailureTest, IncompatibleImmutableSamplerShaderStages)
+{
+    const ImmutableSamplerDesc    Sampler{SHADER_TYPE_ALL, "g_Sampler", SamplerDesc{}};
+    PipelineResourceSignatureDesc Desc;
+    Desc.Name                     = "Incompatible immutable sampler shader stages";
+    Desc.ImmutableSamplers        = &Sampler;
+    Desc.NumImmutableSamplers     = 1;
+    Desc.SRBAllocationGranularity = 4;
+    TestCreatePRSFailure(Desc, "must belong to a single pipeline type");
+}
+
+TEST(PRSCreationFailureTest, InvalidImmutableSamplerShaderStages)
+{
+    const PipelineResourceDesc Resource{SHADER_TYPE_PIXEL, "g_Buffer", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE};
+    const ImmutableSamplerDesc Sampler{static_cast<SHADER_TYPE>(SHADER_TYPE_PIXEL | (Uint32{1} << 31)), "g_Sampler", SamplerDesc{}};
+
+    PipelineResourceSignatureDesc Desc;
+    Desc.Name                     = "Invalid immutable sampler shader stages";
+    Desc.Resources                = &Resource;
+    Desc.NumResources             = 1;
+    Desc.ImmutableSamplers        = &Sampler;
+    Desc.NumImmutableSamplers     = 1;
+    Desc.SRBAllocationGranularity = 4;
+    const auto Error              = FormatString("Desc.ImmutableSamplers[0].ShaderStages (", Uint32{Sampler.ShaderStages}, ") contains invalid shader stage bits.");
+    TestCreatePRSFailure(Desc, Error.c_str());
 }
 
 TEST(PRSCreationFailureTest, ZeroArraySize)
@@ -242,9 +284,11 @@ TEST(PRSCreationFailureTest, WebGPUCombinedSamplerCountOverflow)
 {
     if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_WEBGPU)
         GTEST_SKIP();
+
     // The original texture array fits; its generated sampler array takes the group over the limit.
-    const PipelineResourceDesc    Resource{SHADER_TYPE_PIXEL, "g_Texture", 32769, SHADER_RESOURCE_TYPE_TEXTURE_SRV,
+    const PipelineResourceDesc Resource{SHADER_TYPE_PIXEL, "g_Texture", 32769, SHADER_RESOURCE_TYPE_TEXTURE_SRV,
                                         SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER};
+
     PipelineResourceSignatureDesc Desc;
     Desc.Resources                  = &Resource;
     Desc.NumResources               = 1;
@@ -257,10 +301,12 @@ TEST(PRSCreationFailureTest, ImmutableSamplerArrayCountOverflow)
     const auto Type = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Type;
     if (Type != RENDER_DEVICE_TYPE_D3D11 && Type != RENDER_DEVICE_TYPE_WEBGPU)
         GTEST_SKIP();
-    const Uint32                  Count = Type == RENDER_DEVICE_TYPE_D3D11 ? 256 : 65537;
-    const PipelineResourceDesc    Resource{SHADER_TYPE_PIXEL, "g_Sampler", Count, SHADER_RESOURCE_TYPE_SAMPLER,
+
+    const Uint32               Count = Type == RENDER_DEVICE_TYPE_D3D11 ? 256 : 65537;
+    const PipelineResourceDesc Resource{SHADER_TYPE_PIXEL, "g_Sampler", Count, SHADER_RESOURCE_TYPE_SAMPLER,
                                         SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE};
-    const ImmutableSamplerDesc    Sampler{SHADER_TYPE_PIXEL, "g_Sampler", SamplerDesc{}};
+    const ImmutableSamplerDesc Sampler{SHADER_TYPE_PIXEL, "g_Sampler", SamplerDesc{}};
+
     PipelineResourceSignatureDesc Desc;
     Desc.Resources            = &Resource;
     Desc.NumResources         = 1;
@@ -292,7 +338,8 @@ TEST(PRSCreationFailureTest, DynamicBufferCountOverflow)
     const PipelineResourceDesc Resources[] =
         {
             {SHADER_TYPE_VS_PS, "g_UniformBuffers", 32768, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
-            {SHADER_TYPE_VS_PS, "g_StorageBuffers", 32768, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE}};
+            {SHADER_TYPE_VS_PS, "g_StorageBuffers", 32768, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+        };
     PipelineResourceSignatureDesc Desc;
     Desc.Name         = "Dynamic buffer count overflow";
     Desc.Resources    = Resources;
