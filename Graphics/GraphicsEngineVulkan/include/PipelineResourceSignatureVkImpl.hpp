@@ -134,6 +134,10 @@ public:
     Uint32 GetDynamicOffsetCount() const { return m_DynamicUniformBufferCount + m_DynamicStorageBufferCount; }
     Uint32 GetDynamicUniformBufferCount() const { return m_DynamicUniformBufferCount; }
     Uint32 GetDynamicStorageBufferCount() const { return m_DynamicStorageBufferCount; }
+
+    // Immutable samplers need to be bound even when there are no ordinary resources.
+    bool RequiresSRB() const { return GetNumDescriptorSets() != 0; }
+
     Uint32 GetNumDescriptorSets() const
     {
         static_assert(DESCRIPTOR_SET_ID_NUM_SETS == 2, "Please update this method with new descriptor set id");

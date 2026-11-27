@@ -769,6 +769,13 @@ public:
         }
     }
 
+    // Backends that bind immutable samplers through descriptor sets or bind groups
+    // override this to require an SRB even when the signature has no ordinary resources.
+    bool RequiresSRB() const
+    {
+        return GetTotalResourceCount() != 0;
+    }
+
     bool IsEmpty() const
     {
         return GetTotalResourceCount() == 0 && GetImmutableSamplerCount() == 0;
@@ -830,6 +837,14 @@ private:
                     m_TotalStaticInlineConstants += static_cast<decltype(m_TotalStaticInlineConstants)>(ResDesc.ArraySize);
                 }
             }
+        }
+
+        // Explicit sampler-only signatures have no resource stages from which to
+        // deduce their pipeline type. Preserve stages provided by a PSO or resources.
+        if (m_ShaderStages == SHADER_TYPE_UNKNOWN)
+        {
+            for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)
+                m_ShaderStages |= Desc.ImmutableSamplers[i].ShaderStages;
         }
 
         if (m_ShaderStages != SHADER_TYPE_UNKNOWN)

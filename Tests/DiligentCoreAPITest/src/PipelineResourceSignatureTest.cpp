@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -152,6 +152,7 @@ protected:
     static void TestFormattedOrStructuredBuffer(BUFFER_MODE BufferMode);
     static void TestCombinedImageSamplers(SHADER_SOURCE_LANGUAGE ShaderLang, bool UseEmulatedSamplers = false);
     static void TestMultiSignatures(const std::vector<std::array<Uint8, 3>>& SignatureBindings);
+    static void TestUnusedImmutableSamplers(SHADER_TYPE ShaderType);
 
     enum SRB_COMPAT_MODE
     {
@@ -688,6 +689,225 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers)
     pContext->Draw(DrawAttrs);
 
     pSwapChain->Present();
+}
+
+
+void PipelineResourceSignatureTest::TestUnusedImmutableSamplers(SHADER_TYPE ShaderType)
+{
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
+    auto* pDevice  = pEnv->GetDevice();
+    auto* pContext = pEnv->GetDeviceContext();
+
+    if (!pDevice->GetDeviceInfo().Features.SeparablePrograms)
+        GTEST_SKIP();
+
+    const bool IsCompute = ShaderType == SHADER_TYPE_COMPUTE;
+    if (IsCompute && !pDevice->GetDeviceInfo().Features.ComputeShaders)
+        GTEST_SKIP();
+
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+    ShaderCI.EntryPoint     = "main";
+
+    RefCntAutoPtr<IShader> pVS;
+    if (!IsCompute)
+    {
+        ShaderCI.Desc   = {"Unused immutable sampler VS", SHADER_TYPE_VERTEX, pDevice->GetDeviceInfo().IsGLDevice()};
+        ShaderCI.Source = HLSL::DrawTest_ProceduralTriangleVS.c_str();
+        pDevice->CreateShader(ShaderCI, &pVS);
+        ASSERT_TRUE(pVS);
+    }
+
+    ShaderCI.Desc   = {"Unused immutable sampler shader", ShaderType, pDevice->GetDeviceInfo().IsGLDevice()};
+    ShaderCI.Source = IsCompute ? "[numthreads(1, 1, 1)] void main() {}" : HLSL::DrawTest_PS.c_str();
+    RefCntAutoPtr<IShader> pShader;
+    pDevice->CreateShader(ShaderCI, &pShader);
+    ASSERT_TRUE(pShader);
+
+    auto*       pSwapChain   = pEnv->GetSwapChain();
+    const float ClearColor[] = {0.5f, 0.375f, 0.25f, 0.75f};
+    if (!IsCompute)
+        RenderDrawCommandReference(pSwapChain, ClearColor);
+
+    for (Uint32 Granularity : {1u, 4u})
+    {
+        SCOPED_TRACE(::testing::Message() << "SRB allocation granularity: " << Granularity);
+
+        // Cover implicit PSO layouts and explicit signatures.
+        for (bool IsImplicit : {true, false})
+        {
+            SCOPED_TRACE(::testing::Message() << "Implicit: " << IsImplicit);
+
+            const ImmutableSamplerDesc                Sampler{ShaderType, "g_UnusedSampler", SamplerDesc{}};
+            RefCntAutoPtr<IPipelineResourceSignature> pSignature;
+            if (!IsImplicit)
+            {
+                PipelineResourceSignatureDesc Desc;
+                Desc.Name                     = "Immutable-only signature";
+                Desc.ImmutableSamplers        = &Sampler;
+                Desc.NumImmutableSamplers     = 1;
+                Desc.SRBAllocationGranularity = Granularity;
+                pDevice->CreatePipelineResourceSignature(Desc, &pSignature);
+                ASSERT_TRUE(pSignature);
+                EXPECT_EQ(pSignature->GetStaticVariableCount(ShaderType), 0u);
+            }
+
+            GraphicsPipelineStateCreateInfo GraphicsCI;
+            GraphicsCI.pVS                                           = pVS;
+            GraphicsCI.pPS                                           = IsCompute ? nullptr : pShader.RawPtr();
+            GraphicsCI.GraphicsPipeline.NumRenderTargets             = 1;
+            GraphicsCI.GraphicsPipeline.RTVFormats[0]                = TEX_FORMAT_RGBA8_UNORM;
+            GraphicsCI.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+            GraphicsCI.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+            GraphicsCI.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+            ComputePipelineStateCreateInfo ComputeCI;
+            ComputeCI.pCS                    = IsCompute ? pShader.RawPtr() : nullptr;
+            PipelineStateCreateInfo& PSOCI   = IsCompute ? static_cast<PipelineStateCreateInfo&>(ComputeCI) : static_cast<PipelineStateCreateInfo&>(GraphicsCI);
+            PSOCI.PSODesc.Name               = "Unused immutable sampler PSO";
+            PSOCI.Flags                      = PSO_CREATE_FLAG_IGNORE_MISSING_IMMUTABLE_SAMPLERS;
+            IPipelineResourceSignature* pPRS = pSignature;
+            if (IsImplicit)
+            {
+                PSOCI.PSODesc.ResourceLayout.ImmutableSamplers    = &Sampler;
+                PSOCI.PSODesc.ResourceLayout.NumImmutableSamplers = 1;
+                PSOCI.PSODesc.SRBAllocationGranularity            = Granularity;
+            }
+            else
+            {
+                PSOCI.ppResourceSignatures    = &pPRS;
+                PSOCI.ResourceSignaturesCount = 1;
+            }
+
+            RefCntAutoPtr<IPipelineState> pPSO;
+            if (IsCompute)
+                pDevice->CreateComputePipelineState(ComputeCI, &pPSO);
+            else
+                pDevice->CreateGraphicsPipelineState(GraphicsCI, &pPSO);
+            ASSERT_TRUE(pPSO);
+
+            RefCntAutoPtr<IShaderResourceBinding> pSRB;
+            if (IsImplicit)
+                pPSO->CreateShaderResourceBinding(&pSRB, true);
+            else
+                pSignature->CreateShaderResourceBinding(&pSRB, true);
+            ASSERT_TRUE(pSRB);
+            EXPECT_EQ(pSRB->GetVariableCount(ShaderType), 0u);
+
+            pContext->SetPipelineState(pPSO);
+            pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+            if (IsCompute)
+            {
+                pContext->DispatchCompute(DispatchComputeAttribs{1, 1, 1});
+            }
+            else
+            {
+                ITextureView* pRTV = pSwapChain->GetCurrentBackBufferRTV();
+                pContext->SetRenderTargets(1, &pRTV, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                pContext->ClearRenderTarget(pRTV, ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                pContext->Draw(DrawAttribs{6, DRAW_FLAG_VERIFY_ALL});
+                pSwapChain->Present();
+            }
+        }
+    }
+}
+
+TEST_F(PipelineResourceSignatureTest, UnusedImmutableSamplersGraphics)
+{
+    TestUnusedImmutableSamplers(SHADER_TYPE_PIXEL);
+}
+
+TEST_F(PipelineResourceSignatureTest, UnusedImmutableSamplersCompute)
+{
+    TestUnusedImmutableSamplers(SHADER_TYPE_COMPUTE);
+}
+
+TEST_F(PipelineResourceSignatureTest, ImmutableSamplerOnlySignature)
+{
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
+    auto* pDevice  = pEnv->GetDevice();
+    auto* pContext = pEnv->GetDeviceContext();
+
+    if (pDevice->GetDeviceInfo().IsGLDevice())
+        GTEST_SKIP() << "This test requires separate textures and samplers";
+
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    auto*       pSwapChain   = pEnv->GetSwapChain();
+    const float ClearColor[] = {0.5f, 0.375f, 0.25f, 0.75f};
+    RenderDrawCommandReference(pSwapChain, ClearColor);
+
+    ReferenceTextures RefTextures{3, 128, 128, USAGE_DEFAULT, BIND_SHADER_RESOURCE, TEXTURE_VIEW_SHADER_RESOURCE};
+    ShaderMacroHelper Macros;
+    Macros.AddShaderMacro("Tex2D_1_Ref", RefTextures.GetColor(0));
+    Macros.AddShaderMacro("Tex2D_2_Ref", RefTextures.GetColor(1));
+    Macros.AddShaderMacro("Tex2D_3_Ref", RefTextures.GetColor(2));
+    auto pVS = CreateShaderFromFile(SHADER_TYPE_VERTEX, "ImmutableSamplers.hlsl", "VSMain", "Sampler-only signature VS", Macros);
+    auto pPS = CreateShaderFromFile(SHADER_TYPE_PIXEL, "ImmutableSamplers.hlsl", "PSMain", "Sampler-only signature PS", Macros);
+    ASSERT_TRUE(pVS && pPS);
+
+    for (Uint32 Granularity : {1u, 4u})
+    {
+        SCOPED_TRACE(::testing::Message() << "SRB allocation granularity: " << Granularity);
+
+        // Exercise the sampler set both before and after the texture sets, including a binding gap.
+        for (Uint8 SamplerBinding : {Uint8{0}, Uint8{2}})
+        {
+            SCOPED_TRACE(::testing::Message() << "Sampler binding: " << Uint32{SamplerBinding});
+            const ImmutableSamplerDesc    Sampler{SHADER_TYPE_VS_PS, "g_Sampler", SamplerDesc{}};
+            PipelineResourceSignatureDesc SamplerDesc;
+            SamplerDesc.Name                     = "Standalone immutable sampler";
+            SamplerDesc.BindingIndex             = SamplerBinding;
+            SamplerDesc.ImmutableSamplers        = &Sampler;
+            SamplerDesc.NumImmutableSamplers     = 1;
+            SamplerDesc.SRBAllocationGranularity = Granularity;
+            RefCntAutoPtr<IPipelineResourceSignature> pSamplerSignature;
+            pDevice->CreatePipelineResourceSignature(SamplerDesc, &pSamplerSignature);
+            ASSERT_TRUE(pSamplerSignature);
+
+            const PipelineResourceDesc Resources[] =
+                {
+                    {SHADER_TYPE_VS_PS, "g_Tex2D_Static", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+                    {SHADER_TYPE_VS_PS, "g_Tex2D_Mut", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+                    {SHADER_TYPE_VS_PS, "g_Tex2D_Dyn", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC}};
+            PipelineResourceSignatureDesc TextureDesc;
+            TextureDesc.Name                     = "Textures using another signature's immutable sampler";
+            TextureDesc.BindingIndex             = SamplerBinding == 0 ? 1 : 0;
+            TextureDesc.Resources                = Resources;
+            TextureDesc.NumResources             = _countof(Resources);
+            TextureDesc.SRBAllocationGranularity = Granularity;
+            RefCntAutoPtr<IPipelineResourceSignature> pTextureSignature;
+            pDevice->CreatePipelineResourceSignature(TextureDesc, &pTextureSignature);
+            ASSERT_TRUE(pTextureSignature);
+            SET_STATIC_VAR(pTextureSignature, SHADER_TYPE_VERTEX, "g_Tex2D_Static", Set, RefTextures.GetView(0));
+
+            RefCntAutoPtr<IShaderResourceBinding> pSamplerSRB;
+            pSamplerSignature->CreateShaderResourceBinding(&pSamplerSRB, true);
+            ASSERT_TRUE(pSamplerSRB);
+            EXPECT_EQ(pSamplerSRB->GetVariableCount(SHADER_TYPE_VERTEX), 0u);
+            EXPECT_EQ(pSamplerSRB->GetVariableCount(SHADER_TYPE_PIXEL), 0u);
+            RefCntAutoPtr<IShaderResourceBinding> pTextureSRB;
+            pTextureSignature->CreateShaderResourceBinding(&pTextureSRB, true);
+            ASSERT_TRUE(pTextureSRB);
+            SET_SRB_VAR(pTextureSRB, SHADER_TYPE_VERTEX, "g_Tex2D_Mut", Set, RefTextures.GetView(1));
+            SET_SRB_VAR(pTextureSRB, SHADER_TYPE_PIXEL, "g_Tex2D_Dyn", Set, RefTextures.GetView(2));
+
+            auto pPSO = CreateGraphicsPSO(pVS, pPS, {pSamplerSignature, pTextureSignature});
+            ASSERT_TRUE(pPSO);
+            pContext->SetPipelineState(pPSO);
+            pContext->CommitShaderResources(pSamplerSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+            pContext->CommitShaderResources(pTextureSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+            ITextureView* pRTV = pSwapChain->GetCurrentBackBufferRTV();
+            pContext->SetRenderTargets(1, &pRTV, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+            pContext->ClearRenderTarget(pRTV, ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+            pContext->Draw(DrawAttribs{6, DRAW_FLAG_VERIFY_ALL});
+            pSwapChain->Present();
+        }
+    }
 }
 
 

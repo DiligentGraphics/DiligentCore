@@ -2211,7 +2211,7 @@ inline void DeviceContextBase<ImplementationTraits>::PrepareCommittedResources(C
     for (Uint32 i = 0; i < SignCount; ++i)
     {
         const PipelineResourceSignatureImplType* pSignature = m_pPipelineState->GetResourceSignature(i);
-        if (pSignature == nullptr || pSignature->GetTotalResourceCount() == 0)
+        if (pSignature == nullptr || !pSignature->RequiresSRB())
             continue;
 
         Resources.ActiveSRBMask |= 1u << i;
@@ -2235,10 +2235,10 @@ inline void DeviceContextBase<ImplementationTraits>::PrepareCommittedResources(C
         const PipelineResourceSignatureImplType* pPSOSign = m_pPipelineState->GetResourceSignature(DvpCompatibleSRBCount);
         const PipelineResourceSignatureImplType* pSRBSign = pSRB ? pSRB->GetSignature() : nullptr;
 
-        if ((pPSOSign == nullptr || pPSOSign->GetTotalResourceCount() == 0) !=
-            (pSRBSign == nullptr || pSRBSign->GetTotalResourceCount() == 0))
+        if ((pPSOSign == nullptr || !pPSOSign->RequiresSRB()) !=
+            (pSRBSign == nullptr || !pSRBSign->RequiresSRB()))
         {
-            // One signature is null or empty while the other is not - SRB is not compatible with the PSO.
+            // Only one signature requires an SRB, so the bindings are incompatible.
             break;
         }
 
@@ -2730,8 +2730,8 @@ void DeviceContextBase<ImplementationTraits>::DvpVerifySRBCompatibility(
     for (Uint32 sign = 0; sign < SignCount; ++sign)
     {
         const PipelineResourceSignatureImplType* const pPSOSign = CustomGetSignature ? CustomGetSignature(sign) : m_pPipelineState->GetResourceSignature(sign);
-        if (pPSOSign == nullptr || pPSOSign->GetTotalResourceCount() == 0)
-            continue; // Skip null and empty signatures
+        if (pPSOSign == nullptr || !pPSOSign->RequiresSRB())
+            continue; // Skip signatures that do not require an SRB
 
         VERIFY_EXPR(sign < MAX_RESOURCE_SIGNATURES);
         VERIFY_EXPR(pPSOSign->GetDesc().BindingIndex == sign);

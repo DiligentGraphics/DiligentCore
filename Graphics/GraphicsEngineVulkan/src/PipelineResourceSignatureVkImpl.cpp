@@ -214,10 +214,16 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
             BindingCount[CACHE_GROUP_DYN_SB_DYN_VAR] +
             BindingCount[CACHE_GROUP_OTHER_DYN_VAR];
 
-        Uint32 Idx = 0;
+        const bool NeedsDynamicSet = TotalDynamicBindings != 0;
 
-        DSMapping[DESCRIPTOR_SET_ID_STATIC_MUTABLE] = (TotalStaticBindings != 0 ? Idx++ : 0xFF);
-        DSMapping[DESCRIPTOR_SET_ID_DYNAMIC]        = (TotalDynamicBindings != 0 ? Idx++ : 0xFF);
+        // Immutable samplers use the static/mutable set if it exists, otherwise the dynamic set.
+        // If neither set has ordinary bindings, create a static/mutable set for the samplers.
+        const bool NeedsStaticMutableSet = TotalStaticBindings != 0 ||
+            (!NeedsDynamicSet && m_Desc.NumImmutableSamplers != 0);
+
+        Uint32 Idx                                  = 0;
+        DSMapping[DESCRIPTOR_SET_ID_STATIC_MUTABLE] = (NeedsStaticMutableSet ? Idx++ : 0xFF);
+        DSMapping[DESCRIPTOR_SET_ID_DYNAMIC]        = (NeedsDynamicSet ? Idx++ : 0xFF);
         VERIFY_EXPR(Idx <= MAX_DESCRIPTOR_SETS);
     }
 
@@ -240,10 +246,10 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
         ++NumSets;
     }
 #ifdef DILIGENT_DEBUG
+    // Immutable-only descriptor sets have no entries in the SRB resource cache.
     for (Uint32 i = 0; i < NumSets; ++i)
-        VERIFY_EXPR(m_DescriptorSetSizes[i] != ~0U && m_DescriptorSetSizes[i] > 0);
-#else
-    (void)NumSets;
+        VERIFY_EXPR(m_DescriptorSetSizes[i] != ~0U &&
+                    (m_DescriptorSetSizes[i] > 0 || m_Desc.NumImmutableSamplers > 0));
 #endif
 
     // Check the final sizes before allocating the static cache or expanding sampler arrays.
@@ -499,9 +505,9 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
         const DESCRIPTOR_SET_ID SetId = (DSMapping[DESCRIPTOR_SET_ID_STATIC_MUTABLE] < MAX_DESCRIPTOR_SETS) ?
             DESCRIPTOR_SET_ID_STATIC_MUTABLE :
             DESCRIPTOR_SET_ID_DYNAMIC;
-        DEV_CHECK_ERR(DSMapping[SetId] < MAX_DESCRIPTOR_SETS,
-                      "There are no descriptor sets in this signature, which indicates there are no other "
-                      "resources besides immutable samplers. This is not currently allowed.");
+        VERIFY(DSMapping[SetId] < MAX_DESCRIPTOR_SETS,
+               "Invalid descriptor set mapping for immutable samplers: ", DSMapping[SetId],
+               ". Expected an index less than ", MAX_DESCRIPTOR_SETS, ".");
 
 
         Uint32& BindingIndex = BindingIndices[SetId * 3 + CACHE_GROUP_OTHER];
@@ -589,8 +595,13 @@ void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk
         _DescrSetName.append(" - static/mutable set");
         DescrSetName = _DescrSetName.c_str();
 #endif
+        const Uint32 SetIndex = GetDescriptorSetIndex<DESCRIPTOR_SET_ID_STATIC_MUTABLE>();
+        VERIFY(static_cast<const ShaderResourceCacheVk&>(ResourceCache).GetDescriptorSet(SetIndex).GetSize() > 0 ||
+                   m_Desc.NumImmutableSamplers > 0,
+               "A descriptor set without cached resources must contain immutable samplers.");
+
         DescriptorSetAllocation SetAllocation = GetDevice()->AllocateDescriptorSet(~Uint64{0}, vkLayout, DescrSetName);
-        ResourceCache.AssignDescriptorSetAllocation(GetDescriptorSetIndex<DESCRIPTOR_SET_ID_STATIC_MUTABLE>(), std::move(SetAllocation));
+        ResourceCache.AssignDescriptorSetAllocation(SetIndex, std::move(SetAllocation));
     }
 
     const Uint32                   TotalResources = GetTotalResourceCount();

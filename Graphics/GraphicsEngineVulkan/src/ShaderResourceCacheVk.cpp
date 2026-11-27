@@ -88,10 +88,6 @@ void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator,
     VERIFY_EXPR(MemReq.Size <= std::numeric_limits<size_t>::max());
     m_NumSets        = static_cast<Uint16>(NumSets);
     m_TotalResources = static_cast<Uint32>(MemReq.TotalResources);
-#ifdef DILIGENT_DEBUG
-    for (Uint32 t = 0; t < NumSets; ++t)
-        VERIFY_EXPR(SetSizes[t] > 0);
-#endif
 
     const size_t MemorySize = static_cast<size_t>(MemReq.Size);
 #ifdef DILIGENT_DEBUG

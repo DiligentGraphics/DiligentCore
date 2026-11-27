@@ -126,6 +126,9 @@ public:
 
     ~PipelineResourceSignatureWebGPUImpl();
 
+    // Immutable samplers need to be bound even when there are no ordinary resources.
+    bool RequiresSRB() const { return GetNumBindGroups() != 0; }
+
     Uint32 GetNumBindGroups() const
     {
         static_assert(BIND_GROUP_ID_NUM_GROUPS == 2, "Please update this method with new bind group id");

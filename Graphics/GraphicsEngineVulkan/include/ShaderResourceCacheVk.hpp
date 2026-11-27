@@ -242,7 +242,7 @@ public:
     void AssignDescriptorSetAllocation(Uint32 SetIndex, DescriptorSetAllocation&& Allocation)
     {
         DescriptorSet& DescrSet = GetDescriptorSet(SetIndex);
-        VERIFY(DescrSet.GetSize() > 0, "Descriptor set is empty");
+        // The signature verifies that sets without cached resources contain immutable samplers.
         VERIFY(!DescrSet.m_DescriptorSetAllocation, "Descriptor set allocation has already been initialized");
         DescrSet.m_DescriptorSetAllocation = std::move(Allocation);
     }
