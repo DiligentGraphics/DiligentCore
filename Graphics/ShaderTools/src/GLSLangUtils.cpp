@@ -490,11 +490,10 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
     if ((ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_PACK_MATRIX_ROW_MAJOR) != 0)
         Preamble += "#pragma pack_matrix(row_major)\n\n";
     Preamble.append("#define GLSLANG\n\n");
-    Preamble.append(g_HLSLDefinitions);
-    AppendShaderTypeDefinitions(Preamble, ShaderCI.Desc.ShaderType);
-
     if (ExtraDefinitions != nullptr)
         Preamble += ExtraDefinitions;
+    Preamble.append(g_HLSLDefinitions);
+    AppendShaderTypeDefinitions(Preamble, ShaderCI.Desc.ShaderType);
 
     if (ShaderCI.Macros)
     {

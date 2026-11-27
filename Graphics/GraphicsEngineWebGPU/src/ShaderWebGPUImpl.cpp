@@ -31,17 +31,10 @@
 #include "GLSLUtils.hpp"
 #include "ShaderToolsCommon.hpp"
 #include "WGSLUtils.hpp"
-#include "HLSLUtils.hpp"
-#include "HLSLParsingTools.hpp"
-#include "SPIRVUtils.hpp"
 
 #if !DILIGENT_NO_GLSLANG
 #    include "GLSLangUtils.hpp"
 #    include "SPIRVShaderResources.hpp"
-#endif
-
-#if !DILIGENT_NO_HLSL
-#    include "SPIRVTools.hpp"
 #endif
 
 namespace Diligent
@@ -69,38 +62,16 @@ std::vector<uint32_t> CompileShaderToSPIRV(const ShaderCreateInfo&             S
     {
         SPIRV = GLSLangUtils::HLSLtoSPIRV(ShaderCI, GLSLangUtils::SpirvVersion::Vk100, WebGPUDefine, WebGPUShaderCI.ppCompilerOutput);
 
-        SPIRVShaderResources::CreateInfo ResCI;
-        ResCI.ShaderType                  = ShaderCI.Desc.ShaderType;
-        ResCI.Name                        = ShaderCI.Desc.Name;
-        ResCI.CombinedSamplerSuffix       = ShaderCI.Desc.UseCombinedTextureSamplers ? ShaderCI.Desc.CombinedSamplerSuffix : nullptr;
-        ResCI.LoadShaderStageInputs       = ShaderCI.Desc.ShaderType == SHADER_TYPE_VERTEX;
-        ResCI.LoadUniformBufferReflection = false;
-
-        SPIRVShaderResources Resources{
-            GetRawAllocator(),
-            SPIRV,
-            ResCI,
-        };
-
-        if (ShaderCI.Desc.ShaderType == SHADER_TYPE_VERTEX)
+        if (!SPIRV.empty() && ShaderCI.Desc.ShaderType == SHADER_TYPE_VERTEX)
         {
+            SPIRVShaderResources::CreateInfo ResCI;
+            ResCI.ShaderType            = ShaderCI.Desc.ShaderType;
+            ResCI.Name                  = ShaderCI.Desc.Name;
+            ResCI.CombinedSamplerSuffix = ShaderCI.Desc.UseCombinedTextureSamplers ? ShaderCI.Desc.CombinedSamplerSuffix : nullptr;
+            ResCI.LoadShaderStageInputs = true;
+
+            SPIRVShaderResources Resources{GetRawAllocator(), SPIRV, ResCI};
             Resources.MapHLSLVertexShaderInputs(SPIRV);
-        }
-
-        if (Resources.GetNumImgs() > 0)
-        {
-            // Image formats are lost during HLSL->SPIRV conversion, so we need to patch them manually
-            const std::string HLSLSource = BuildHLSLSourceString(ShaderCI);
-            if (!HLSLSource.empty())
-            {
-                // Extract image formats from special comments in HLSL code:
-                //    Texture2D<float4 /*format=rgba32f*/> g_RWTexture;
-                const auto ImageFormats = Parsing::ExtractGLSLImageFormatsFromHLSL(HLSLSource);
-                if (!ImageFormats.empty())
-                {
-                    SPIRV = PatchImageFormats(SPIRV, ImageFormats);
-                }
-            }
         }
     }
     else

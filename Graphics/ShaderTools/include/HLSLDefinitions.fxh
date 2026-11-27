@@ -80,6 +80,9 @@ float2x2 MatrixFromRows(float2 row0, float2 row1)
 
 #if defined(VULKAN) && defined(DXCOMPILER)
 #   define VK_IMAGE_FORMAT(format) [[vk::image_format(format)]]
+#elif defined(GLSLANG) && (defined(VULKAN) || defined(WEBGPU))
+#   define format_r11g11b10f format_r11fg11fb10f
+#   define VK_IMAGE_FORMAT(format) [[spv::format_##format]]
 #else
 #   define VK_IMAGE_FORMAT(format)
 #endif
