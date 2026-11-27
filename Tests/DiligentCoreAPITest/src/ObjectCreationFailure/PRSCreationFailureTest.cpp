@@ -364,23 +364,27 @@ TEST(PRSCreationFailureTest, VulkanAggregateResourceCountOverflow)
 
 TEST(PRSCreationFailureTest, ResourceCacheAddressSpaceOverflow)
 {
-    if (sizeof(size_t) > sizeof(Uint32))
-        GTEST_SKIP() << "This case targets 32-bit allocation sizes";
-
-    const auto& DeviceInfo = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
-    if (!DeviceInfo.IsVulkanDevice() && DeviceInfo.Type != RENDER_DEVICE_TYPE_D3D12)
-        GTEST_SKIP();
-
-    // Counts fit the backend's fields, but storing the resources requires more than 4 GiB.
-    PipelineResourceSignatureDescX Desc{"Resource cache address space overflow"};
-    const Uint32                   NumResources = DeviceInfo.IsVulkanDevice() ? 16 : 1;
-    const Uint32                   ArraySize    = DeviceInfo.IsVulkanDevice() ? 1u << 24 : 1u << 29;
-    for (Uint32 i = 0; i < NumResources; ++i)
+    if constexpr (sizeof(size_t) > sizeof(Uint32))
     {
-        const std::string Name = "g_Texture" + std::to_string(i);
-        Desc.AddResource(SHADER_TYPE_VS_PS, Name.c_str(), ArraySize, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+        GTEST_SKIP() << "This case targets 32-bit allocation sizes";
     }
-    TestCreatePRSFailure(Desc, "Resource cache memory size");
+    else
+    {
+        const auto& DeviceInfo = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
+        if (!DeviceInfo.IsVulkanDevice() && DeviceInfo.Type != RENDER_DEVICE_TYPE_D3D12)
+            GTEST_SKIP();
+
+        // Counts fit the backend's fields, but storing the resources requires more than 4 GiB.
+        PipelineResourceSignatureDescX Desc{"Resource cache address space overflow"};
+        const Uint32                   NumResources = DeviceInfo.IsVulkanDevice() ? 16 : 1;
+        const Uint32                   ArraySize    = DeviceInfo.IsVulkanDevice() ? 1u << 24 : 1u << 29;
+        for (Uint32 i = 0; i < NumResources; ++i)
+        {
+            const std::string Name = "g_Texture" + std::to_string(i);
+            Desc.AddResource(SHADER_TYPE_VS_PS, Name.c_str(), ArraySize, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+        }
+        TestCreatePRSFailure(Desc, "Resource cache memory size");
+    }
 }
 
 TEST(PRSCreationFailureTest, OpenGLResourceCacheSizeOverflow)
