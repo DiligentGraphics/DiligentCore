@@ -849,6 +849,8 @@ bool RenderStateCacheImpl::CreatePipelineStateInternal(const CreateInfoType& PSO
         UnpackInfo.PipelineType                  = PSOCreateInfo.PSODesc.PipelineType;
         UnpackInfo.Name                          = HashStr.c_str();
         UnpackInfo.pDevice                       = m_pDevice;
+        UnpackInfo.SRBAllocationGranularity      = PSOCreateInfo.PSODesc.SRBAllocationGranularity;
+        UnpackInfo.ImmediateContextMask          = PSOCreateInfo.PSODesc.ImmediateContextMask;
         UnpackInfo.pCache                        = PSOCreateInfo.pPSOCache;
         UnpackInfo.ModifyPipelineStateCreateInfo = Callback;
         UnpackInfo.pUserData                     = Callback;
@@ -859,7 +861,11 @@ bool RenderStateCacheImpl::CreatePipelineStateInternal(const CreateInfoType& PSO
             const PIPELINE_STATE_STATUS Status = pPSO->GetStatus();
             if (Status == PIPELINE_STATE_STATUS_READY)
             {
-                if (pPSO->GetDesc() == PSOCreateInfo.PSODesc)
+                // The device clears the bits of the immediate context mask that have no command queue,
+                // so the unpacked pipeline may hold a subset of the requested mask.
+                PipelineStateDesc ExpectedDesc = PSOCreateInfo.PSODesc;
+                ExpectedDesc.ImmediateContextMask &= pPSO->GetDesc().ImmediateContextMask;
+                if (pPSO->GetDesc() == ExpectedDesc)
                 {
                     *ppPipelineState = pPSO.Detach();
                     FoundInCache     = true;
